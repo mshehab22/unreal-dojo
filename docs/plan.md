@@ -78,6 +78,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | merged 329a995 | merged | 1 fix round; build about 20 s, headless test about 18 s on UE 5.8.3 Mac |
 | M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | merged 267739b | merged | Passed first review; Windows unverified (problems.md) |
 | M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | merged | merged | 2 fix rounds; rematch farming closed, proven with randomized sequences |
+| M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | m1-6b-progress-wiring | building | Connects the remaining progress stubs to ProgressService using the content catalog |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop @ 3891f21 | fixes | Reviewer reran 7 of 7 on UE 5.8.3; timer fix confirmed. Round 1: test filter matches other quests (confirmed), Windows argv0 unquoted on spaced engine path, orphaned runs on quit, long-path warning not sent |
