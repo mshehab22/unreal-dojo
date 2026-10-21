@@ -35,7 +35,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 - [x] M1.1 unreal-pipeline: PlatformPaths for Windows and macOS with fake-fs unit tests; EngineLocator (default paths, Windows registry, manual pick, vswhere and Xcode checks). Proof: unit tests on both platform objects.
 - [x] M1.2 unreal-pipeline: sandbox template in `resources/sandbox-template/` and SandboxProjectService (copy, EngineAssociation, first full build with streamed progress). Proof: the template builds on the Windows desktop; timings recorded in `systems/unreal-pipeline.md`.
 - [x] M1.3 unreal-pipeline: headless loop (UnrealBuilder, AutomationTestRunner, ReportParser, LogFilter) with the hand-written sample quest (Health component + one automation test). Proof: integration test passes on the Windows desktop; timings recorded.
-- [ ] M1.4 unreal-pipeline: fast loop (McpEditorClient, LiveEditorRunner: CompileLiveCoding then RunTests, header-change detection that falls back to UBT). Proof: same sample quest round-trips in seconds with the editor open; timings recorded.
+- [x] M1.4 unreal-pipeline (Mac verified; Live Coding Windows only, unverified): fast loop (McpEditorClient, LiveEditorRunner: CompileLiveCoding then RunTests, header-change detection that falls back to UBT). Proof: same sample quest round-trips in seconds with the editor open; timings recorded.
 - [ ] M1.5 unreal-pipeline: the same four tasks verified on the Mac. If Unreal is not installed there yet, log as unverified and continue.
 - [x] M1.6 progress-and-rules: XpRules, roles, cards and tiers, spells, Seer Stone, spree and armor, streak and freezes, mastery meter, SM-2 scheduler with review log, DrillScheduler, DailyQuestService, unlock graph, atomic save. Proof: unit tests for every rule in the spec's tables.
 - [x] M1.7 ai-review (live run still open, problems.md): providers, prompts, JSON schemas, parsers, breakdown grader, explain-item grader, provider selection. Proof: unit tests on recorded outputs; one live run through Claude Code logged.
@@ -101,7 +101,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.P2.2 Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | merged 0e7060c | merged | 1 fix round |
 | M4.P2.3 Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | merged 0e7060c | merged | 1 fix round; moved to the arena (D13) |
 | M4.P2.4 Pack 2 World 4 (Double Buffer) | content-patterns | author-patterns (session) | m4-p2-world4 @ 37d97a2 | review | 36 of 36 solutions across four worlds |
-| M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop @ e6ae050 | re-review | Rebased onto M1.3b; Windows rule matches the Mac; filler writes recorded |
+| M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged 2b31811 | merged | 2 fix rounds; fast re-run 65 ms to 2.4 s on the Mac |
+| M1.4b Fast loop wiring | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4b-fast-loop-wiring | building | A489 list: quit close, openEditor, ledger recording, port setting |
 | M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | merged | merged | 1 fix round; refused save safe; migration verified |
 | M1.6d Pack 4 gate by world id (A68) | progress-and-rules | builder-rules (session) | merged 365d0b4 | merged | Passed first review; future world ids foundations/communication and patterns/component are conventions authors must use |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
