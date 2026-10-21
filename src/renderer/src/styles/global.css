@@ -1,5 +1,6 @@
 /* Tailwind entry: loads the design tokens, then the base rules every screen shares. */
 @import "tailwindcss";
+@import "../assets/fonts/fonts.css";
 @import "./tokens.css";
 
 @custom-variant dark (&:is(.dark *));

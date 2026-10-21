@@ -5,11 +5,6 @@ import "@vitejs/plugin-react/preamble";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-// Fonts are bundled into the build from node_modules; nothing is fetched at runtime.
-import "@fontsource-variable/bricolage-grotesque";
-import "@fontsource-variable/instrument-sans";
-import "@fontsource-variable/jetbrains-mono";
-
 import { App } from "./App";
 import "./styles/global.css";
 
