@@ -21,7 +21,7 @@ export interface CodeAttemptSubmission
 	/** The code review, absent when the build failed. */
 	review?: CodeReview;
 
-	/** The files submitted, so the attempt can keep them for "why is this a finding?" (A463). */
+	/** The files submitted, stored on the attempt for "why is this a finding?" (A467). */
 	files: Record<string, string>;
 }
 
