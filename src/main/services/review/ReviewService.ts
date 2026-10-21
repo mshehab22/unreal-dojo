@@ -38,7 +38,7 @@ export interface ReviewGraders
 /** Failures that mean "this provider cannot review right now": it is set aside and the next provider is tried. */
 const PROVIDER_UNAVAILABLE_CODES: ReadonlySet<AppErrorCode> = new Set<AppErrorCode>(["review-unavailable", "secure-storage-unavailable"]);
 
-/** A reply the reviewer gave but the app could not use. For a code review it falls back instead of failing the Submit (A472). */
+/** A reply the reviewer gave but the app could not use. For a code review it falls back instead of failing the Submit (A602). */
 const BAD_REPLY_CODES: ReadonlySet<AppErrorCode> = new Set<AppErrorCode>(["review-invalid-output", "review-refused"]);
 
 /** Why the API key did not review a submit with failing tests (A70). */
@@ -105,7 +105,7 @@ export class ReviewService
 	{
 		if (!input.run.compiled) return undefined;
 
-		// A70: the paid API reviews only submits where every test passed; a bad or refused reply never loses a finished engine run (A472).
+		// A70: the paid API reviews only submits where every test passed; a bad or refused reply never loses a finished engine run (A602).
 		const options: FailoverOptions = { skipReason: (provider) => (provider.id === "anthropic-api" && !input.run.ok ? API_FAILING_TESTS_REASON : null), fallBackOnBadReply: true };
 
 		return this.withProvider((provider) => this.graders.codeReviewer.review(provider, input, signal), (fallback) => this.testsOnly.reviewCode(input, fallback), options);
@@ -130,12 +130,12 @@ export class ReviewService
 	}
 
 	/**
-	 * Runs one grader on the selected provider and decides what a failure means (A154, A300, A301, A70, A472):
+	 * Runs one grader on the selected provider and decides what a failure means (A154, A300, A301, A70, A602):
 	 * - review-unavailable (not installed, not signed in, key rejected) or secure-storage-unavailable (the key cannot be read):
 	 *   the provider is marked and the next pick runs, in `auto` the next AI provider, otherwise tests only with the reason.
 	 * - review-timeout: tests only at once, with the reason and a "Retry review" hint, never the next AI provider, so a slow
 	 *   Claude Code does not turn into a paid API review on its own. The provider is not marked; the next submit tries it again.
-	 * - refusal and invalid output are thrown as they are, except where `fallBackOnBadReply` is set (the code review, A472): then tests only with a retry hint.
+	 * - refusal and invalid output are thrown as they are, except where `fallBackOnBadReply` is set (the code review, A602): then tests only with a retry hint.
 	 * - a provider `skipReason` names (the API on a submit with failing tests, A70) is not asked; tests only answers with that reason.
 	 * - cancel is always thrown.
 	 * Each marking removes one provider, so the loop ends.

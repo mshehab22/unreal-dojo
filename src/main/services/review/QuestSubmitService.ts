@@ -58,7 +58,7 @@ export class QuestSubmitService
 
 	/**
 	 * Runs, reviews, and records one Submit. Streams progress through `onProgress`, with a `reviewing` step before the review.
-	 * `onRecording` is called once recording starts: from then on the Submit is finished and a cancel no longer applies (A471).
+	 * `onRecording` is called once recording starts: from then on the Submit is finished and a cancel no longer applies (A601).
 	 */
 	async submit(request: RunRequest, onProgress: ProgressListener, signal: AbortSignal, onRecording: () => void = () => undefined): Promise<SubmitOutcome>
 	{
@@ -69,7 +69,7 @@ export class QuestSubmitService
 		const run = await this.dependencies.runQuest(request, onProgress, signal);
 		this.stopIfCancelled(signal);
 
-		// The engine builds every file in full; the reviewer reads the same capped copy the attempt stores, so a finding always points at code the explainer can see (A473).
+		// The engine builds every file in full; the reviewer reads the same capped copy the attempt stores, so a finding always points at code the explainer can see (A603).
 		const reviewedFiles = this.fileRules.capFiles(request.files);
 
 		let review: CodeReview | undefined;

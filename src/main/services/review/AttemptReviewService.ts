@@ -45,7 +45,7 @@ export class AttemptReviewService
 		if (!finding) throw new AppErrorException("attempt-not-found", "That finding is not in this review.", "Open the review again and pick a finding from the list.", `finding ${request.findingIndex} of ${review.findings.length}`);
 
 		return this.graders.explainFinding({
-			// Attempt ids restart at attempt-1 after a progress reset, so the attempt's time is part of the key (A470).
+			// Attempt ids restart at attempt-1 after a progress reset, so the attempt's time is part of the key (A600).
 			cacheKey: `${request.attemptId}:${attempt.at}:${request.findingIndex}`,
 			brief: await this.sources.questBrief(attempt.questId),
 			finding,

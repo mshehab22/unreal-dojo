@@ -1,4 +1,4 @@
-// Keeps the files and reviews stored on Submit attempts small, so "why is this a finding?" can read them without the save file growing without bound (A467, A474).
+// Keeps the files and reviews stored on Submit attempts small, so "why is this a finding?" can read them without the save file growing without bound (A467, A604).
 import type { AttemptRecord } from "@shared/types/progress";
 
 /** Longest single stored file, in characters (about 64 KB of source). */
@@ -36,7 +36,7 @@ export class AttemptFileRules
 		return kept;
 	}
 
-	/** Answers the attempts with files and reviews removed from all but the latest five of `questId`'s attempts that hold either. Other quests are untouched (A467, A474). */
+	/** Answers the attempts with files and reviews removed from all but the latest five of `questId`'s attempts that hold either. Other quests are untouched (A467, A604). */
 	pruneOlderDetails(attempts: readonly AttemptRecord[], questId: string): AttemptRecord[]
 	{
 		let keptForQuest = 0;

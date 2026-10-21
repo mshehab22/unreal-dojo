@@ -77,7 +77,7 @@ describe("fix 1: a provider that cannot review is skipped", () =>
 		expect(anthropicApi.requests).toHaveLength(0);
 	});
 
-	it("does not fail over on cancel, refusal, or invalid output (outside the code review, which falls back, A472)", async () =>
+	it("does not fail over on cancel, refusal, or invalid output (outside the code review, which falls back, A602)", async () =>
 	{
 		const cases: Array<[Error, "run-cancelled" | "review-refused" | "review-invalid-output"]> = [
 			[cancelledError(), "run-cancelled"],

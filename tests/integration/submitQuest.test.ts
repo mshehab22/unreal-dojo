@@ -91,6 +91,7 @@ describe.skipIf(!HAS_ENGINE)(`submitQuest against ${ENGINE_ROOT || "no engine"}`
 				settingsService: {} as never,
 				readEnvironmentStatus: () => { throw new Error("not used"); },
 				getReviewHandlers: () => reviewHandlers,
+				getEditorService: () => { throw new Error("not used"); },
 			}),
 		);
 	}

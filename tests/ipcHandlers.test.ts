@@ -260,14 +260,6 @@ describe("registerHandlers", () =>
 		expectError(await call(IPC_CHANNELS.completeFirstRun), "settings-invalid");
 	});
 
-	it("answers a stub with a not-implemented AppError that names when it arrives", async () =>
-	{
-		const invoke = createInvoker();
-		const error = expectError(await invoke(IPC_CHANNELS.openEditor, null), "not-implemented");
-
-		expect(error.suggestedAction).toMatch(/arrives with/);
-	});
-
 	it("answers every channel with an IpcResponse, never a throw, even with no arguments", async () =>
 	{
 		const invoke = createInvoker();

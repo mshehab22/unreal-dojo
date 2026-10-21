@@ -28,7 +28,7 @@ export interface ReviewHandlers
 	/** Grades the answer to a stored review's reflection question. */
 	answerReflection(request: ReflectionAnswerRequest): Promise<ExplainGrade>;
 
-	/** Runs, reviews, and records a Submit. `onRecording` is called once recording starts (A471). */
+	/** Runs, reviews, and records a Submit. `onRecording` is called once recording starts (A601). */
 	submitQuest(request: RunRequest, onProgress: ProgressListener, signal: AbortSignal, onRecording?: () => void): Promise<SubmitOutcome>;
 }
 
