@@ -18,6 +18,8 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 
 - 2026-10-21, qa: under heavy machine load (load average about 21 with several Unreal builds running), single end-to-end tests fail on timing (Cmd+K glossary search, the smoke window-height check) and pass on rerun. Owner: tester, to raise waits on the slow steps and keep engine runs serialized.
 
+- 2026-10-21, ui-core: the e2e test "a locked stage explains why on hover" fails about 1 run in 3 to 6 in the full suite and passes alone (10 of 10). Low-rate hover timing flake. Owner: ui-core.
+
 ## Unverified on a platform
 
 (The Lead lists here anything that passed on one machine and could not be run on the other.)
