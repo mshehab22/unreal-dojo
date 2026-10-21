@@ -100,7 +100,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
 | M4.P2.2 Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | claude/m3-patterns-world2-game-loop @ 92381be | fixes | 9 of 9; DeltaSeconds clamp, Pow decay, D13 numbers, ghost brief and rubric |
 | M4.P2.3 Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | claude/m4-patterns-world3-update-method @ 0edd88f | fixes | 9 of 9; D13: mirrors the book's crypt example, move to the arena; product.md world list |
-| M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop @ 7fa6c10 | review | Real editor on the Mac: 4.4 s first run, then 32 ms; app wiring after M1.3b |
+| M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop @ 7fa6c10 | fixes | Timings reproduced (4.2 s, 32 ms). Round 1: port ownership, close waits on queued call, quit closes editor, sandbox-write mark against false passes with the filler, rebase on M1.3b |
 | M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | merged | merged | 1 fix round; refused save safe; migration verified |
 | M1.6d Pack 4 gate by world id (A68) | progress-and-rules | builder-rules (session) | m1-6d-pack-gate-by-id | building | Gate names the Component world by id |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
