@@ -38,7 +38,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 - [ ] M1.4 unreal-pipeline: fast loop (McpEditorClient, LiveEditorRunner: CompileLiveCoding then RunTests, header-change detection that falls back to UBT). Proof: same sample quest round-trips in seconds with the editor open; timings recorded.
 - [ ] M1.5 unreal-pipeline: the same four tasks verified on the Mac. If Unreal is not installed there yet, log as unverified and continue.
 - [ ] M1.6 progress-and-rules: XpRules, roles, cards and tiers, spells, Seer Stone, spree and armor, streak and freezes, mastery meter, SM-2 scheduler with review log, DrillScheduler, DailyQuestService, unlock graph, atomic save. Proof: unit tests for every rule in the spec's tables.
-- [ ] M1.7 ai-review: providers, prompts, JSON schemas, parsers, breakdown grader, explain-item grader, provider selection. Proof: unit tests on recorded outputs; one live run through Claude Code logged.
+- [x] M1.7 ai-review (live run still open, problems.md): providers, prompts, JSON schemas, parsers, breakdown grader, explain-item grader, provider selection. Proof: unit tests on recorded outputs; one live run through Claude Code logged.
 - [ ] M1.8 content-engine: GlossaryService, TermLinker (remark plugin), Monaco hover and completion data, full verifier (repetition rules, fade check, pattern use-case counts, reachability, `--engine` mode). Proof: unit tests; verifier on the sample quest with `--engine` on the Windows desktop.
 
 ### M2 Vertical slice (first build Mohammad practices on)
@@ -78,7 +78,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | merged 329a995 | merged | 1 fix round; build about 20 s, headless test about 18 s on UE 5.8.3 Mac |
 | M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | merged 267739b | merged | Passed first review; Windows unverified (problems.md) |
 | M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | claude/m1-6-rules-b3c2e0 @ 30216a8 | fixes | Round 1: lost updates under concurrent calls, rematch XP farming, unspaced recalls count to mastery, bad save blocks startup, Windows rename retry, rematch flag timing, short-build rule, effort XP (Lead: code quests only), potion and badge. Rebasing onto main. |
-| M1.7 AI review providers and graders | ai-review | builder-review (session) | claude/m1-7-ai-review-5c9ef2 @ 2f0521d | fixes | Round 1: signed-out Claude Code blocks submits, injection via compiler output, Windows process tree, tests-only label gaming, line 0, 429 cancel, strip API key env (Lead). Live run unverified (problems.md). Rebasing onto main. |
+| M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
+| M1.7b Review fallback edges | ai-review | builder-review (session) | m1-7b-review-edges | building | Timeout never auto-bills the API; secure storage failure falls back; tests-only ignores kind words |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop | building | Integration test on the Mac with UE 5.8.3 |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | m1-8-verifier | building | Runs --engine on content/examples |
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | m0-2b-content-ipc | building | Shares registerHandlers with M1.3; merge in order |
