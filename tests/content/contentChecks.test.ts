@@ -22,6 +22,7 @@ import { questShapeCheck } from "../../tools/verifier/checks/questShapeCheck";
 import { referenceCheck } from "../../tools/verifier/checks/referenceCheck";
 import { repetitionCheck } from "../../tools/verifier/checks/repetitionCheck";
 import { solutionCheck } from "../../tools/verifier/checks/solutionCheck";
+import { termOrderCheck } from "../../tools/verifier/checks/termOrderCheck";
 import { unlockGraphCheck } from "../../tools/verifier/checks/unlockGraphCheck";
 import { readExamples } from "./contentFixture";
 
@@ -458,6 +459,31 @@ describe("boss reference integrations (A67)", () =>
 			"solutions/yard/lamp/DojoExtra.cpp is not one of lamp's files",
 			"solutions/yard/stranger/ is not named after one of this boss's pieces",
 		]);
+	});
+});
+
+describe("term order (A72)", () =>
+{
+	it("warns for a term only a later concept quest teaches and for one no concept quest teaches, naming where it is taught", async () =>
+	{
+		const early = { ...build("early", "worked"), terms: ["actor", "ue-log"] };
+		const teacher = concept("teacher", ["early"], ["actor"]);
+		const late = { ...build("late", "stub", ["teacher"]), terms: ["actor"] };
+		const found = await termOrderCheck.run(inputWith([[early], [teacher, late]]));
+
+		expect(found.map((problem) => [problem.file, problem.severity, problem.message])).toEqual([
+			["packs/p1/worlds/01-w1/01-early.md", "warning", "terms: \"actor\" is not taught by any earlier concept quest; first taught later, by \"teacher\" (packs/p1/worlds/02-w2/01-teacher.md). It links but does not gate this quest (A72)"],
+			["packs/p1/worlds/01-w1/01-early.md", "warning", "terms: \"ue-log\" is not taught by any earlier concept quest; never taught by a concept quest. It links but does not gate this quest (A72)"],
+		]);
+	});
+
+	it("never warns about a concept quest's own terms, a term taught earlier in the same world, or the format examples", async () =>
+	{
+		const teacher = concept("teacher", [], ["actor", "pawn"]);
+		const user = { ...build("user", "worked", ["teacher"]), terms: ["actor"] };
+		const exampleBuild = { ...build("example-only", "worked"), terms: ["ghost-term"] };
+
+		expect(await termOrderCheck.run(inputWith([[teacher, user]], { examples: [exampleBuild] }))).toEqual([]);
 	});
 });
 
