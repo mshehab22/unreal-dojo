@@ -852,3 +852,51 @@ total                                       39.2  PASSED
 - What the reviewer asked for: (1) a syntax check that never ends (a snippet that includes a named pipe) never answered and left the compiler running, because only the outer `xcrun` was killed; (2) a boss or piece filled from its reference did not bring its own earlier quests, so in a recreated sandbox the World 2 target rack failed on the World 1 boss's practice bell; plus three small wording fixes.
 - What changed: short commands now start in their own process group. On the time limit the whole group is killed and the check answers at once that it took too long (A412). The run now follows each earlier quest's own "Compiles against earlier quests:" line, the brief for a build quest and the spec for a boss, all the way down, by the same rules (A413). When the compiler fails without a message about the snippet, the line-1 error now quotes its first error line. The fill reason says "missing from the sandbox", since a quest reset does not delete sandbox files. A400 no longer names the deleted adapter.
 - Proof: a unit test runs a real child process that leaves a blocking grandchild on stderr. With a 0.5 s limit it answers within 3 s, and the grandchild is gone. A unit test covers the bell case: a target rack built on a boss whose spec names the bell. On UE 5.8.3 under the engine lock, 11 of 11 passed. The fixture boss now also includes the practice bell, and the run reported "Filled f1-practice-bell ... from the reference solution", built, and passed `Dojo.Fx.AfterYard.Bonus`. Trimmed output: `docs/iterations/m1-3b-runquest-run.txt`.
+
+## M4.P2.2 Pack 2 World 2, Time: the Game Loop arc (content-patterns, author-patterns)
+- What changed: the Patterns pack has a second world, "Time", with the full mini-arc for Game Loop (six quests). Unreal runs the outer loop itself, so the learner builds the part an Unreal programmer still writes by hand: a bank that spends each frame's real time in whole fixed steps, so a trap, a replay, or a rolling hazard plays the same at any frame rate. The pattern is named only after the first build (A473).
+- The quests and their observables:
+  - Every frame is a different length (concept): Tick, DeltaSeconds, tick groups, `stat fps` and `t.MaxFPS`, and why a "keep 98 percent" rule cannot be fixed by scaling.
+  - A blade that swings the same on every machine (build, worked): a damped swinging blade stepped 32 times a second. In the editor it swings and settles in the same time under `t.MaxFPS 20` as uncapped; in the tests, one second fed at 64, 8, and 4 frames per second leaves exactly the same angle, and the drawing sits halfway between steps when half a step is banked.
+  - The loop you never write, and the clock you do (concept): the Game Loop card and recognize items.
+  - A replay ghost that keeps its own clock (build, stub): a recorded four-second dash replayed by fixed steps. The label counts Step 0 / 64 up to DONE, double speed finishes in half the time at the same spot, and 0 pauses. Its deliberate failure: one Advance carrying three seconds must not turn into a sprint (A474).
+  - Take the boulder's drag off the frame rate (refactor): a boulder whose drag was applied per frame now stops at the same spot at 30, 60, and 120 frames per second, and rolls exactly as tuned at 60.
+  - When to leave the clock alone (concept): no second loop or sleeping on the game thread, DeltaSeconds for ordinary rates, timers and physics substepping first, and always cap a bank.
+- Also: a new `physics-substepping` glossary entry, the game-loop card's two use cases and two new items, `firstQuestId` on `tick`, `deltatime`, and `tick-groups` (A476).
+- Proof, UE 5.8.3 on the MacBook Air, fresh copies of the sandbox template, commands from the unreal-pipeline spec, under the shared engine lock:
+  - Reference solutions for both patterns worlds: build succeeded, 18 of 18 tests passed (9 new).
+  - Starters: all compile; 15 of 18 fail. On the World 2 side, every test fails except the boulder's 60 frames per second test, which passes on the working starter by design.
+  - The obvious replay ghost (no cap): only `HitchDoesNotTurnIntoASprint` fails, with "expected 4, was 32".
+  - Content verifier `--pack patterns` (full M1.8 checks on main): no problems.
+- Not done: no breakdown or boss for Time yet (A470); Update Method and Double Buffer come next in this world. No screenshots: the Mac's editor runs with `-NullRHI`. Windows unverified. Decisions A470 to A477.
+
+### Fix round 1
+- The frame-time card now says how DeltaSeconds is shaped before Tick sees it: time dilation scales it, and World Settings' Max Undilated Frame Time (0.4 seconds by default) caps it, so a long stall reaches Tick as 0.4 seconds. The replay ghost brief, the game-loop card's recall item 4, and A474 now describe the three-second hitch as one direct `Advance` call (or a project that raised the cap), not a frame.
+- A lone per-update decay is now taught as frame-rate independent with a power of DeltaSeconds. Fixed steps are kept for rules that interact within an update and for results that must repeat; the blade brief, the card, and the when-not quest say the same.
+- Originality (D13): the when-not quest's runaway-bank question now uses this world's own numbers (a 1/32 second step that costs 40 milliseconds).
+- Replay ghost: the brief's first line now starts at Step 0 / 64. The brief and the rubric agree that a negative playback rate is treated as 0 (the reference already clamps), and the playback test now checks it.
+- Engine, UE 5.8.3 on the Mac, fresh sandboxes under the engine lock: reference solutions 18 of 18 pass (World 1 and World 2); starters compile and 15 of 18 fail, the same split as before (the boulder's 60 frames per second test passes on its working starter by design).
+
+## M4.P2.3 Pack 2 World 3, Update Method (content-patterns, author-patterns)
+- What changed: a third Patterns world, "Things that act on their own", with the full mini-arc for Update Method (six quests). Each thing that behaves over time owns a function for one frame of that behavior, and the engine calls it every frame. The learner meets it as an actor's own Tick, then as one manager walking a plain struct array, then refactors a central director into it. Per the Lead, this pattern is its own world, which changes the plan in A472 (A491).
+- The quests and their observables:
+  - Whose job is this frame? (concept): slicing behavior into frames, storing where you left off, update order inside a frame, tick prerequisites, and idling.
+  - A drone that patrols on its own (build, worked): the >> label glides 400 centimeters, turns into <<, and comes back, even under `t.MaxFPS 2`. In the tests, three seconds in frames of 0.01, 0.1, and 1 second all end 100 centimeters out, and a single five-second frame that passes both ends still lands inside.
+  - Each thing owns its frame (concept): the Update Method card and recognize items.
+  - A spark swarm with one walk per frame (build, stub): `ke * Launch` sends an orange spark out that bursts into 2, then 4, then fades, while the label counts 1, 2, 4, 0, all from one actor. Its deliberate failure: sparks born mid-walk must wait a step (A494).
+  - Hand the arena's behavior back to its things (refactor): braziers and sweepers waver and turn as before, but each from its own Tick, and they still move with no director in the level.
+  - When nothing needs to happen every frame (concept): listen instead of polling, timers for schedules, stop idle ticking, and one walk for thousands of tiny things.
+- Also: a new `tick-prerequisite` glossary entry, and the update-method card's two use cases and two new items (A495).
+- Proof, UE 5.8.3 on the MacBook Air, fresh copies of the sandbox template, commands from the unreal-pipeline spec, under the shared engine lock:
+  - Reference solutions for all three patterns worlds: build succeeded, 27 of 27 tests passed (9 new).
+  - Starters: all compile; 22 of 27 fail. On the World 3 side, only the arena's look test (working starter) and the drone's engine-drives-it test pass, by design.
+  - The obvious swarm walk (loop to the live count): fails `NewSparksWaitAStep` and `LaunchBurstsToTheEnd`, both from children moving in the step they were born.
+  - Content verifier `--pack patterns`: no problems.
+- Not done: no boss for this world yet (A490). No screenshots (editor runs with `-NullRHI` on this Mac). Windows unverified. Decisions A490 to A496.
+
+### Fix round 1
+- Rebased on World 2's fix round.
+- Originality (D13): the world no longer echoes the source's crypt setting. It now takes place on the arena's training floor, and the refactor is `p3-arena-refactor` with `ADojoP3ArenaBrazier`, `ADojoP3ArenaSweeper`, and `ADojoP3ArenaDirector`. Two blocking examples are new: a scoreboard rolling its number up in one for loop, and a winner's banner fading in inside one loop. They replace the patrol written as loops. The card's prompts and its which-pattern item are rewritten (the item is now a pit lane in a racing game). The when-not quest's board game is now an armory shop whose prices change only on a sale. The patrol drone build stays.
+- The drone brief now says its five-second update is a direct Tick call in the tests, since real frames reach Tick capped at 0.4 seconds by default. Its editor step uses Speed 900 under `t.MaxFPS 2` so each frame really carries it most of a corridor.
+- `docs/product.md` lists Pack 2's worlds as one ordered list, and A370 carries a dated note that A491 supersedes it in part. A491 now records that the Lead's A68 re-pointed the Pack 4 gate.
+- Engine, UE 5.8.3 on the Mac, fresh sandboxes under the engine lock: reference solutions 27 of 27 pass across the three patterns worlds; starters compile and 22 of 27 fail, the same split as before. The obvious swarm walk still fails only `NewSparksWaitAStep` and `LaunchBurstsToTheEnd`.

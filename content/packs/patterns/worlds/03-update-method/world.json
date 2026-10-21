@@ -1,0 +1,5 @@
+{
+	"id": "update-method",
+	"title": "Things that act on their own",
+	"summary": "The arena's training floor is filling up with patrol drones, braziers, sweeping blades, and firework sparks, and each one has to keep moving every frame without one giant function that knows them all. Learn to give each thing its own per-frame behavior, keep its place between frames, and change the crowd safely while it moves."
+}

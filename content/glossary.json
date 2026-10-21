@@ -1337,7 +1337,8 @@
       "tick-groups",
       "timer-manager",
       "delegate"
-    ]
+    ],
+    "firstQuestId": "p2-frame-time"
   },
   {
     "id": "deltatime",
@@ -1355,7 +1356,8 @@
       "tick",
       "fmath",
       "timer-manager"
-    ]
+    ],
+    "firstQuestId": "p2-frame-time"
   },
   {
     "id": "tick-groups",
@@ -1374,7 +1376,27 @@
       "tick",
       "primary-actor-tick",
       "physics-simulation"
-    ]
+    ],
+    "firstQuestId": "p2-frame-time"
+  },
+  {
+    "id": "tick-prerequisite",
+    "term": "Tick Prerequisite",
+    "aliases": [
+      "AddTickPrerequisiteActor",
+      "AddTickPrerequisiteComponent",
+      "tick dependency"
+    ],
+    "category": "framework",
+    "short": "A rule that one actor or component must tick after another within the same frame.",
+    "long": "Inside one frame the engine calls ticking objects one after another, and their order is not promised by where they sit in the level. When a camera rig must read its pawn's position after the pawn has moved, or a health bar must read health after damage was applied, call AddTickPrerequisiteActor (or AddTickPrerequisiteComponent) so the engine always ticks the dependency first. Tick groups give coarse order around physics; prerequisites give exact order between two things.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/actor-ticking-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tick",
+      "tick-groups",
+      "primary-actor-tick"
+    ],
+    "firstQuestId": "p3-per-frame-behavior"
   },
   {
     "id": "primary-actor-tick",
@@ -1394,7 +1416,8 @@
       "tick-groups",
       "timer-manager",
       "object-pool"
-    ]
+    ],
+    "firstQuestId": "p2-frame-time"
   },
   {
     "id": "timer-handle",
@@ -2185,6 +2208,26 @@
       "generate-overlap-events",
       "tick-groups"
     ]
+  },
+  {
+    "id": "physics-substepping",
+    "term": "Physics Substepping",
+    "aliases": [
+      "Substepping",
+      "substep",
+      "Max Substep Delta Time",
+      "Max Substeps"
+    ],
+    "category": "physics",
+    "short": "A project setting that splits one long frame into several smaller physics steps, so simulated bodies stay stable when the frame rate drops.",
+    "long": "A spring, a ragdoll, or a stack of crates is tuned for small physics updates; one long frame can make them jitter or fly apart. With substepping turned on in Project Settings under Physics, the engine runs several shorter physics steps inside that frame instead of one long one, up to a maximum count you set. It is the engine's built-in answer for simulated bodies. Gameplay code that must repeat exactly, such as a replay, still needs its own fixed step, because substepping keeps physics stable without making it identical across machines.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/physics-sub-stepping-in-unreal-engine?application_version=5.8",
+    "related": [
+      "physics-simulation",
+      "tick-groups",
+      "deltatime"
+    ],
+    "firstQuestId": "p2-game-loop-card"
   },
   {
     "id": "enhanced-input",

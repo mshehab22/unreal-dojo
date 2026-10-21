@@ -1,0 +1,5 @@
+{
+	"id": "time",
+	"title": "Time",
+	"summary": "A trap maker's arena has to play the same on a fast desktop and a slow laptop, and its replays have to match the round that was played. Learn how the engine moves time forward every frame, and when to take the clock into your own hands."
+}
