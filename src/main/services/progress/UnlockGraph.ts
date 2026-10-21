@@ -4,6 +4,7 @@ import type { MasteryLevel, PlayerProgress, QuestAvailability } from "@shared/ty
 import { MasteryRules } from "./MasteryRules";
 import type { RuleQuest } from "./RuleQuest";
 import { PACK_GATES } from "./rules";
+import { taughtTermsOf } from "./taughtTerms";
 import { TestOutRules } from "./TestOutRules";
 
 /** The learner state the graph reads. */
@@ -52,7 +53,7 @@ export class UnlockGraph
 		this.questsById = new Map(quests.map((quest) => [quest.id, quest]));
 		this.alwaysAvailableIds = this.findAlwaysAvailable();
 		this.packGateBossIds = this.findPackGates();
-		this.taughtTerms = new Set(quests.filter((quest) => quest.kind === "concept").flatMap((quest) => quest.terms));
+		this.taughtTerms = taughtTermsOf(quests);
 	}
 
 	/** Availability of every quest. */

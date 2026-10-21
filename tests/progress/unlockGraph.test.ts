@@ -81,8 +81,11 @@ describe("UnlockGraph", () =>
 	{
 		const rules = new TestOutRules();
 
-		expect(rules.testedOutWorlds([first, second], (term) => ({ "term.actor": "proficient", "term.component": "mastered" })[term] as MasteryLevel)).toEqual(["world-1"]);
-		expect(rules.testedOutWorlds([first, second], (term) => ({ "term.actor": "proficient", "term.component": "familiar" })[term] as MasteryLevel)).toEqual([]);
+		const terms = ["term.actor", "term.component"];
+
+		expect(rules.passes(terms, (term) => ({ "term.actor": "proficient", "term.component": "mastered" })[term] as MasteryLevel)).toBe(true);
+		expect(rules.passes(terms, (term) => ({ "term.actor": "proficient", "term.component": "familiar" })[term] as MasteryLevel)).toBe(false);
+		expect(rules.passes([], () => "mastered")).toBe(false);
 	});
 
 	it("opens Pack 4 only after the Pack 1 world 5 and Pack 2 world 4 bosses", () =>

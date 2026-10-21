@@ -61,7 +61,7 @@ export class DrillItemBank
 						const item: DrillItem = { source: "quest-question", questId: quest.id, question };
 						const keys = question.type === "which-pattern" ? [question.answer] : quest.terms;
 
-						for (const key of keys) this.add(key, { ...base, itemId: key, format: formatOf(question), topic: world.id, item });
+						for (const key of keys) this.add(key, { ...base, itemId: key, format: formatOf(question), topic: world.id, item, contentId: `${quest.id}/${question.id}` });
 					}
 				}
 
@@ -70,7 +70,7 @@ export class DrillItemBank
 					for (const block of quest.parsons)
 					{
 						const key = parsonsItemId(quest.id, block.id);
-						this.add(key, { ...base, itemId: key, format: "parsons", topic: world.id, item: { source: "parsons", questId: quest.id, parsons: block } });
+						this.add(key, { ...base, itemId: key, format: "parsons", topic: world.id, item: { source: "parsons", questId: quest.id, parsons: block }, contentId: key });
 					}
 				}
 			}
@@ -80,13 +80,13 @@ export class DrillItemBank
 		{
 			for (const question of card.recall)
 			{
-				this.add(card.id, { itemId: card.id, format: formatOf(question), topic: "patterns", item: { source: "pattern-recall", patternId: card.id, question } });
+				this.add(card.id, { itemId: card.id, format: formatOf(question), topic: "patterns", item: { source: "pattern-recall", patternId: card.id, question }, contentId: `${card.id}/${question.id}` });
 			}
 
 			for (const question of card.scenarios)
 			{
 				const key = question.type === "which-pattern" ? question.answer : card.id;
-				this.add(key, { itemId: key, format: formatOf(question), topic: "patterns", item: { source: "pattern-scenario", patternId: card.id, question } });
+				this.add(key, { itemId: key, format: formatOf(question), topic: "patterns", item: { source: "pattern-scenario", patternId: card.id, question }, contentId: `${card.id}/${question.id}` });
 			}
 		}
 	}

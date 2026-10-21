@@ -128,7 +128,7 @@ describe("ProgressService hints and Seer Stone", () =>
 		const { service } = createTestProgressService(localMoment(2026, 10, 21), [0.5]);
 		await service.getDailyQuest({ conceptQuestIds: [], shortBuildQuestIds: [] });
 		await service.chooseDailyOffer(0);
-		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 }, [])).chest).toBe("seer-stone");
+		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 })).chest).toBe("seer-stone");
 
 		const fail = { quest: firstQuest, score: 30, passed: false, compiled: false, isSubmit: true };
 		await service.recordAttempt(fail, quests);
@@ -197,14 +197,14 @@ describe("ProgressService reviews and drills", () =>
 		}
 
 		// A due drill never tests a world out; only a test-out drill for that world does (A313).
-		expect((await service.finishDrill({ correctCount: 6, totalCount: 7 }, [termQuest])).testedOutWorldIds).toEqual([]);
+		expect((await service.finishDrill({ correctCount: 6, totalCount: 7 })).testedOutWorldIds).toEqual([]);
 
-		const outcome = await service.finishDrill({ correctCount: 6, totalCount: 7 }, [termQuest], "world-1");
+		const outcome = await service.finishDrill({ correctCount: 6, totalCount: 7 }, { rewarded: true, testOut: { worldId: "world-1", termIds: termQuest.terms } });
 
 		expect(outcome.xpGained).toBe(10);
 		expect(outcome.streak.count).toBe(1);
 		expect(outcome.testedOutWorldIds).toEqual(["world-1"]);
-		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 }, [termQuest], "world-1")).testedOutWorldIds).toEqual([]);
+		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 }, { rewarded: true, testOut: { worldId: "world-1", termIds: termQuest.terms } })).testedOutWorldIds).toEqual([]);
 	});
 });
 
@@ -220,7 +220,7 @@ describe("ProgressService daily quest and settings", () =>
 		await service.chooseDailyOffer(0);
 		await expect(service.chooseDailyOffer(1)).rejects.toMatchObject({ appError: { code: "invalid-payload" } });
 
-		const outcome = await service.finishDrill({ correctCount: 6, totalCount: 6 }, []);
+		const outcome = await service.finishDrill({ correctCount: 6, totalCount: 6 });
 		expect(outcome.chest).toBe("freeze");
 		expect(service.getProgress().streak.freezes).toBe(1);
 	});
@@ -339,7 +339,7 @@ describe("ProgressService fix round 1", () =>
 			const { service } = createTestProgressService(localMoment(2026, 10, 21), [roll]);
 			await service.getDailyQuest({ conceptQuestIds: [], shortBuildQuestIds: [] });
 			await service.chooseDailyOffer(0);
-			await service.finishDrill({ correctCount: 6, totalCount: 6 }, []);
+			await service.finishDrill({ correctCount: 6, totalCount: 6 });
 
 			expect(read(service)).toEqual(expected);
 		}
@@ -350,13 +350,13 @@ describe("ProgressService fix round 1", () =>
 		const { service, clock } = createTestProgressService(localMoment(2026, 10, 21), [0.8]);
 		await service.getDailyQuest({ conceptQuestIds: [], shortBuildQuestIds: [] });
 		await service.chooseDailyOffer(0);
-		await service.finishDrill({ correctCount: 6, totalCount: 6 }, []);
+		await service.finishDrill({ correctCount: 6, totalCount: 6 });
 
 		clock.set(localMoment(2026, 10, 21, 12, 29));
-		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 }, [])).xpGained).toBe(15);
+		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 })).xpGained).toBe(15);
 
 		clock.set(localMoment(2026, 10, 21, 12, 30));
-		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 }, [])).xpGained).toBe(10);
+		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 })).xpGained).toBe(10);
 	});
 
 	it("carries the month badge through finishDrill and recordAttempt outcomes", async () =>
@@ -369,7 +369,7 @@ describe("ProgressService fix round 1", () =>
 		const drillDay = createTestProgressService(localMoment(2027, 2, 28), [0], earlierDays);
 		await drillDay.service.getDailyQuest({ conceptQuestIds: ["c1"], shortBuildQuestIds: [] });
 		await drillDay.service.chooseDailyOffer(0);
-		expect((await drillDay.service.finishDrill({ correctCount: 6, totalCount: 6 }, [])).monthBadge).toBe("2027-02");
+		expect((await drillDay.service.finishDrill({ correctCount: 6, totalCount: 6 })).monthBadge).toBe("2027-02");
 
 		const concept = makeQuest({ id: "c1", kind: "concept" });
 		const conceptDay = createTestProgressService(localMoment(2027, 2, 28), [0], earlierDays);
@@ -408,3 +408,28 @@ describe("ProgressService refused save", () =>
 		expect([...fileSystem.files.keys()]).toEqual(["/user-data/progress.json"]);
 	});
 });
+
+describe("ProgressService daily cap across drills", () =>
+{
+	it("lowers the day's cap by the items already reviewed today, so a backlog of 25 is not cleared in one day", async () =>
+	{
+		const { service } = createTestProgressService(localMoment(2026, 10, 21, 9), [0], (progress) =>
+		{
+			for (let index = 0; index < 25; index++) progress.schedule[`item-${String(index).padStart(2, "0")}`] = localMoment(2026, 10, 21, 8).toISOString();
+		});
+
+		expect(service.getDrillSummary()).toMatchObject({ dueToday: 20, overflow: 5 });
+
+		// The first drill reviews ten due items.
+		for (const itemId of service.getScheduledDueItemIds().slice(0, 10)) await service.reviewItem(itemId, 4);
+		expect(service.getDrillSummary()).toMatchObject({ dueToday: 10, overflow: 5 });
+		expect(service.getScheduledDueItemIds()).toHaveLength(10);
+
+		// The second drill reviews ten more; the last five slide to tomorrow.
+		for (const itemId of service.getScheduledDueItemIds()) await service.reviewItem(itemId, 4);
+		expect(service.getDrillSummary()).toMatchObject({ dueToday: 0, overflow: 5 });
+		expect(service.getScheduledDueItemIds()).toEqual([]);
+		expect(service.getDueItemIds()).toEqual([]);
+	});
+});
+

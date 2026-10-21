@@ -319,7 +319,8 @@ describe("drills", () =>
 		const { handlers, service } = setup({ prepare: (progress) => { progress.memory["term.a"] = proficient; progress.memory["term.b"] = proficient; } });
 		const session = await handlers.startDrill.handle({ kind: "test-out", worldId: "world-1" });
 
-		expect(session.items.map((item) => item.itemId).sort()).toEqual(["observer", "term.a", "term.b"]);
+		// Observer's card is not unlocked yet, so the test-out does not name it (A64, A322).
+		expect(session.items.map((item) => item.itemId).sort()).toEqual(["term.a", "term.b"]);
 
 		for (const sessionItem of session.items) await handlers.answerDrillItem.handle({ sessionId: session.sessionId, itemId: sessionItem.itemId, response: rightAnswerFor(sessionItem.item) });
 
@@ -361,3 +362,82 @@ describe("drills", () =>
 		await expect(handlers.startDrill.handle({ kind: "parsons-fallback", questId: conceptQuest.id })).rejects.toMatchObject({ appError: { code: "invalid-payload" } });
 	});
 });
+
+describe("M1.6b fix round 1", () =>
+{
+	const proficient = { ease: 2.5, intervalDays: 8, repetitions: 3, mastery: "proficient" as const, lastReviewedAt: "2026-10-01T09:00:00.000Z" };
+
+	it("lets practice drills run but pays no XP, streak, or daily drill credit without a scheduled due item (A320)", async () =>
+	{
+		const { handlers, service, clock } = setup();
+		await passConcept(handlers);
+		await handlers.getDailyQuest.handle();
+		await handlers.chooseDailyOffer.handle(0);
+		const streakBefore = service.getProgress().streak.count;
+
+		for (let round = 0; round < 4; round++)
+		{
+			const practice = await handlers.startDrill.handle({ kind: "due" });
+			for (const item of practice.items) await handlers.answerDrillItem.handle({ sessionId: practice.sessionId, itemId: item.itemId, response: rightAnswerFor(item.item) });
+
+			const outcome = await handlers.finishDrill.handle(practice.sessionId);
+			expect(outcome.xpGained).toBe(0);
+			expect(outcome.chest).toBeUndefined();
+		}
+
+		expect(service.getProgress().streak.count).toBe(streakBefore);
+		expect(service.getProgress().daily.done).toBe(false);
+
+		clock.advanceDays(1);
+		const due = await handlers.startDrill.handle({ kind: "due" });
+		for (const item of due.items) await handlers.answerDrillItem.handle({ sessionId: due.sessionId, itemId: item.itemId, response: rightAnswerFor(item.item) });
+		expect((await handlers.finishDrill.handle(due.sessionId)).xpGained).toBe(10);
+	});
+
+	it("never shows the same question twice in one drill, even when it asks about two due terms", async () =>
+	{
+		const { handlers, clock } = setup();
+		await passConcept(handlers);
+		clock.advanceDays(1);
+
+		const session = await handlers.startDrill.handle({ kind: "due" });
+		const questionKeys = session.items.map((item) => (item.item.source === "parsons" ? item.itemId : `${item.item.source}/${"questId" in item.item ? item.item.questId : item.item.patternId}/${item.item.question.id}`));
+
+		expect(session.items.map((item) => item.itemId)).toEqual(expect.arrayContaining(["term.a", "term.b"]));
+		expect(new Set(questionKeys).size).toBe(questionKeys.length);
+	});
+
+	it("tests out a world whose quests list a term no concept quest teaches, leaving that term out (A322)", async () =>
+	{
+		const content = fixtureContent();
+		const world = content.packs[0]?.worlds[0];
+		const build = world?.quests.find((quest) => quest.id === "w1-build");
+		if (!build) throw new Error("expected the build quest");
+		build.terms = ["term.a", "term.untaught"];
+
+		const { handlers } = setup({ content, prepare: (progress) => { progress.memory["term.a"] = proficient; progress.memory["term.b"] = proficient; } });
+
+		expect((await handlers.getTestOutStatus.handle())["world-1"]).toEqual({ eligible: true, testedOut: false });
+
+		const session = await handlers.startDrill.handle({ kind: "test-out", worldId: "world-1" });
+		expect(session.items.map((item) => item.itemId)).not.toContain("term.untaught");
+
+		for (const item of session.items) await handlers.answerDrillItem.handle({ sessionId: session.sessionId, itemId: item.itemId, response: rightAnswerFor(item.item) });
+		expect((await handlers.finishDrill.handle(session.sessionId)).testedOutWorldIds).toEqual(["world-1"]);
+	});
+
+	it("includes a world's pattern in its test-out only once that pattern's card is unlocked (A64, A322)", async () =>
+	{
+		const { handlers } = setup({ prepare: (progress) =>
+		{
+			progress.memory["term.a"] = proficient;
+			progress.memory["term.b"] = proficient;
+			progress.patternCards["observer"] = { tier: "bronze", useCasesPassed: ["w1-build"] };
+		} });
+
+		const session = await handlers.startDrill.handle({ kind: "test-out", worldId: "world-1" });
+
+		expect(session.items.map((item) => item.itemId).sort()).toEqual(["observer", "term.a", "term.b"]);
+	});
+});
+

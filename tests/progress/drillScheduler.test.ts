@@ -24,6 +24,8 @@ function progressWithDue(count: number)
 	return progress;
 }
 
+const random = new SequenceRandom([0.3, 0.7, 0.1, 0.9, 0.5]);
+
 describe("DrillScheduler due today", () =>
 {
 	it("caps due items at 20 per day and slides the overflow to the next day", () =>
@@ -33,6 +35,29 @@ describe("DrillScheduler due today", () =>
 		expect(summary.dueToday).toBe(20);
 		expect(summary.overflow).toBe(5);
 		expect(scheduler.dueToday(progressWithDue(25), now)).toHaveLength(20);
+	});
+
+	it("counts distinct items reviewed since local midnight against the cap, and ignores yesterday's reviews", () =>
+	{
+		const progress = progressWithDue(30);
+		const reviewedAt = (hour: number, day = 21) => localMoment(2026, 10, day, hour).toISOString();
+		progress.reviewLog = [
+			...Array.from({ length: 12 }, (_, index) => ({ itemId: `done-${index}`, at: reviewedAt(7), quality: 4, intervalDays: 1, ease: 2.5 })),
+			{ itemId: "done-0", at: reviewedAt(8), quality: 4, intervalDays: 1, ease: 2.5 },
+			{ itemId: "yesterday", at: reviewedAt(20, 20), quality: 4, intervalDays: 1, ease: 2.5 },
+		];
+
+		expect(scheduler.remainingCap(progress, now)).toBe(8);
+		expect(scheduler.dueToday(progress, now)).toHaveLength(8);
+		expect(scheduler.summary(progress, now)).toMatchObject({ dueToday: 8, overflow: 22 });
+	});
+
+	it("never repeats a question that asks about two items", () =>
+	{
+		const shared = (itemId: string): DrillCandidate => ({ itemId, format: "recall", topic: "topic", contentId: "quest/q1" });
+		const items = scheduler.compose([shared("term.a"), shared("term.b"), candidate("term.c", "recall", "topic")], [], random);
+
+		expect(items.map((item) => item.itemId).sort()).toEqual(["term.a", "term.c"]);
 	});
 
 	it("counts items due later today but not tomorrow", () =>
@@ -86,8 +111,6 @@ function candidate(itemId: string, format: DrillCandidate["format"], topic: stri
 
 describe("DrillScheduler composition", () =>
 {
-	const random = new SequenceRandom([0.3, 0.7, 0.1, 0.9, 0.5]);
-
 	it("holds at most 10 items", () =>
 	{
 		const priority = Array.from({ length: 15 }, (_, index) => candidate(`r${index}`, "recall", `topic-${index % 3}`));

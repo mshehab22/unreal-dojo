@@ -35,6 +35,7 @@ import type { RandomSource } from "./RandomSource";
 import type { RuleQuest } from "./RuleQuest";
 import { FAILED_SUBMITS_BEFORE_OFFERS } from "./rules";
 import { Sm2Scheduler } from "./Sm2Scheduler";
+import { taughtTermsOf } from "./taughtTerms";
 import { toRuleQuests } from "./toRuleQuests";
 
 /** The part of the content catalog this service reads. ContentCatalog meets it. */
@@ -123,8 +124,9 @@ export class ProgressContentService
 		const progress = this.progress.getProgress();
 		const result: Record<string, WorldTestOutStatus> = {};
 
-		for (const [worldId, terms] of this.termsByWorld(quests))
+		for (const worldId of new Set(quests.map((quest) => quest.worldId)))
 		{
+			const terms = this.testOutTerms(quests, worldId);
 			const weak = terms.filter((term) => !this.mastery.isAtLeast(progress.memory[term]?.mastery, "proficient"));
 			const status: WorldTestOutStatus = { eligible: terms.length > 0 && weak.length === 0, testedOut: progress.testedOutWorldIds.includes(worldId) };
 
@@ -251,8 +253,10 @@ export class ProgressContentService
 	async startDrill(request: DrillRequest): Promise<DrillSession>
 	{
 		const variants = await this.composeSession(request);
+		const scheduledDue = new Set(this.progress.getScheduledDueItemIds());
+		const rewarded = request.kind !== "parsons-fallback" && variants.some((variant) => scheduledDue.has(variant.itemId));
 
-		return structuredClone(this.sessions.open(request, variants).session);
+		return structuredClone(this.sessions.open(request, variants, rewarded).session);
 	}
 
 	/** Grades one drill answer and reschedules its item. An explain item self-checked without an AI grader is not scheduled (A318). */
@@ -292,7 +296,7 @@ export class ProgressContentService
 		return { ...result, explainGrade, modelAnswer: grade.question.modelAnswer };
 	}
 
-	/** Ends a session. A due or test-out drill with every item answered pays drill XP and keeps the streak; an unfinished drill and the Parsons fallback pay nothing (A319). */
+	/** Ends a session. A finished due or test-out drill that held a scheduled due item pays drill XP and keeps the streak (A320); a practice drill, an unfinished drill, and the Parsons fallback pay nothing (A319). A finished test-out drill still tests the world out. */
 	async finishDrill(sessionId: string): Promise<DrillOutcome>
 	{
 		const stored = this.sessions.get(sessionId);
@@ -306,9 +310,11 @@ export class ProgressContentService
 
 		if (!complete || request.kind === "parsons-fallback") return this.progress.unrewardedDrillOutcome(totals);
 
+		if (request.kind !== "test-out") return this.progress.finishDrill(totals, { rewarded: stored.rewarded });
+
 		const { quests } = await this.view();
 
-		return this.progress.finishDrill(totals, quests, request.kind === "test-out" ? request.worldId : undefined);
+		return this.progress.finishDrill(totals, { rewarded: stored.rewarded, testOut: { worldId: request.worldId, termIds: this.testOutTerms(quests, request.worldId) } });
 	}
 
 	/** Picks the session's variants for each kind of request. */
@@ -335,8 +341,10 @@ export class ProgressContentService
 			if (!status) throw new AppErrorException("world-not-found", "That world does not exist.", "Open the World Map again.", request.worldId);
 			if (!status.eligible) throw new AppErrorException("quest-locked", `This world's test-out is not open yet. ${status.reason ?? ""}`.trim(), "Drill its terms until each is Proficient.");
 
-			const worldQuests = quests.filter((quest) => quest.worldId === request.worldId);
-			const keys = [...new Set(worldQuests.flatMap((quest) => [...quest.terms, ...quest.patterns]))];
+			// Taught terms plus only the patterns whose card is unlocked, so a test-out never names a pattern before it is built (A64, A322).
+			const cards = this.progress.getProgress().patternCards;
+			const patterns = quests.filter((quest) => quest.worldId === request.worldId).flatMap((quest) => quest.patterns).filter((pattern) => cards[pattern] !== undefined);
+			const keys = [...new Set([...this.testOutTerms(quests, request.worldId), ...patterns])];
 			const variants = this.drillScheduler.compose(keys.flatMap((key) => this.shuffle(bank.variantsOf(key))), [], this.random);
 
 			if (variants.length === 0) throw new AppErrorException("quest-locked", "This world has nothing to test yet.", "Come back once its quests have questions.");
@@ -438,19 +446,12 @@ export class ProgressContentService
 		return this.graders.gradeExplain({ prompt, modelAnswer, rubric: [...rubric], answer });
 	}
 
-	/** Terms of each world (the union over its quests), in map order. */
-	private termsByWorld(quests: RuleQuest[]): Map<string, string[]>
+	/** A world's test-out terms: the terms its quests list that some concept quest teaches (A322). */
+	private testOutTerms(quests: RuleQuest[], worldId: string): string[]
 	{
-		const byWorld = new Map<string, Set<string>>();
+		const taught = taughtTermsOf(quests);
 
-		for (const quest of quests)
-		{
-			const terms = byWorld.get(quest.worldId) ?? new Set<string>();
-			quest.terms.forEach((term) => terms.add(term));
-			byWorld.set(quest.worldId, terms);
-		}
-
-		return new Map([...byWorld.entries()].map(([worldId, terms]) => [worldId, [...terms]]));
+		return [...new Set(quests.filter((quest) => quest.worldId === worldId).flatMap((quest) => quest.terms))].filter((term) => taught.has(term));
 	}
 
 	/** The quest facts and drill bank for the current content load, built once per load. */

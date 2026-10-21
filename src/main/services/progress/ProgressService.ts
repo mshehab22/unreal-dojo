@@ -74,6 +74,16 @@ export interface ReviewContext
 	earnedInWorldId?: string;
 }
 
+/** How a finished drill counts. */
+export interface DrillFinishOptions
+{
+	/** True when the drill held at least one scheduled due item: it pays drill XP, streak credit, and the daily drill offer (A320). */
+	rewarded: boolean;
+
+	/** For a test-out drill: the world and the taught terms that must all still be proficient. */
+	testOut?: { worldId: string; termIds: string[] };
+}
+
 /** Drill totals the drill session hands over when it finishes. */
 export interface DrillTotals
 {
@@ -457,48 +467,73 @@ export class ProgressService
 		});
 	}
 
-	/** Ends a drill: flat drill XP, the streak, the daily offer and its chest. A test-out drill (`testOutWorldId`) tests the world out when every term of it is still at proficient afterwards (A313). */
-	finishDrill(totals: DrillTotals, allQuests: RuleQuest[], testOutWorldId?: string): Promise<DrillOutcome>
+	/**
+	 * Ends a drill. A rewarded drill (one that held at least one scheduled due item, A320) pays the flat drill XP, keeps the streak,
+	 * and completes the daily drill offer with its chest; a practice drill pays none of that. A test-out drill tests the world out
+	 * when every one of `testOut.termIds` (its taught terms, A322) is still at proficient afterwards (A313), rewarded or not.
+	 */
+	finishDrill(totals: DrillTotals, options: DrillFinishOptions = { rewarded: true }): Promise<DrillOutcome>
 	{
 		return this.enqueue(async () =>
 		{
 			const now = this.clock.now();
-			const xpGained = this.xpRules.drillXp(this.potionActive(this.progress, now));
-			const streakUpdate = this.streakRules.recordActivity(this.progress.streak, now);
-
-			let next: PlayerProgress = { ...this.progress, xp: this.progress.xp + xpGained, streak: streakUpdate.streak };
-			next.role = this.levelRules.roleForLevel(this.levelRules.levelForXp(next.xp));
-
-			const completion = this.dailyQuest.complete(next.daily, now, "drill");
-			next.daily = completion.state;
-
+			let next: PlayerProgress = { ...this.progress };
+			let xpGained = 0;
+			let streak: DrillOutcome["streak"] = { count: this.streakRules.countAt(next.streak, now) };
 			let chest: ChestReward | undefined;
-			if (completion.completedNow)
+			let monthBadge: string | undefined;
+
+			if (options.rewarded)
 			{
-				chest = this.chestRules.roll(next, this.random);
-				next = this.applyChest(next, chest, now);
+				xpGained = this.xpRules.drillXp(this.potionActive(next, now));
+				const streakUpdate = this.streakRules.recordActivity(next.streak, now);
+
+				next = { ...next, xp: next.xp + xpGained, streak: streakUpdate.streak };
+				next.role = this.levelRules.roleForLevel(this.levelRules.levelForXp(next.xp));
+				streak = streakUpdate.milestoneReached === undefined ? { count: streakUpdate.streak.count } : { count: streakUpdate.streak.count, milestoneReached: streakUpdate.milestoneReached };
+
+				const completion = this.dailyQuest.complete(next.daily, now, "drill");
+				next.daily = completion.state;
+				monthBadge = completion.monthBadge;
+
+				if (completion.completedNow)
+				{
+					chest = this.chestRules.roll(next, this.random);
+					next = this.applyChest(next, chest, now);
+				}
 			}
 
-			const worldQuests = allQuests.filter((quest) => quest.worldId === testOutWorldId);
-			const testedOut = testOutWorldId === undefined ? [] : this.testOutRules.testedOutWorlds(worldQuests, (itemId) => next.memory[itemId]?.mastery);
-			const testedOutWorldIds = testedOut.filter((worldId) => !next.testedOutWorldIds.includes(worldId));
+			const testOut = options.testOut;
+			const passedTestOut = testOut !== undefined && this.testOutRules.passes(testOut.termIds, (itemId) => next.memory[itemId]?.mastery);
+			const testedOutWorldIds = passedTestOut && !next.testedOutWorldIds.includes(testOut.worldId) ? [testOut.worldId] : [];
 			next.testedOutWorldIds = [...next.testedOutWorldIds, ...testedOutWorldIds];
 
 			await this.commit(() => next);
 
 			const outcome: DrillOutcome = {
 				xpGained,
-				streak: streakUpdate.milestoneReached === undefined ? { count: streakUpdate.streak.count } : { count: streakUpdate.streak.count, milestoneReached: streakUpdate.milestoneReached },
+				streak,
 				correctCount: totals.correctCount,
 				totalCount: totals.totalCount,
 				nextDueAt: this.nextDueDates(next)[0] ?? null,
 				testedOutWorldIds,
 			};
 			if (chest) outcome.chest = chest;
-			if (completion.monthBadge) outcome.monthBadge = completion.monthBadge;
+			if (monthBadge) outcome.monthBadge = monthBadge;
 
 			return outcome;
 		});
+	}
+
+	/** Scheduled items due by the end of today, within what is left of the daily cap. Only these make a drill rewarded (A320). */
+	getScheduledDueItemIds(): string[]
+	{
+		this.ensureAvailable();
+
+		const now = this.clock.now();
+		const allowed = new Set(this.drillScheduler.dueToday(this.progress, now));
+
+		return this.drillScheduler.scheduledDueToday(this.progress, now).filter((itemId) => allowed.has(itemId));
 	}
 
 	/** Availability of every quest for the World Map. Due items first surface as rematches of passed quests in other worlds. */
