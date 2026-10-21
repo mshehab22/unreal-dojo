@@ -1,5 +1,5 @@
 // Answers the progress and drill IPC methods that need content: reads quest facts and drill items from the catalog and applies them through ProgressService.
-import type { LearnerWorld, PackOutline } from "@shared/types/catalog";
+import type { LearnerQuest, LearnerWorld, PackOutline } from "@shared/types/catalog";
 import type { AuthoredQuest, BreakdownQuest, BossQuest, PatternCard, ReferencePlan } from "@shared/types/content";
 import type { DrillRequest, DrillSession } from "@shared/types/drill";
 import type {
@@ -46,6 +46,9 @@ export interface ProgressContentSource
 
 	/** One full world (hint texts left out). */
 	getWorld(worldId: string): Promise<LearnerWorld>;
+
+	/** One full quest (hint texts left out). */
+	getQuest(questId: string): Promise<LearnerQuest>;
 
 	/** One quest with everything, hints included, or undefined for an unknown id. */
 	getAuthoredQuest(questId: string): Promise<AuthoredQuest | undefined>;
@@ -139,14 +142,28 @@ export class ProgressContentService
 		return result;
 	}
 
-	/** Reveals the next hint spell of a build or refactor quest. */
-	async revealHint(questId: string): Promise<HintReveal>
+	/** Reveals the next hint spell of a build or refactor quest, or answers an already revealed one again for free. */
+	async revealHint(questId: string, hintIndex?: number): Promise<HintReveal>
 	{
 		const quest = await this.openQuest(questId);
 
 		if (quest.authored.kind !== "build" && quest.authored.kind !== "refactor") throw new AppErrorException("invalid-payload", "This quest has no hint spells.", "Hints are on build and refactor quests.");
 
-		return this.progress.revealHint(quest.rule, [...quest.authored.hints]);
+		return this.progress.revealHint(quest.rule, [...quest.authored.hints], hintIndex);
+	}
+
+	/** One quest as the quest screen receives it, with the texts of the hint spells already revealed (A502). Unrevealed hints never leave main (A222). */
+	async getQuest(questId: string): Promise<LearnerQuest>
+	{
+		return this.withRevealedHints(await this.content.getQuest(questId));
+	}
+
+	/** One world as the quest screens receive it, each quest with its revealed hint texts. */
+	async getWorld(worldId: string): Promise<LearnerWorld>
+	{
+		const world = await this.content.getWorld(worldId);
+
+		return { ...world, quests: await Promise.all(world.quests.map((quest) => this.withRevealedHints(quest))) };
 	}
 
 	/** Grades a concept quest, reviews its terms in the scheduler, and records the attempt. The prediction is never graded. */
@@ -315,6 +332,18 @@ export class ProgressContentService
 		const { quests } = await this.view();
 
 		return this.progress.finishDrill(totals, { rewarded: stored.rewarded, testOut: { worldId: request.worldId, termIds: this.testOutTerms(quests, request.worldId) } });
+	}
+
+	/** Adds `revealedHints` (texts in reveal order) to a build or refactor quest; other kinds are returned as they are. */
+	private async withRevealedHints(quest: LearnerQuest): Promise<LearnerQuest>
+	{
+		if (quest.kind !== "build" && quest.kind !== "refactor") return quest;
+
+		const authored = await this.content.getAuthoredQuest(quest.id);
+		const hints: string[] = authored && (authored.kind === "build" || authored.kind === "refactor") ? [...authored.hints] : [];
+		const revealedIndexes = this.progress.getRevealedHintIndexes(quest.id);
+
+		return { ...quest, revealedHints: revealedIndexes.map((index) => hints[index]).filter((text): text is string => text !== undefined) };
 	}
 
 	/** Picks the session's variants for each kind of request. */

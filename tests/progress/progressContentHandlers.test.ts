@@ -140,7 +140,7 @@ describe("revealHint", () =>
 		await expect(handlers.revealHint.handle("w1-build")).rejects.toMatchObject({ appError: { code: "quest-locked" } });
 
 		await passConcept(handlers);
-		expect(await handlers.revealHint.handle("w1-build")).toEqual({ hintIndex: 0, text: "First hint.", xpCost: 15, hintsRevealed: 1 });
+		expect(await handlers.revealHint.handle("w1-build")).toEqual({ hintIndex: 0, text: "First hint.", xpCost: 15, hintsRevealed: 1, alreadyRevealed: false });
 		expect((await handlers.revealHint.handle("w1-build")).text).toBe("Second hint.");
 		await expect(handlers.revealHint.handle("w1-concept")).rejects.toMatchObject({ appError: { code: "invalid-payload" } });
 		await expect(handlers.revealHint.handle("missing")).rejects.toMatchObject({ appError: { code: "quest-not-found" } });
@@ -464,7 +464,7 @@ describe("M1.6b fix round 2", () =>
 		// Spread random picks, so filler would reach the overflow items if it were allowed to.
 		const { handlers, service } = setup({ content, random: [0.95, 0.6, 0.3, 0.8, 0.1], prepare: (progress) =>
 		{
-			progress.quests["w1-concept"] = { status: "passed", bestScore: 100, attempts: 1, hintsRevealed: 0, solutionViewed: false, seerStoneSpent: false, effortXpGranted: false, savedFiles: {}, lastAttemptAt: "2026-10-20T09:00:00.000Z" };
+			progress.quests["w1-concept"] = { status: "passed", bestScore: 100, attempts: 1, hintsRevealed: 0, revealedHints: [], solutionViewed: false, seerStoneSpent: false, effortXpGranted: false, savedFiles: {}, lastAttemptAt: "2026-10-20T09:00:00.000Z" };
 			termIds.forEach((termId, index) =>
 			{
 				progress.memory[termId] = { ease: 2.5, intervalDays: 1, repetitions: 1, mastery: "familiar", lastReviewedAt: "2026-10-20T08:00:00.000Z" };

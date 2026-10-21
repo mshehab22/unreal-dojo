@@ -96,7 +96,7 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Progress | `getTestOutStatus()` | test-out eligibility per world id | done (M1.6b) |
 | Progress | `setPlayerName(name)` | `PlayerProgress` | done (M1.6) |
 | Progress | `saveQuestDraft(draft)`, `resetQuest(questId)` | nothing, `QuestProgress` (drafts hold files, board, and worked-level self-explanations) | done (M1.6) |
-| Progress | `revealHint(questId)` | `HintReveal` (text and XP cost) | done (M1.6b) |
+| Progress | `revealHint(questId, hintIndex?)` | `HintReveal` (text, XP cost, `alreadyRevealed`; a revealed hint is answered again for free, A501) | done (M1.6b) |
 | Progress | `submitConcept(submission)` | `ConceptOutcome` | done (M1.6b) |
 | Progress | `submitBreakdown(submission)` | `BreakdownReferenceChoice` (which reference plan to show) | done (M1.6b) |
 | Progress | `reviseBreakdown(revision)` | `BreakdownOutcome` (grade and loot) | done (M1.6b; AI grading when the review service is wired, A318) |
@@ -104,8 +104,8 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Progress | `getDailyQuest()`, `chooseDailyOffer(index)` | `DailyQuestState` | done (M1.6b) |
 | Content | `getContentStatus()` | `ContentStatus` (root, counts, every problem) | done (M0.2b) |
 | Content | `listPacks()` | `PackOutline[]`: packs, worlds, quest outlines, in order | done (M0.2b) |
-| Content | `getWorld(worldId)` | `LearnerWorld` with full quests, or `world-not-found` | done (M0.2b) |
-| Content | `getQuest(questId)` | `LearnerQuest` (hint texts replaced by `hintCount`), or `quest-not-found` | done (M0.2b) |
+| Content | `getWorld(worldId)` | `LearnerWorld` with full quests (build and refactor quests carry their revealed hint texts, A502), or `world-not-found` | done (M0.2b, M1.6c) |
+| Content | `getQuest(questId)` | `LearnerQuest` (hint texts replaced by `hintCount`, plus `revealedHints` with the texts already revealed, A502), or `quest-not-found` | done (M0.2b, M1.6c) |
 | Content | `getGlossary()` | `GlossaryEntry[]` | done (M0.2b) |
 | Content | `getGlossaryAliases()` | `GlossaryAlias[]`, longest text first, for Monaco and the TermLinker | done (M0.2b) |
 | Content | `getPatternCards()` | `PatternCard[]` | done (M0.2b) |

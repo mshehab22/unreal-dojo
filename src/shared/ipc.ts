@@ -125,8 +125,8 @@ export interface DojoInvokeApi
 	/** Clears a quest's saved files and board and removes its files from the sandbox. */
 	resetQuest(questId: string): Promise<QuestProgress>;
 
-	/** Reveals the next hint spell for a quest and returns its text and XP cost. */
-	revealHint(questId: string): Promise<HintReveal>;
+	/** Reveals the next hint spell for a quest and returns its text and XP cost. With `hintIndex`, an already revealed hint is answered again at no cost; a new one must be the next in order (A501). */
+	revealHint(questId: string, hintIndex?: number): Promise<HintReveal>;
 
 	/** Grades a finished concept quest and records it. */
 	submitConcept(submission: ConceptSubmission): Promise<ConceptOutcome>;

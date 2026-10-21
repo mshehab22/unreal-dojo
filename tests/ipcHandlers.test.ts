@@ -58,7 +58,8 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 	}),
 	runRegistry: new RunRegistry(),
 	sendProgress: () => undefined,
-	progressContentService: createTestProgressContent().content,
+	// The progress content service reads the same fake catalog, so getWorld and getQuest answer from it.
+	progressContentService: createTestProgressContent({ source: { ...FAKE_CONTENT_CATALOG, getAuthoredQuest: async () => undefined } }).content,
 	settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
 	readEnvironmentStatus: async () => ({ engine: null, sandbox: { path: null, ready: false }, reviewProvider: null, loopMode: "auto", editorConnected: false }),
 };
