@@ -1,47 +1,11 @@
 // Reads `content/glossary.json` and `content/patterns.json` into typed entries, reporting each bad entry by index and id.
+import type { z } from "zod";
+
 import type { GlossaryEntry, PatternCard } from "@shared/types/content";
 
-import { ObjectReader } from "./ObjectReader";
 import type { ProblemList } from "./ProblemList";
-import { readQuestion } from "./readQuestion";
-
-/** Reads one glossary entry. */
-function readGlossaryEntry(reader: ObjectReader): GlossaryEntry
-{
-	const entry: GlossaryEntry = {
-		id: reader.string("id"),
-		term: reader.string("term"),
-		aliases: reader.stringList("aliases"),
-		category: reader.string("category"),
-		short: reader.string("short"),
-		long: reader.string("long"),
-		unrealDocsUrl: reader.string("unrealDocsUrl"),
-		related: reader.stringList("related"),
-	};
-
-	const firstQuestId = reader.optionalString("firstQuestId");
-
-	if (firstQuestId !== undefined) entry.firstQuestId = firstQuestId;
-	if (entry.unrealDocsUrl && !entry.unrealDocsUrl.startsWith("https://")) reader.report("unrealDocsUrl", "expected an https:// link to Epic's docs");
-
-	return entry;
-}
-
-/** Reads one pattern card with its recall and scenario questions. */
-function readPatternCard(reader: ObjectReader): PatternCard
-{
-	return {
-		id: reader.string("id"),
-		title: reader.string("title"),
-		intent: reader.string("intent"),
-		problem: reader.string("problem"),
-		unrealForm: reader.string("unrealForm"),
-		whenNot: reader.string("whenNot"),
-		useCaseQuestIds: reader.stringList("useCaseQuestIds"),
-		recall: reader.objectList("recall", (question) => readQuestion(question), true),
-		scenarios: reader.objectList("scenarios", (question) => readQuestion(question), true),
-	};
-}
+import { glossaryEntrySchema, patternCardSchema } from "./schemas/contentFileSchemas";
+import { validateWith } from "./schemas/validateWith";
 
 /** Parses JSON text that must be a list, reporting malformed JSON or a non-list. */
 function parseJsonList(text: string, problems: ProblemList): unknown[] | undefined
@@ -67,8 +31,8 @@ function parseJsonList(text: string, problems: ProblemList): unknown[] | undefin
 	return data;
 }
 
-/** Reads every entry of a JSON list, naming each entry by its id (or index) in problem messages. */
-function readEntries<Entry>(text: string, problems: ProblemList, readEntry: (reader: ObjectReader) => Entry): Entry[]
+/** Validates every entry of a JSON list on its own, naming each bad entry by its index and id. */
+function readEntries<Entry>(text: string, problems: ProblemList, schema: z.ZodType<Entry>): Entry[]
 {
 	const data = parseJsonList(text, problems);
 
@@ -79,16 +43,10 @@ function readEntries<Entry>(text: string, problems: ProblemList, readEntry: (rea
 	data.forEach((value, index) =>
 	{
 		const id = typeof value === "object" && value !== null && "id" in value ? String(value.id) : undefined;
-		const name = id === undefined ? `entry ${index}` : `entry ${index} (${id})`;
-		const before = problems.count;
-		const reader = ObjectReader.from(value, `[${index}]`, problems, { section: name });
+		const section = id === undefined ? `entry ${index}` : `entry ${index} (${id})`;
+		const entry = validateWith(schema, value, problems, { section }, `[${index}]`);
 
-		if (reader === undefined) return;
-
-		const entry = readEntry(reader);
-		reader.finish();
-
-		if (problems.count === before) entries.push(entry);
+		if (entry !== undefined) entries.push(entry);
 	});
 
 	return entries;
@@ -97,11 +55,11 @@ function readEntries<Entry>(text: string, problems: ProblemList, readEntry: (rea
 /** Reads the glossary file's text. Entries with problems are left out and reported. */
 export function readGlossary(text: string, problems: ProblemList): GlossaryEntry[]
 {
-	return readEntries(text, problems, readGlossaryEntry);
+	return readEntries(text, problems, glossaryEntrySchema);
 }
 
 /** Reads the pattern cards file's text. Entries with problems are left out and reported. */
 export function readPatterns(text: string, problems: ProblemList): PatternCard[]
 {
-	return readEntries(text, problems, readPatternCard);
+	return readEntries(text, problems, patternCardSchema);
 }

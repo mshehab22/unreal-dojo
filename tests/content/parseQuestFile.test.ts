@@ -246,6 +246,18 @@ describe("parseQuestFile malformed files", () =>
 		expect(problems).toContainEqual(expect.objectContaining({ section: "Questions", message: "Questions[2].answerIndex: expected a whole number, 0 to 3" }));
 	});
 
+	it("words schema problems plainly: a bad question type, a missing field, and an unknown field", () =>
+	{
+		const text = example("01-concept-uproperty.md")
+			.replace("type: spot-the-bug", "type: essay")
+			.replace("  modelAnswer: The Details panel lists", "  modelAnswr: The Details panel lists");
+		const messages = parse(text).problems.map((problem) => problem.message);
+
+		expect(messages.some((message) => message.startsWith("Questions[1].type: \"essay\" is not allowed (expected one of: multiple-choice"))).toBe(true);
+		expect(messages).toContain("Questions[3].modelAnswer: missing (expected text)");
+		expect(messages).toContain("Questions[3].modelAnswr: unknown field");
+	});
+
 	it("reports a file with no front matter", () =>
 	{
 		const { problems } = parse("# Card\n\nHello");

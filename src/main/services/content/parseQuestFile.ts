@@ -1,9 +1,10 @@
 // Parses one `<nn-slug>.md` quest file into a typed quest, reporting every problem with the file and section.
+import { z } from "zod";
+
 import type {
 	AuthoredQuest,
 	AuthoredQuestKind,
 	CodeQuestFields,
-	QuestFrontMatter,
 	QuestFile,
 	QuestKind,
 	Question,
@@ -12,22 +13,19 @@ import type {
 	ScaffoldLevel,
 } from "@shared/types/content";
 
-import { ObjectReader, readObjectList } from "./ObjectReader";
 import type { ProblemList } from "./ProblemList";
 import { parseYaml } from "./parseYaml";
-import { readParsons } from "./readParsons";
-import { createReferencePlanReader, readRequiredPiece } from "./readPlanParts";
-import { readQuestion } from "./readQuestion";
 import { readStarterFile } from "./readStarterFile";
+import { FRONT_MATTER_SCHEMAS } from "./schemas/frontMatterSchemas";
+import { parsonsSchema, referencePlanSchema, requiredPieceSchema } from "./schemas/planSchemas";
+import { questionSchema } from "./schemas/questionSchemas";
+import { validateWith } from "./schemas/validateWith";
 import { readBulletList, readMarkdown, readSingleCodeBlock, readSubsections, readYamlBlock } from "./sectionContent";
 import { checkSectionLayout } from "./sectionLayout";
 import { splitQuestFile, type MarkdownSection } from "./splitQuestFile";
 
 /** Every kind a front matter `kind` may name; drill is listed so the parser can explain why it is refused. */
 const QUEST_KINDS: readonly QuestKind[] = ["concept", "drill", "breakdown", "build", "refactor", "boss"];
-
-/** Every scaffold level, from most help to none. */
-const SCAFFOLD_LEVELS: readonly ScaffoldLevel[] = ["worked", "faded", "stub", "blank"];
 
 /** The subsection every build and refactor brief must have. */
 const SEE_IT_SUBSECTION = "See it in the editor";
@@ -42,7 +40,7 @@ interface SectionSource
 	problems: ProblemList;
 }
 
-/** Parses the YAML front matter text, reporting malformed YAML with its file line. */
+/** Parses the YAML front matter text with gray-matter, reporting malformed YAML with its file line. */
 function parseFrontMatter(source: string, firstLine: number, problems: ProblemList): unknown
 {
 	const result = parseYaml(source);
@@ -53,43 +51,53 @@ function parseFrontMatter(source: string, firstLine: number, problems: ProblemLi
 	return undefined;
 }
 
-/** Reads the front matter fields every kind shares. */
-function readCommonFrontMatter(reader: ObjectReader, kind: QuestKind): QuestFrontMatter
+/** Checks `kind` on its own first, so a drill or a typo gets one clear message before the other fields are read. */
+function readKind(data: unknown, problems: ProblemList): AuthoredQuestKind | undefined
 {
-	return {
-		id: reader.string("id"),
-		title: reader.string("title"),
-		order: reader.integer("order", 1),
-		kind,
-		difficulty: reader.integer("difficulty", 1, 5),
-		patterns: reader.stringList("patterns"),
-		skills: reader.stringList("skills"),
-		terms: reader.stringList("terms"),
-		prerequisites: reader.stringList("prerequisites"),
-		xp: reader.integer("xp", 0),
-		estimatedMinutes: reader.integer("estimatedMinutes", 1),
-		concepts: reader.stringList("concepts"),
-	};
+	const location = { section: FRONT_MATTER, line: 1 };
+
+	if (typeof data !== "object" || data === null || Array.isArray(data))
+	{
+		problems.add("front matter must be a set of named fields", location);
+		return undefined;
+	}
+
+	const kind = (data as Record<string, unknown>).kind;
+
+	if (kind === "drill")
+	{
+		problems.add("kind: drill quests are built at runtime and have no file; put drill items in concept questions, pattern cards, or Parsons blocks", location);
+		return undefined;
+	}
+
+	if (typeof kind !== "string" || !QUEST_KINDS.includes(kind as QuestKind))
+	{
+		const allowed = `expected one of: ${QUEST_KINDS.filter((name) => name !== "drill").join(", ")}`;
+		problems.add(kind === undefined ? `kind: missing (${allowed})` : `kind: "${String(kind)}" is not allowed (${allowed})`, location);
+		return undefined;
+	}
+
+	return kind as AuthoredQuestKind;
 }
 
-/** Reads a section's ```yaml list, each entry with `readEntry`. */
-function readYamlList<Entry>(source: SectionSource, title: string, readEntry: (reader: ObjectReader) => Entry): Entry[]
+/** Validates a section's ```yaml block against `schema`; field paths in problems start with the section title. */
+function yamlSectionOf<Output>(source: SectionSource, title: string, schema: z.ZodType<Output>): Output | undefined
 {
 	const section = source.sections.get(title);
 
-	if (section === undefined) return [];
+	if (section === undefined) return undefined;
 
 	const data = readYamlBlock(section, source.problems);
 
-	if (data === undefined) return [];
+	if (data === undefined) return undefined;
 
-	if (!Array.isArray(data) || data.length === 0)
-	{
-		source.problems.add("expected a non-empty YAML list (each entry starting with \"- \")", { section: title, line: section.bodyLine });
-		return [];
-	}
+	return validateWith(schema, data, source.problems, { section: title, line: section.bodyLine }, title);
+}
 
-	return readObjectList(data, title, source.problems, { section: title, line: section.bodyLine }, readEntry);
+/** Validates a section's ```yaml block as a non-empty list of `entry`. */
+function yamlListOf<Entry>(source: SectionSource, title: string, entry: z.ZodType<Entry>): Entry[]
+{
+	return yamlSectionOf(source, title, z.array(entry).min(1)) ?? [];
 }
 
 /** Reads a Markdown section, or "" when it is missing (already reported by the layout check). */
@@ -132,45 +140,50 @@ function reportRepeatedIds(ids: readonly string[], what: string, section: string
 /** Reads the concept sections: Predict, Card, Example, Questions. */
 function readConceptBody(source: SectionSource): { predict: Question; card: string; example: string; questions: Question[] }
 {
-	const predictSection = source.sections.get("Predict");
-	let predict: Question | undefined;
-
-	if (predictSection !== undefined)
-	{
-		const data = readYamlBlock(predictSection, source.problems);
-
-		if (data !== undefined)
-		{
-			const reader = ObjectReader.from(data, "Predict", source.problems, { section: "Predict", line: predictSection.bodyLine });
-
-			if (reader !== undefined)
-			{
-				predict = readQuestion(reader);
-				reader.finish();
-			}
-		}
-	}
-
+	const predict = yamlSectionOf(source, "Predict", questionSchema);
 	const card = markdownOf(source, "Card");
 	const example = codeOf(source, "Example", "cpp");
-	const questions = readYamlList(source, "Questions", (reader) => readQuestion(reader));
+	const questions = yamlListOf(source, "Questions", questionSchema);
 
 	reportRepeatedIds([...(predict ? [predict.id] : []), ...questions.map((question) => question.id)], "question", "Questions", source.problems);
 
-	// A missing Predict was already reported; the placeholder never leaves the parser because the problem count rose.
+	// A missing or broken Predict was already reported; the placeholder never leaves the parser because the problem count rose.
 	return { predict: predict ?? ({} as Question), card, example, questions };
 }
 
-/** Reads the shared plan sections of breakdown and boss quests: Spec, Required Pieces, Reference Plans. */
+/** Reports plan pieces that cover an unknown required piece, and edges whose ends are not pieces of the same plan. */
+function checkPlanReferences(plan: ReferencePlan, requiredIds: ReadonlySet<string>, problems: ProblemList): void
+{
+	const pieceIds = new Set(plan.pieces.map((piece) => piece.id));
+	const location = { section: "Reference Plans" };
+
+	for (const piece of plan.pieces)
+	{
+		for (const covered of piece.covers)
+		{
+			if (!requiredIds.has(covered)) problems.add(`plan "${plan.id}": piece "${piece.id}" covers "${covered}", which is not a required piece id`, location);
+		}
+	}
+
+	for (const edge of plan.edges)
+	{
+		if (!pieceIds.has(edge.from)) problems.add(`plan "${plan.id}": edge from "${edge.from}" does not name a piece in this plan`, location);
+		if (!pieceIds.has(edge.to)) problems.add(`plan "${plan.id}": edge to "${edge.to}" does not name a piece in this plan`, location);
+	}
+}
+
+/** Reads the shared plan sections of breakdown and boss quests and checks each plan's references. */
 function readPlanBody(source: SectionSource): { spec: string; requiredPieces: RequiredPiece[]; referencePlans: ReferencePlan[] }
 {
 	const spec = markdownOf(source, "Spec");
-	const requiredPieces = readYamlList(source, "Required Pieces", readRequiredPiece);
+	const requiredPieces = yamlListOf(source, "Required Pieces", requiredPieceSchema);
+	const referencePlans = yamlListOf(source, "Reference Plans", referencePlanSchema);
 	const requiredIds = new Set(requiredPieces.map((piece) => piece.id));
-	const referencePlans = readYamlList(source, "Reference Plans", createReferencePlanReader(requiredIds));
 
 	reportRepeatedIds(requiredPieces.map((piece) => piece.id), "required piece", "Required Pieces", source.problems);
 	reportRepeatedIds(referencePlans.map((plan) => plan.id), "reference plan", "Reference Plans", source.problems);
+
+	for (const plan of referencePlans) checkPlanReferences(plan, requiredIds, source.problems);
 
 	return { spec, requiredPieces, referencePlans };
 }
@@ -203,8 +216,9 @@ function readCodeQuestBody(source: SectionSource, scaffold: ScaffoldLevel): Code
 
 	const tests = codeOf(source, "Tests", "cpp");
 	const hints = bulletsOf(source, "Hints");
+	const hintsSection = source.sections.get("Hints");
 
-	if (source.sections.has("Hints") && hints.length !== 3) source.problems.add(`expected exactly 3 hints, found ${hints.length}`, { section: "Hints", line: source.sections.get("Hints")?.line });
+	if (hintsSection !== undefined && hints.length !== 3) source.problems.add(`expected exactly 3 hints, found ${hints.length}`, { section: "Hints", line: hintsSection.line });
 
 	const rubric = bulletsOf(source, "Rubric");
 	const alternative = markdownOf(source, "Alternative");
@@ -212,39 +226,53 @@ function readCodeQuestBody(source: SectionSource, scaffold: ScaffoldLevel): Code
 
 	if (source.sections.has("Parsons"))
 	{
-		fields.parsons = readYamlList(source, "Parsons", readParsons);
+		fields.parsons = yamlListOf(source, "Parsons", parsonsSchema);
 		reportRepeatedIds(fields.parsons.map((block) => block.id), "Parsons block", "Parsons", source.problems);
 	}
 
 	return fields;
 }
 
-/** Reads the kind-specific front matter and the body sections, then assembles the quest. */
-function readQuestBody(kind: AuthoredQuestKind, common: QuestFrontMatter, reader: ObjectReader, source: SectionSource): AuthoredQuest
+/** Validates the kind's front matter and reads its body sections, then assembles the quest (undefined if the front matter failed). */
+function readQuest(kind: AuthoredQuestKind, frontMatter: unknown, source: SectionSource): AuthoredQuest | undefined
 {
+	const location = { section: FRONT_MATTER, line: 1 };
+
 	switch (kind)
 	{
 		case "concept":
-			return { ...common, kind, ...readConceptBody(source) };
+		{
+			const common = validateWith(FRONT_MATTER_SCHEMAS.concept, frontMatter, source.problems, location);
+			const body = readConceptBody(source);
+			return common && { ...common, ...body };
+		}
 
 		case "breakdown":
 		{
-			const plan = readPlanBody(source);
-			return { ...common, kind, ...plan, rubric: bulletsOf(source, "Rubric"), alternativeNote: markdownOf(source, "Alternative Note") };
+			const common = validateWith(FRONT_MATTER_SCHEMAS.breakdown, frontMatter, source.problems, location);
+			const body = { ...readPlanBody(source), rubric: bulletsOf(source, "Rubric"), alternativeNote: markdownOf(source, "Alternative Note") };
+			return common && { ...common, ...body };
 		}
 
 		case "build":
+		{
+			const common = validateWith(FRONT_MATTER_SCHEMAS.build, frontMatter, source.problems, location);
+			const body = readCodeQuestBody(source, common?.scaffold ?? "worked");
+			return common && { ...common, ...body };
+		}
+
 		case "refactor":
 		{
-			const scaffold = reader.oneOf("scaffold", SCAFFOLD_LEVELS);
-			return { ...common, kind, ...readCodeQuestBody(source, scaffold) };
+			const common = validateWith(FRONT_MATTER_SCHEMAS.refactor, frontMatter, source.problems, location);
+			const body = readCodeQuestBody(source, common?.scaffold ?? "worked");
+			return common && { ...common, ...body };
 		}
 
 		case "boss":
 		{
-			const pieces = reader.stringList("pieces", false);
-			const plan = readPlanBody(source);
-			return { ...common, kind, ...plan, pieces, integrationRubric: bulletsOf(source, "Integration Rubric") };
+			const common = validateWith(FRONT_MATTER_SCHEMAS.boss, frontMatter, source.problems, location);
+			const body = { ...readPlanBody(source), integrationRubric: bulletsOf(source, "Integration Rubric") };
+			return common && { ...common, ...body };
 		}
 	}
 }
@@ -269,34 +297,16 @@ export function parseQuestFile(text: string, problems: ProblemList): AuthoredQue
 		problems.add("text after the front matter must sit inside a \"# Section\"", { line: split.textBeforeFirstSectionLine });
 	}
 
-	const data = parseFrontMatter(split.frontMatter, split.frontMatterLine, problems);
+	const frontMatter = parseFrontMatter(split.frontMatter, split.frontMatterLine, problems);
 
-	if (data === undefined) return undefined;
+	if (frontMatter === undefined) return undefined;
 
-	const reader = ObjectReader.from(data, "", problems, { section: FRONT_MATTER, line: 1 });
+	const kind = readKind(frontMatter, problems);
 
-	if (reader === undefined) return undefined;
+	if (kind === undefined) return undefined;
 
-	const kind = reader.oneOf("kind", QUEST_KINDS);
-
-	if (problems.count > before)
-	{
-		// Without a valid kind there is no section layout to check against.
-		reader.finish();
-		return undefined;
-	}
-
-	if (kind === "drill")
-	{
-		reader.report("kind", "drill quests are built at runtime and have no file; put drill items in concept questions, pattern cards, or Parsons blocks");
-		return undefined;
-	}
-
-	const common = readCommonFrontMatter(reader, kind);
 	const sections = checkSectionLayout(kind, split.sections, problems);
-	const quest = readQuestBody(kind, common, reader, { sections, problems });
-
-	reader.finish();
+	const quest = readQuest(kind, frontMatter, { sections, problems });
 
 	return problems.count > before ? undefined : quest;
 }

@@ -66,7 +66,7 @@ Errors name the file (relative to `content/`), and the section and line when kno
 ## Parser structure
 
 - `ContentLoader` (`load({ packId? })`, `loadExamples()`) walks the folder and returns `LoadedContent` with every problem; it never throws on bad content.
-- `parseQuestFile` parses one quest file: `splitQuestFile` cuts front matter and sections (fence aware through `FenceTracker`), `checkSectionLayout` checks the order, and the `read*` modules read each section's data through `ObjectReader`, which reports wrong, missing, and unknown fields with their path.
+- `parseQuestFile` parses one quest file: `splitQuestFile` cuts front matter and sections (fence aware through `FenceTracker`), gray-matter parses the front matter and every ` ```yaml ` block (`parseYaml`), `checkSectionLayout` checks the order, and zod schemas in `schemas/` validate the data. `validateWith` turns zod issues into problems with a field path and plain words (`Questions[3].modelAnswer: missing (expected text)`, `kind: "essay" is not allowed (expected one of: ...)`, `dificulty: unknown field`). Cross references (plan edges and `covers`, ids repeated inside a quest, the hint count) are checked after the schemas pass.
 - `ProblemList` collects problems for one file so one run reports all of them.
 
 ## Term linking
@@ -75,7 +75,7 @@ Errors name the file (relative to `content/`), and the section and line when kno
 
 ## Verifier (`tools/verify-content.ts`)
 
-Parse-only mode (M0.4, built): parses every pack, the glossary, the patterns, and `content/examples/`, prints `ok` or `FAIL` per file with each problem under it, then a summary line, and exits 1 on any problem (2 for a bad command line). `--content <folder>` points it at another folder (tests and fixtures). Later checks plug in as `ContentCheck` objects (`tools/verifier/ContentCheck.ts`) passed to `runVerifier`; `PARSE_ONLY_CHECKS` is empty until M1.8 adds them. `--engine` is refused with exit 2 until M1.8 builds it. Measured: 300 quests plus the real glossary and patterns parse in about 110 ms, 0.31 s for the whole command on the MacBook Air.
+Parse-only mode (M0.4, built): parses every pack, the glossary, the patterns, and `content/examples/`, prints `ok` or `FAIL` per file with each problem under it, then a summary line, and exits 1 on any problem (2 for a bad command line). `--content <folder>` points it at another folder (tests and fixtures). Later checks plug in as `ContentCheck` objects (`tools/verifier/ContentCheck.ts`) passed to `runVerifier`; `PARSE_ONLY_CHECKS` is empty until M1.8 adds them. `--engine` is refused with exit 2 until M1.8 builds it. Measured: 300 quests plus the real glossary and patterns parse in about 46 ms, 0.28 s for the whole command on the MacBook Air.
 
 Checks, all with file names in the output (the ones beyond parsing arrive in M1.8):
 - every quest parses; required sections per kind present; hints are 3; rubric sizes; concepts non-empty; `terms[]` ids exist in the glossary; `patterns[]` ids exist in patterns.json; prerequisites exist; the prerequisite graph has no cycles and every quest is reachable from a pack's first quest

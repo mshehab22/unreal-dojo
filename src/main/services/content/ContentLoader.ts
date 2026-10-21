@@ -2,12 +2,15 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 
+import type { z } from "zod";
+
 import type { AuthoredQuest, ContentProblem, LoadedContent, Pack, World } from "@shared/types/content";
 
-import { ObjectReader } from "./ObjectReader";
 import { ProblemList } from "./ProblemList";
 import { parseQuestFile } from "./parseQuestFile";
 import { readGlossary, readPatterns } from "./readGlossaryAndPatterns";
+import { packManifestSchema, worldManifestSchema } from "./schemas/contentFileSchemas";
+import { validateWith } from "./schemas/validateWith";
 
 /** What to load; with no options the loader reads every pack. */
 export interface ContentLoadOptions
@@ -139,12 +142,7 @@ export class ContentLoader
 	private async readPack(folder: string, folderName: string, run: LoadRun): Promise<Pack | undefined>
 	{
 		const content = run.content;
-		const manifest = await this.readManifest(join(folder, "pack.json"), content, (reader) => ({
-			id: reader.string("id"),
-			title: reader.string("title"),
-			summary: reader.string("summary"),
-			order: reader.integer("order", 1),
-		}));
+		const manifest = await this.readManifest(join(folder, "pack.json"), content, packManifestSchema);
 
 		if (manifest !== undefined && manifest.id !== folderName)
 		{
@@ -177,11 +175,7 @@ export class ContentLoader
 		const order = Number(nameMatch[1]);
 		const worldId = nameMatch[2];
 		const manifestPath = join(folder, "world.json");
-		const manifest = await this.readManifest(manifestPath, content, (reader) => ({
-			id: reader.string("id"),
-			title: reader.string("title"),
-			summary: reader.string("summary"),
-		}));
+		const manifest = await this.readManifest(manifestPath, content, worldManifestSchema);
 
 		if (manifest !== undefined && manifest.id !== worldId)
 		{
@@ -227,8 +221,8 @@ export class ContentLoader
 		return quest === undefined ? undefined : { quest, file };
 	}
 
-	/** Reads a `pack.json` or `world.json` with `read`, reporting a missing file, bad JSON, or bad fields. */
-	private async readManifest<Manifest>(path: string, content: LoadedContent, read: (reader: ObjectReader) => Manifest): Promise<Manifest | undefined>
+	/** Reads a `pack.json` or `world.json` against `schema`, reporting a missing file, bad JSON, or bad fields. */
+	private async readManifest<Manifest>(path: string, content: LoadedContent, schema: z.ZodType<Manifest>): Promise<Manifest | undefined>
 	{
 		const file = this.relativePath(path);
 		const problems = new ProblemList(file);
@@ -253,13 +247,11 @@ export class ContentLoader
 			return undefined;
 		}
 
-		const reader = ObjectReader.from(data, "", problems, {});
-		const manifest = reader === undefined ? undefined : read(reader);
+		const manifest = validateWith(schema, data, problems, {});
 
-		reader?.finish();
 		content.problems.push(...problems.problems);
 
-		return problems.count > 0 ? undefined : manifest;
+		return manifest;
 	}
 
 	/** Reports quest ids used by more than one file, and records where each quest came from. */

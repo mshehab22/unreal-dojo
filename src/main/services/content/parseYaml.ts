@@ -1,20 +1,34 @@
-// Parses YAML text and, on failure, gives the first error's message and its 1-based line inside the text.
-import { parseDocument } from "yaml";
+// Parses YAML through gray-matter (front matter, and the ```yaml blocks inside sections) and reports the error line.
+import matter from "gray-matter";
 
-/** Parsed YAML data, or the first error with its line inside the YAML text. */
+/** Parsed YAML data, or the first error with its 1-based line inside the YAML text. */
 export type YamlResult = { ok: true; data: unknown } | { ok: false; message: string; line: number };
 
-/** Parses `source`, rejecting repeated keys. */
+/** The parts of a js-yaml error that gray-matter passes through. */
+interface YamlError
+{
+	reason?: string;
+	mark?: { line?: number };
+}
+
+/** Parses a YAML document by handing it to gray-matter as front matter. Repeated keys are an error. */
 export function parseYaml(source: string): YamlResult
 {
-	const document = parseDocument(source, { prettyErrors: false, uniqueKeys: true });
-	const firstError = document.errors[0];
+	try
+	{
+		// Passing an options object turns off gray-matter's cache, which would otherwise return stale data objects.
+		const parsed = matter(`---\n${source}\n---\n`, {});
 
-	if (firstError === undefined) return { ok: true, data: document.toJS() };
+		return { ok: true, data: parsed.data };
+	}
+	catch (error)
+	{
+		const yamlError = error as YamlError;
 
-	// Without pretty errors the yaml package gives a character offset, so count the line breaks before it.
-	const offset = firstError.pos[0];
-	const line = source.slice(0, offset).split("\n").length;
+		// Line 0 of the wrapped text is the opening ---, so js-yaml's 0-based line is the 1-based line in `source`.
+		const line = Math.max(1, yamlError.mark?.line ?? 1);
+		const reason = yamlError.reason ?? (error instanceof Error ? error.message.split("\n")[0] : String(error));
 
-	return { ok: false, message: `YAML is malformed: ${firstError.message.split("\n")[0]}`, line };
+		return { ok: false, message: `YAML is malformed: ${reason}`, line };
+	}
 }

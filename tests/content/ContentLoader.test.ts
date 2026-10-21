@@ -117,7 +117,7 @@ describe("ContentLoader", () =>
 		const content = await new ContentLoader(fixture.root).load();
 
 		expect(content.glossary.map((entry) => entry.id)).toEqual(["actor"]);
-		expect(content.problems).toEqual([{ file: "glossary.json", section: "entry 1 (tick)", message: "[1].short: expected non-empty text" }]);
+		expect(content.problems).toEqual([{ file: "glossary.json", section: "entry 1 (tick)", message: "[1].short: expected text" }]);
 	});
 
 	it("reports malformed JSON in a pack manifest and a world folder that breaks the naming rule", async () =>
