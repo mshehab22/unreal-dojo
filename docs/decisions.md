@@ -31,6 +31,30 @@ Options: an app flag or environment variable that calls `app.setPath("userData",
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A547 2026-10-21 Decision numbers A540 to A549 for Pack 2 World 4 (author-patterns, M4.P2.4)
+Main uses A500 to A503, A510, A511, and A520; no branch uses A530 or above. Chosen: A540 to A549, leaving A530 to A539 free as a gap. Reverse cost: none.
+
+### A546 2026-10-21 Glossary and card additions for Double Buffer (author-patterns, M4.P2.4)
+Added `render-thread` (category framework, the existing label that fits best; Epic's 5.8 "Threaded Rendering" page, title checked live), first taught by `p4-read-while-writing`; aliases include `FSceneProxy` and "game thread", none shared with another entry. The double-buffer card lists `p4-straw-fire` and `p4-drum-pad` as use cases and gains `double-buffer-recall-4` (what the back copy holds right after a swap) and `double-buffer-scenario-3` (a when-not multiple-choice item: a fuse that should sweep in one pass). Reverse cost: low.
+
+### A545 2026-10-21 World 4's deliberate failure: a swapped-back copy that is not emptied (author-patterns, M4.P2.4)
+Options: writing in place on the straw floor (that is the worked quest's whole lesson, so not a surprise); a held reference across the swap (would read freed or moved memory, a crash risk); the drum pad's back copy collecting new hits on top of the batch it held before. Chosen: the drum pad. The obvious version swaps and does not clear, so hits from two frames back return. Checked on 5.8.3 (see M4.P2.4 in iterations). To keep the surprise, the card quest (before the drum pad) explains swap cost and references but not the stale back copy; the when-not quest states the rule afterwards. Reverse cost: low.
+
+### A544 2026-10-21 The standings refactor's honest alternative (author-patterns, M4.P2.4)
+In the standings round, computing the leader once before an in-place loop would also fix the designer's case, because each team's own score is touched only once. Options: invent a round where only a full second copy works; keep the simple round and say so. Chosen: keep it, and the Alternative section says exactly that, explaining why the second copy is still the general fix (the next rule that reads another team's score breaks the in-place loop again). The rubric asks for the second copy because the quest is the refactor into the pattern. Reverse cost: low.
+
+### A543 2026-10-21 Double Buffer arc, built away from the source's examples (author-patterns, M4.P2.4)
+Lessons from D13 reviews applied from the start: no stage of actors reacting to each other's slaps, no framebuffer tearing as the motivating story, no per-object two-slot array with a shared index, no numbers from the chapter. Arc: `p4-read-while-writing` (concept, no pattern name), `p4-straw-fire` (worked: a straw floor where fire spreads one square per step, read from the finished floor, write the next, `Swap`), `p4-double-buffer-card`, `p4-drum-pad` (stub: hits arriving mid-frame collect in a back copy that swaps to the front at frame start), `p4-standings-refactor` (team standings whose catch-up bonus depended on which team was scored first), `p4-double-buffer-when-not` (independent updates, order as the design, readers that need a write at once, stale back copies, memory and swap cost). Unreal facts used: `Swap` on `TArray` from `Templates/UnrealTemplate.h` (5.8 source), render-thread scene proxies, and `GetWorldTimerManager().SetTimer` for the floor's step. Reverse cost: medium.
+
+### A542 2026-10-21 Walk-order switches stay as editable properties (author-patterns, M4.P2.4)
+The straw floor has `bWalkBackward` and the standings have `bScoreInReverse`. Options: test order independence with a hidden test hook; expose a property a designer can flip. Chosen: the property, because the author rules ask for experiments as an A/B on one setting, and flipping it in the Details panel before and after the fix is the visible proof. Their comments say they exist to prove the point. Reverse cost: low.
+
+### A541 2026-10-21 Pack 2 World 4 has no boss yet; any boss will follow A67 (author-patterns, M4.P2.4)
+As A490. Reverse cost: none.
+
+### A540 2026-10-21 Pack 2 World 4 ids (author-patterns, M4.P2.4)
+Folder `04-double-buffer`, world id `double-buffer`, quest ids `p4-<slug>`, classes `ADojoP4<Name>`, enum `EDojoP4StrawState` with values `ESS_` (A66, A267), tests `Dojo.P4.<Quest>.<Case>`. Reverse cost: medium once learners have progress saved.
+
 ### A365 2026-10-21 The fake's World 1 is built from content/ at build and test time, with no committed copy (M2.2 fix round 4, Lead decision)
 A committed `worldOneFixture.json` with a drift test made main's `npm test` fail whenever an author edited World 1. Options: build the fixture from `content/` whenever the app or the tests are built; keep the copy and turn the drift test into a verifier warning. Chosen (Lead): build it. `tools/fake/fakeWorldPlugin.ts` is a Vite plugin (registered in `electron.vite.config.ts` for the renderer and in `vitest.config.ts`) that serves `virtual:dojo-fake-world`; it runs `tools/fake/print-fake-world-fixture.ts` with tsx (the build config itself cannot resolve the app's `@shared` paths) and embeds the JSON in the fake's lazy chunk. If World 1 cannot be built it warns and serves an empty world, so a content mistake never stops the real app from building. The e2e spec reads the same output for the answers it types. What still couples the fake to content: its build judge checks the training dummy's file names and gaps, so renaming that quest's files would fail the fake's tests (wording changes no longer do). `tsconfig.node.json` includes the virtual module's type file. Reverse cost: low.
 

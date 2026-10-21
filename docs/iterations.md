@@ -918,3 +918,26 @@ total                                       39.2  PASSED
   - Windows gap: Windows compared the learner's draft against the quest's own last build, even when a later build of another quest had compiled different files for it (for example its reference with a new reflected property). Windows now also requires the quest's last build to be the latest build, like the Mac (A481). A test covers that exact sequence.
 - Proof: the real-editor run after the rebase passed all 6 steps in 156 s: cold build 27 s, headless with no editor 31 s, editor ready in 14 s, fast runs 4.3 s then 31 ms, a second editor on the same port refused, the stale-editor fallback and restart working (4.3 s after the restart), and a clean close in 1.7 s. Full output: `docs/iterations/2026-10-21-m1-4-fast-loop-run-rebased.txt`.
 - Checks: `npm run typecheck` passes; `npm test` 63 files, 776 passed (3 new: the filler's write reports, a partial write in the build record, and the Windows sequence); `npm run build` passes; `npm run test:e2e` 27 passed.
+
+## M4.P2.4 Pack 2 World 4, Double Buffer (content-patterns, author-patterns)
+- What changed: a fourth Patterns world, "Finished copies only", with the full mini-arc for Double Buffer (six quests), all set in the arena. When state changes piece by piece, readers use a finished copy while the next one is built in a second copy, and one swap hands it over. Nobody then sees half a change, and nothing depends on which entry the loop visits first. Built away from the source chapter's examples from the start (A543).
+- The quests and their observables:
+  - Reading a page someone is still writing (concept): half-done changes, steps that read their own half-finished work, and how Unreal's renderer draws from its own copies.
+  - Straw that burns the same whichever way you look (build, worked): `ke * Ignite 6 4` sets the straw floor alight, and a diamond of orange squares grows one ring every half second, identical with Walk Backward on or off. In the tests, a one-row strip burns exactly one square per step in both directions, and two fires leave identical floors either way.
+  - Two copies and one handover (concept): the Double Buffer card and recognize items.
+  - A drum pad that scores one finished frame at a time (build, stub): hits from `ke * Hit 0` jump the score by 10 each on the next frame and never count again. Its deliberate failure: the swapped-back copy must be emptied before it collects again (A545).
+  - Standings that do not depend on who is scored first (refactor): with scores 20, 10, 4 and hits 0, 6, 1, the label reads 20 | 22 | 6 whichever way the teams are walked, where before it read 20 | 22 | 11 walking forward.
+  - When one copy is enough (concept): independent updates, chains meant to sweep in one pass, readers who need a write at once, stale back copies, and memory cost.
+- Also: a new `render-thread` glossary entry, and the double-buffer card's two use cases and two new items (A546).
+- Proof, UE 5.8.3 on the MacBook Air, fresh copies of the sandbox template, commands from the unreal-pipeline spec, under the shared engine lock:
+  - Reference solutions for all four patterns worlds: build succeeded, 36 of 36 tests passed (9 new). One World 2 test logged a warning that is not about the quest: the engine tried to launch its Intel-only iOS device probe (`idevice_id`, "Bad CPU type") while that test happened to be running.
+  - Starters: all compile; 30 of 36 fail. On the World 4 side, only the standings' plain-rounds test (working starter) passes, by design.
+  - The obvious drum pad (swap without emptying): fails only `OldHitsNeverReturn` ("expected 1, was 4") and `EachHitScoresOnce` ("expected 20, was 40").
+  - Content verifier `--pack patterns`: no problems. One expected warning: the Pack 4 gate names the Component world, which does not exist yet.
+- Not done: no boss for this world yet (A541). No screenshots (editor runs with `-NullRHI` on this Mac). Windows unverified. Decisions A540 to A547.
+
+### Fix round 1
+- Straw fire brief: it now says what an in-place write really does. The fire dies out in the direction of the walk and creeps one square per step against it, so the shape depends on the walk direction. The strip test catches the forward walk, and the two-fire test compares both directions.
+- Glossary: `render-thread` no longer lists "game thread" as an alias. A new `game-thread` entry has its own short and long text and Epic's 5.8 Threaded Rendering page, which describes the game thread's role. Its first quest is the Game Loop card, and the five quests that mention the game thread now list it in their terms.
+- Drum pad brief: each `ke * Hit` typed in the console runs on its own frame, so the brief now says the score rises by 10 on the frame after each hit instead of promising a jump of 30.
+- No code or tests changed, so the engine results above stand. Verifier `--pack patterns`: no problems, plus the expected Pack 4 gate warning.

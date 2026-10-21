@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: [game-loop]
 skills: [game-loop, time]
-terms: [tick, deltatime, tick-groups, physics-substepping]
+terms: [tick, deltatime, tick-groups, physics-substepping, game-thread]
 prerequisites: [p2-swinging-blade]
 xp: 25
 estimatedMinutes: 8

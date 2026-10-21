@@ -1,0 +1,5 @@
+{
+	"id": "double-buffer",
+	"title": "Finished copies only",
+	"summary": "The arena's straw floor catches fire, its drum pads take hits mid-frame, and its standings change while people read them. Learn to build the next state on a hidden copy and hand it over all at once, so nobody reads half a change and nothing depends on who went first."
+}
