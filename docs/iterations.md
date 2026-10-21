@@ -475,3 +475,7 @@ exit code 0
 - Rubrics now only ask for what the briefs say: the tutorial sign's brief now states what Watch does with an empty lever, a finished step, or a different lever. The refactor's rubric drops "reconnecting to another generator", which the working starter never did, and its brief now states that connecting twice must leave one binding, which the tests check.
 - Lesson zero no longer lists `coding-standard`. `endplay` now points to the delegates quest as its first quest. A379 and A381 are corrected (A381 now says the unlock also needs Pack 1 World 1 terms at Familiar).
 - Engine, UE 5.8.3 on the Mac, fresh sandboxes from the rebased template under the engine lock: reference solutions 9 of 9 pass; starters all compile and 7 of 9 fail, the same split as before (the refactor's behavior test and the sign's reflection test pass on their starters by design).
+
+### Fix round 2
+- The Observer card's lapsed-listener sentence is corrected: a plain `AddLambda` capturing the board does not keep it alive. Garbage collection never sees the binding, so the retired board keeps counting until it is freed, and the next broadcast then calls into freed memory.
+- The `multicast-delegate` glossary entry's example now uses this world's bounty board, crowd audio, and scoreboard instead of an achievement tracker (D13). Verifier `--pack patterns`: no problems. No code or tests changed, so the engine results from fix round 1 stand.
