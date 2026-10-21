@@ -1,0 +1,104 @@
+# CI: installs, checks, builds, and smoke tests the app on Windows and macOS, then uploads screenshots and the Playwright report.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # The release workflow calls this one so installers are only built from a commit that passed every check.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        # Git Bash on Windows, so every step runs the same command on both runners.
+        shell: bash
+    env:
+      # Where `install.js` keeps the Electron download, so the cache step below can restore it.
+      electron_config_cache: ${{ github.workspace }}/.cache/electron
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.1
+          cache: npm
+
+      - name: Cache the Electron download
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/electron
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      # npm 11 skips install scripts (A19), so Electron's binary is not in node_modules yet; fetch it now instead of inside the first test.
+      - name: Fetch the Electron binary
+        run: node node_modules/electron/install.js
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Content verifier
+        run: npx tsx tools/verify-content.ts
+
+      - name: Build
+        run: npm run build
+
+      # The hosted Windows desktop is 1024x768, below the window's 1100x700 minimum; raise it so the window fits the screen.
+      # Unverified on the windows-2025 image until the first real run. If the cmdlet is missing, the smoke test still passes
+      # because it accepts the minimum size as the floor, so a failure here does not fail the job (A117).
+      - name: Raise the Windows display resolution
+        if: ${{ runner.os == 'Windows' }}
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          Get-CimInstance -ClassName Win32_VideoController | Select-Object CurrentHorizontalResolution, CurrentVerticalResolution
+
+      # windows-latest and macos-latest have a desktop session, so Electron opens a real window with no virtual display.
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      # The e2e tests save screenshots under test-results/ (SAVE_PROOF is never set here, so docs/iterations/ is not touched).
+      - name: Upload screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: screenshots-${{ matrix.os }}
+          path: test-results/**/*.png
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload the Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report-${{ matrix.os }}
+          path: playwright-report/
+          if-no-files-found: warn
+          retention-days: 30

@@ -5,5 +5,6 @@ export default defineConfig({
 	testDir: "e2e",
 	timeout: 60_000,
 	workers: 1,
-	reporter: [["list"]],
+	// CI also writes an HTML report to `playwright-report/`, which the workflow uploads.
+	reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
 });
