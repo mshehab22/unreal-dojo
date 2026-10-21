@@ -80,11 +80,12 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | merged | merged | 2 fix rounds; rematch farming closed, proven with randomized sequences |
 | M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | merged 4bff33b | merged | 2 fix rounds; merge conflicts with M1.3 resolved keeping both |
 | M2.1c World Map overflow with real content | ui-core | ui-core (session "M0.3 Design tokens...") | merged 8798d5d | merged | Passed first review |
+| M2.1d Codex palette hover and map polish | ui-core | ui-core (session "M0.3 Design tokens...") | m2-1d-palette-hover | building | Highlight on pointer move, not enter |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 8665386 | merged | 1 fix round plus a test fix; includes the GFrameCounter timer fix |
-| M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring @ e109d4e | review | runQuest, cancelRun, checkSnippetSyntax, rebuildSandbox; prerequisite fill; adding tools/solutions to extraResources (Lead permission) |
-| M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | m0-2c-settings @ 7105220 | fixes | Key handling verified in a packaged build. Round 1: paths trusted blindly (Lead: sandboxPath only via the sandbox service, enginePath validated), corrupt config.json blocks startup |
+| M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring @ 99a6796 | review | Plus reference solutions shipped as solutions/ in the app bundle |
+| M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | m0-2c-settings @ 3271d44 | re-review | Paths checked or refused; corrupt config set aside |
 | M1.7c submitQuest and review IPC wiring | ai-review | builder-review (session) | m1-7c-submit-wiring | waiting on M0.2c and M1.3b | Run, review, recordAttempt; provider IPC; AI graders replace the A318 stand-in |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | merged b06a722 | merged | 2 rounds; --engine 9 of 9 on UE 5.8.3 through M1.3 runners |
 | M1.8b Verifier follow-ups | content-engine | content-engine (session "M0.4 Content types...") | m1-8b-verifier-followups | building | Bare-name cross-quest includes, Ctrl+C cancel, template copy skips build folders |
@@ -94,8 +95,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c1b7533) | re-review (round 3) | Round start and timer; World 1 boss reference integration with two-round tests, 10 of 10, mutation caught |
 | M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c3c9c14) | re-review; boss waits on A67 | All 11 items; 20 of 20 on UE 5.8.3 with the World 1 boss pieces |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | m2-2-quest-screens | building | Concept, Drill, Breakdown, Build, Loot on the M2.1 data layer and fake |
-| M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | claude/m3-1-patterns-observer-0943eb @ 4701e8a | fixes | 9 of 9 on UE 5.8.3, mutations caught. Round 1: wrong UFUNCTION claim (bind-time ensure, silent skip), two D13 issues (coupling definition, achievements example), rubric bullets without briefs, unused term |
-| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 94fae2a | fixes | A63 switch verified. Round 2: window height 858/859 rounding (allow 1 point when the work area limits), move remaining specs onto the harness |
+| M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | claude/m3-1-patterns-observer-0943eb @ 06ba8af | re-review | All five items fixed; rebased on the full verifier |
+| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 14cb005 | re-review | Height tolerance A118; every spec on the harness |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
 Queued for unreal-pipeline (from the M0.2c review, A426): `docs/systems/unreal-pipeline.md` lines 29 and 84 still name `ElectronStoreSandboxPathStore`; the class is unused once settings land.
