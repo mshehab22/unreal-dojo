@@ -89,7 +89,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
-| M2.3b World 1 follow-ups, then Pack 1 World 2 | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (M2.3b @ f7bfce1) | fixes (M2.3b round 2); building (World 2) | ResetForRound confirmed. Round 2: Blueprint Delay cannot auto-lower several targets; bell flag never cleared for round 2 |
+| M2.3b World 1 follow-ups, then Pack 1 World 2 | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (M2.3b @ f3ea45b) | fixes (M2.3b round 3); building (World 2) | Round start and C++ round timer missing; per A67 the boss now gets a compiled reference integration with a two-round test |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | m2-2-quest-screens | building | Concept, Drill, Breakdown, Build, Loot on the M2.1 data layer and fake |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | m3-1-patterns-observer | building | Engine runs under the shared lock |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness | fixes | Switching the smoke to M1.3 runners (A63) |
