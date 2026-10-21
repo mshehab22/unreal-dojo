@@ -97,6 +97,9 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | claude/m2-2-quest-screens-a21151 @ 214f85c | fixes | Core rules hold. Round 1: merge with main breaks the fake quest flow (A390 vs A351), editor test flake, sideways scroll in build column, breakdown board too narrow at 1100, Parsons marking, switch to the real TermLinker, fake grader, retry label, polish |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
 | M4.x Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | claude/m3-patterns-world2-game-loop @ 92381be | review | 18 of 18 solutions on UE 5.8.3 |
+| M4.x Pack 2 World 3 | content-patterns | author-patterns (session) | from the World 2 branch | building | Next pattern in Part 3 order |
+| M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop | building | McpEditorClient, EditorLauncher, LiveEditorRunner; Live Coding Windows only (A45) |
+| M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | m1-6c-revealed-hints | building | Hints survive restart, no second charge |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ fedd91d | re-review | Height range check; 30 of 30 |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
