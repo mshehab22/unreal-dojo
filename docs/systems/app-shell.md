@@ -87,7 +87,7 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Sandbox | `createSandbox(request)`, `rebuildSandbox(runId)` | `SandboxSetupResult`, streams progress | M1.2 |
 | Sandbox | `openEditor(questId or null)` | nothing; opens the editor on the sandbox with its MCP server and resolves once it answers (the quest id is ignored until per-quest maps exist, A533) | done (M1.4b) |
 | Runs | `runQuest(request)` | `RunResult`, streams progress | M1.3, M1.4 |
-| Runs | `submitQuest(request)` | `SubmitOutcome` (run, review, loot), streams progress | wired (M1.7c); the runner step arrives with M1.3b |
+| Runs | `submitQuest(request)` | `SubmitOutcome` (run, review, loot), streams progress | done (M1.7c, on M1.3b's run path) |
 | Runs | `checkSnippetSyntax(request)` | `SyntaxCheckResult` for the concept scratch buffer | M1.3 |
 | Runs | `cancelRun(runId)` | nothing | M1.3 |
 | Progress | `getProgress()`, `resetProgress()` | `PlayerProgress` | done (M1.6) |

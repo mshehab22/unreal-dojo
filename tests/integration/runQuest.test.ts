@@ -75,6 +75,7 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 				progressContentService: {} as never,
 				settingsService: {} as never,
 				readEnvironmentStatus: () => { throw new Error("not used"); },
+				getReviewHandlers: () => { throw new Error("not used"); },
 			}),
 		);
 	}

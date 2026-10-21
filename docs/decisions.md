@@ -58,6 +58,12 @@ Options: an app flag or environment variable that calls `app.setPath("userData",
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A469 2026-10-21 Submit's engine check uses the tests-only reviewer (M1.7c, builder-review)
+The integration test must run on any machine with the engine, without a Claude Code login or an API key, and must not spend money. Chosen (as the Lead asked): `tests/integration/submitQuest.test.ts` builds the same `createReviewHandlers` wiring the app uses, with a `ReviewService` whose settings choose `tests-only`, a real `ProgressService` on an in-memory disk, and the real content and unreal services, then submits `f1-score-keeper` with its reference solution. It is opt-in through `DOJO_ENGINE_ROOT`, like the M1.3b check (A187), and runs under the shared engine lock. Reverse cost: none.
+
+### A468 2026-10-21 Submit runs through `QuestRunService.runQuest`, built in the composition root (M1.7c, builder-review)
+Options: give `QuestSubmitService` the runner and quest file writer directly; reuse the run path M1.3b built for `runQuest`. Chosen: the second. `index.ts` passes `(request, onProgress, signal) => getUnrealServices().questRunService.runQuest(request.questId, request.files, onProgress, signal)` into `createReviewHandlers`, so Submit gets the same prerequisite fill, sandbox checks, loop, and progress events as Run, and the IPC layer's `trackRun` adds the run id, cancel, and `run-cancelled`. Every Submit dependency (review service, content catalog, progress service, runner path) is built in `index.ts`. Reverse cost: none.
+
 ### A467 2026-10-21 Submit attempts keep their files, capped, for the quest's last five Submits (M1.7c, Lead direction)
 "Why is this a finding?" needs the code the review saw; the quest's draft can change after Submit. Directed by the Lead: `AttemptRecord.files` stores the submitted files on build, refactor, and boss Submits only (`AttemptInput.isSubmit`), and `explainFinding` reads only those, never the draft. Caps (`AttemptFileRules`, picked within the Lead's example): each file is cut at 64 KB with a one-line note saying it was cut; files are kept in name order until the attempt reaches 256 KB, and the rest are left out; only a quest's latest five Submits that have files keep them, older ones drop `files` (score, review, and XP stay). Worst case per quest is about 1.25 MB, and only quests the learner has submitted grow. Reverse cost: low.
 

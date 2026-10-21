@@ -9,7 +9,6 @@ import { app, BrowserWindow, dialog, ipcMain, safeStorage } from "electron";
 import { createContentCatalog } from "./content/createContentCatalog";
 import { resolveContentRoot } from "./content/resolveContentRoot";
 import { createHandlers } from "./ipc/createHandlers";
-import { notImplemented } from "./ipc/notImplemented";
 import { registerHandlers } from "./ipc/registerHandlers";
 import { sendBuildProgress } from "./ipc/sendBuildProgress";
 import { createEngineLocator } from "./services/unreal/createEngineLocator";
@@ -132,11 +131,8 @@ async function start(): Promise<void>
 			content: contentCatalog,
 			progress: progressService,
 
-			// Submit runs through the same runner path as runQuest once M1.3b lands.
-			runQuest: async () =>
-			{
-				throw notImplemented("submitQuest", "the build and test loop (M1.3b)");
-			},
+			// The same run path as runQuest: prerequisite fill, file writing, the runner, and its progress events (M1.3b).
+			runQuest: (request, onProgress, signal) => getUnrealServices().questRunService.runQuest(request.questId, request.files, onProgress, signal),
 		}));
 
 	registerHandlers(

@@ -18,7 +18,16 @@ import { QuestSubmitService, type CodeAttemptSubmission } from "../../src/main/s
 import type { CodeReviewInput, ExplainGradeInput, FindingExplanationInput } from "../../src/main/services/review/ReviewInputs";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
 import { RunRegistry } from "../../src/main/services/unreal/RunRegistry";
-import { expectAppError, sampleRun } from "./reviewTestKit";
+import { BreakdownGrader } from "../../src/main/services/review/graders/BreakdownGrader";
+import { CodeReviewer } from "../../src/main/services/review/graders/CodeReviewer";
+import { ExplainGrader } from "../../src/main/services/review/graders/ExplainGrader";
+import { FindingExplainer } from "../../src/main/services/review/graders/FindingExplainer";
+import { createReviewHandlers } from "../../src/main/services/review/createReviewHandlers";
+import { TestsOnlyProvider } from "../../src/main/services/review/providers/TestsOnlyProvider";
+import { ProviderSelector } from "../../src/main/services/review/ProviderSelector";
+import { ReviewService } from "../../src/main/services/review/ReviewService";
+import { createTestProgressService } from "../support/progressFixtures";
+import { expectAppError, fixedSettings, sampleRun, ScriptedProvider } from "./reviewTestKit";
 
 /** A build quest with the fields the review reads. */
 function buildQuest(overrides: Partial<ReviewedCodeQuest> = {}): ReviewedCodeQuest
@@ -325,3 +334,41 @@ describe("review IPC routing", () =>
 		expect(sent[0]).toMatchObject({ runId: "run-7", phase: "reviewing", elapsedMs: expect.any(Number) });
 	});
 });
+
+describe("createReviewHandlers end to end with fakes", () =>
+{
+	it("submits with the tests-only reviewer, stores the review and files on the attempt, and explains a finding from them", async () =>
+	{
+		const testsOnly = new TestsOnlyProvider();
+		const graders = { codeReviewer: new CodeReviewer(), breakdownGrader: new BreakdownGrader(), explainGrader: new ExplainGrader(), findingExplainer: new FindingExplainer() };
+		const reviewService = new ReviewService(new ProviderSelector(fixedSettings("tests-only"), [], testsOnly), new ScriptedProvider("claude-code"), testsOnly, graders);
+		const { service: progress } = createTestProgressService();
+		const runRequests: RunRequest[] = [];
+
+		const handlers = createReviewHandlers({
+			reviewService,
+			content: { listPacks: async () => PACKS, getAuthoredQuest: async (questId) => (questId === "w1.health" ? buildQuest() : undefined), getPatternCards: async () => PATTERN_CARDS },
+			progress,
+			runQuest: async (request, onProgress) =>
+			{
+				runRequests.push(request);
+				onProgress({ phase: "testing", lastLine: "Running tests" });
+
+				return sampleRun();
+			},
+		});
+
+		const submit = await handlers.submitQuest(REQUEST, () => undefined, new AbortController().signal);
+
+		expect(runRequests).toEqual([REQUEST]);
+		expect(submit.review).toMatchObject({ provider: "tests-only", score: 50 });
+		expect(submit.outcome.attempt).toMatchObject({ score: 50, passed: false, review: { provider: "tests-only" }, files: REQUEST.files });
+
+		const attemptId = submit.outcome.attempt.attemptId;
+		const explanation = await handlers.explainFinding({ attemptId, findingIndex: 0 });
+
+		expect(explanation).toContain("fired 0 times");
+		await expect(handlers.answerReflection({ attemptId, answer: "Because." })).resolves.toMatchObject({ provider: "tests-only" });
+	});
+});
+
