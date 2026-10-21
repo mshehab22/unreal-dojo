@@ -78,7 +78,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | merged 329a995 | merged | 1 fix round; build about 20 s, headless test about 18 s on UE 5.8.3 Mac |
 | M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | merged 267739b | merged | Passed first review; Windows unverified (problems.md) |
 | M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | merged | merged | 2 fix rounds; rematch farming closed, proven with randomized sequences |
-| M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | m1-6b-progress-wiring | building | Connects the remaining progress stubs to ProgressService using the content catalog |
+| M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | m1-6b-progress-wiring @ 857ed48 | fixes | Wiring correct; trial merge clean. Round 1: empty due drill pays XP (Lead: XP and streak only with a scheduled due item), daily cap per call not per day, test-out blocked by untaught terms, test-out drill names unbuilt patterns, duplicate questions |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop @ 3891f21 | fixes | Reviewer reran 7 of 7 on UE 5.8.3; timer fix confirmed. Round 1: test filter matches other quests (confirmed), Windows argv0 unquoted on spaced engine path, orphaned runs on quit, long-path warning not sent |
@@ -91,6 +91,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
 Queued for unreal-pipeline (A65): fill a tested-out or reset prerequisite quest's files with its reference solution before building a later quest that depends on it, and tell the learner which files came from the reference.
 Queued for M2.2 (from the M1.7b review): the Build screen shows a "Retry review" button when a review falls back to tests-only with `retryReviewSuggested`.
+Queued for the verifier (from the M1.6b review): a concept quest must have at least one question that is not explain-in-one-sentence, since tests-only grading cannot pass explain items.
 Queued for the verifier (from the M1.7b review): a breakdown required-piece label must have a core of at least 4 characters after kind words are removed, so tests-only matching stays meaningful.
 Note for M2.1 (from the M1.1 review): `supportsFastLoop` is true for 5.8 on the Mac, but the Mac has no Live Coding (A45); first-run and Title must not promise the fast loop on the Mac.
 
