@@ -102,7 +102,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.P2.2 Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | merged 0e7060c | merged | 1 fix round |
 | M4.P2.3 Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | merged 0e7060c | merged | 1 fix round; moved to the arena (D13) |
 | M4.P2.4 Pack 2 World 4 (Double Buffer) | content-patterns | author-patterns (session) | merged | merged | Text fix round checked by the Lead; new game-thread glossary entry |
-| M4.P2.5 Pack 2 World 5 (Command) | content-patterns | author-patterns (session) | m4-p2-world5 @ a5efaa6 | review | 45 of 45 solutions across five worlds |
+| M4.P2.5 Pack 2 World 5 (Command) | content-patterns | author-patterns (session) | m4-p2-world5 @ a5efaa6 | fixes | Accurate, 9 of 9; D13: course planner mirrors the book's level-editor undo, move it into play |
 | M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged 2b31811 | merged | 2 fix rounds; fast re-run 65 ms to 2.4 s on the Mac |
 | M1.4b Fast loop wiring | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4b-fast-loop-wiring @ 6abe58d | review | Wired per A489; engine test through real handlers |
 | M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | merged | merged | 1 fix round; refused save safe; migration verified |
