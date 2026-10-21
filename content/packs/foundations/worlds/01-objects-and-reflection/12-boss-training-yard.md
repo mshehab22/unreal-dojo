@@ -24,9 +24,11 @@ pieces:
 
 The client's training yard runs a timed practice round. The yard holds 6 pop-up targets and 2 training dummies. A round lasts 45 seconds. Every second a lowered target (never a broken one) is chosen at random and raised, unless 2 targets are already up; a raised target that nobody hits within 2.5 seconds drops back by itself. Each target breaks after 2 hits and each dummy goes down after 3 strikes. The score keeper counts 5 points per dummy strike and 25 per broken target, so the most a round can score is 180 (150 from six broken targets, 30 from two downed dummies). A hit on a target that is lowered or broken is a miss: it costs 5 points, the score never drops below 0, and the target's label reads MISS until its next state change. Mashing every key as targets rise therefore loses points instead of breaking everything for free. When the score first reaches 150 in a round, the bell is struck once at full force; a flag for "bell rung this round" stops it ringing again until the next round. When the round ends, the rise and lower timers stop, keys stop doing anything, and the keeper shows the final score on its label, which stays there until the next round starts. Starting a round resets everything first: every target goes back to lowered with no hits and no misses, whatever state it ended in, every dummy stands up again, the bell flag and the remembered rise times are cleared, and only then do the timers and keys start, so round 2 plays exactly like round 1. With a rise every second and 2.5 seconds up, an unhit target is still up when the next two rises come, so the 2 at once limit really decides which rises are skipped. Reference game: the archery and shooting galleries of The Legend of Zelda: Ocarina of Time, where a short timed round with targets popping up is the whole game.
 
-How the player hits things: keys 1 to 6 call Hit on the matching pop-up target, and Q and E call Strike on the two dummies. Map them in the level Blueprint with keyboard events, or bind keys on a C++ director (an actor only receives keys after `EnableInput` with the player controller); either way the key only calls the target's own BlueprintCallable function, and only while a round is running.
+How a round starts: round 1 starts when play begins, and pressing R starts the next round, but only while no round is running; R is the one key that works between rounds. How the player hits things: keys 1 to 6 call Hit on the matching pop-up target, and Q and E call Strike on the two dummies. Map them in the level Blueprint with keyboard events, or bind keys on a C++ director (an actor only receives keys after `EnableInput` with the player controller); either way the key only calls the target's own BlueprintCallable function, and only while a round is running.
 
 The point of the boss is the split. Your four earlier classes keep their rules; something new drives the round, and every number above can be changed by a designer in the editor without a rebuild. The earlier classes need exactly five additions, and nothing else in their rules changes: the pop-up target gains `Lower` (raised to lowered without counting a hit, for the target nobody hit in time), a miss count (a refused hit adds one and shows MISS), and `ResetForRound` (lowered from any state, with hits and misses cleared and the label refreshed; Repair only works on a broken target, so it cannot do this job); the dummy gains `ResetHits` (back to standing for the next round); and the score keeper gains `PointsPerMiss` (5), subtracting all misses from the points earned and clamping the total at 0, so misses made while the score is 0 still count against points earned later. Timers get a full world later; for the round clock, the rise rhythm, and the auto lower you may use the level Blueprint's Set Timer by Event node calling your BlueprintCallable functions, or a C++ director actor with the timer manager. A Delay node will not do for the auto lower: a Delay that is already counting ignores new calls, so with a rise every second only the first target would ever drop. Remember when each target rose and check them all on a short looping timer instead.
+
+Compiles against earlier quests: f1-popup-target (`Quests/f1-popup-target/DojoF1PopupTarget.h`), f1-training-dummy (`Quests/f1-training-dummy/DojoF1TrainingDummy.h`), f1-score-keeper (`Quests/f1-score-keeper/DojoF1ScoreKeeper.h`), and f1-practice-bell (`Quests/f1-practice-bell/DojoF1PracticeBell.h`).
 
 Core numbers are fixed: 6 targets, 2 dummies, 45 second round, a rise every second, 2.5 seconds up, at most 2 up at once, 2 hits per target, 3 strikes per dummy, 5 and 25 points, 5 points lost per miss with a floor of 0, bell at 150.
 
@@ -51,8 +53,8 @@ Feel: tune the time a target stays up until a missed target feels like your own 
   why: The round needs to drop an unhit target, punish mashing, and stand dummies up again, and these are the only changes the earlier classes need.
 - id: player-input
   kind: step
-  label: Map keys 1 to 6 to Hit on each target and Q and E to Strike on each dummy
-  why: The player's only verbs; each key calls the target's own function and nothing else.
+  label: Map keys 1 to 6 to Hit on each target and Q and E to Strike on each dummy during a round, and R to start the next round between rounds
+  why: The player's only verbs; each key calls one function and nothing else, and R is how round 2 begins.
 - id: round-driver
   kind: class
   label: Something that runs the round clock and the rise rhythm
@@ -91,13 +93,13 @@ Feel: tune the time a target stays up until a missed target feels like your own 
   pieces:
     - { id: reused, kind: class, label: The dummy and pop-up target classes from the earlier quests, covers: [targets] }
     - { id: added, kind: step, label: Lower and a miss count and ResetForRound on ADojoF1PopupTarget and ResetHits on ADojoF1TrainingDummy and PointsPerMiss on the keeper as the only additions, covers: [additions] }
-    - { id: director, kind: class, label: ADojoF1YardDirector with StartRound and EndRound and a bRoundRunning flag and arrays of targets and dummies plus the keeper and the bell set in Details, covers: [round-driver, tunables] }
-    - { id: keys, kind: step, label: Director calls EnableInput in BeginPlay and binds number keys and Q and E to Hit and Strike on the matching array entries only while bRoundRunning, covers: [player-input] }
+    - { id: director, kind: class, label: ADojoF1YardDirector with StartRound called from BeginPlay and EndRound and a bRoundRunning flag and arrays of targets and dummies plus the keeper and the bell set in Details, covers: [round-driver, tunables] }
+    - { id: keys, kind: step, label: Director calls EnableInput in BeginPlay and binds keys 1 to 6 and Q and E to HitTarget and StrikeDummy which do nothing unless bRoundRunning and R to RestartRound which only calls StartRound while no round runs, covers: [player-input] }
     - { id: rise, kind: step, label: Director's rise step counts raised targets with GetState and raises a random lowered one, covers: [rise-rule] }
     - { id: lower, kind: step, label: Director stores each target's rise time in a map when it raises it and a 0.1 second looping timer calls Lower on every target still raised for the up time or longer, covers: [auto-lower] }
     - { id: keeper, kind: class, label: The score keeper placed in the level with every target and dummy in its list, covers: [scoring] }
     - { id: bell, kind: step, label: After each hit or strike the director checks CountScore and if bBellRungThisRound is false and the score has reached the threshold strikes the bell and sets the flag, covers: [bell-trigger] }
-    - { id: reset, kind: step, label: EndRound clears the rise and check timers and bRoundRunning and calls ShowScore; StartRound calls ResetForRound on every target and ResetHits on every dummy and clears bBellRungThisRound and the rise times and calls ShowScore before starting the timers, covers: [round-reset] }
+    - { id: reset, kind: step, label: EndRound clears the rise and check timers and bRoundRunning and calls ShowScore; StartRound calls ResetForRound on every target and ResetHits on every dummy and clears bBellRungThisRound and the rise times and calls ShowScore before starting a non-looping 45 second round timer that calls EndRound and the looping rise and lower timers, covers: [round-reset] }
   edges:
     - { from: added, to: reused, label: extends the earlier classes }
     - { from: keys, to: reused, label: calls Hit and Strike }
@@ -115,8 +117,8 @@ Feel: tune the time a target stays up until a missed target feels like your own 
   pieces:
     - { id: reused, kind: class, label: The four earlier classes placed in the level, covers: [targets, scoring] }
     - { id: added, kind: step, label: Lower and a miss count and ResetForRound on the pop-up target and ResetHits on the dummy and PointsPerMiss on the keeper as the only additions, covers: [additions] }
-    - { id: level, kind: class, label: Level Blueprint with Start Round and End Round events and a Round Running variable and timer handles for the round and rise and check timers, covers: [round-driver] }
-    - { id: keys, kind: step, label: Keyboard events 1 to 6 and Q and E in the level Blueprint call Hit or Strike on placed actors behind a branch on Round Running, covers: [player-input] }
+    - { id: level, kind: class, label: Level Blueprint with Start Round called from Event BeginPlay and End Round called by a non-looping 45 second round timer and a Round Running variable and timer handles for the round and rise and check timers, covers: [round-driver] }
+    - { id: keys, kind: step, label: Keyboard events 1 to 6 and Q and E in the level Blueprint call Hit or Strike on placed actors behind a branch on Round Running and the R event calls Start Round behind a branch on Round Running being false, covers: [player-input] }
     - { id: rise, kind: step, label: Rise event filters the target array by GetState and calls Raise on a random lowered one and records Get Game Time in Seconds for it in a target to time map, covers: [rise-rule] }
     - { id: lower, kind: step, label: A 0.1 second looping Set Timer by Event loops over the map and calls Lower on every target still raised for the up time or longer, covers: [auto-lower] }
     - { id: bell, kind: step, label: After each Hit or Strike the Blueprint checks a Bell Rung This Round variable and compares CountScore with the threshold and strikes the bell and sets the variable, covers: [bell-trigger] }
@@ -142,6 +144,6 @@ Feel: tune the time a target stays up until a missed target feels like your own 
 - Every fixed number is an editable property or instance editable variable with the given default.
 - The up limit of 2 holds even when the rise step and an auto lower happen in the same moment; every raised target drops after the up time, not only the latest; and a hit on a lowered or broken target costs 5 points without taking the score below 0.
 - The bell is struck exactly once per round, through Strike, never by calling its reaction directly, and the bell rung this round flag is cleared when the next round starts so round 2 can ring too.
-- Ending the round stops the timers and the keys and shows the score; starting a round resets every target (lowered, no hits or misses), every dummy, the bell flag, and the rise times first, so a second round plays the same as the first.
+- Round 1 starts with play and R starts each later round only between rounds; a 45 second round timer ends it, stopping the timers and the keys and showing the score; starting a round resets every target (lowered, no hits or misses), every dummy, the bell flag, and the rise times first, so a second round plays the same as the first.
 - Nothing uses Tick; the round runs on timers and on calls into the C++ API.
 - The tuned up time is written in the submission with one sentence on why it felt fair.
