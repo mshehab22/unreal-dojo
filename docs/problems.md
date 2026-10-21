@@ -20,6 +20,8 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 
 - 2026-10-21, ui-core: the e2e test "a locked stage explains why on hover" fails about 1 run in 3 to 6 in the full suite and passes alone (10 of 10). Low-rate hover timing flake. Owner: ui-core.
 
+- 2026-10-21, docs: `docs/decisions.md` has duplicate numbers A89, A490, and A491 from parallel branches. Owner: Lead, to renumber the later duplicates with a cross-reference note when no branch touching them is open.
+
 ## Unverified on a platform
 
 (The Lead lists here anything that passed on one machine and could not be run on the other.)

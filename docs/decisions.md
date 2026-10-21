@@ -931,6 +931,9 @@ Options: a marker string such as `{{ENGINE}}`; empty; a real version. Chosen: em
 ### A40 2026-10-21 The sample quest ships in the template as the sandbox smoke test (builder-unreal, M1.2a)
 Options: keep the sample out of the shipped template; ship it. Chosen: ship it as `Quests/SampleHealth/USampleHealthComponent` with test `Dojo.Sample.Health.TakesDamage`, so the first-run build has something to compile and the first test run proves the whole chain. Named "Sample" so it cannot clash with a content pack's own health component class (all quests share one module, so two `UHealthComponent` classes would not compile). Content authors should give quest classes names unique within the module. Reverse cost: delete two folders.
 
+### A70 2026-10-21 The paid API reviews a submit only when every test passed
+From the M1.7c review: the spec reviews every submit that compiled, which with the learner's API key spends money on attempts whose tests failed. Options: review every compiled submit with any provider; never review failing submits; review failing submits only with the subscription-backed Claude Code. Chosen: Claude Code (subscription, no per-call cost) reviews any compiled submit, since findings on failing tests teach; the Anthropic API provider reviews only all-tests-passed submits, and a submit with failing tests falls back to tests-only grading with the reason shown. Recorded in `docs/systems/ai-review.md` by builder-review. Reverse cost: low.
+
 ### A69 2026-10-21 Strategy, Factory Method, and Facade get Pack 2 worlds 20 to 22, after Nystrom's 19
 With one world per pattern (A491), the three patterns added beyond Nystrom's book need places. Options: interleave them where they fit thematically; append them after the 19 in card order. Chosen: append as worlds 20 to 22 in card order, after the combos world's prerequisites, so Part 3's teaching order stays intact. Reverse cost: low (folder renames).
 
