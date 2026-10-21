@@ -86,7 +86,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
-| M2.3b World 1 follow-ups, then Pack 1 World 2 | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 | building | Boss miss penalty (Lead decision), A66 in patterns.json; then World 2 |
+| M2.3b World 1 follow-ups, then Pack 1 World 2 | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (M2.3b @ cfedcf2) | review (M2.3b); building (World 2) | Boss miss rule A330 to A332; World 2 is memory and ownership under GC |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | m2-2-quest-screens | building | Concept, Drill, Breakdown, Build, Loot on the M2.1 data layer and fake |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | m3-1-patterns-observer | building | Engine runs under the shared lock |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 8b6e368 | fixes | Round 1: cleanup and test order now; after M1.3 merges the smoke reuses M1.3 runners (A63) |
