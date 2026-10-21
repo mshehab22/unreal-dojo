@@ -200,6 +200,30 @@ describe("ContentLoader", () =>
 		expect(messages.some((message) => message.startsWith("unexpected file"))).toBe(true);
 	});
 
+	it("reports a world id used in two packs, and leaves the later pack's world and its quests out (A73)", async () =>
+	{
+		const concept = (await readExamples()).get("01-concept-uproperty.md") ?? "";
+
+		await writePack(fixture, "first", 1);
+		await writePack(fixture, "second", 2);
+		await writeWorld(fixture, "first", "01-basics");
+		await writeWorld(fixture, "second", "03-basics");
+		await fixture.write("packs/first/worlds/01-basics/01-a.md", retagQuest(concept, "a", 1));
+		await fixture.write("packs/second/worlds/03-basics/01-b.md", retagQuest(concept, "b", 1));
+
+		const content = await new ContentLoader(fixture.root).load();
+
+		expect(content.problems).toEqual([
+			{
+				file: "packs/second/worlds/03-basics/world.json",
+				section: "id",
+				message: "world id \"basics\" is already used by packs/first/worlds/01-basics/world.json in another pack; world ids must be unique across packs (A73)",
+			},
+		]);
+		expect(content.packs.map((pack) => [pack.id, pack.worlds.map((world) => world.id)])).toEqual([["first", ["basics"]], ["second", []]]);
+		expect(Object.keys(content.questSources)).toEqual(["a"]);
+	});
+
 	it("reads only the requested pack", async () =>
 	{
 		await writePack(fixture, "one", 1);

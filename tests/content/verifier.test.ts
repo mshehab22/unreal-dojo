@@ -108,6 +108,19 @@ describe("runVerifier", () =>
 		expect(lines).toContain("      engine: did not build:\n          first error\n          second error");
 	});
 
+	it("fails on a world id two packs share (A73)", async () =>
+	{
+		await writePack(fixture, "first", 1);
+		await writePack(fixture, "second", 2);
+		await writeWorld(fixture, "first", "01-basics");
+		await writeWorld(fixture, "second", "01-basics");
+
+		const result = await runVerifier(defaultOptions(), []);
+
+		expect(result.problemCount).toBe(1);
+		expect(formatReport(result)).toContain("FAIL  packs/second/worlds/01-basics/world.json");
+	});
+
 	it("runs registered checks after parsing and reports their problems", async () =>
 	{
 		const check = { name: "always", run: () => [{ file: "glossary.json", message: "from a check" }] };

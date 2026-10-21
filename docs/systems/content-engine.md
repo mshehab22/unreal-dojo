@@ -61,7 +61,7 @@ Plan shapes: a required piece is `{ id, kind, label, why }`; a reference plan is
 
 Folder rules: a pack folder name equals its `pack.json` id; a world folder is `<nn>-<world-id>` and its number is the world order; a world folder holds only `world.json` and `<nn>-<slug>.md` files.
 
-Errors name the file (relative to `content/`), and the section and line when known, for example `packs/p1/worlds/01-actors/03-door.md line 41, Hints: expected exactly 3 hints, found 2`. Duplicate ids are errors: quest ids across every loaded pack, pack ids, world ids in a pack, glossary ids, pattern ids, and question, piece, plan, file, and Parsons ids inside one quest. A file or entry with any problem is left out of the loaded content and the rest still loads. For a duplicate id or a repeated `order`, the first file or entry (by path, then position) keeps it and each later one is flagged and left out.
+Errors name the file (relative to `content/`), and the section and line when known, for example `packs/p1/worlds/01-actors/03-door.md line 41, Hints: expected exactly 3 hints, found 2`. Duplicate ids are errors: quest ids across every loaded pack, pack ids, world ids across every pack (A73: the catalog, `getWorld`, and the drill bank look worlds up by bare id; the later world in pack order is reported on its `world.json`, naming the earlier one, and left out with its quests), glossary ids, pattern ids, and question, piece, plan, file, and Parsons ids inside one quest. A file or entry with any problem is left out of the loaded content and the rest still loads. For a duplicate id or a repeated `order`, the first file or entry (by path, then position) keeps it and each later one is flagged and left out.
 
 ## Parser structure
 

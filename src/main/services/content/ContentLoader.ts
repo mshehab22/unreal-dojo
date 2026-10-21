@@ -34,6 +34,9 @@ interface LoadRun
 {
 	content: LoadedContent;
 	parsedQuests: QuestFromFile[];
+
+	/** The folder (relative to the content folder) each loaded world was read from, for problems that name it. */
+	worldFolders: Map<World, string>;
 }
 
 /** Loads content from one folder. One loader per folder; `load()` may be called again to reload. */
@@ -51,7 +54,7 @@ export class ContentLoader
 	async load(options: ContentLoadOptions = {}): Promise<LoadedContent>
 	{
 		const content: LoadedContent = { packs: [], glossary: [], patterns: [], files: [], questSources: {}, problems: [] };
-		const run: LoadRun = { content, parsedQuests: [] };
+		const run: LoadRun = { content, parsedQuests: [], worldFolders: new Map() };
 
 		if (!(await this.isDirectory(this.root)))
 		{
@@ -68,9 +71,10 @@ export class ContentLoader
 		content.glossary = this.dropDuplicates(glossary, "glossary entry", "glossary.json", content.problems);
 		content.patterns = this.dropDuplicates(patterns, "pattern card", "patterns.json", content.problems);
 
+		const uniquePacks = this.dropCrossPackWorldIds(packs, run);
 		const dropped = this.dropDuplicateQuestIds(run);
 
-		content.packs = packs.map((pack) => ({
+		content.packs = uniquePacks.map((pack) => ({
 			...pack,
 			worlds: pack.worlds.map((world) => ({ ...world, quests: world.quests.filter((quest) => !dropped.has(quest)) })),
 		}));
@@ -87,7 +91,7 @@ export class ContentLoader
 	async loadExamples(): Promise<{ quests: AuthoredQuest[]; files: string[]; questSources: Record<string, string>; problems: ContentProblem[] }>
 	{
 		const folder = join(this.root, "examples");
-		const run: LoadRun = { content: { packs: [], glossary: [], patterns: [], files: [], questSources: {}, problems: [] }, parsedQuests: [] };
+		const run: LoadRun = { content: { packs: [], glossary: [], patterns: [], files: [], questSources: {}, problems: [] }, parsedQuests: [], worldFolders: new Map() };
 
 		if (!(await this.isDirectory(folder))) return { quests: [], files: [], questSources: {}, problems: [] };
 
@@ -205,7 +209,11 @@ export class ContentLoader
 
 		if (manifest === undefined) return undefined;
 
-		return { ...manifest, order, quests: quests.map((result) => result.quest).sort((first, second) => first.order - second.order) };
+		const world: World = { ...manifest, order, quests: quests.map((result) => result.quest).sort((first, second) => first.order - second.order) };
+
+		run.worldFolders.set(world, folderPath);
+
+		return world;
 	}
 
 	/** Reads and parses one quest file. */
@@ -252,6 +260,43 @@ export class ContentLoader
 		content.problems.push(...problems.problems);
 
 		return manifest;
+	}
+
+	/**
+	 * Reports a world id that a world in another pack already uses (A73): the catalog, `getWorld`, and the drill bank look
+	 * worlds up by bare id. Packs are taken in pack order; the later world is reported on its `world.json`, naming the
+	 * earlier one, and is left out with its quests. Returns the packs without those worlds.
+	 */
+	private dropCrossPackWorldIds(packs: readonly Pack[], run: LoadRun): Pack[]
+	{
+		const firstFolder = new Map<string, string>();
+		const droppedFolders: string[] = [];
+
+		const kept = packs.map((pack) =>
+		{
+			const worlds = pack.worlds.filter((world) =>
+			{
+				const folder = run.worldFolders.get(world) ?? `packs/${pack.id}/worlds`;
+				const earlier = firstFolder.get(world.id);
+
+				if (earlier === undefined)
+				{
+					firstFolder.set(world.id, folder);
+					return true;
+				}
+
+				run.content.problems.push({ file: `${folder}/world.json`, section: "id", message: `world id "${world.id}" is already used by ${earlier}/world.json in another pack; world ids must be unique across packs (A73)` });
+				droppedFolders.push(`${folder}/`);
+				return false;
+			});
+
+			return { ...pack, worlds };
+		});
+
+		// A left-out world's quests are left out too, so they never claim quest ids or appear in questSources.
+		run.parsedQuests = run.parsedQuests.filter((result) => !droppedFolders.some((folder) => result.file.startsWith(folder)));
+
+		return kept;
 	}
 
 	/**
