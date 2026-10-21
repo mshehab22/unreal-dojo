@@ -18,6 +18,7 @@ export class WindowsPlatformPaths implements PlatformPaths
 {
 	readonly buildPlatform: UnrealBuildPlatform = "Win64";
 	readonly caseInsensitivePaths = true;
+	readonly liveCodingAvailable = true;
 	readonly verbatimArguments = true;
 	readonly testNameEndAnchor = "$";
 	readonly maximumSandboxPathLength = 100;

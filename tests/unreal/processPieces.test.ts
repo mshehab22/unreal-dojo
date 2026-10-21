@@ -75,6 +75,22 @@ describe("process tree killers", () =>
 		expect(killer.startsOwnProcessGroup).toBe(false);
 		expect(commands).toEqual(["taskkill /PID 77 /T /F"]);
 	});
+
+	it("asks a process to quit with SIGTERM on macOS, to the process only", () =>
+	{
+		const signals: [number, string][] = [];
+		new PosixProcessTreeKiller((processId, signal) => signals.push([processId, signal])).requestExit(4321);
+
+		expect(signals).toEqual([[4321, "SIGTERM"]]);
+	});
+
+	it("asks a process tree to close with taskkill without /F on Windows", () =>
+	{
+		const commands: string[] = [];
+		new WindowsProcessTreeKiller((command, commandArguments) => commands.push([command, ...commandArguments].join(" "))).requestExit(77);
+
+		expect(commands).toEqual(["taskkill /PID 77 /T"]);
+	});
 });
 
 describe("runSupervised", () =>

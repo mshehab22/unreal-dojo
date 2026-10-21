@@ -9,6 +9,9 @@ export interface PlatformPaths
 	/** UBT platform name, `Win64` or `Mac`. */
 	readonly buildPlatform: UnrealBuildPlatform;
 
+	/** True when the editor can patch new code in with Live Coding (Windows, MSVC only). On macOS a code change needs a full build and an editor restart (A45). */
+	readonly liveCodingAvailable: boolean;
+
 	/** True when paths compare without regard to letter case (Windows). */
 	readonly caseInsensitivePaths: boolean;
 

@@ -26,4 +26,17 @@ export class WindowsProcessTreeKiller implements ProcessTreeKiller
 			// Already gone.
 		}
 	}
+
+	/** Runs taskkill without `/F`, which asks the process's windows to close instead of ending it. */
+	requestExit(processId: number): void
+	{
+		try
+		{
+			this.startDetached("taskkill", ["/PID", String(processId), "/T"]);
+		}
+		catch
+		{
+			// Already gone.
+		}
+	}
 }

@@ -8,6 +8,7 @@ export class MacPlatformPaths implements PlatformPaths
 {
 	readonly buildPlatform: UnrealBuildPlatform = "Mac";
 	readonly caseInsensitivePaths = false;
+	readonly liveCodingAvailable = false;
 	readonly verbatimArguments = false;
 	readonly testNameEndAnchor = "";
 	readonly maximumSandboxPathLength = null;

@@ -1,11 +1,12 @@
 // The headless loop: write files, build with UnrealBuildTool, run tests in UnrealEditor-Cmd, read the report.
-import type { RunResult, TestCaseResult } from "@shared/types/run";
+import type { RunResult } from "@shared/types/run";
 
 import type { AutomationTestRunner } from "./AutomationTestRunner";
 import type { PlatformPaths } from "./PlatformPaths";
 import type { ProgressListener } from "./ProgressUpdate";
 import type { QuestFileWriter, QuestForWriting } from "./QuestFileWriter";
 import type { IRunner, RunnerContext } from "./Runner";
+import { runResultOf } from "./runResultOf";
 import type { SandboxFileSystem } from "./SandboxFileSystem";
 import { PROJECT_FILE_NAME } from "./SandboxProjectService";
 import type { Timer } from "./SupervisedProcess";
@@ -42,7 +43,7 @@ export class HeadlessRunner implements IRunner
 	async run(quest: QuestForWriting, files: Record<string, string>, onProgress: ProgressListener, signal: AbortSignal): Promise<RunResult>
 	{
 		const startedAt = this.dependencies.timer.now();
-		const finish = (fields: Partial<RunResult>): RunResult => resultOf(fields, this.dependencies.timer.now() - startedAt);
+		const finish = (fields: Partial<RunResult>): RunResult => runResultOf(fields, this.dependencies.timer.now() - startedAt, "headless");
 
 		try
 		{
@@ -111,26 +112,4 @@ export class HeadlessRunner implements IRunner
 			await fileSystem.removeFolder(reportFolder);
 		}
 	}
-}
-
-/** Fills a RunResult from the known fields; `ok` only when it compiled, at least one test ran, every test passed, and nothing went wrong. */
-function resultOf(fields: Partial<RunResult>, durationMs: number): RunResult
-{
-	const tests: TestCaseResult[] = fields.tests ?? [];
-	const compiled = fields.compiled ?? false;
-	const testsPassed = tests.filter((test) => test.passed).length;
-	const result: RunResult = {
-		ok: compiled && tests.length > 0 && testsPassed === tests.length && fields.error === undefined,
-		compiled,
-		compilerOutput: fields.compilerOutput ?? "",
-		tests,
-		testsPassed,
-		testsTotal: tests.length,
-		durationMs,
-		loop: "headless",
-	};
-
-	if (fields.error !== undefined) result.error = fields.error;
-
-	return result;
 }

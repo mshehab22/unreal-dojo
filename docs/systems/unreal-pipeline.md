@@ -20,7 +20,7 @@ interface TestCaseResult { name: string; passed: boolean; message?: string; dura
 
 `BuildProgressEvent` is defined in `src/shared/types/run.ts` (A85); that file is the source of truth. Fields: `runId` (the id the renderer passed in its request; every event of a run carries it), `phase` (`preparing`, `writing`, `building`, `launching`, `testing`, `parsing`, `reviewing`), `elapsedMs`, `lastLine`, `percent?`, `loop?` (`fast` or `headless`, once chosen), `loopReason?` (sent once with the choice). Services emit it through `sendBuildProgress` in `src/main/ipc/sendBuildProgress.ts`. `RunResult` and `TestCaseResult` above match `run.ts`.
 
-`RunnerFactory.forQuest(quest)` on macOS: Live Coding is not available there, and the open editor keeps the code it loaded at launch. So on the Mac `LiveEditorRunner` is used only when no build has finished since that editor launched and the run needs no build; otherwise `HeadlessRunner`, and the open editor is marked stale with a "restart the editor" offer (A45). On Windows it returns `LiveEditorRunner` when the engine is 5.8+, the editor is open with the sandbox project, the MCP server answers, and the diff since the last successful full build touches no header of a reflected type; otherwise `HeadlessRunner`. The choice and the reason go into the progress stream so the UI can say "fast loop" or "full build".
+`RunnerFactory.forContext(context)` returns a `LoopSelectingRunner` once the fast loop pieces are given (M1.4, A480); it chooses at the start of each run with `chooseLoop`. On macOS: Live Coding is not available there, and the open editor keeps the code it loaded at launch. So on the Mac `LiveEditorRunner` is used only when no build has finished since that editor launched and the run needs no build; otherwise `HeadlessRunner`, and the open editor is marked stale with a "restart the editor" offer (A45). On Windows it returns `LiveEditorRunner` when the engine is 5.8+, the editor is open with the sandbox project, the MCP server answers, and the diff since the last successful full build touches no header of a reflected type; otherwise `HeadlessRunner`. The choice and the reason go into the progress stream so the UI can say "fast loop" or "full build". Only an editor the app opened counts (A484). The exact rules are under "Fast loop (M1.4)" below.
 
 ## Components
 
@@ -30,11 +30,11 @@ interface TestCaseResult { name: string; passed: boolean; message?: string; dura
 - `UnrealBuilder.ts`: runs `DojoEditor <Win64|Mac> Development -Project=<uproject> -WaitMutex -Progress` through `Build.sh` on macOS and `UnrealBuildTool.exe` directly on Windows (Node cannot spawn `Build.bat` without a shell, A182); stdin ignored; streams lines with a percent from `@progress` and `[n/N]` lines; `LogFilter` keeps errors, warnings, and lines mentioning `Quests/` or `Tests/`; 15 minute timeout; cancel kills the process tree. Built in M1.3.
 - `AutomationTestRunner.ts` (headless, built in M1.3): `UnrealEditor-Cmd "<uproject>" -ExecCmds="Automation RunTests ^<test name>$+...; Quit" (no $ on macOS) -Unattended -NoPause -NullRHI -NoSplash -NoSound -stdout -FullStdOutLogOutput -ReportExportPath="<tmp>/report" -log` (verified on 5.8.3, A44); waits for exit; `ReportParser` reads `index.json` (tests array with state, errors, warnings, duration). Exit codes seen: 0 all passed, 3 a failed assertion; the report decides, not the exit code. Timeout 10 minutes. The filter is the exact test names the quest's test source declares, each anchored because `RunTests` matches substrings: `^Name1$+^Name2$` on Windows, `^Name1+^Name2` on macOS, where Unreal turns every `$` on its command line into `"` (LaunchMac.cpp) and the broken quotes swallow `-NullRHI`. Report entries for any test the quest does not declare are dropped (A180). Never put a `$` in a macOS Unreal command line. Each run gets a fresh temp report folder, deleted afterwards.
 - All runners resolve on the process exit event, not on stdout closing: a child daemon (likely the zen storage server) can outlive the editor and hold the pipe open.
-- `McpEditorClient.ts`: MCP client over Streamable HTTP to `http://127.0.0.1:<port>/mcp` using `@modelcontextprotocol/sdk`. The port is a setting (default 8000) because another editor can already hold 8000 (A44). Calls the meta-tool `call_tool` with `{ toolset_name: "LiveCodingToolset.LiveCodingToolset", tool_name: "CompileLiveCoding", arguments: {} }` and `{ toolset_name: "AutomationTestToolset.AutomationTestToolset", tool_name: "RunTests", arguments: { TestNames: [...] } }` (names verified on 5.8.3, A44). `DiscoverTests` must run once per editor session first. `RunTests` returns the finished summary directly; `GetTestStatus` and `GetTestResults` are for polling and re-reading. One call in flight at a time (the server runs tools serially on the game thread). Health check: `list_toolsets`.
-- `LiveEditorRunner.ts`: write files, `CompileLiveCoding`, parse its captured log for errors, `RunTests`, map results to `RunResult`. Falls back to `HeadlessRunner` with a logged reason when the compile reports that a full build is needed.
+- `McpEditorClient.ts`: MCP client over Streamable HTTP to `http://127.0.0.1:<port>/mcp` using `@modelcontextprotocol/sdk`. The port is a setting (default 8000) because another editor can already hold 8000 (A44). Calls the meta-tool `call_tool` with `{ toolset_name: "LiveCodingToolset.LiveCodingToolset", tool_name: "CompileLiveCoding", arguments: {} }` and `{ toolset_name: "AutomationTestToolset.AutomationTestToolset", tool_name: "RunTests", arguments: { TestNames: [...] } }` (names verified on 5.8.3, A44). `DiscoverTests` must run once per editor session first. `RunTests` returns the finished summary directly; `GetTestStatus` and `GetTestResults` are for polling and re-reading. One call in flight at a time (the server runs tools serially on the game thread). Health check: `list_toolsets`. Built in M1.4: a lost session is dropped and the next call reconnects and discovers tests again.
+- `LiveEditorRunner.ts`: on Windows writes files and calls `CompileLiveCoding`, reading the answer with `LiveCodingAnswer` (A485); on macOS skips both, because the chooser only picks it for code the editor already loaded (A45). Then `RunTests` with the quest's declared test names, keeping only those in the answer. Falls back to the headless loop with a reason when the editor stops answering, a tool errors, Live Coding cannot take the change, or the editor does not know the quest's tests (A486). Built in M1.4.
 - `HeadlessRunner.ts`: write files, `UnrealBuilder`, `AutomationTestRunner`, `ReportParser`. Built in M1.3. `ok` only when it compiled, at least one test ran, every test passed, and there was no pipeline error.
 - `QuestFileWriter.ts`: learner files, unchanged, to `<Sandbox>/Source/Dojo/Quests/<quest-id>/`; quest tests to `<Sandbox>/Source/Dojo/Tests/<quest-id>.Test.cpp` with a header comment naming the quest (only the test file, so compiler line numbers match the learner's editor, A188). Files left in the quest folder from an earlier run are removed; `remove` deletes a quest on reset. Refuses file names that are not plain `.h` or `.cpp` names. Each quest folder is an include path (A181). Built in M1.3. Always write files fresh (never move an older copy back into place): UBT decides what to rebuild by modification time, and a restored file with an older time is silently skipped.
-- `EditorLauncher.ts`: opens the editor on the sandbox project with `-ModelContextProtocolStartServer -ModelContextProtocolPort=<port>` when the engine is 5.8+. Closing: SIGTERM (or a normal window close), then a hard kill after 15 seconds; on the Mac the editor was seen hanging in shutdown after a SIGTERM.
+- `EditorLauncher.ts`: opens the editor on the sandbox project with `-ModelContextProtocolStartServer -ModelContextProtocolPort=<port>` when the engine is 5.8+ (plus `-NullRHI -Unattended -NoSplash -NoSound -stdout -FullStdOutLogOutput` when windowless). Keeps one editor; launching again closes the old one. Closing: an exit request (SIGTERM on macOS, `taskkill /T` without `/F` on Windows), then a hard tree kill after 15 seconds; on the Mac the editor was seen hanging in shutdown after a SIGTERM. No kill after a clean exit, because the zen storage server it may have started is shared with other editors (A487). Built in M1.4.
 
 ## Architecture (built so far)
 
@@ -104,6 +104,34 @@ IPC: `createSandbox`, `cancelRun`, and `pickSandboxFolder` answer (A189); `runQu
 Real engine check: `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/integration/runQuest.test.ts` creates a sandbox through the `createSandbox` handler, runs `f1-score-keeper` with its reference solution through the `runQuest` handler (its two prerequisites filled from their reference solutions), and runs two snippet checks.
 
 Real engine check: `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/integration` creates a sandbox in a temp folder, builds it, writes the sample quest through `QuestFileWriter`, and runs it passing, with a failed assertion, with a compile error, and cancelled mid-build and mid-test (A187).
+
+### Fast loop (M1.4)
+
+| File | Job |
+| --- | --- |
+| `EditorToolClient.ts`, `EditorClientError.ts` | What runners ask of an open editor (health, RunTests, CompileLiveCoding); errors are `connection`, `tool`, or `format` |
+| `McpEditorClient.ts` | The real client: `@modelcontextprotocol/sdk` over Streamable HTTP, a promise queue so calls never overlap, `DiscoverTests` once per session |
+| `EditorTestSummaryParser.ts` | Unwraps `{"returnValue": "<json>"}` and reads the RunTests summary (errors as strings or objects) |
+| `LiveCodingAnswer.ts` | Reads CompileLiveCoding's answer into `succeeded`, `no-changes`, `failed`, `needs-full-build`, `unavailable`, or `busy`; an unknown answer counts as needing a full build |
+| `EditorLauncher.ts` | Above; also `reopen()` and `waitUntilAnswering(session, timeout)` (polls once a second) |
+| `FullBuildLedger.ts` | In memory: when the last full build finished, and per quest the files and tests it compiled |
+| `chooseLoop.ts` | The rules below, as a pure function |
+| `LoopSelectingRunner.ts` | Gathers the inputs, announces the loop and reason once, runs the fast runner or the headless one, and records every build that compiled |
+| `LiveEditorRunner.ts` | Above |
+| `runResultOf.ts` | Fills a `RunResult` the same way for both loops |
+| `RunnerFactory.ts` | Without fast loop pieces, the headless runner as before; with them, a `LoopSelectingRunner` per context |
+
+Rules, first match wins (`chooseLoop.ts`):
+1. `loopMode` is `headless`: headless.
+2. The engine is older than 5.8, no editor the app opened is on this engine and sandbox, or its server does not answer: headless.
+3. A full build finished after the editor opened: headless, and the editor is stale. On the Mac the reason says to restart the editor.
+4. Windows: headless when this quest has no full build this session, its tests changed, files were added or removed, or a changed header contains a reflection macro (`UCLASS`, `USTRUCT`, `UENUM`, `UINTERFACE`, `UPROPERTY`, `UFUNCTION`, `UDELEGATE`, `GENERATED_BODY`, `DECLARE_DYNAMIC_*`) before or after the change; otherwise fast with Live Coding.
+5. macOS: fast only when the files and tests equal the last full build of this quest and that build finished before the editor opened; otherwise headless.
+6. `loopMode` `fast` that cannot be honored says so at the start of the reason.
+
+On Windows a headless run closes the open editor first and reopens it afterwards in the background (A483). Cancel takes effect between steps; a call already sent to the editor is not interrupted (A488).
+
+Not wired into the app yet (A489): `createUnrealServices` still builds the factory without fast loop pieces, the `openEditor` IPC is a stub, and sandbox create and rebuild do not record into the ledger. Those files are in M1.3b's fix round; the wiring follows its merge.
 
 ## Sandbox template (`resources/sandbox-template/`)
 
@@ -226,3 +254,21 @@ Measured by `tests/integration/headlessLoop.test.ts` over its last three runs (e
 | Cancel mid-test | about 3 s after the editor starts | The editor and its helpers gone; no process left |
 
 Fix round 1, run under the shared engine lock (no other Unreal work on the machine), 2026-10-21: create and cold build 17 s; run after rewriting the sample 23 s; a brand new quest 23 s; a failed assertion 24 s; a compile error 6.5 s; the whole integration test 105 s. These are the numbers to expect on a quiet M5.
+
+### MacBook Air M5, UE 5.8.3, the fast loop, 2026-10-21 (M1.4)
+
+Measured by `tests/integration/fastLoop.test.ts` in one run under the shared engine lock (`DOJO_ENGINE_ROOT=~/Applications/UE_5.8`). The editor is windowless (`-NullRHI`) with the MCP server on a free port; Live Coding does not exist on the Mac, so "fast" here means re-running tests on code the editor already loaded (A45).
+
+| Step | Time | Notes |
+| --- | --- | --- |
+| Create sandbox and cold full build | 21 s | |
+| Run with no editor open (headless) | 26 s | Reason: the editor is not open |
+| Editor launch to MCP answering | 10.5 s | |
+| First fast run | 4.4 s | Includes `DiscoverTests`, once per editor session |
+| Next fast run | 32 ms | `RunTests` alone |
+| Run after a `.cpp` change (headless, editor left open) | 28 s | Reason: code changed, no Live Coding on the Mac |
+| Next run with the now stale editor | 41 s | Headless; the reason says to restart the editor |
+| Editor restart to MCP answering | 26 s | Includes closing the old editor |
+| Fast run after the restart | 3.5 s | New session, so `DiscoverTests` again |
+| Editor close (exit request, clean quit) | 1.7 s | No process left mentioning the sandbox |
+| Fast loop compile (Live Coding) | not available | Windows only; unverified there |

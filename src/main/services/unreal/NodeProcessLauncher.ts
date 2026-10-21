@@ -78,6 +78,12 @@ export class NodeProcessLauncher implements ProcessLauncher
 
 				treeKiller.killTree(child.pid);
 			},
+			requestExit(): void
+			{
+				if (child.pid === undefined || hasExited) return;
+
+				treeKiller.requestExit(child.pid);
+			},
 		};
 	}
 }
