@@ -4,6 +4,7 @@ import type { ContentStatus, GlossaryAlias, LearnerQuest, LearnerWorld, PackOutl
 import type { GlossaryEntry, PatternCard } from "@shared/types/content";
 import type { EngineInstall, ToolchainCheck } from "@shared/types/engine";
 
+import type { ProgressContentService } from "../services/progress/ProgressContentService";
 import type { ProgressService } from "../services/progress/ProgressService";
 import type { HandlerDefinition, HandlerTable } from "./HandlerDefinition";
 import { notImplemented } from "./notImplemented";
@@ -43,6 +44,9 @@ export interface HandlerDependencies
 
 	/** The learner's progress and the game rules (M1.6). */
 	progressService: ProgressService;
+
+	/** The progress and drill methods that read content: availability, test-out, hints, concept and breakdown grading, daily quest, drills (M1.6b). */
+	progressContentService: ProgressContentService;
 }
 
 /** The part of EngineLocator the handlers use, so tests can pass a fake. */
@@ -94,7 +98,6 @@ const ARRIVES_WITH = {
 	editor: "the fast loop (M1.4)",
 	runs: "the build and test loop (M1.3 and M1.4)",
 	submit: "the build loop, rules, and review (M1.3, M1.6, M1.7)",
-	progress: "progress and rules (M1.6)",
 	review: "AI review (M1.7)",
 } as const;
 
@@ -113,7 +116,7 @@ function stub<Method extends DojoMethod>(method: Method, arrivesWith: string, ar
 /** Returns the full handler table. Every method of DojoApi must appear, or this does not compile. */
 export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 {
-	const { progressService } = dependencies;
+	const { progressService, progressContentService } = dependencies;
 
 	return {
 		getAppVersion: { argumentSchemas: [], handle: () => dependencies.getAppVersion() },
@@ -148,18 +151,18 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 
 		getProgress: { argumentSchemas: [], handle: () => progressService.getProgress() },
 		getRules: { argumentSchemas: [], handle: () => progressService.getRules() },
-		getQuestAvailability: stub("getQuestAvailability", ARRIVES_WITH.progress, []),
-		getTestOutStatus: stub("getTestOutStatus", ARRIVES_WITH.progress, []),
+		getQuestAvailability: { argumentSchemas: [], handle: () => progressContentService.getQuestAvailability() },
+		getTestOutStatus: { argumentSchemas: [], handle: () => progressContentService.getTestOutStatus() },
 		setPlayerName: { argumentSchemas: [playerNameSchema], handle: (name) => progressService.setPlayerName(name) },
 		saveQuestDraft: { argumentSchemas: [questDraftSchema], handle: (draft) => progressService.saveQuestDraft(draft) },
 		resetQuest: { argumentSchemas: [idSchema], handle: (questId) => progressService.resetQuest(questId) },
-		revealHint: stub("revealHint", ARRIVES_WITH.progress, [idSchema]),
-		submitConcept: stub("submitConcept", ARRIVES_WITH.progress, [conceptSubmissionSchema]),
-		submitBreakdown: stub("submitBreakdown", ARRIVES_WITH.progress, [breakdownSubmissionSchema]),
-		reviseBreakdown: stub("reviseBreakdown", ARRIVES_WITH.review, [breakdownRevisionSchema]),
+		revealHint: { argumentSchemas: [idSchema], handle: (questId) => progressContentService.revealHint(questId) },
+		submitConcept: { argumentSchemas: [conceptSubmissionSchema], handle: (submission) => progressContentService.submitConcept(submission) },
+		submitBreakdown: { argumentSchemas: [breakdownSubmissionSchema], handle: (submission) => progressContentService.submitBreakdown(submission) },
+		reviseBreakdown: { argumentSchemas: [breakdownRevisionSchema], handle: (revision) => progressContentService.reviseBreakdown(revision) },
 		recordTermHover: { argumentSchemas: [idSchema], handle: (termId) => progressService.recordTermHover(termId) },
 		queueDrillItem: { argumentSchemas: [idSchema], handle: (itemId) => progressService.queueDrillItem(itemId) },
-		getDailyQuest: stub("getDailyQuest", ARRIVES_WITH.progress, []),
+		getDailyQuest: { argumentSchemas: [], handle: () => progressContentService.getDailyQuest() },
 		chooseDailyOffer: { argumentSchemas: [dailyOfferIndexSchema], handle: (index) => progressService.chooseDailyOffer(index) },
 		resetProgress: { argumentSchemas: [], handle: () => progressService.resetProgress() },
 
@@ -171,10 +174,10 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		getGlossaryAliases: { argumentSchemas: [], handle: () => dependencies.getContentCatalog().getGlossaryAliases() },
 		getPatternCards: { argumentSchemas: [], handle: () => dependencies.getContentCatalog().getPatternCards() },
 
-		startDrill: stub("startDrill", ARRIVES_WITH.progress, [drillRequestSchema]),
+		startDrill: { argumentSchemas: [drillRequestSchema], handle: (request) => progressContentService.startDrill(request) },
 		getDrillSummary: { argumentSchemas: [], handle: () => progressService.getDrillSummary() },
-		answerDrillItem: stub("answerDrillItem", ARRIVES_WITH.progress, [drillAnswerSchema]),
-		finishDrill: stub("finishDrill", ARRIVES_WITH.progress, [idSchema]),
+		answerDrillItem: { argumentSchemas: [drillAnswerSchema], handle: (answer) => progressContentService.answerDrillItem(answer) },
+		finishDrill: { argumentSchemas: [idSchema], handle: (sessionId) => progressContentService.finishDrill(sessionId) },
 
 		getReviewProviders: stub("getReviewProviders", ARRIVES_WITH.review, []),
 		testClaudeCode: stub("testClaudeCode", ARRIVES_WITH.review, []),

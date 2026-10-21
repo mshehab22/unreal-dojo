@@ -2,6 +2,7 @@
 import type { AppError } from "@shared/types/errors";
 import type {
 	AttemptOutcome,
+	BreakdownPlan,
 	ChestReward,
 	DailyQuestState,
 	DrillItemResult,
@@ -58,6 +59,9 @@ export interface AttemptInput
 
 	/** True for a Submit of a build, refactor, or boss integration (the only attempts that can move the spree). */
 	isSubmit: boolean;
+
+	/** Items to review in the same step before the attempt is priced, for example a concept quest's terms, so unlocks they cause appear in the outcome. */
+	itemReviews?: { itemId: string; quality: number; context?: ReviewContext }[];
 }
 
 /** Where a review item came from, so skill mastery and rematches can follow it. */
@@ -325,7 +329,8 @@ export class ProgressService
 		return this.enqueue(async () =>
 		{
 			const now = this.clock.now();
-			const before = this.progress;
+			const unlockBaseline = this.progress;
+			const before = (input.itemReviews ?? []).reduce((progress, review) => this.applyReview(progress, review.itemId, review.quality, review.context ?? {}, now).progress, this.progress);
 			const { quest } = input;
 			const questBefore = this.questProgressOf(before, quest.id);
 			const previouslyPassed = questBefore.status === "passed";
@@ -416,7 +421,7 @@ export class ProgressService
 			const attempt = { attemptId: `attempt-${before.attempts.length + 1}`, questId: quest.id, at: now.toISOString(), score: input.score, passed: input.passed, xpGained: xp.total };
 			next.attempts = [...next.attempts, attempt];
 
-			const unlockedQuestIds = new UnlockGraph(allQuests).newlyUnlocked(this.unlockState(before), this.unlockState(next));
+			const unlockedQuestIds = new UnlockGraph(allQuests).newlyUnlocked(this.unlockState(unlockBaseline), this.unlockState(next));
 
 			await this.commit(() => next);
 
@@ -452,8 +457,8 @@ export class ProgressService
 		});
 	}
 
-	/** Ends a drill: flat drill XP, the streak, the daily offer and its chest, and any world test-outs it completed. */
-	finishDrill(totals: DrillTotals, allQuests: RuleQuest[]): Promise<DrillOutcome>
+	/** Ends a drill: flat drill XP, the streak, the daily offer and its chest. A test-out drill (`testOutWorldId`) tests the world out when every term of it is still at proficient afterwards (A313). */
+	finishDrill(totals: DrillTotals, allQuests: RuleQuest[], testOutWorldId?: string): Promise<DrillOutcome>
 	{
 		return this.enqueue(async () =>
 		{
@@ -474,7 +479,8 @@ export class ProgressService
 				next = this.applyChest(next, chest, now);
 			}
 
-			const testedOut = this.testOutRules.testedOutWorlds(allQuests, (itemId) => next.memory[itemId]?.mastery);
+			const worldQuests = allQuests.filter((quest) => quest.worldId === testOutWorldId);
+			const testedOut = testOutWorldId === undefined ? [] : this.testOutRules.testedOutWorlds(worldQuests, (itemId) => next.memory[itemId]?.mastery);
 			const testedOutWorldIds = testedOut.filter((worldId) => !next.testedOutWorldIds.includes(worldId));
 			next.testedOutWorldIds = [...next.testedOutWorldIds, ...testedOutWorldIds];
 
@@ -517,6 +523,68 @@ export class ProgressService
 
 			return graph.availability(this.unlockState(this.progress));
 		});
+	}
+
+	/** Keeps the breakdown plan as first submitted (before a reference plan is shown) and autosaves it as the draft. */
+	saveSubmittedPlan(questId: string, plan: BreakdownPlan): Promise<void>
+	{
+		return this.enqueue(async () =>
+		{
+			await this.commit((progress) =>
+			{
+				const quest = this.questProgressOf(progress, questId);
+				const status = quest.status === "passed" ? "passed" : "in_progress";
+
+				return this.withQuest(progress, questId, { status, submittedPlan: structuredClone(plan), breakdownPlan: structuredClone(plan) });
+			});
+		});
+	}
+
+	/** Keeps the revised plan and the revision note of a breakdown (used for a boss breakdown, which passes with its integration build, A317). */
+	saveRevision(questId: string, plan: BreakdownPlan, revisionNote: string): Promise<void>
+	{
+		return this.enqueue(async () =>
+		{
+			await this.commit((progress) => this.withQuest(progress, questId, { breakdownPlan: structuredClone(plan), revisionNote }));
+		});
+	}
+
+	/** The loot screen's view when nothing was earned: current level, role, spree, streak, and next due dates. */
+	unchangedOutcome(questId: string, score: number): AttemptOutcome
+	{
+		this.ensureAvailable();
+
+		const now = this.clock.now();
+		const level = this.levelRules.levelForXp(this.progress.xp);
+		const xp = this.xpRules.questXp({ baseXp: 0, difficulty: 1, level, kind: "boss", result: "failed", previouslyPassed: false, isRematch: false, hintsRevealed: 0, solutionViewedWithoutStone: false, effortAlreadyGranted: false, spreeAfter: 0, potionActive: false });
+
+		return {
+			attempt: { attemptId: "none", questId, at: now.toISOString(), score, passed: false, xpGained: 0 },
+			xp,
+			level: { before: level, after: level },
+			role: { before: this.progress.role, after: this.progress.role },
+			cardChanges: [],
+			skillChanges: [],
+			spree: { current: this.progress.spree.current, best: this.progress.spree.best, armorUsed: false },
+			streak: { count: this.streakRules.countAt(this.progress.streak, now) },
+			unlockedQuestIds: [],
+			nextDueDates: this.nextDueDates(this.progress),
+		};
+	}
+
+	/** The drill outcome when a session ends without earning anything (an unfinished drill or the Parsons fallback): no XP, streak unchanged. */
+	unrewardedDrillOutcome(totals: DrillTotals): DrillOutcome
+	{
+		this.ensureAvailable();
+
+		return {
+			xpGained: 0,
+			streak: { count: this.streakRules.countAt(this.progress.streak, this.clock.now()) },
+			correctCount: totals.correctCount,
+			totalCount: totals.totalCount,
+			nextDueAt: this.nextDueDates(this.progress)[0] ?? null,
+			testedOutWorldIds: [],
+		};
 	}
 
 	/** Today's daily quest, with fresh offers on a new day. */

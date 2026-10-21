@@ -60,11 +60,11 @@ export class DrillScheduler
 	 * a required format or the minimum size. Holds 6 to 10 items, at least one of each required format when any exists,
 	 * mixed across topics, in a shuffled order.
 	 */
-	compose(priority: DrillCandidate[], pool: DrillCandidate[], random: RandomSource): DrillCandidate[]
+	compose<Candidate extends DrillCandidate>(priority: Candidate[], pool: Candidate[], random: RandomSource): Candidate[]
 	{
-		const chosen: DrillCandidate[] = [];
+		const chosen: Candidate[] = [];
 		const chosenIds = new Set<string>();
-		const take = (candidate: DrillCandidate): void =>
+		const take = (candidate: Candidate): void =>
 		{
 			chosen.push(candidate);
 			chosenIds.add(candidate.itemId);
@@ -82,6 +82,7 @@ export class DrillScheduler
 		for (const candidate of this.interleaveByTopic(priority.filter((candidate) => !chosenIds.has(candidate.itemId))))
 		{
 			if (chosen.length >= DRILL_SIZE.max) break;
+			if (chosenIds.has(candidate.itemId)) continue;
 			take(candidate);
 		}
 
@@ -126,9 +127,9 @@ export class DrillScheduler
 	}
 
 	/** Round-robin across topics in order of first appearance, keeping each topic's own order. */
-	private interleaveByTopic(candidates: DrillCandidate[]): DrillCandidate[]
+	private interleaveByTopic<Candidate extends DrillCandidate>(candidates: Candidate[]): Candidate[]
 	{
-		const byTopic = new Map<string, DrillCandidate[]>();
+		const byTopic = new Map<string, Candidate[]>();
 
 		for (const candidate of candidates)
 		{
@@ -138,7 +139,7 @@ export class DrillScheduler
 		}
 
 		const queues = [...byTopic.values()];
-		const interleaved: DrillCandidate[] = [];
+		const interleaved: Candidate[] = [];
 
 		while (queues.some((queue) => queue.length > 0))
 		{

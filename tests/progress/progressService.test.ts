@@ -184,7 +184,7 @@ describe("ProgressService reviews and drills", () =>
 		expect(service.getDrillSummary().dueToday).toBe(1);
 	});
 
-	it("finishes a drill with flat XP, the streak, and a world test-out once every term is proficient", async () =>
+	it("finishes a drill with flat XP, the streak, and tests a world out from its test-out drill once every term is proficient", async () =>
 	{
 		const { service, clock } = createTestProgressService();
 		const termQuest = makeQuest({ id: "t1", terms: ["term.a"] });
@@ -196,12 +196,15 @@ describe("ProgressService reviews and drills", () =>
 			clock.advanceDays(gapDays);
 		}
 
-		const outcome = await service.finishDrill({ correctCount: 6, totalCount: 7 }, [termQuest]);
+		// A due drill never tests a world out; only a test-out drill for that world does (A313).
+		expect((await service.finishDrill({ correctCount: 6, totalCount: 7 }, [termQuest])).testedOutWorldIds).toEqual([]);
+
+		const outcome = await service.finishDrill({ correctCount: 6, totalCount: 7 }, [termQuest], "world-1");
 
 		expect(outcome.xpGained).toBe(10);
 		expect(outcome.streak.count).toBe(1);
 		expect(outcome.testedOutWorldIds).toEqual(["world-1"]);
-		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 }, [termQuest])).testedOutWorldIds).toEqual([]);
+		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 }, [termQuest], "world-1")).testedOutWorldIds).toEqual([]);
 	});
 });
 

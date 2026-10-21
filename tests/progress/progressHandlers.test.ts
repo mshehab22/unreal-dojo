@@ -2,12 +2,12 @@
 import { describe, expect, it } from "vitest";
 
 import { createHandlers } from "../../src/main/ipc/createHandlers";
-import { createTestProgressService } from "../support/progressFixtures";
+import { createTestProgressContent } from "../support/contentFixture";
 
 describe("progress IPC handlers", () =>
 {
-	const { service } = createTestProgressService();
-	const handlers = createHandlers({ getAppVersion: () => "1.0.0", getEngineLocator: () => { throw new Error("not used"); }, getContentCatalog: () => { throw new Error("not used"); }, pickFolder: async () => null, progressService: service });
+	const { service, content } = createTestProgressContent();
+	const handlers = createHandlers({ getAppVersion: () => "1.0.0", getEngineLocator: () => { throw new Error("not used"); }, getContentCatalog: () => { throw new Error("not used"); }, pickFolder: async () => null, progressService: service, progressContentService: content });
 
 	it("answers getProgress, setPlayerName, and getRules from the service", async () =>
 	{

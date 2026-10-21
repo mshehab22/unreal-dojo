@@ -13,6 +13,7 @@ import { resolveContentRoot } from "../src/main/content/resolveContentRoot";
 import { AppErrorException } from "../src/main/errors/AppErrorException";
 import { createHandlers } from "../src/main/ipc/createHandlers";
 import { registerHandlers, type WrappedHandler } from "../src/main/ipc/registerHandlers";
+import { createTestProgressContent } from "./support/contentFixture";
 import { createTestProgressService } from "./support/progressFixtures";
 import { createContentFixture, readExamples, retagQuest, writePack, writeWorld, type ContentFixture } from "./content/contentFixture";
 
@@ -189,6 +190,7 @@ describe("ContentCatalog load failures", () =>
 				getContentCatalog: () => catalog,
 				pickFolder: async () => null,
 				progressService: createTestProgressService().service,
+				progressContentService: createTestProgressContent().content,
 			}),
 		);
 

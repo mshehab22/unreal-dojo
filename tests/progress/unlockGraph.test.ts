@@ -30,6 +30,7 @@ function state(passedIds: string[] = [], mastery: Record<string, MasteryLevel> =
 const first = makeQuest({ id: "first", title: "Hello Actor", order: 1, terms: ["term.actor"] });
 const second = makeQuest({ id: "second", title: "Health Component", order: 2, prerequisites: ["first"], terms: ["term.component"], scaffold: "worked" });
 const third = makeQuest({ id: "third", title: "Damage", order: 3, prerequisites: ["second"], scaffold: "stub" });
+const teacher = makeQuest({ id: "teacher", title: "Components", kind: "concept", packId: "pack-2", packOrder: 2, worldId: "world-9", terms: ["term.component"] });
 const boss = makeQuest({ id: "boss", title: "Arena Boss", kind: "boss", order: 4, prerequisites: ["second"] });
 
 describe("UnlockGraph", () =>
@@ -41,17 +42,25 @@ describe("UnlockGraph", () =>
 
 	it("locks a quest until its prerequisites are passed, naming them", () =>
 	{
-		const availability = new UnlockGraph([first, second]).availability(state([], { "term.component": "familiar" }));
+		const availability = new UnlockGraph([first, second, teacher]).availability(state([], { "term.component": "familiar" }));
 
 		expect(availability["second"]).toMatchObject({ status: "locked", lockedReason: "Pass Hello Actor first." });
 	});
 
-	it("locks a quest until every term is at least familiar", () =>
+	it("locks a quest until every taught term is at least familiar", () =>
 	{
-		const graph = new UnlockGraph([first, second]);
+		const graph = new UnlockGraph([first, second, teacher]);
 
 		expect(graph.availability(state(["first"], { "term.component": "attempted" }))["second"]?.status).toBe("locked");
 		expect(graph.availability(state(["first"], { "term.component": "familiar" }))["second"]?.status).toBe("available");
+	});
+
+	it("never locks a quest on a term no concept quest teaches, and never locks a concept quest on its own terms (A312)", () =>
+	{
+		const lesson = makeQuest({ id: "lesson", kind: "concept", order: 3, prerequisites: ["first"], terms: ["term.new"] });
+
+		expect(new UnlockGraph([first, second]).availability(state(["first"]))["second"]?.status).toBe("available");
+		expect(new UnlockGraph([first, lesson]).availability(state(["first"]))["lesson"]?.status).toBe("available");
 	});
 
 	it("waives the term rule in a tested-out world and lets worked and faded build quests be skipped", () =>

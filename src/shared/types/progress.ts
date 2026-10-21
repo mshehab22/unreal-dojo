@@ -96,6 +96,9 @@ export interface QuestProgress
 	/** The learner's revision note after seeing a reference plan. */
 	revisionNote?: string;
 
+	/** The plan as first submitted, before the learner saw a reference plan; graded beside the revision (A316). */
+	submittedPlan?: BreakdownPlan;
+
 	/** Worked-level self-explanations: why each marked line exists, keyed by the marked line's key from the quest content. */
 	selfExplanations?: Record<string, string>;
 
