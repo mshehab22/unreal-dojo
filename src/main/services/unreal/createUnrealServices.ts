@@ -12,12 +12,16 @@ import { NodeSandboxFileSystem } from "./NodeSandboxFileSystem";
 import { QuestFileWriter } from "./QuestFileWriter";
 import { RunnerFactory } from "./RunnerFactory";
 import { ClangSnippetSyntaxChecker } from "./ClangSnippetSyntaxChecker";
+import { EditorLauncher } from "./EditorLauncher";
+import { EditorService } from "./EditorService";
+import { McpEditorClient } from "./McpEditorClient";
+import { NodePortProbe } from "./NodePortProbe";
 import { FullBuildLedger } from "./FullBuildLedger";
 import { PrerequisiteFiller } from "./PrerequisiteFiller";
 import { type AuthoredQuestSource, type LearnerRecord, QuestRunService } from "./QuestRunService";
 import { ReferenceSolutions } from "./ReferenceSolutions";
 import type { UnrealSettingsStore } from "./UnrealSettingsStore";
-import { SandboxProjectService } from "./SandboxProjectService";
+import { PROJECT_FILE_NAME, SandboxProjectService, type SandboxBuildHooks } from "./SandboxProjectService";
 import { SYSTEM_TIMER } from "./SupervisedProcess";
 import { platformUnsupported } from "./unrealErrors";
 import { UnrealBuilder } from "./UnrealBuilder";
@@ -52,8 +56,14 @@ export interface UnrealServices
 	questFileWriter: QuestFileWriter;
 	questRunService: QuestRunService;
 
-	/** The full-build record the fast loop decides with (A481). The prerequisite filler already reports its writes to it; the fast loop wiring passes it to RunnerFactory (A489). */
+	/** The full-build record the fast loop decides with (A481): runs, sandbox create and rebuild, prerequisite fills, and resets all report to it. */
 	buildLedger: FullBuildLedger;
+
+	/** The one editor the app opens; the quit hook disposes it (A530). */
+	editorLauncher: EditorLauncher;
+
+	/** The openEditor request and the editor chip. */
+	editorService: EditorService;
 }
 
 /** Wires real disk, processes, and clock. Throws `toolchain-missing` with a plain explanation on an unsupported operating system. */
@@ -75,16 +85,41 @@ export function createUnrealServices(inputs: UnrealServiceInputs): UnrealService
 	const testRunner = new AutomationTestRunner(paths, launcher, SYSTEM_TIMER, fileSystem);
 	const questFileWriter = new QuestFileWriter(paths, fileSystem);
 
-	const sandboxService = new SandboxProjectService({ paths, fileSystem, builder, engineInspector: inputs.engineInspector, pathStore: inputs.settings, timer: SYSTEM_TIMER, templateFolder: inputs.templateFolder });
-	const runnerFactory = new RunnerFactory((context) => new HeadlessRunner({ context, paths, fileSystem, writer: questFileWriter, builder, testRunner, timer: SYSTEM_TIMER }));
-
 	const buildLedger = new FullBuildLedger();
+	const editorLauncher = new EditorLauncher({ paths, launcher, timer: SYSTEM_TIMER, portProbe: new NodePortProbe(), createClient: (port) => new McpEditorClient(port) });
+
+	// A full build of the sandbox replaces the code an open editor loaded; close one on this sandbox first (UBT cannot rebuild modules it holds, and a rebuild deletes them), then record the build (A531).
+	const buildHooks: SandboxBuildHooks = {
+		beforeBuild: async (sandboxFolder) =>
+		{
+			const session = editorLauncher.current();
+
+			if (session && paths.pathKey(session.projectFile) === paths.pathKey(paths.join(sandboxFolder, PROJECT_FILE_NAME))) await editorLauncher.close();
+		},
+		afterBuild: (succeeded) =>
+		{
+			if (succeeded) buildLedger.recordSandboxBuild(SYSTEM_TIMER.now());
+		},
+	};
+
+	const sandboxService = new SandboxProjectService({ paths, fileSystem, builder, engineInspector: inputs.engineInspector, pathStore: inputs.settings, timer: SYSTEM_TIMER, templateFolder: inputs.templateFolder, buildHooks });
+	const runnerFactory = new RunnerFactory((context) => new HeadlessRunner({ context, paths, fileSystem, writer: questFileWriter, builder, testRunner, timer: SYSTEM_TIMER }), {
+		paths,
+		editorLauncher,
+		ledger: buildLedger,
+		writer: questFileWriter,
+		timer: SYSTEM_TIMER,
+		getLoopMode: () => inputs.settings.getLoopMode(),
+		engineSupportsFastLoop: async (engineRoot) => (await inputs.engineInspector.inspectFolder(engineRoot)).supportsFastLoop,
+	});
+
 	const prerequisiteFiller = new PrerequisiteFiller(questFileWriter, new ReferenceSolutions(paths, fileSystem, inputs.solutionsFolder), (questId, files, replaceFolder) => buildLedger.recordSandboxWrite(questId, files, replaceFolder));
 
 	// Only the Mac check exists so far; Windows answers not-implemented (A402).
 	const snippetChecker = paths.buildPlatform === "Mac" ? new ClangSnippetSyntaxChecker(paths, fileSystem, commandRunner) : null;
 
-	const questRunService = new QuestRunService({ settings: inputs.settings, quests: inputs.quests, runnerFactory, prerequisiteFiller, sandboxService, snippetChecker, learner: inputs.learner });
+	const questRunService = new QuestRunService({ settings: inputs.settings, quests: inputs.quests, runnerFactory, prerequisiteFiller, sandboxService, snippetChecker, learner: inputs.learner, questFileWriter, buildLedger });
+	const editorService = new EditorService({ settings: inputs.settings, engineInspector: inputs.engineInspector, editorLauncher, ledger: buildLedger, paths, checkToolchain: () => platform.toolchainChecker.check() });
 
-	return { sandboxService, runnerFactory, questFileWriter, questRunService, buildLedger };
+	return { sandboxService, runnerFactory, questFileWriter, questRunService, buildLedger, editorLauncher, editorService };
 }

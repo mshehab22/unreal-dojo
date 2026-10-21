@@ -18,7 +18,6 @@ import { NodeCommandRunner } from "../../src/main/services/unreal/NodeCommandRun
 import { NodePortProbe } from "../../src/main/services/unreal/NodePortProbe";
 import { NodeProcessLauncher } from "../../src/main/services/unreal/NodeProcessLauncher";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
-import { RunnerFactory } from "../../src/main/services/unreal/RunnerFactory";
 import { SYSTEM_TIMER } from "../../src/main/services/unreal/SupervisedProcess";
 import { MemoryUnrealSettings } from "../unreal/MemoryUnrealSettings";
 
@@ -78,7 +77,7 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 	let session: EditorSession | null = null;
 	let rig: ReturnType<typeof createRig> | null = null;
 
-	/** Builds the real services and fast loop pieces. Called from the first test, so collecting a skipped suite starts nothing. */
+	/** Builds the real services. Called from the first test, so collecting a skipped suite starts nothing. */
 	function createRig()
 	{
 		const locator = createEngineLocator();
@@ -93,17 +92,8 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 		const platform = createUnrealPlatform({ platform: process.platform, homeFolder: homedir(), environment: process.env, commandRunner: new NodeCommandRunner() });
 		if (!platform) throw new Error(`No Unreal platform for ${process.platform}`);
 
-		const editorLauncher = new EditorLauncher({ paths: platform.paths, launcher: new NodeProcessLauncher(platform.processTreeKiller), timer: SYSTEM_TIMER, portProbe: new NodePortProbe(), createClient: (clientPort) => new McpEditorClient(clientPort) });
-		const ledger = services.buildLedger;
-		const factory = new RunnerFactory((context) => services.runnerFactory.forContext(context), {
-			paths: platform.paths,
-			editorLauncher,
-			ledger,
-			writer: services.questFileWriter,
-			timer: SYSTEM_TIMER,
-			getLoopMode: () => "auto",
-			engineSupportsFastLoop: async (engineRoot) => (await locator.inspectFolder(engineRoot)).supportsFastLoop,
-		});
+		// Since M1.4b the services build the fast loop themselves: their runner factory chooses the loop, and their launcher is the app's one editor.
+		const { editorLauncher, buildLedger: ledger, runnerFactory: factory } = services;
 
 		return { services, platform, editorLauncher, ledger, factory };
 	}

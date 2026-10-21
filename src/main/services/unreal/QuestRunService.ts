@@ -5,9 +5,11 @@ import type { SandboxSetupResult } from "@shared/types/engine";
 import type { RunResult, SyntaxCheckResult } from "@shared/types/run";
 
 import { AppErrorException } from "../../errors/AppErrorException";
+import type { FullBuildLedger } from "./FullBuildLedger";
 import type { FilledPrerequisite, PrerequisiteFiller } from "./PrerequisiteFiller";
 import type { ProgressListener } from "./ProgressUpdate";
 import { prerequisiteQuestIds } from "./QuestDependencies";
+import type { QuestFileWriter } from "./QuestFileWriter";
 import type { RunnerFactory } from "./RunnerFactory";
 import type { RunnerContext } from "./Runner";
 import type { SandboxProjectService } from "./SandboxProjectService";
@@ -48,6 +50,12 @@ export interface QuestRunDependencies
 
 	/** What the progress service knows about the learner's quests. */
 	learner: LearnerRecord;
+
+	/** Removes a quest's files from the sandbox on reset. */
+	questFileWriter: QuestFileWriter;
+
+	/** The fast loop's build record, told when a reset removes files (A481). */
+	buildLedger: FullBuildLedger;
 }
 
 /** `runQuest`, `checkSnippetSyntax`, and `rebuildSandbox` behind one object for the IPC handlers. */
@@ -84,6 +92,16 @@ export class QuestRunService
 		}
 
 		return this.dependencies.runnerFactory.forContext(context).run(quest, files, onProgress, signal);
+	}
+
+	/** Removes a reset quest's files and test from the sandbox in settings and records the change, so the fast loop does not trust the editor's copy (A481). Does nothing before setup. */
+	async removeQuestFiles(questId: string): Promise<void>
+	{
+		const sandboxFolder = this.dependencies.settings.getSandboxPath();
+		if (sandboxFolder === null) return;
+
+		await this.dependencies.questFileWriter.remove(sandboxFolder, questId);
+		this.dependencies.buildLedger.recordSandboxWrite(questId, null);
 	}
 
 	/** Syntax-checks a concept quest's scratch buffer with the platform compiler. */

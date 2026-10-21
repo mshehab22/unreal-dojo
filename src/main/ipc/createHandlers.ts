@@ -55,8 +55,11 @@ export interface HandlerDependencies
 	/** Returns the sandbox service (M1.2). A function for the same reason. */
 	getSandboxService: () => SandboxSetupService;
 
-	/** Returns the quest run service (M1.3b): runs, the snippet syntax check, and sandbox rebuilds. */
+	/** Returns the quest run service (M1.3b): runs, the snippet syntax check, sandbox rebuilds, and removing a reset quest's files. */
 	getQuestRunService: () => QuestRunApi;
+
+	/** Returns the editor service (M1.4b): opens the editor on the sandbox with its MCP server. */
+	getEditorService: () => EditorApi;
 
 	/** Running operations by run id, for `cancelRun`. */
 	runRegistry: RunRegistry;
@@ -114,6 +117,16 @@ export interface QuestRunApi
 
 	/** Clean full build of the sandbox in settings. */
 	rebuildSandbox(onProgress: ProgressListener, signal: AbortSignal): Promise<SandboxSetupResult>;
+
+	/** Removes a reset quest's files from the sandbox; does nothing before setup. */
+	removeQuestFiles(questId: string): Promise<void>;
+}
+
+/** The part of EditorService the handlers use, so tests can pass a fake. */
+export interface EditorApi
+{
+	/** Opens the editor on the sandbox (with the MCP server on 5.8 and later) and resolves once it answers. */
+	openEditor(): Promise<void>;
 }
 
 /** The part of EngineLocator the handlers use, so tests can pass a fake. */
@@ -164,7 +177,6 @@ const PICK_SANDBOX_TITLE = "Choose where to create the Unreal Dojo sandbox proje
 const ARRIVES_WITH = {
 	engine: "the engine locator (M1.1)",
 	sandbox: "the settings service (sandbox setup itself works, M1.2)",
-	editor: "the fast loop (M1.4)",
 	runs: "the build and test loop (M1.3 and M1.4)",
 	submit: "the build loop, rules, and review (M1.3, M1.6, M1.7)",
 	review: "AI review (M1.7)",
@@ -224,7 +236,8 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 			argumentSchemas: [idSchema],
 			handle: (runId) => trackRun(runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getQuestRunService().rebuildSandbox(onProgress, signal)),
 		},
-		openEditor: stub("openEditor", ARRIVES_WITH.editor, [idSchema.nullable()]),
+		// Per-quest maps for "See it run" do not exist yet, so a quest id opens the sandbox like null does (A533).
+		openEditor: { argumentSchemas: [idSchema.nullable()], handle: () => dependencies.getEditorService().openEditor() },
 
 		runQuest: {
 			argumentSchemas: [runRequestSchema],
@@ -240,7 +253,18 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		getTestOutStatus: { argumentSchemas: [], handle: () => progressContentService.getTestOutStatus() },
 		setPlayerName: { argumentSchemas: [playerNameSchema], handle: (name) => progressService.setPlayerName(name) },
 		saveQuestDraft: { argumentSchemas: [questDraftSchema], handle: (draft) => progressService.saveQuestDraft(draft) },
-		resetQuest: { argumentSchemas: [idSchema], handle: (questId) => progressService.resetQuest(questId) },
+		resetQuest: {
+			argumentSchemas: [idSchema],
+			handle: async (questId) =>
+			{
+				const progress = await progressService.resetQuest(questId);
+
+				// The save is reset either way; a sandbox that cannot be reached (no engine, another platform) only keeps the old files, which the next run replaces (A534).
+				await dependencies.getQuestRunService().removeQuestFiles(questId).catch((error: unknown) => console.warn(`Reset ${questId}: sandbox files not removed: ${(error as Error).message}`));
+
+				return progress;
+			},
+		},
 		revealHint: { argumentSchemas: [idSchema, hintIndexSchema.optional()], handle: (questId, hintIndex) => progressContentService.revealHint(questId, hintIndex) },
 		submitConcept: { argumentSchemas: [conceptSubmissionSchema], handle: (submission) => progressContentService.submitConcept(submission) },
 		submitBreakdown: { argumentSchemas: [breakdownSubmissionSchema], handle: (submission) => progressContentService.submitBreakdown(submission) },

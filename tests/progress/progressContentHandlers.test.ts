@@ -27,6 +27,7 @@ function setup(options: Parameters<typeof createTestProgressContent>[0] = {})
 		progressContentService: stack.content,
 		getSandboxService: () => { throw new Error("not used"); },
 		getQuestRunService: () => { throw new Error("not used"); },
+		getEditorService: () => { throw new Error("not used"); },
 		runRegistry: new RunRegistry(),
 		sendProgress: () => undefined,
 		settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
