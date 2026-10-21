@@ -92,8 +92,10 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
-| M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (round 4 @ 787192d) | passed; merges with World 2 | Hits mutation caught; 10 of 10; A67 layout documented |
-| M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (head bcc8937) | fixes (boss) | 22 of 22; boss tests miss four promises (spotter choice, streak reset, round waits for bonus, bonus recall); spec and Blueprint plan wording |
+| M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | merged 2e29c7c | merged | 4 rounds; World 1 boss reference integration (A67) |
+| M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | merged 2e29c7c | merged | 2 rounds plus boss round; 24 of 24 on UE 5.8.3; main --engine clean |
+| M4.P1.3 Pack 1 World 3 | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-world3 | building | Same process incl. A67 boss integration |
+| M1.8c Missing boss integration is an error | content-engine | content-engine (session "M0.4 Content types...") | m1-8c-boss-integration-error | building | Flip A215 now both bosses are on main |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | claude/m2-2-quest-screens-a21151 @ c14b36d | fixes (round 2) | Round 1 all fixed. Round 2: breakdown compare step unreadable below 1300 (Lead: list reference pieces as text and lay boards out wide) |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
 | M4.P2.2 Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | claude/m3-patterns-world2-game-loop @ 92381be | fixes | 9 of 9; DeltaSeconds clamp, Pow decay, D13 numbers, ghost brief and rubric |
