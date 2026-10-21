@@ -5,7 +5,7 @@ Owner: builder-shell (shared with app-shell). Research: `research/tooling-and-st
 ## v1
 
 - electron-builder: `nsis` x64 on Windows, `dmg` on macOS (arm64 and x64). Unsigned: set `CSC_IDENTITY_AUTO_DISCOVERY=false` in CI. README explains the Gatekeeper right-click-open step and the SmartScreen "more info, run anyway" step.
-- `files`: `out/**`, `content/**`, `resources/**`, `package.json`. Research and docs are not shipped.
+- `files`: `out/**`, `package.json`. `content/` and `resources/` are copied beside the app as `extraResources` (outside the asar, read through `process.resourcesPath`) so the sandbox template exists as real files; see A13 in `docs/decisions.md`. Research and docs are not shipped.
 - App id `dev.mshehab.unrealdojo`, product name `Unreal Dojo`.
 
 ## Later (waits for Mohammad: money)

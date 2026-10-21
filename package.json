@@ -25,7 +25,7 @@
 		"verify-content": "tsx tools/verify-content.ts"
 	},
 	"build": {
-		"appId": "com.mshehab.unrealdojo",
+		"appId": "dev.mshehab.unrealdojo",
 		"productName": "Unreal Dojo",
 		"directories": {
 			"output": "dist",
@@ -54,7 +54,13 @@
 		"asar": true,
 		"mac": {
 			"target": [
-				"dmg"
+				{
+					"target": "dmg",
+					"arch": [
+						"arm64",
+						"x64"
+					]
+				}
 			],
 			"category": "public.app-category.education",
 			"identity": null
@@ -64,7 +70,12 @@
 		},
 		"win": {
 			"target": [
-				"nsis"
+				{
+					"target": "nsis",
+					"arch": [
+						"x64"
+					]
+				}
 			]
 		},
 		"nsis": {
@@ -77,9 +88,13 @@
 		"@anthropic-ai/sdk": "0.131.0",
 		"@modelcontextprotocol/sdk": "1.32.1",
 		"electron-store": "11.0.2",
+		"fast-xml-parser": "5.11.2",
+		"gray-matter": "4.0.3",
 		"remark-gfm": "4.0.1",
+		"remark-parse": "11.0.0",
 		"unified": "11.0.5",
-		"unist-util-visit": "5.1.0"
+		"unist-util-visit": "5.1.0",
+		"zod": "4.6.5"
 	},
 	"devDependencies": {
 		"@monaco-editor/react": "4.7.0",
@@ -98,6 +113,7 @@
 		"lucide-react": "1.52.0",
 		"monaco-editor": "0.57.0",
 		"motion": "14.0.0",
+		"radix-ui": "1.7.0",
 		"react": "19.3.0",
 		"react-dom": "19.3.0",
 		"react-markdown": "10.1.0",

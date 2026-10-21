@@ -9,6 +9,9 @@ const MINIMUM_WIDTH = 1100;
 const MINIMUM_HEIGHT = 700;
 const BACKGROUND_COLOR = "#0b0d12";
 
+// Centers the macOS window buttons inside the renderer's 36px drag strip (TitleBarDragRegion).
+const TRAFFIC_LIGHT_POSITION = { x: 14, y: 12 };
+
 /** Opens the main window, loads the renderer, and sends any outside link to the system browser. */
 export function createMainWindow(): BrowserWindow
 {
@@ -23,6 +26,7 @@ export function createMainWindow(): BrowserWindow
 		backgroundColor: BACKGROUND_COLOR,
 		title: "Unreal Dojo",
 		titleBarStyle: isMac ? "hiddenInset" : "default",
+		...(isMac ? { trafficLightPosition: TRAFFIC_LIGHT_POSITION } : {}),
 		autoHideMenuBar: true,
 		webPreferences: {
 			preload: join(import.meta.dirname, "../preload/index.cjs"),

@@ -15,7 +15,8 @@ export default defineConfig({
 	preload: {
 		resolve: { alias: sharedAlias },
 		build: {
-			externalizeDeps: true,
+			// A sandboxed preload cannot require packages at runtime, so every import is bundled in. electron-vite still keeps electron and Node built-ins external.
+			externalizeDeps: false,
 
 			// Sandboxed preload scripts must be CommonJS, even though the rest of the app is ESM.
 			rolldownOptions: { output: { format: "cjs", entryFileNames: "[name].cjs" } },

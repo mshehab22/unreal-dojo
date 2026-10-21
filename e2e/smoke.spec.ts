@@ -1,13 +1,13 @@
 // Smoke test: the built app launches, opens one window at the spec's size, and shows the title screen.
-import { readFileSync } from "node:fs";
+import { copyFileSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { _electron as electron, expect, test } from "@playwright/test";
 
-const SCREENSHOT_PATH = resolve("docs/iterations/m0-1-window.png");
+const PROOF_PATH = resolve("docs/iterations/m0-1-window.png");
 const PACKAGE_VERSION: string = JSON.parse(readFileSync(resolve("package.json"), "utf8")).version;
 
-test("the app opens its main window", async () =>
+test("the app opens its main window", async ({}, testInfo) =>
 {
 	// Launching the project folder (not out/main/index.js) lets Electron read package.json, as the packaged app does.
 	const electronApp = await electron.launch({ args: [resolve(".")] });
@@ -27,9 +27,19 @@ test("the app opens its main window", async () =>
 	expect(sizes.bounds?.height).toBe(Math.min(900, sizes.workArea.height));
 	expect(sizes.minimum).toEqual([1100, 700]);
 
+	// The hidden macOS title bar means the window can only be moved through this strip.
+	const dragRegion = window.getByTestId("title-bar-drag-region");
+	await expect(dragRegion).toHaveCSS("-webkit-app-region", "drag");
+	expect((await dragRegion.boundingBox())?.height).toBe(36);
+
 	const hasNodeAccess = await window.evaluate(() => typeof (globalThis as { require?: unknown }).require !== "undefined");
 	expect(hasNodeAccess).toBe(false);
 
-	await window.screenshot({ path: SCREENSHOT_PATH });
+	// Screenshots go to the gitignored test-results/ folder; SAVE_PROOF=1 also copies one into docs/iterations/ for an iterations entry.
+	const screenshotPath = testInfo.outputPath("window.png");
+	await window.screenshot({ path: screenshotPath });
+
+	if (process.env["SAVE_PROOF"] === "1") copyFileSync(screenshotPath, PROOF_PATH);
+
 	await electronApp.close();
 });

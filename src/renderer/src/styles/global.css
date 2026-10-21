@@ -42,3 +42,14 @@
 		font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 	}
 }
+
+/* Lets the user move the window by dragging this area; interactive children inside it stay clickable. */
+.app-drag-region {
+	-webkit-app-region: drag;
+	app-region: drag;
+}
+
+.app-drag-region :is(button, a, input, select, textarea, [role="button"]) {
+	-webkit-app-region: no-drag;
+	app-region: no-drag;
+}
