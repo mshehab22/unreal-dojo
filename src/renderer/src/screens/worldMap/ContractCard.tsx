@@ -4,7 +4,7 @@ import { GraduationCapIcon } from "lucide-react";
 import type { WorldOutline } from "@shared/types/catalog";
 import type { QuestAvailability, WorldTestOutStatus } from "@shared/types/progress";
 
-import { DisabledWithReason } from "@/components/DisabledWithReason";
+import { useNavigate } from "@/app/router/useRoute";
 import { StudioPortrait } from "@/components/StudioPortrait";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ interface ContractCardProps
 /** A world's contract card. Bosses can never be tested out of. */
 export function ContractCard({ world, availability, testOut, rematchShare }: ContractCardProps)
 {
+	const navigate = useNavigate();
 	const passed = world.quests.filter((quest) => availability[quest.id]?.status === "passed").length;
 	const isOpen = world.quests.some((quest) => availability[quest.id]?.status !== "locked");
 
@@ -43,12 +44,10 @@ export function ContractCard({ world, availability, testOut, rematchShare }: Con
 				</div>
 				<div className="flex shrink-0 flex-col items-end gap-1">
 					{testOut?.eligible && !testOut.testedOut && (
-						<DisabledWithReason testId="test-out" reason="Taking a test-out opens with the drill screen, which comes next (M2.2).">
-							<Button variant="outline" size="sm" disabled>
-								<GraduationCapIcon />
-								Test out
-							</Button>
-						</DisabledWithReason>
+						<Button variant="outline" size="sm" data-testid="test-out" onClick={() => navigate("drill", { kind: "test-out", world: world.id })}>
+							<GraduationCapIcon />
+							Test out
+						</Button>
 					)}
 					{testOut && !testOut.eligible && !testOut.testedOut && testOut.reason && isOpen && <span className="max-w-40 text-right text-2xs text-paper-faint">{testOut.reason}</span>}
 				</div>

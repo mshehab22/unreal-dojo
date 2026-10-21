@@ -35,7 +35,7 @@ function pickQuest(progress: PlayerProgress, availability: Readonly<Record<strin
 	return null;
 }
 
-/** The continue card. Opens the World Map until the quest screens exist. */
+/** The continue card. Opens the quest itself. */
 export function ContinuePanel({ progress, availability, quests }: ContinuePanelProps)
 {
 	const navigate = useNavigate();
@@ -50,8 +50,8 @@ export function ContinuePanel({ progress, availability, quests }: ContinuePanelP
 						availability={availability[location.quest.id]}
 						context={`${location.pack.title}, ${location.world.title}`}
 						action={
-							<Button variant="pack" size="sm" className="self-start" onClick={() => navigate("worldMap")}>
-								Open on the map
+							<Button variant="pack" size="sm" className="self-start" onClick={() => navigate("quest", { id: location.quest.id })}>
+								{availability[location.quest.id]?.status === "in_progress" ? "Continue" : "Start"}
 								<ArrowRightIcon />
 							</Button>
 						}

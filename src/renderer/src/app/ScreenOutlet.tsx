@@ -3,7 +3,10 @@ import type { ComponentType } from "react";
 
 import { CharacterScreen } from "@/screens/CharacterScreen";
 import { CodexScreen } from "@/screens/CodexScreen";
+import { DrillScreen } from "@/screens/DrillScreen";
 import { FirstRunScreen } from "@/screens/FirstRunScreen";
+import { LootScreen } from "@/screens/LootScreen";
+import { QuestScreen } from "@/screens/QuestScreen";
 import { TokenGalleryScreen } from "@/screens/dev/TokenGalleryScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
 import { StudioScreen } from "@/screens/StudioScreen";
@@ -21,6 +24,9 @@ const SCREENS: Readonly<Record<RouteId, ComponentType>> = {
 	codex: CodexScreen,
 	settings: SettingsScreen,
 	firstRun: FirstRunScreen,
+	quest: QuestScreen,
+	drill: DrillScreen,
+	loot: LootScreen,
 	devTokens: TokenGalleryScreen,
 };
 

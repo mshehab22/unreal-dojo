@@ -19,7 +19,17 @@ const ROUTE_ICONS: Readonly<Record<RouteId, LucideIcon>> = {
 	codex: BookOpenIcon,
 	settings: SettingsIcon,
 	firstRun: FlagIcon,
+	quest: MapIcon,
+	drill: WarehouseIcon,
+	loot: MapIcon,
 	devTokens: SettingsIcon,
+};
+
+/** The rail entry that stays lit on screens the rail does not list: quests and loot belong to the map, drills to the studio. */
+const RAIL_PARENT: Partial<Readonly<Record<RouteId, RouteId>>> = {
+	quest: "worldMap",
+	loot: "worldMap",
+	drill: "studio",
 };
 
 /** Props for NavigationRail. */
@@ -55,7 +65,7 @@ export function NavigationRail({ activeRouteId }: NavigationRailProps)
 						label={route.label}
 						index={position + 1}
 						icon={ROUTE_ICONS[route.id]}
-						isActive={route.id === activeRouteId}
+						isActive={route.id === (RAIL_PARENT[activeRouteId] ?? activeRouteId)}
 					/>
 				))}
 			</div>

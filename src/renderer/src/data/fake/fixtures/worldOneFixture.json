@@ -1,0 +1,1659 @@
+{
+	"packId": "foundations",
+	"world": {
+		"id": "objects-and-reflection",
+		"title": "Objects and reflection",
+		"summary": "A training yard client wants targets their designers can tune without a programmer. Learn how UObjects, actors, and the reflection macros let the editor, Blueprint, and the console see your C++.",
+		"order": 1,
+		"quests": [
+			{
+				"id": "f1-uobject-and-actor",
+				"title": "UObjects, actors, and the class default object",
+				"order": 1,
+				"difficulty": 1,
+				"patterns": [],
+				"skills": [
+					"object-model"
+				],
+				"terms": [
+					"uobject",
+					"actor",
+					"cdo",
+					"coding-standard",
+					"beginplay"
+				],
+				"prerequisites": [],
+				"xp": 20,
+				"estimatedMinutes": 5,
+				"concepts": [
+					"Every engine type the editor can see derives from UObject",
+					"An actor is a UObject that can be placed in a world",
+					"The constructor builds the class default object, so it only sets defaults"
+				],
+				"kind": "concept",
+				"predict": {
+					"id": "predict",
+					"prompt": "Guess, no penalty: a new actor class logs a line from its constructor. You open the editor, but you have not placed the actor anywhere and nobody has pressed Play. Does the line appear in the log?",
+					"explanation": "The engine runs each constructor once at startup to build the class default object, the template every later instance copies, so the line appears before anything is placed.",
+					"type": "multiple-choice",
+					"choices": [
+						"No, constructors only run when an actor is spawned during play",
+						"Yes, at least once, because the engine builds a template object of the class",
+						"Only if the class is also used by a Blueprint",
+						"Only in a packaged game, never in the editor"
+					],
+					"answerIndex": 1
+				},
+				"card": "Almost every type you will write in Unreal sits on one family tree with **UObject** at the root. Deriving from UObject is what lets the engine save the object, collect it when nothing uses it, and show it in the editor.\n\nAn **actor** (`AActor`) is a UObject that can live in a level: it has a place in the world, it can be spawned and destroyed, and it gets lifecycle calls such as `BeginPlay`. Doors, pickups, and the player's character are actors. Data that never needs a place in the world, such as an item definition, can stay a plain UObject.\n\nNames carry the type, following Epic's coding standard: `A` for actors, `U` for other UObjects, `F` for plain structs, `E` for enums, `b` for booleans. The header tool relies on these prefixes and refuses a reflected class without the right one.\n\nWhen the engine starts, it runs each class's constructor once to build the **class default object** (CDO). Every actor you place or spawn begins as a copy of it. That is why a constructor should only create components and set default values: it often runs when no world exists, so it cannot find other actors or start gameplay. Runtime setup belongs in `BeginPlay`.",
+				"example": "// A crate the yard places in a level: it needs a location, so it is an actor.\nUCLASS()\nclass ADojoF1SupplyCrate : public AActor\n{\n\tGENERATED_BODY()\n\npublic:\n\tADojoF1SupplyCrate()\n\t{\n\t\t// Runs for the class default object too: defaults only.\n\t\tPrimaryActorTick.bCanEverTick = false;\n\t}\n\nprotected:\n\tvirtual void BeginPlay() override\n\t{\n\t\tSuper::BeginPlay();\n\n\t\t// Runs once this crate is in a world that has started play.\n\t\tUE_LOG(LogTemp, Log, TEXT(\"%s is ready\"), *GetName());\n\t}\n\n\t// Copied from the class default object into every crate, unless a designer edits that crate.\n\tUPROPERTY(EditAnywhere, Category = \"Crate\")\n\tint32 StartingRations = 4;\n};",
+				"questions": [
+					{
+						"id": "pick-the-base",
+						"prompt": "Which of these should be a plain UObject rather than an actor?",
+						"explanation": "A recipe has no position and never appears in the level, so the extra weight of an actor buys nothing.",
+						"type": "multiple-choice",
+						"choices": [
+							"A door that swings open in the level",
+							"A turret the player can destroy",
+							"A recipe describing which items craft a sword",
+							"A trigger box that starts a cutscene"
+						],
+						"answerIndex": 2
+					},
+					{
+						"id": "fill-prefix",
+						"prompt": "Following Epic's coding standard, a class that derives from AActor and represents a lever is named ___DojoLever.",
+						"explanation": "Actor classes take the A prefix; the header tool checks it on reflected classes.",
+						"type": "fill-blank",
+						"acceptedAnswers": [
+							"A"
+						]
+					},
+					{
+						"id": "spot-constructor-lookup",
+						"prompt": "This crate is meant to remember the first player pawn in the world. Which line belongs somewhere else?",
+						"explanation": "The constructor also builds the class default object, often with no world at all, so a world lookup there finds nothing.",
+						"type": "spot-the-bug",
+						"code": "ADojoF1SupplyCrate::ADojoF1SupplyCrate()\n{\n\tPrimaryActorTick.bCanEverTick = false;\n\tCachedPawn = UGameplayStatics::GetPlayerPawn(this, 0);\n}",
+						"bugLine": 4,
+						"fix": "Move the lookup into BeginPlay, where the crate is in a world that has started play."
+					},
+					{
+						"id": "explain-cdo",
+						"prompt": "In one sentence, say why a constructor should only set defaults and create components.",
+						"explanation": "Treat the constructor as filling in a form that every copy starts from, not as the moment the actor comes alive.",
+						"type": "explain-in-one-sentence",
+						"modelAnswer": "The constructor runs to build the class default object, often before any world exists, so anything that needs a world or other actors must wait for BeginPlay.",
+						"rubric": [
+							"Mentions the class default object or a template every instance copies",
+							"Says no world or other actors are available yet"
+						]
+					}
+				]
+			},
+			{
+				"id": "f1-reflection-and-uclass",
+				"title": "Reflection, UCLASS, and the generated header",
+				"order": 2,
+				"difficulty": 1,
+				"patterns": [],
+				"skills": [
+					"reflection"
+				],
+				"terms": [
+					"reflection",
+					"uclass",
+					"generated-body",
+					"generated-h-include",
+					"unreal-header-tool",
+					"forward-declaration",
+					"api-macro"
+				],
+				"prerequisites": [
+					"f1-uobject-and-actor"
+				],
+				"xp": 20,
+				"estimatedMinutes": 6,
+				"concepts": [
+					"The Unreal Header Tool reads the macros and writes generated code before the compiler runs",
+					"A reflected header includes its generated header last and opens the class with GENERATED_BODY",
+					"Forward declarations keep headers light"
+				],
+				"kind": "concept",
+				"predict": {
+					"id": "predict",
+					"prompt": "Guess, no penalty: in a reflected actor header, someone adds `#include \"Components/BoxComponent.h\"` below the `.generated.h` line. What happens when you build?",
+					"explanation": "The header tool insists that the generated header is the final include, and it reports the file and line before the compiler ever starts.",
+					"type": "multiple-choice",
+					"choices": [
+						"Nothing, include order never matters in C++",
+						"The header tool stops with an error about the generated header not being last",
+						"The build passes but the box component is hidden in the editor",
+						"The linker reports a duplicate symbol"
+					],
+					"answerIndex": 1
+				},
+				"card": "C++ cannot list its own classes or fields at run time. Unreal adds that ability, called **reflection**, with a step that runs before the compiler: the **Unreal Header Tool** (UHT) reads every header that uses the reflection macros and writes extra code describing each class, property, and function. The editor, Blueprint, saving, the console, and the garbage collector all read that description.\n\nThree things make a class reflected:\n\n- `UCLASS()` above the class tells UHT to describe it. Specifiers inside, such as `Blueprintable`, change how the editor treats it.\n- `GENERATED_BODY()` as the first line in the class body is where UHT's code is pasted in.\n- `#include \"<FileName>.generated.h\"` as the **last** include of the header brings that code in.\n\nKeep headers light with **forward declarations**: `class UTextRenderComponent;` tells the compiler the type exists, which is enough for a pointer member. The full include goes in the `.cpp` that calls functions on it, so changing one header rebuilds fewer files.\n\nThe editor's class wizard writes `DOJO_API` between `class` and the name. That **module API macro** exports the class for other modules. Every quest here lives inside the single Dojo module, so quest classes leave it out.",
+				"example": "#pragma once\n\n#include \"CoreMinimal.h\"\n#include \"GameFramework/Actor.h\"\n#include \"DojoF1Signpost.generated.h\"\n\n// Enough for a pointer member; the .cpp includes the real header.\nclass UTextRenderComponent;\n\n// A signpost that shows a word above itself.\nUCLASS()\nclass ADojoF1Signpost : public AActor\n{\n\tGENERATED_BODY()\n\npublic:\n\tADojoF1Signpost();\n\n\tUPROPERTY(VisibleAnywhere, Category = \"Signpost\")\n\tTObjectPtr<UTextRenderComponent> Label;\n};",
+				"questions": [
+					{
+						"id": "order-of-includes",
+						"prompt": "Which include must come first in a reflected header, before the base class header?",
+						"explanation": "CoreMinimal.h brings the basic types everything else uses; the base class header follows, and the generated header closes the list.",
+						"type": "multiple-choice",
+						"choices": [
+							"The .generated.h header",
+							"CoreMinimal.h",
+							"Engine.h",
+							"The .cpp file of the same class"
+						],
+						"answerIndex": 1
+					},
+					{
+						"id": "fill-generated-body",
+						"prompt": "The first line inside the braces of a UCLASS is ___().",
+						"explanation": "GENERATED_BODY marks where the header tool's code is inserted into the class.",
+						"type": "fill-blank",
+						"acceptedAnswers": [
+							"GENERATED_BODY"
+						]
+					},
+					{
+						"id": "spot-forward-declaration",
+						"prompt": "This header compiles, but every file that includes it now pulls in the whole text render header. Which line should be a forward declaration instead?",
+						"explanation": "A pointer member only needs to know the type exists; the full definition is needed where functions are called on it.",
+						"type": "spot-the-bug",
+						"code": "#pragma once\n#include \"CoreMinimal.h\"\n#include \"GameFramework/Actor.h\"\n#include \"Components/TextRenderComponent.h\"\n#include \"DojoF1Signpost.generated.h\"",
+						"bugLine": 4,
+						"fix": "Replace the include with a forward declaration of UTextRenderComponent and include the header in the .cpp file."
+					},
+					{
+						"id": "explain-uht",
+						"prompt": "In one sentence, say what the Unreal Header Tool does and when it runs.",
+						"explanation": "A typo in a specifier is therefore reported by the header tool, not by the compiler.",
+						"type": "explain-in-one-sentence",
+						"modelAnswer": "Before the C++ compiler runs, the Unreal Header Tool reads the reflection macros in headers and writes the generated code that describes those classes, properties, and functions to the engine.",
+						"rubric": [
+							"Says it runs before compiling",
+							"Says it reads the macros and writes generated code or reflection data"
+						]
+					}
+				]
+			},
+			{
+				"id": "f1-uproperty-specifiers",
+				"title": "UPROPERTY specifiers decide who can see and change a field",
+				"order": 3,
+				"difficulty": 1,
+				"patterns": [],
+				"skills": [
+					"reflection"
+				],
+				"terms": [
+					"uproperty",
+					"editanywhere",
+					"visibleanywhere",
+					"blueprintreadwrite",
+					"blueprintreadonly",
+					"category-specifier",
+					"meta-specifier",
+					"allowprivateaccess",
+					"displayname-meta",
+					"tobjectptr"
+				],
+				"prerequisites": [
+					"f1-reflection-and-uclass"
+				],
+				"xp": 25,
+				"estimatedMinutes": 6,
+				"concepts": [
+					"Edit and Visible specifiers control the Details panel",
+					"BlueprintReadOnly and BlueprintReadWrite control Blueprint access",
+					"Category and meta keep a class usable for designers"
+				],
+				"kind": "concept",
+				"predict": {
+					"id": "predict",
+					"prompt": "Guess, no penalty: a field is marked `UPROPERTY(VisibleAnywhere)` and holds a component pointer. Can a designer change the component's own settings, such as its color, in the Details panel?",
+					"explanation": "VisibleAnywhere locks which object the pointer holds; the object's own editable properties still show and can be changed.",
+					"type": "multiple-choice",
+					"choices": [
+						"No, VisibleAnywhere makes everything inside read only",
+						"Yes, the pointer cannot be swapped, but the component it points to is still editable",
+						"Only if the component is also marked EditAnywhere in its own class",
+						"Only in a Blueprint child, never on a placed actor"
+					],
+					"answerIndex": 1
+				},
+				"card": "`UPROPERTY(...)` records a field with reflection. The words in the brackets are **specifiers**; they say what each part of the engine may do with the field.\n\nEditor access (pick one):\n\n- `EditAnywhere`: editable on the class defaults and on every placed instance.\n- `EditDefaultsOnly` or `EditInstanceOnly`: editable on only one of the two.\n- `VisibleAnywhere`: shown read only. The usual choice for component pointers made in the constructor.\n\nBlueprint access (optional): `BlueprintReadOnly` gives a Get node, `BlueprintReadWrite` gives Get and Set. A private field needs `meta = (AllowPrivateAccess = \"true\")` before Blueprint may touch it.\n\nOrganization: `Category = \"Target\"` groups fields under a heading, and `Category = \"Target|Timing\"` nests a subheading. The `meta` block holds editor hints: `ClampMin` and `ClampMax` stop impossible values, and `DisplayName` changes the label a designer reads without renaming the C++ field.\n\nEvery UObject pointer member gets a UPROPERTY, even an empty one, and is written as `TObjectPtr<T>` in UE5. Without the macro the garbage collector cannot see the reference and may free the object while you still hold it.",
+				"example": "UCLASS()\nclass ADojoF1Scarecrow : public AActor\n{\n\tGENERATED_BODY()\n\npublic:\n\t// Read only in Details; the label's own text and color stay editable inside it.\n\tUPROPERTY(VisibleAnywhere, Category = \"Scarecrow\")\n\tTObjectPtr<UTextRenderComponent> Label;\n\n\t// Designers tune it per scarecrow; Blueprint can read it but not change it.\n\tUPROPERTY(EditAnywhere, BlueprintReadOnly, Category = \"Scarecrow|Tuning\", meta = (ClampMin = \"0.0\", DisplayName = \"Scare Radius (cm)\"))\n\tfloat ScareRadius = 400.f;\n\nprivate:\n\t// Private in C++, still readable from this class's Blueprint children.\n\tUPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = \"Scarecrow\", meta = (AllowPrivateAccess = \"true\"))\n\tint32 BirdsScared = 0;\n};",
+				"questions": [
+					{
+						"id": "pick-edit-specifier",
+						"prompt": "Every gate in the yard shares one opening speed, and nobody should change it on a single placed gate. Which specifier fits the speed field?",
+						"explanation": "EditDefaultsOnly allows edits on the class or its Blueprint child but hides the field on placed instances.",
+						"type": "multiple-choice",
+						"choices": [
+							"EditInstanceOnly",
+							"VisibleAnywhere",
+							"BlueprintReadWrite",
+							"EditDefaultsOnly"
+						],
+						"answerIndex": 3
+					},
+					{
+						"id": "fill-clamp",
+						"prompt": "To stop a designer typing a negative radius, write meta = (___ = \"0.0\").",
+						"explanation": "ClampMin sets the lowest value the Details panel and Blueprint pins accept.",
+						"type": "fill-blank",
+						"acceptedAnswers": [
+							"ClampMin"
+						]
+					},
+					{
+						"id": "spot-private-blueprint",
+						"prompt": "The header tool stops this build because a private field is offered to Blueprint without permission. Which line is wrong?",
+						"explanation": "Blueprint access to a private member must be granted explicitly with AllowPrivateAccess.",
+						"type": "spot-the-bug",
+						"code": "private:\n\tUPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = \"Scarecrow\")\n\tint32 BirdsScared = 0;",
+						"bugLine": 2,
+						"fix": "Add meta with AllowPrivateAccess set to true to that UPROPERTY, or move the field to a public or protected section."
+					},
+					{
+						"id": "readonly-versus-readwrite",
+						"prompt": "A Blueprint should show a target's current hit count on a widget but never change it. Which Blueprint specifier fits?",
+						"explanation": "BlueprintReadOnly gives only a Get node, so C++ stays the single place that changes the count.",
+						"type": "multiple-choice",
+						"choices": [
+							"BlueprintReadWrite",
+							"BlueprintReadOnly",
+							"BlueprintAssignable"
+						],
+						"answerIndex": 1
+					},
+					{
+						"id": "explain-tobjectptr",
+						"prompt": "In one sentence, say why a component pointer member needs UPROPERTY even when nobody edits it.",
+						"explanation": "The Details panel is a side benefit; keeping the object alive is the reason the macro is required.",
+						"type": "explain-in-one-sentence",
+						"modelAnswer": "The garbage collector only tracks references that reflection knows about, so without UPROPERTY the object can be freed while the pointer still points at it.",
+						"rubric": [
+							"Names the garbage collector",
+							"Says an unmarked pointer can be left pointing at a freed object"
+						]
+					}
+				]
+			},
+			{
+				"id": "f1-ufunction-specifiers",
+				"title": "UFUNCTION opens a function to Blueprint and the console",
+				"order": 4,
+				"difficulty": 2,
+				"patterns": [],
+				"skills": [
+					"reflection"
+				],
+				"terms": [
+					"ufunction",
+					"blueprintcallable",
+					"blueprintpure",
+					"blueprintimplementableevent",
+					"blueprintnativeevent"
+				],
+				"prerequisites": [
+					"f1-uproperty-specifiers"
+				],
+				"xp": 25,
+				"estimatedMinutes": 7,
+				"concepts": [
+					"BlueprintCallable and BlueprintPure expose C++ functions as nodes",
+					"BlueprintImplementableEvent and BlueprintNativeEvent let Blueprint supply the body",
+					"Callers call the event, never its _Implementation"
+				],
+				"kind": "concept",
+				"predict": {
+					"id": "predict",
+					"prompt": "Guess, no penalty: a public C++ function `void Ring();` has no macro above it. A designer opens the actor's Blueprint and searches for a Ring node. What do they find?",
+					"explanation": "Blueprint only lists functions that reflection knows about, and a function becomes known through UFUNCTION.",
+					"type": "multiple-choice",
+					"choices": [
+						"A Ring node with an execution pin",
+						"A Ring node without execution pins",
+						"No Ring node at all",
+						"A Ring event they can override"
+					],
+					"answerIndex": 2
+				},
+				"card": "`UFUNCTION(...)` records a function with reflection, the same way UPROPERTY records a field. Once recorded, the engine can find the function by name: Blueprint can call it, delegates can bind to it, and the console command `ke * <FunctionName>` can run it on every actor that has it.\n\nSpecifiers for C++ bodies that Blueprint calls:\n\n- `BlueprintCallable`: a node with execution pins, for functions that change something.\n- `BlueprintPure`: a node with no execution pins, for getters that change nothing. Pair it with `const`.\n\nSpecifiers for bodies that Blueprint provides:\n\n- `BlueprintImplementableEvent`: C++ declares it and calls it; there is no C++ body at all. If no Blueprint implements it, the call does nothing.\n- `BlueprintNativeEvent`: C++ writes a default body in a function named `<Name>_Implementation`, and a Blueprint child may override it. Code always calls `<Name>(...)`; the generated version picks the Blueprint override when one exists and the C++ default otherwise. Calling `_Implementation` yourself skips any override.\n\nA handler bound to a dynamic delegate needs `UFUNCTION()` with no specifiers, because the binding finds it by name.",
+				"example": "UCLASS()\nclass ADojoF1Gong : public AActor\n{\n\tGENERATED_BODY()\n\npublic:\n\t// Changes state, so it gets execution pins.\n\tUFUNCTION(BlueprintCallable, Category = \"Gong\")\n\tvoid Hit();\n\n\t// Only reads, so it is a pure node.\n\tUFUNCTION(BlueprintPure, Category = \"Gong\")\n\tint32 GetHitCount() const;\n\nprotected:\n\t// Blueprint may replace the reaction; C++ supplies a default.\n\tUFUNCTION(BlueprintNativeEvent, Category = \"Gong\")\n\tvoid React();\n\tvirtual void React_Implementation();\n\n\t// Purely cosmetic and entirely up to Blueprint.\n\tUFUNCTION(BlueprintImplementableEvent, Category = \"Gong\")\n\tvoid PlaySparkle();\n\nprivate:\n\tint32 HitCount = 0;\n};\n\nvoid ADojoF1Gong::Hit()\n{\n\tHitCount++;\n\n\t// Calls the Blueprint override if there is one, otherwise React_Implementation.\n\tReact();\n\tPlaySparkle();\n}",
+				"questions": [
+					{
+						"id": "pick-pure",
+						"prompt": "Which function should be BlueprintPure rather than BlueprintCallable?",
+						"explanation": "A pure node has no execution pins, so it suits functions that only read state.",
+						"type": "multiple-choice",
+						"choices": [
+							"OpenGate, which starts the gate moving",
+							"GetRemainingHits, which returns a number and changes nothing",
+							"ResetScore, which sets the score to zero",
+							"SpawnTarget, which places a new actor"
+						],
+						"answerIndex": 1
+					},
+					{
+						"id": "fill-implementation",
+						"prompt": "A BlueprintNativeEvent named React has its C++ default body in a function named React___.",
+						"explanation": "The header tool generates React itself, which dispatches to a Blueprint override or to React_Implementation.",
+						"type": "fill-blank",
+						"acceptedAnswers": [
+							"_Implementation"
+						]
+					},
+					{
+						"id": "spot-direct-implementation",
+						"prompt": "A designer overrode React in a Blueprint child of the gong, but hitting it still runs only the C++ default. Which line is wrong?",
+						"explanation": "_Implementation is only the C++ default; calling it directly bypasses the override.",
+						"type": "spot-the-bug",
+						"code": "void ADojoF1Gong::Hit()\n{\n\tHitCount++;\n\tReact_Implementation();\n}",
+						"bugLine": 4,
+						"fix": "Call React instead of React_Implementation so the generated dispatcher can pick the Blueprint override."
+					},
+					{
+						"id": "implementable-without-blueprint",
+						"prompt": "C++ calls a BlueprintImplementableEvent named PlaySparkle on an actor whose Blueprint never implemented it. What happens?",
+						"explanation": "An unimplemented BlueprintImplementableEvent with no return value is simply a call that does nothing.",
+						"type": "multiple-choice",
+						"choices": [
+							"A crash, because the function has no body",
+							"A compile error in the C++ caller",
+							"Nothing, the call returns without doing anything",
+							"The engine logs an error every time"
+						],
+						"answerIndex": 2
+					},
+					{
+						"id": "explain-native-event",
+						"prompt": "In one sentence, say when you would pick BlueprintNativeEvent over BlueprintImplementableEvent.",
+						"explanation": "BlueprintImplementableEvent has no C++ body, so it fits purely cosmetic hooks where doing nothing is fine.",
+						"type": "explain-in-one-sentence",
+						"modelAnswer": "Pick BlueprintNativeEvent when the function needs a sensible C++ default that still works if no Blueprint overrides it.",
+						"rubric": [
+							"Mentions a C++ default body",
+							"Says Blueprint can still override it"
+						]
+					}
+				]
+			},
+			{
+				"id": "f1-training-dummy",
+				"title": "A training dummy the console can strike",
+				"order": 5,
+				"difficulty": 1,
+				"patterns": [],
+				"skills": [
+					"reflection",
+					"actors"
+				],
+				"terms": [
+					"uproperty",
+					"ufunction",
+					"blueprintcallable",
+					"blueprintpure",
+					"editanywhere",
+					"visibleanywhere",
+					"createdefaultsubobject",
+					"beginplay"
+				],
+				"prerequisites": [
+					"f1-ufunction-specifiers"
+				],
+				"xp": 40,
+				"estimatedMinutes": 12,
+				"concepts": [
+					"UFUNCTION makes a function reachable by name from Blueprint and the console",
+					"UPROPERTY with EditAnywhere puts a tuning value in the Details panel"
+				],
+				"kind": "build",
+				"scaffold": "worked",
+				"brief": "When you press Play and run `ke * Strike` in the console three times, the number floating above the dummy counts down 3, 2, 1 and then reads DOWN.\n\nMost of `ADojoF1TrainingDummy` is written for you. First read the marked lines and say in a sentence why each one is there. Then fill the two gaps:\n\n1. In the header, make `Strike` a function Blueprint and the console can call.\n2. In the source file, write `Strike`: count one strike and refresh the label, unless the dummy is already down.\n\nThe console command `ke` (short for KismetEvent) finds a function by name through reflection, so it only works once `Strike` is a UFUNCTION. Try it before the first gap and after it: that difference is the whole lesson.\n\n## See it in the editor\n\nDrag `DojoF1TrainingDummy` from the Content Browser's C++ Classes folder into the sandbox map, set Hits To Knock Down to 5 in its Details panel, and press Play. The label reads 5. Press the backtick key to open the console and run `ke * Strike` five times: the label counts down to 1 and then reads DOWN, and a sixth strike changes nothing.",
+				"files": [
+					{
+						"name": "DojoF1TrainingDummy.h",
+						"starter": "#pragma once\n\n#include \"CoreMinimal.h\"\n#include \"GameFramework/Actor.h\"\n#include \"DojoF1TrainingDummy.generated.h\"\n\nclass UTextRenderComponent;\n\n/** A practice dummy that counts strikes and tips over after a set number of them. */\nUCLASS()\nclass ADojoF1TrainingDummy : public AActor\n{\n\tGENERATED_BODY()\n\npublic:\n\t/** Creates the label and turns ticking off. */\n\tADojoF1TrainingDummy();\n\n\t/** Floating text above the dummy that shows the strikes left. */\n\tUPROPERTY(VisibleAnywhere, Category = \"Dummy\")\n\tTObjectPtr<UTextRenderComponent> Label;\n\n\t/** How many strikes knock the dummy down. */\n\tUPROPERTY(EditAnywhere, BlueprintReadOnly, Category = \"Dummy\", meta = (ClampMin = \"1\"))\n\tint32 HitsToKnockDown = 3;\n\n\t// Your code: let Blueprint and the console call Strike.\n\tvoid Strike();\n\n\t/** Strikes counted so far. */\n\tUFUNCTION(BlueprintPure, Category = \"Dummy\")\n\tint32 GetHitsTaken() const;\n\n\t/** True once the dummy has taken HitsToKnockDown strikes. */\n\tUFUNCTION(BlueprintPure, Category = \"Dummy\")\n\tbool IsKnockedDown() const;\n\nprotected:\n\t/** Shows the starting count on the label. */\n\tvirtual void BeginPlay() override;\n\nprivate:\n\t/** Writes the strikes left, or DOWN, into the label. */\n\tvoid RefreshLabel();\n\n\tint32 HitsTaken = 0;\n};",
+						"markedLines": [
+							{
+								"line": 5,
+								"reason": "The header tool's generated code comes in through this include, and it must be the last one."
+							},
+							{
+								"line": 20,
+								"reason": "VisibleAnywhere shows the label in Details and keeps the garbage collector aware of it, without letting anyone swap it out."
+							},
+							{
+								"line": 24,
+								"reason": "Designers tune the count per dummy, Blueprint may read it, and ClampMin stops a zero that would make the dummy start knocked down."
+							},
+							{
+								"line": 35,
+								"reason": "A getter that changes nothing becomes a pure node without execution pins, and const promises the same in C++."
+							}
+						]
+					},
+					{
+						"name": "DojoF1TrainingDummy.cpp",
+						"starter": "#include \"DojoF1TrainingDummy.h\"\n\n#include \"Components/TextRenderComponent.h\"\n\nADojoF1TrainingDummy::ADojoF1TrainingDummy()\n{\n\tPrimaryActorTick.bCanEverTick = false;\n\n\tLabel = CreateDefaultSubobject<UTextRenderComponent>(TEXT(\"Label\"));\n\tRootComponent = Label;\n\tLabel->SetHorizontalAlignment(EHTA_Center);\n}\n\nvoid ADojoF1TrainingDummy::BeginPlay()\n{\n\tSuper::BeginPlay();\n\n\tRefreshLabel();\n}\n\nvoid ADojoF1TrainingDummy::Strike()\n{\n\t// Your code: do nothing if the dummy is already down; otherwise count the strike and refresh the label.\n}\n\nint32 ADojoF1TrainingDummy::GetHitsTaken() const\n{\n\treturn HitsTaken;\n}\n\nbool ADojoF1TrainingDummy::IsKnockedDown() const\n{\n\treturn HitsTaken >= HitsToKnockDown;\n}\n\nvoid ADojoF1TrainingDummy::RefreshLabel()\n{\n\tconst FText Text = IsKnockedDown() ? FText::FromString(TEXT(\"DOWN\")) : FText::AsNumber(HitsToKnockDown - HitsTaken);\n\tLabel->SetText(Text);\n}",
+						"markedLines": [
+							{
+								"line": 9,
+								"reason": "Components every dummy always has are created in the constructor, so they exist on the class default object too."
+							}
+						]
+					}
+				],
+				"tests": "#include \"Misc/AutomationTest.h\"\n\n#if WITH_AUTOMATION_TESTS\n\n#include \"Components/TextRenderComponent.h\"\n#include \"Quests/f1-training-dummy/DojoF1TrainingDummy.h\"\n#include \"Support/DojoTestWorld.h\"\n\nIMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F1_TrainingDummy_StrikeIsReflected, \"Dojo.F1.TrainingDummy.StrikeIsReflected\", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)\n\n/** Asks reflection for Strike and HitsToKnockDown and checks Blueprint and the Details panel can reach them. */\nbool FDojo_F1_TrainingDummy_StrikeIsReflected::RunTest(const FString& Parameters)\n{\n\tconst UFunction* StrikeFunction = ADojoF1TrainingDummy::StaticClass()->FindFunctionByName(TEXT(\"Strike\"));\n\tif (!TestNotNull(TEXT(\"Strike is a UFUNCTION\"), StrikeFunction)) return false;\n\tTestTrue(TEXT(\"Strike is BlueprintCallable\"), StrikeFunction->HasAnyFunctionFlags(FUNC_BlueprintCallable));\n\n\tconst FProperty* HitsProperty = FindFProperty<FProperty>(ADojoF1TrainingDummy::StaticClass(), TEXT(\"HitsToKnockDown\"));\n\tif (!TestNotNull(TEXT(\"HitsToKnockDown is a UPROPERTY\"), HitsProperty)) return false;\n\tTestTrue(TEXT(\"HitsToKnockDown is editable in Details\"), HitsProperty->HasAnyPropertyFlags(CPF_Edit));\n\n\treturn true;\n}\n\nIMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F1_TrainingDummy_KnockedDownAfterThree, \"Dojo.F1.TrainingDummy.KnockedDownAfterThree\", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)\n\n/** Strikes a dummy four times and checks the count, the label, and that it goes down on the third and ignores the fourth. */\nbool FDojo_F1_TrainingDummy_KnockedDownAfterThree::RunTest(const FString& Parameters)\n{\n\tFDojoTestWorld TestWorld;\n\n\tADojoF1TrainingDummy* Dummy = TestWorld.SpawnActor<ADojoF1TrainingDummy>();\n\tif (!TestNotNull(TEXT(\"Dummy spawned\"), Dummy)) return false;\n\tif (!TestNotNull(TEXT(\"Dummy has a label\"), Dummy->Label.Get())) return false;\n\n\tTestEqual(TEXT(\"Label reads 3 at the start\"), Dummy->Label->Text.ToString(), FString(TEXT(\"3\")));\n\n\tDummy->Strike();\n\tDummy->Strike();\n\tTestEqual(TEXT(\"Two strikes counted\"), Dummy->GetHitsTaken(), 2);\n\tTestFalse(TEXT(\"Still standing after two strikes\"), Dummy->IsKnockedDown());\n\tTestEqual(TEXT(\"Label reads 1 after two strikes\"), Dummy->Label->Text.ToString(), FString(TEXT(\"1\")));\n\n\tDummy->Strike();\n\tTestTrue(TEXT(\"Down after the third strike\"), Dummy->IsKnockedDown());\n\tTestEqual(TEXT(\"Label reads DOWN after the third strike\"), Dummy->Label->Text.ToString(), FString(TEXT(\"DOWN\")));\n\n\tDummy->Strike();\n\tTestEqual(TEXT(\"A downed dummy ignores more strikes\"), Dummy->GetHitsTaken(), 3);\n\n\treturn true;\n}\n\n#endif",
+				"rubric": [
+					"Strike is a UFUNCTION with BlueprintCallable and a Category.",
+					"A downed dummy ignores further strikes, so the count never passes HitsToKnockDown.",
+					"The label is refreshed through the existing helper, not by writing text in two places.",
+					"The knock-down count comes from the editable property, never from a number typed in Strike.",
+					"No Tick is used and the label component is created once, in the constructor."
+				],
+				"alternative": "Instead of a counter going up, the dummy could store HitsRemaining and count down, which makes the label line shorter. The catch is that HitsToKnockDown can be changed in Details after the dummy is placed, so HitsRemaining would have to be copied in BeginPlay and kept in step. Counting hits taken and comparing against the editable limit keeps one source of truth, which is why the starter is shaped this way.",
+				"parsons": [
+					{
+						"id": "dummy-strike",
+						"prompt": "Put Strike in order.",
+						"lines": [
+							"void ADojoF1TrainingDummy::Strike()",
+							"{",
+							"\tif (IsKnockedDown()) return;",
+							"\tHitsTaken++;",
+							"\tRefreshLabel();",
+							"}"
+						],
+						"distractors": [
+							{
+								"line": "\tSuper::Strike();",
+								"mistake": "Strike is a new function on this class, not an override, so there is no parent version to call."
+							}
+						]
+					},
+					{
+						"id": "dummy-constructor",
+						"prompt": "Put the constructor in order.",
+						"lines": [
+							"ADojoF1TrainingDummy::ADojoF1TrainingDummy()",
+							"{",
+							"\tPrimaryActorTick.bCanEverTick = false;",
+							"\tLabel = CreateDefaultSubobject<UTextRenderComponent>(TEXT(\"Label\"));",
+							"\tRootComponent = Label;",
+							"}"
+						],
+						"distractors": [
+							{
+								"line": "\tLabel = NewObject<UTextRenderComponent>(this);",
+								"mistake": "Components every instance owns from the start are made with CreateDefaultSubobject in the constructor, so they exist on the class default object."
+							}
+						]
+					}
+				],
+				"hintCount": 3
+			},
+			{
+				"id": "f1-uenum-and-ustruct",
+				"title": "UENUM and USTRUCT bring your own types into reflection",
+				"order": 6,
+				"difficulty": 2,
+				"patterns": [],
+				"skills": [
+					"reflection"
+				],
+				"terms": [
+					"uenum",
+					"ustruct",
+					"generated-body",
+					"blueprintreadwrite",
+					"coding-standard"
+				],
+				"prerequisites": [
+					"f1-training-dummy"
+				],
+				"xp": 25,
+				"estimatedMinutes": 6,
+				"concepts": [
+					"A reflected enum is an enum class of uint8 with UENUM above it",
+					"UMETA gives each value a display name without renaming it",
+					"USTRUCT groups related values into one reflected type"
+				],
+				"kind": "concept",
+				"predict": {
+					"id": "predict",
+					"prompt": "Guess, no penalty: a target's state is a plain `enum class ETargetMode : uint8 { Idle, Up };` with no macro, and a field of that type has `UPROPERTY(EditAnywhere)`. What happens when you build?",
+					"explanation": "Reflection can only describe a field whose type it knows, so the enum itself needs UENUM first.",
+					"type": "multiple-choice",
+					"choices": [
+						"It builds, and Details shows a dropdown with Idle and Up",
+						"It builds, and Details shows a number box",
+						"The header tool stops, because a UPROPERTY cannot use an enum it knows nothing about",
+						"It builds, and the field is silently left out of Details"
+					],
+					"answerIndex": 2
+				},
+				"card": "Your own enums and structs can join reflection too, and then they work everywhere a built-in type does: Details panels, Blueprint pins, saving, and logs.\n\nA reflected enum is an `enum class` with a `uint8` underlying type and `UENUM()` above it. Add `BlueprintType` inside the brackets so Blueprint can use it as a variable type. `UMETA(DisplayName = \"Up\")` after a value changes the label designers see while the C++ name stays `ETS_Raised`. This project starts every value with the enum's initials (ETS for a target state), so a value reads as belonging to its enum wherever it appears. Reflection can then turn a value into readable text for you: `UEnum::GetDisplayValueAsText(State)` returns the display name, with no switch statement to keep in sync.\n\nA reflected struct is a value type with `USTRUCT()` above it and `GENERATED_BODY()` as its first line. Its name takes the `F` prefix. Fields inside that should be saved, edited, or reach Blueprint get their own UPROPERTY. Structs suit small bundles of data that travel together, such as the result of one round: score, hits, and time.\n\nNeither one can hold functions that Blueprint calls; behavior stays on UObjects.",
+				"example": "// The states a yard gate moves through.\nUENUM(BlueprintType)\nenum class EDojoF1GateState : uint8\n{\n\tEGS_Shut UMETA(DisplayName = \"Closed\"),\n\tEGS_Opening UMETA(DisplayName = \"Opening\"),\n\tEGS_Open UMETA(DisplayName = \"Open\")\n};\n\n// What one practice round produced, passed around as a single value.\nUSTRUCT(BlueprintType)\nstruct FDojoF1RoundResult\n{\n\tGENERATED_BODY()\n\n\tUPROPERTY(EditAnywhere, BlueprintReadWrite, Category = \"Round\")\n\tint32 Score = 0;\n\n\tUPROPERTY(EditAnywhere, BlueprintReadWrite, Category = \"Round\")\n\tfloat Seconds = 0.f;\n};",
+				"questions": [
+					{
+						"id": "enum-underlying-type",
+						"prompt": "A UENUM that Blueprint can use is declared as enum class EDojoF1Mode : ___.",
+						"explanation": "Blueprint stores enums as bytes, so a BlueprintType enum must use uint8.",
+						"type": "fill-blank",
+						"acceptedAnswers": [
+							"uint8"
+						]
+					},
+					{
+						"id": "display-name",
+						"prompt": "A value is declared as EGS_Shut UMETA(DisplayName = \"Closed\"). What does UEnum::GetDisplayValueAsText return for it?",
+						"explanation": "The display name comes from UMETA, so designers read Closed while code keeps EGS_Shut.",
+						"type": "multiple-choice",
+						"choices": [
+							"EGS_Shut",
+							"Closed",
+							"EDojoF1GateState::EGS_Shut",
+							"0"
+						],
+						"answerIndex": 1
+					},
+					{
+						"id": "spot-struct-body",
+						"prompt": "The header tool stops on this struct. Which line is wrong?",
+						"explanation": "The header tool checks the coding standard prefix on reflected types, and structs take F.",
+						"type": "spot-the-bug",
+						"code": "USTRUCT(BlueprintType)\nstruct DojoF1RoundResult\n{\n\tGENERATED_BODY()\n\tUPROPERTY(EditAnywhere, Category = \"Round\")\n\tint32 Score = 0;\n};",
+						"bugLine": 2,
+						"fix": "Name the struct FDojoF1RoundResult, with the F prefix."
+					},
+					{
+						"id": "struct-or-uobject",
+						"prompt": "Which of these is the best fit for a USTRUCT rather than a UObject class?",
+						"explanation": "A struct is a plain value; anything with behavior or a lifetime of its own belongs in a UObject class.",
+						"type": "multiple-choice",
+						"choices": [
+							"A score summary of three numbers returned from a function",
+							"A target that reacts when it is hit",
+							"A manager that spawns enemies every few seconds"
+						],
+						"answerIndex": 0
+					},
+					{
+						"id": "explain-umeta",
+						"prompt": "In one sentence, say what reflection gives you when you mark an enum with UENUM.",
+						"explanation": "That is why a reflected enum label never drifts out of step with the enum.",
+						"type": "explain-in-one-sentence",
+						"modelAnswer": "The engine learns the enum's values and their display names, so it can show them in Details and Blueprint and turn any value into readable text without a hand-written switch.",
+						"rubric": [
+							"Mentions editor or Blueprint use of the values",
+							"Mentions turning a value into a name or text"
+						]
+					}
+				]
+			},
+			{
+				"id": "f1-popup-target",
+				"title": "A pop-up target that shows its state by name",
+				"order": 7,
+				"difficulty": 2,
+				"patterns": [
+					"state"
+				],
+				"skills": [
+					"reflection"
+				],
+				"terms": [
+					"uenum",
+					"ufunction",
+					"blueprintcallable",
+					"uproperty",
+					"coding-standard"
+				],
+				"prerequisites": [
+					"f1-uenum-and-ustruct"
+				],
+				"xp": 60,
+				"estimatedMinutes": 15,
+				"concepts": [
+					"A UENUM holds one actor's state in a single field",
+					"UMETA display names reach the screen through reflection, with no switch statement"
+				],
+				"kind": "build",
+				"scaffold": "faded",
+				"brief": "When you press Play and run `ke * Raise`, the word above the target changes from Down to Up; `ke * Hit` drops it back to Down, and a second raise and hit leave it reading Broken.\n\nThe class is declared for you and every function has a comment naming its job. Your parts:\n\n1. Declare `EDojoF1TargetState` at the top of the header: a reflected enum class with the values ETS_Lowered, ETS_Raised, and ETS_Broken (the enum's initials first, as the project's naming rule asks), shown to designers as Down, Up, and Broken.\n2. Fill in the bodies of `Raise`, `Hit`, `Repair`, and `SetState`.\n\nFirst version: a pair of booleans (`bIsRaised`, `bIsBroken`) would also work for three states. Try sketching the Hit rules with them on paper first and count the combinations you have to forbid (raised and broken at once makes no sense). One enum field makes those impossible combinations unrepresentable, and reflection turns its value into the label text for free.\n\nEvery state change goes through `SetState`, so the label can never disagree with the state.\n\n## See it in the editor\n\nPlace a `DojoF1PopupTarget` in the sandbox map, set Hits To Break to 2, and press Play. The label reads Down. In the console run `ke * Raise` (Up), `ke * Hit` (Down), `ke * Raise`, `ke * Hit` (Broken), then `ke * Raise` again: it stays Broken. `ke * Repair` brings it back to Down. Select the target while playing (eject with F8) and watch the State field in Details change with it.",
+				"files": [
+					{
+						"name": "DojoF1PopupTarget.h",
+						"starter": "#pragma once\n\n#include \"CoreMinimal.h\"\n#include \"GameFramework/Actor.h\"\n#include \"DojoF1PopupTarget.generated.h\"\n\nclass UTextRenderComponent;\n\n// Your code: declare EDojoF1TargetState here, a reflected enum class with ETS_Lowered (shown as \"Down\"), ETS_Raised (\"Up\"), and ETS_Broken (\"Broken\").\n\n/** A target that pops up, drops back when hit, and breaks after enough hits. */\nUCLASS()\nclass ADojoF1PopupTarget : public AActor\n{\n\tGENERATED_BODY()\n\npublic:\n\t/** Creates the label and turns ticking off. */\n\tADojoF1PopupTarget();\n\n\t/** Floating text that shows the state's display name. */\n\tUPROPERTY(VisibleAnywhere, Category = \"Target\")\n\tTObjectPtr<UTextRenderComponent> Label;\n\n\t/** Hits that break the target for good. */\n\tUPROPERTY(EditAnywhere, BlueprintReadOnly, Category = \"Target\", meta = (ClampMin = \"1\"))\n\tint32 HitsToBreak = 2;\n\n\t/** Lowered to raised; does nothing in any other state. */\n\tUFUNCTION(BlueprintCallable, Category = \"Target\")\n\tvoid Raise();\n\n\t/** Counts a hit on a raised target and returns true; a hit on a lowered or broken target returns false. */\n\tUFUNCTION(BlueprintCallable, Category = \"Target\")\n\tbool Hit();\n\n\t/** Broken to lowered with the hit count cleared. */\n\tUFUNCTION(BlueprintCallable, Category = \"Target\")\n\tvoid Repair();\n\n\t/** The current state. */\n\tUFUNCTION(BlueprintPure, Category = \"Target\")\n\tEDojoF1TargetState GetState() const;\n\nprotected:\n\t/** Shows the starting state on the label. */\n\tvirtual void BeginPlay() override;\n\nprivate:\n\t/** Changes the state and shows its display name on the label. */\n\tvoid SetState(EDojoF1TargetState NewState);\n\n\tUPROPERTY(VisibleInstanceOnly, Category = \"Target\")\n\tEDojoF1TargetState State = EDojoF1TargetState::ETS_Lowered;\n\n\tint32 HitsTaken = 0;\n};",
+						"markedLines": [
+							{
+								"line": 53,
+								"reason": "VisibleInstanceOnly shows the live state on a placed or spawned target in Details without letting anyone edit it."
+							}
+						]
+					},
+					{
+						"name": "DojoF1PopupTarget.cpp",
+						"starter": "#include \"DojoF1PopupTarget.h\"\n\n#include \"Components/TextRenderComponent.h\"\n\nADojoF1PopupTarget::ADojoF1PopupTarget()\n{\n\tPrimaryActorTick.bCanEverTick = false;\n\n\tLabel = CreateDefaultSubobject<UTextRenderComponent>(TEXT(\"Label\"));\n\tRootComponent = Label;\n\tLabel->SetHorizontalAlignment(EHTA_Center);\n}\n\nvoid ADojoF1PopupTarget::BeginPlay()\n{\n\tSuper::BeginPlay();\n\n\tSetState(State);\n}\n\nvoid ADojoF1PopupTarget::Raise()\n{\n\t// Your code: only a lowered target rises.\n}\n\nbool ADojoF1PopupTarget::Hit()\n{\n\t// Your code: ignore the hit unless raised.\n\t// Your code: count it, then break the target or drop it back down.\n\treturn false;\n}\n\nvoid ADojoF1PopupTarget::Repair()\n{\n\t// Your code: only a broken target is repaired; clear its hits and lower it.\n}\n\nEDojoF1TargetState ADojoF1PopupTarget::GetState() const\n{\n\treturn State;\n}\n\nvoid ADojoF1PopupTarget::SetState(EDojoF1TargetState NewState)\n{\n\t// Your code: store the state, then put its display name on the label.\n}",
+						"markedLines": [
+							{
+								"line": 18,
+								"reason": "Routing the starting value through SetState makes the label show it from the first frame."
+							}
+						]
+					}
+				],
+				"tests": "#include \"Misc/AutomationTest.h\"\n\n#if WITH_AUTOMATION_TESTS\n\n#include \"Components/TextRenderComponent.h\"\n#include \"Quests/f1-popup-target/DojoF1PopupTarget.h\"\n#include \"Support/DojoTestWorld.h\"\n\nIMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F1_PopupTarget_EnumIsReflected, \"Dojo.F1.PopupTarget.EnumIsReflected\", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)\n\n/** Reads the enum back through reflection and checks its display names. */\nbool FDojo_F1_PopupTarget_EnumIsReflected::RunTest(const FString& Parameters)\n{\n\tconst UEnum* StateEnum = StaticEnum<EDojoF1TargetState>();\n\tif (!TestNotNull(TEXT(\"EDojoF1TargetState is a UENUM\"), StateEnum)) return false;\n\n\tTestEqual(TEXT(\"Lowered shows as Down\"), StateEnum->GetDisplayNameTextByValue(static_cast<int64>(EDojoF1TargetState::ETS_Lowered)).ToString(), FString(TEXT(\"Down\")));\n\tTestEqual(TEXT(\"Raised shows as Up\"), StateEnum->GetDisplayNameTextByValue(static_cast<int64>(EDojoF1TargetState::ETS_Raised)).ToString(), FString(TEXT(\"Up\")));\n\tTestEqual(TEXT(\"Broken shows as Broken\"), StateEnum->GetDisplayNameTextByValue(static_cast<int64>(EDojoF1TargetState::ETS_Broken)).ToString(), FString(TEXT(\"Broken\")));\n\n\treturn true;\n}\n\nIMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F1_PopupTarget_RaiseHitBreakRepair, \"Dojo.F1.PopupTarget.RaiseHitBreakRepair\", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)\n\n/** Walks a target through every state and checks the label always shows the state's display name. */\nbool FDojo_F1_PopupTarget_RaiseHitBreakRepair::RunTest(const FString& Parameters)\n{\n\tFDojoTestWorld TestWorld;\n\n\tADojoF1PopupTarget* Target = TestWorld.SpawnActor<ADojoF1PopupTarget>();\n\tif (!TestNotNull(TEXT(\"Target spawned\"), Target)) return false;\n\tif (!TestNotNull(TEXT(\"Target has a label\"), Target->Label.Get())) return false;\n\n\tTestEqual(TEXT(\"Starts lowered\"), Target->GetState(), EDojoF1TargetState::ETS_Lowered);\n\tTestEqual(TEXT(\"Label reads Down at start\"), Target->Label->Text.ToString(), FString(TEXT(\"Down\")));\n\tTestFalse(TEXT(\"A lowered target cannot be hit\"), Target->Hit());\n\n\tTarget->Raise();\n\tTestEqual(TEXT(\"Raised after Raise\"), Target->GetState(), EDojoF1TargetState::ETS_Raised);\n\tTestEqual(TEXT(\"Label reads Up\"), Target->Label->Text.ToString(), FString(TEXT(\"Up\")));\n\n\tTestTrue(TEXT(\"A raised target takes the hit\"), Target->Hit());\n\tTestEqual(TEXT(\"Drops back after the first hit\"), Target->GetState(), EDojoF1TargetState::ETS_Lowered);\n\n\tTarget->Raise();\n\tTarget->Hit();\n\tTestEqual(TEXT(\"Broken after the second hit\"), Target->GetState(), EDojoF1TargetState::ETS_Broken);\n\tTestEqual(TEXT(\"Label reads Broken\"), Target->Label->Text.ToString(), FString(TEXT(\"Broken\")));\n\n\tTarget->Raise();\n\tTestEqual(TEXT(\"A broken target cannot be raised\"), Target->GetState(), EDojoF1TargetState::ETS_Broken);\n\n\tTarget->Repair();\n\tTestEqual(TEXT(\"Repair lowers it\"), Target->GetState(), EDojoF1TargetState::ETS_Lowered);\n\n\tTarget->Raise();\n\tTarget->Hit();\n\tTestEqual(TEXT(\"Repair cleared the hits, so one hit drops it instead of breaking it\"), Target->GetState(), EDojoF1TargetState::ETS_Lowered);\n\n\treturn true;\n}\n\n#endif",
+				"rubric": [
+					"EDojoF1TargetState is a UENUM(BlueprintType) enum class of uint8 with UMETA display names.",
+					"The state lives in one enum field; there are no parallel booleans.",
+					"Every change goes through SetState, so the label always matches the state.",
+					"The label text comes from the enum's display name through reflection, not from a switch of hand-typed strings.",
+					"Each function guards on the current state, so illegal moves (raising a broken target, hitting a lowered one) do nothing.",
+					"The hit limit is the editable HitsToBreak property."
+				],
+				"alternative": "The label could be filled by a switch over the three values with a string per case. It works and needs no reflection, but every new state then needs a matching case, and a forgotten case shows a blank label with no warning. Reading the display name from the reflected enum keeps names in one place, next to the values, and the same names appear in the Details panel and in Blueprint dropdowns.\n\nWhat you built is a small state machine: one field says which state the target is in, and each function only acts when the current state allows it. That shape is the State pattern, and Pack 2 gives it a world of its own.",
+				"parsons": [
+					{
+						"id": "popup-hit",
+						"prompt": "Put Hit in order.",
+						"lines": [
+							"bool ADojoF1PopupTarget::Hit()",
+							"{",
+							"\tif (State != EDojoF1TargetState::ETS_Raised) return false;",
+							"\tHitsTaken++;",
+							"\tSetState(HitsTaken >= HitsToBreak ? EDojoF1TargetState::ETS_Broken : EDojoF1TargetState::ETS_Lowered);",
+							"\treturn true;",
+							"}"
+						],
+						"distractors": [
+							{
+								"line": "\tState = EDojoF1TargetState::ETS_Broken;",
+								"mistake": "Writing the field directly skips SetState, so the label would keep showing the old state."
+							}
+						]
+					},
+					{
+						"id": "popup-set-state",
+						"prompt": "Put SetState in order.",
+						"lines": [
+							"void ADojoF1PopupTarget::SetState(EDojoF1TargetState NewState)",
+							"{",
+							"\tState = NewState;",
+							"\tLabel->SetText(UEnum::GetDisplayValueAsText(State));",
+							"}"
+						],
+						"distractors": [
+							{
+								"line": "\tLabel->SetText(FText::AsNumber(static_cast<uint8>(State)));",
+								"mistake": "That shows the enum's number, not the display name designers chose with UMETA."
+							}
+						]
+					}
+				],
+				"hintCount": 3
+			},
+			{
+				"id": "f1-cast-and-isa",
+				"title": "Cast and IsA ask an object what it really is",
+				"order": 8,
+				"difficulty": 2,
+				"patterns": [],
+				"skills": [
+					"object-model"
+				],
+				"terms": [
+					"cast",
+					"isa",
+					"isvalid",
+					"uclass"
+				],
+				"prerequisites": [
+					"f1-popup-target"
+				],
+				"xp": 25,
+				"estimatedMinutes": 6,
+				"concepts": [
+					"Cast returns a typed pointer or null",
+					"IsA answers yes or no without converting",
+					"Every Cast result is checked before use"
+				],
+				"kind": "concept",
+				"predict": {
+					"id": "predict",
+					"prompt": "Guess, no penalty: `AActor* Thing` points at a plain test actor, and code runs `ADojoF1TrainingDummy* Dummy = Cast<ADojoF1TrainingDummy>(Thing);`. What is in Dummy?",
+					"explanation": "Cast checks the real class through reflection and gives back null when the object is not that class or a child of it.",
+					"type": "multiple-choice",
+					"choices": [
+						"The same address as Thing, now typed as a dummy",
+						"nullptr",
+						"A brand new dummy actor",
+						"The build fails because the types differ"
+					],
+					"answerIndex": 1
+				},
+				"card": "Engine functions usually hand you a general type: an overlap gives you an `AActor*`, a list a designer filled in the editor may hold anything. To use what is special about one kind of actor you need a pointer of that kind.\n\n`Cast<ADojoF1TrainingDummy>(Thing)` asks reflection for the object's real class. If it is a training dummy, or any child of one, you get a typed pointer. If it is anything else, or Thing is already null, you get `nullptr`. So every Cast is followed by a check:\n\n```cpp\nif (ADojoF1TrainingDummy* Dummy = Cast<ADojoF1TrainingDummy>(Thing)) { ... }\n```\n\n`Thing->IsA<ADojoF1TrainingDummy>()` gives the yes or no without the pointer. Use it when the answer is all you need, such as counting how many dummies are in a list. It needs Thing to be valid first; `IsValid(Thing)` checks for null and for an actor already being destroyed.\n\nA C++ `static_cast` does no check at all. On the wrong type it hands you a pointer that looks fine and corrupts memory when used, so in Unreal you cast UObjects with Cast.\n\nWhen code casts to many different classes in a row, that is a sign a shared interface or event would decouple things better; later worlds cover both.",
+				"example": "// Counts how many of the given actors are dummies, and how many of those are already down.\nvoid DojoF1CountDummies(const TArray<AActor*>& Things, int32& OutDummies, int32& OutDown)\n{\n\tOutDummies = 0;\n\tOutDown = 0;\n\n\tfor (AActor* Thing : Things)\n\t{\n\t\tif (!IsValid(Thing)) continue;\n\n\t\tif (Thing->IsA<ADojoF1TrainingDummy>()) OutDummies++;\n\n\t\tif (const ADojoF1TrainingDummy* Dummy = Cast<ADojoF1TrainingDummy>(Thing))\n\t\t{\n\t\t\tif (Dummy->IsKnockedDown()) OutDown++;\n\t\t}\n\t}\n}",
+				"questions": [
+					{
+						"id": "cast-or-isa",
+						"prompt": "You only need to know whether an overlapping actor is a pop-up target, to pick a sound. Which is the lighter fit?",
+						"explanation": "IsA answers the question without producing a pointer you would never use.",
+						"type": "multiple-choice",
+						"choices": [
+							"Cast and use the pointer",
+							"IsA",
+							"static_cast",
+							"A tag string comparison"
+						],
+						"answerIndex": 1
+					},
+					{
+						"id": "spot-unchecked-cast",
+						"prompt": "This crashes as soon as the list holds anything other than a dummy. Which line is wrong?",
+						"explanation": "A failed Cast returns null, and calling a function through null crashes.",
+						"type": "spot-the-bug",
+						"code": "for (AActor* Thing : Targets)\n{\n\tADojoF1TrainingDummy* Dummy = Cast<ADojoF1TrainingDummy>(Thing);\n\tTotal += Dummy->GetHitsTaken();\n}",
+						"bugLine": 4,
+						"fix": "Only read the hits when the cast result is not null, for example by moving the cast into an if statement."
+					},
+					{
+						"id": "fill-cast",
+						"prompt": "Fill the gap to turn an AActor pointer named Other into a target pointer: ADojoF1PopupTarget* Target = ___<ADojoF1PopupTarget>(Other);",
+						"explanation": "Cast takes the wanted class in the angle brackets and the object in the parentheses.",
+						"type": "fill-blank",
+						"acceptedAnswers": [
+							"Cast"
+						]
+					},
+					{
+						"id": "child-class-cast",
+						"prompt": "BP_BigDummy is a Blueprint child of ADojoF1TrainingDummy. What does Cast<ADojoF1TrainingDummy> return for one?",
+						"explanation": "Cast and IsA both accept the class itself and every child of it.",
+						"type": "multiple-choice",
+						"choices": [
+							"nullptr, because the class is not exactly ADojoF1TrainingDummy",
+							"A valid dummy pointer, because a child is also a dummy",
+							"A copy of the dummy's class default object"
+						],
+						"answerIndex": 1
+					},
+					{
+						"id": "explain-static-cast",
+						"prompt": "In one sentence, say why Unreal code uses Cast instead of static_cast on UObjects.",
+						"explanation": "The null from Cast is something you can test; a wrong pointer from static_cast is a crash waiting somewhere else.",
+						"type": "explain-in-one-sentence",
+						"modelAnswer": "Cast checks the object's real class through reflection and returns null on a mismatch, while static_cast trusts you and returns a bad pointer when you are wrong.",
+						"rubric": [
+							"Says Cast checks the real type",
+							"Says static_cast does no check or gives a bad pointer"
+						]
+					}
+				]
+			},
+			{
+				"id": "f1-score-keeper",
+				"title": "A score keeper that tells dummies from targets",
+				"order": 9,
+				"difficulty": 2,
+				"patterns": [],
+				"skills": [
+					"object-model",
+					"references"
+				],
+				"terms": [
+					"cast",
+					"isa",
+					"isvalid",
+					"tarray",
+					"tobjectptr",
+					"editanywhere"
+				],
+				"prerequisites": [
+					"f1-cast-and-isa",
+					"f1-training-dummy",
+					"f1-popup-target"
+				],
+				"xp": 80,
+				"estimatedMinutes": 20,
+				"concepts": [
+					"A designer-filled list of AActor pointers can hold anything",
+					"Cast to use a specific class, IsA to only ask the question"
+				],
+				"kind": "build",
+				"scaffold": "stub",
+				"brief": "When you press Play, strike a dummy twice, and break one pop-up target, running `ke * ShowScore` makes the number above the keeper read 35.\n\nThe declarations are given; every body is yours. The keeper holds a list of plain `AActor` pointers that a designer fills in the level. It scores each kind differently:\n\n- a training dummy is worth `PointsPerDummyHit` for every strike it has taken;\n- a pop-up target is worth `PointsPerBrokenTarget` once it is broken, and nothing before;\n- anything else in the list, and any empty slot, scores nothing.\n\n`CountPopupTargets` returns how many entries are pop-up targets in any state. It never needs a target's functions, so it only needs to ask the question.\n\n`ShowScore` writes the current score into the keeper's own label, the same kind of floating text the dummy uses; create that label in the constructor the way the dummy does.\n\nDependency direction: the keeper holds references to the targets; the dummies and targets know nothing about the keeper and never include its header. Your two earlier quests are reused here unchanged.\n\nCompiles against earlier quests: f1-training-dummy (`Quests/f1-training-dummy/DojoF1TrainingDummy.h`) and f1-popup-target (`Quests/f1-popup-target/DojoF1PopupTarget.h`).\n\nWrite the obvious version first and run the tests. This one fails on purpose the first time for most people. Find out why from the test output before you read the hints.\n\n## See it in the editor\n\nPlace one dummy, one pop-up target, a plain cube, and one `DojoF1ScoreKeeper`. In the keeper's Details panel add the three to Targets with the eyedropper, plus one empty slot. Press Play, run `ke * Strike` twice, run `ke * Raise` and `ke * Hit` twice each until the target reads Broken, then run `ke * ShowScore`: the keeper's label reads 35 (two strikes at 5 and one broken target at 25). Eject with F8, change Points Per Dummy Hit to 10 on the keeper, and run it again: 45. Keep one of each kind: `ke *` calls the function on every actor that has it, so a second dummy would take every strike too.",
+				"files": [
+					{
+						"name": "DojoF1ScoreKeeper.h",
+						"starter": "#pragma once\n\n#include \"CoreMinimal.h\"\n#include \"GameFramework/Actor.h\"\n#include \"DojoF1ScoreKeeper.generated.h\"\n\nclass UTextRenderComponent;\n\n/** Totals the yard's score from the targets a designer wired to it; the targets know nothing about the keeper. */\nUCLASS()\nclass ADojoF1ScoreKeeper : public AActor\n{\n\tGENERATED_BODY()\n\npublic:\n\t/** Creates the label and turns ticking off. */\n\tADojoF1ScoreKeeper();\n\n\t/** Floating text that shows the score after ShowScore. */\n\tUPROPERTY(VisibleAnywhere, Category = \"Score\")\n\tTObjectPtr<UTextRenderComponent> Label;\n\n\t/** Anything a designer picks in the level; only dummies and pop-up targets score. */\n\tUPROPERTY(EditAnywhere, Category = \"Score\")\n\tTArray<TObjectPtr<AActor>> Targets;\n\n\t/** Points for every strike a dummy has taken. */\n\tUPROPERTY(EditAnywhere, Category = \"Score\", meta = (ClampMin = \"0\"))\n\tint32 PointsPerDummyHit = 5;\n\n\t/** Points for every pop-up target that is broken. */\n\tUPROPERTY(EditAnywhere, Category = \"Score\", meta = (ClampMin = \"0\"))\n\tint32 PointsPerBrokenTarget = 25;\n\n\t/** Adds up dummy strikes and broken targets; skips empty slots and every other kind of actor. */\n\tUFUNCTION(BlueprintPure, Category = \"Score\")\n\tint32 CountScore() const;\n\n\t/** How many entries are pop-up targets, in any state. */\n\tUFUNCTION(BlueprintPure, Category = \"Score\")\n\tint32 CountPopupTargets() const;\n\n\t/** Writes the current score into the label. */\n\tUFUNCTION(BlueprintCallable, CallInEditor, Category = \"Score\")\n\tvoid ShowScore();\n};"
+					},
+					{
+						"name": "DojoF1ScoreKeeper.cpp",
+						"starter": "#include \"DojoF1ScoreKeeper.h\"\n\n#include \"Components/TextRenderComponent.h\"\n#include \"Quests/f1-popup-target/DojoF1PopupTarget.h\"\n#include \"Quests/f1-training-dummy/DojoF1TrainingDummy.h\"\n\nADojoF1ScoreKeeper::ADojoF1ScoreKeeper()\n{\n}\n\nint32 ADojoF1ScoreKeeper::CountScore() const\n{\n\treturn 0;\n}\n\nint32 ADojoF1ScoreKeeper::CountPopupTargets() const\n{\n\treturn 0;\n}\n\nvoid ADojoF1ScoreKeeper::ShowScore()\n{\n}"
+					}
+				],
+				"tests": "#include \"Misc/AutomationTest.h\"\n\n#if WITH_AUTOMATION_TESTS\n\n#include \"Components/TextRenderComponent.h\"\n#include \"Quests/f1-popup-target/DojoF1PopupTarget.h\"\n#include \"Quests/f1-score-keeper/DojoF1ScoreKeeper.h\"\n#include \"Quests/f1-training-dummy/DojoF1TrainingDummy.h\"\n#include \"Support/DojoTestActor.h\"\n#include \"Support/DojoTestWorld.h\"\n\nIMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F1_ScoreKeeper_ScoresMixedTargets, \"Dojo.F1.ScoreKeeper.ScoresMixedTargets\", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)\n\n/** Wires a dummy, two pop-up targets, a plain actor, and an empty slot to a keeper and checks the score and the target count. */\nbool FDojo_F1_ScoreKeeper_ScoresMixedTargets::RunTest(const FString& Parameters)\n{\n\tFDojoTestWorld TestWorld;\n\n\tADojoF1ScoreKeeper* Keeper = TestWorld.SpawnActor<ADojoF1ScoreKeeper>();\n\tADojoF1TrainingDummy* Dummy = TestWorld.SpawnActor<ADojoF1TrainingDummy>();\n\tADojoF1PopupTarget* BrokenTarget = TestWorld.SpawnActor<ADojoF1PopupTarget>();\n\tADojoF1PopupTarget* WholeTarget = TestWorld.SpawnActor<ADojoF1PopupTarget>();\n\tADojoTestActor* Bystander = TestWorld.SpawnActor<ADojoTestActor>();\n\tif (!TestNotNull(TEXT(\"Keeper spawned\"), Keeper) || !TestNotNull(TEXT(\"Dummy spawned\"), Dummy)) return false;\n\tif (!TestNotNull(TEXT(\"Targets spawned\"), BrokenTarget) || !TestNotNull(TEXT(\"Targets spawned\"), WholeTarget) || !TestNotNull(TEXT(\"Bystander spawned\"), Bystander)) return false;\n\n\tKeeper->Targets = { Dummy, Bystander, nullptr, BrokenTarget, WholeTarget };\n\n\tTestEqual(TEXT(\"Nothing scored yet\"), Keeper->CountScore(), 0);\n\tTestEqual(TEXT(\"Two of the entries are pop-up targets\"), Keeper->CountPopupTargets(), 2);\n\n\tDummy->Strike();\n\tDummy->Strike();\n\tfor (int32 Hit = 0; Hit < BrokenTarget->HitsToBreak; ++Hit)\n\t{\n\t\tBrokenTarget->Raise();\n\t\tBrokenTarget->Hit();\n\t}\n\tWholeTarget->Raise();\n\n\tTestEqual(TEXT(\"Two dummy strikes at 5 plus one broken target at 25\"), Keeper->CountScore(), 35);\n\n\tKeeper->ShowScore();\n\tif (!TestNotNull(TEXT(\"Keeper has a label\"), Keeper->Label.Get())) return false;\n\tTestEqual(TEXT(\"The label shows the score\"), Keeper->Label->Text.ToString(), FString(TEXT(\"35\")));\n\n\tKeeper->PointsPerDummyHit = 10;\n\tTestEqual(TEXT(\"The score follows the editable points\"), Keeper->CountScore(), 45);\n\n\treturn true;\n}\n\n#endif",
+				"rubric": [
+					"Each entry is converted with Cast and the result is checked before any function is called on it.",
+					"Empty slots and actors of other classes are skipped without a crash.",
+					"CountPopupTargets uses IsA (after a validity check) because it never needs the target's functions.",
+					"Points come from the editable properties, never from numbers typed in the loop.",
+					"The keeper holds the references; dummies and targets do not know the keeper exists.",
+					"No Tick is used: the score is counted when asked, and the label is created once in the constructor."
+				],
+				"alternative": "The keeper could keep two typed lists, `TArray<TObjectPtr<ADojoF1TrainingDummy>>` and one for pop-up targets, so no Cast is needed and the eyedropper only accepts the right class. That is safer for designers, but every new scoring class adds another list and another loop. One generic list with Cast keeps the editor wiring in one place; when the list of kinds grows past two or three, the better step is a shared interface the keeper calls on anything, which Pack 1 World 5 builds.",
+				"parsons": [
+					{
+						"id": "keeper-count-popups",
+						"prompt": "Put CountPopupTargets in order.",
+						"lines": [
+							"int32 ADojoF1ScoreKeeper::CountPopupTargets() const",
+							"{",
+							"\tint32 Count = 0;",
+							"\tfor (AActor* Target : Targets)",
+							"\t{",
+							"\t\tif (IsValid(Target) && Target->IsA<ADojoF1PopupTarget>()) Count++;",
+							"\t}",
+							"\treturn Count;",
+							"}"
+						],
+						"distractors": [
+							{
+								"line": "\t\tif (static_cast<ADojoF1PopupTarget*>(Target)) Count++;",
+								"mistake": "static_cast never checks the class, so it counts every non-null actor as a target."
+							}
+						]
+					}
+				],
+				"hintCount": 3
+			},
+			{
+				"id": "f1-practice-bell",
+				"title": "A bell whose ring Blueprint can restyle",
+				"order": 10,
+				"difficulty": 3,
+				"patterns": [],
+				"skills": [
+					"reflection",
+					"blueprint-bridge"
+				],
+				"terms": [
+					"blueprintnativeevent",
+					"blueprintcallable",
+					"blueprintpure",
+					"uclass",
+					"meta-specifier",
+					"ue-log"
+				],
+				"prerequisites": [
+					"f1-score-keeper"
+				],
+				"xp": 120,
+				"estimatedMinutes": 30,
+				"concepts": [
+					"A BlueprintNativeEvent gives C++ a default that Blueprint may replace",
+					"Game rules stay in C++ while the reaction is open to designers"
+				],
+				"kind": "build",
+				"scaffold": "blank",
+				"brief": "When you press Play and run `ke * Strike 50`, the label above the bell reads DONG 50% and the output log prints that the bell rang at volume 0.50; a Blueprint child of the bell can replace that reaction without touching C++.\n\nWrite `ADojoF1PracticeBell` from nothing. Split it into two jobs:\n\n- The rule, which stays in C++: a strike softer than `MinimumForce` does nothing; any other strike counts one ring and sets the volume to the force divided by `FullVolumeForce`, never above 1.\n- The reaction, which designers may restyle: by default, write DONG and the volume as a percentage into a floating label and log a line to the `LogDojo` category (declared in `Dojo.h`).\n\nThe tests use this public interface, so keep these names:\n\n- `UFUNCTION(BlueprintCallable) void Strike(float Force);`\n- `UFUNCTION(BlueprintPure) int32 GetRingCount() const;` and `float GetLastVolume() const;`\n- `UPROPERTY(EditAnywhere) float MinimumForce = 20.f;` clamped at 0 or more, and `float FullVolumeForce = 100.f;` clamped at 1 or more, so the volume division can never divide by zero.\n- `UPROPERTY(VisibleAnywhere) TObjectPtr<UTextRenderComponent> Label;` the floating text the default reaction writes, created in the constructor.\n- `void Ring(float Volume)` as a BlueprintNativeEvent; its C++ default is the reaction.\n\nDependency direction: the bell owns its rule and its default reaction; whoever strikes it (the console, a dummy, a Blueprint) only calls `Strike` and never touches the reaction.\n\n## See it in the editor\n\nPlace a `DojoF1PracticeBell` in a map with no training dummies (`ke *` would strike those too), press Play, and run `ke * Strike 10`: nothing happens. Run `ke * Strike 50`: the label reads DONG 50% and the output log shows the ring at 0.50. Then stop, right-click the class in the Content Browser, choose Create Blueprint Class Based on DojoF1PracticeBell, open it, and override Ring with a Print String of the volume. Place that Blueprint instead and strike it: the print appears instead of the label change, and the ring count still goes up, because the rule never left C++.",
+				"files": [
+					{
+						"name": "DojoF1PracticeBell.h",
+						"starter": "// Declare ADojoF1PracticeBell here."
+					},
+					{
+						"name": "DojoF1PracticeBell.cpp",
+						"starter": "// Define ADojoF1PracticeBell here."
+					}
+				],
+				"tests": "#include \"Misc/AutomationTest.h\"\n\n#if WITH_AUTOMATION_TESTS\n\n#include \"Components/TextRenderComponent.h\"\n#include \"Quests/f1-practice-bell/DojoF1PracticeBell.h\"\n#include \"Support/DojoTestWorld.h\"\n\nIMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F1_PracticeBell_RingIsNativeEvent, \"Dojo.F1.PracticeBell.RingIsNativeEvent\", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)\n\n/** Asks reflection whether Ring is an event Blueprint can override and whether Strike is callable. */\nbool FDojo_F1_PracticeBell_RingIsNativeEvent::RunTest(const FString& Parameters)\n{\n\tconst UFunction* RingFunction = ADojoF1PracticeBell::StaticClass()->FindFunctionByName(TEXT(\"Ring\"));\n\tif (!TestNotNull(TEXT(\"Ring is a UFUNCTION\"), RingFunction)) return false;\n\tTestTrue(TEXT(\"Ring can be overridden in Blueprint\"), RingFunction->HasAnyFunctionFlags(FUNC_BlueprintEvent));\n\tTestTrue(TEXT(\"Ring has a C++ default body\"), RingFunction->HasAnyFunctionFlags(FUNC_Native));\n\n\tconst UFunction* StrikeFunction = ADojoF1PracticeBell::StaticClass()->FindFunctionByName(TEXT(\"Strike\"));\n\tif (!TestNotNull(TEXT(\"Strike is a UFUNCTION\"), StrikeFunction)) return false;\n\tTestTrue(TEXT(\"Strike is BlueprintCallable\"), StrikeFunction->HasAnyFunctionFlags(FUNC_BlueprintCallable));\n\n\treturn true;\n}\n\nIMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F1_PracticeBell_RingsAboveMinimum, \"Dojo.F1.PracticeBell.RingsAboveMinimum\", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)\n\n/** Strikes the bell softly, then at half and double the full-volume force, and checks the count, the volume, and the default reaction's label. */\nbool FDojo_F1_PracticeBell_RingsAboveMinimum::RunTest(const FString& Parameters)\n{\n\tFDojoTestWorld TestWorld;\n\n\tADojoF1PracticeBell* Bell = TestWorld.SpawnActor<ADojoF1PracticeBell>();\n\tif (!TestNotNull(TEXT(\"Bell spawned\"), Bell)) return false;\n\n\tTestEqual(TEXT(\"MinimumForce defaults to 20\"), Bell->MinimumForce, 20.f);\n\tTestEqual(TEXT(\"FullVolumeForce defaults to 100\"), Bell->FullVolumeForce, 100.f);\n\n\tBell->Strike(10.f);\n\tTestEqual(TEXT(\"A soft strike does not ring\"), Bell->GetRingCount(), 0);\n\n\tBell->Strike(50.f);\n\tTestEqual(TEXT(\"A strike at 50 rings once\"), Bell->GetRingCount(), 1);\n\tTestEqual(TEXT(\"Half the full-volume force rings at half volume\"), Bell->GetLastVolume(), 0.5f);\n\tif (!TestNotNull(TEXT(\"Bell has a label\"), Bell->Label.Get())) return false;\n\tTestEqual(TEXT(\"The default reaction writes DONG 50%\"), Bell->Label->Text.ToString(), FString(TEXT(\"DONG 50%\")));\n\n\tBell->Strike(200.f);\n\tTestEqual(TEXT(\"Rings again\"), Bell->GetRingCount(), 2);\n\tTestEqual(TEXT(\"Volume never passes 1\"), Bell->GetLastVolume(), 1.f);\n\n\treturn true;\n}\n\n#endif",
+				"rubric": [
+					"Ring is a BlueprintNativeEvent with its default in Ring_Implementation, declared virtual.",
+					"Strike calls Ring, never Ring_Implementation, so a Blueprint override is not bypassed.",
+					"The counting and volume rule lives in Strike, so a Blueprint override cannot break it.",
+					"MinimumForce and FullVolumeForce are editable, clamped properties with the given defaults.",
+					"The default reaction logs to LogDojo and writes the label; the label component is made once in the constructor.",
+					"Nothing ticks, and the bell knows nothing about who strikes it."
+				],
+				"alternative": "Ring could be a BlueprintImplementableEvent instead, with the label and log written in Strike before calling it. Then a Blueprint can only add to the reaction, never remove the default, and a bell with no Blueprint still shows DONG. That suits effects that must always happen. The native event chosen here hands the whole reaction to the designer, which is right when the default is only a placeholder; the cost is that a Blueprint that forgets to call the parent loses the label without any warning.",
+				"hintCount": 3
+			},
+			{
+				"id": "f1-dash-with-cooldown",
+				"title": "Plan a dash with a cooldown",
+				"order": 11,
+				"difficulty": 2,
+				"patterns": [
+					"component",
+					"observer"
+				],
+				"skills": [
+					"planning"
+				],
+				"terms": [
+					"character",
+					"character-movement-component",
+					"launch-character",
+					"input-action",
+					"actor-component",
+					"timer-manager",
+					"multicast-delegate",
+					"editanywhere"
+				],
+				"prerequisites": [
+					"f1-practice-bell"
+				],
+				"xp": 90,
+				"estimatedMinutes": 15,
+				"concepts": [
+					"Splitting a mechanic into classes, components, data, events, and steps",
+					"Deciding where the cooldown lives so other abilities can reuse it"
+				],
+				"kind": "breakdown",
+				"spec": "The player's character can dash. Pressing the dash input throws the character 600 units along the direction the camera faces, flattened so a dash never lifts off the ground. For 0.15 seconds after the press the player's movement input is ignored, so the dash cannot be steered. Dashing again is refused for 1.2 seconds. A dash that meets a wall ends there: the character stops against it instead of sliding along it at dash speed. A round wedge on the HUD fills back up while the cooldown runs and is full when a dash is ready.\n\nYou are planning, not coding. Several of the pieces use engine features later worlds teach in depth (input actions, timers, delegates); here you only decide what the pieces are, who owns what, and who tells whom.\n\nAcceptance:\n\n- Pressing dash during the cooldown does nothing at all: no movement, no sound, no reset of the cooldown.\n- The 600 units, 0.15 seconds, and 1.2 seconds are tunable by a designer without a rebuild.\n- The HUD wedge never asks every frame whether the dash is ready; it is told.\n- The cooldown can be reused by a second ability, such as a shield, without copying code.\n- Dashing at a wall at an angle ends the dash at the wall; the character does not slide along it at dash speed.",
+				"requiredPieces": [
+					{
+						"id": "dash-input",
+						"kind": "step",
+						"label": "Bind a dash input action to the dash",
+						"why": "The player needs one button, and the binding is where pressing becomes a request to dash."
+					},
+					{
+						"id": "dash-executor",
+						"kind": "class",
+						"label": "Something on the character that performs the dash",
+						"why": "One place must turn a request into a launch along the flattened camera direction."
+					},
+					{
+						"id": "cooldown",
+						"kind": "component",
+						"label": "A cooldown that can start and answer whether it is ready",
+						"why": "The refusal rule must live somewhere reusable, not inside the dash code."
+					},
+					{
+						"id": "movement-lock",
+						"kind": "step",
+						"label": "Ignore movement input for the lock window",
+						"why": "Without it the player can steer mid-dash and the dash loses its shape."
+					},
+					{
+						"id": "wall-stop",
+						"kind": "step",
+						"label": "Stop the dash on a blocking hit",
+						"why": "The movement component never lets the character pass through a wall, but a launched character hitting one at an angle slides along it and keeps its speed."
+					},
+					{
+						"id": "dash-events",
+						"kind": "event",
+						"label": "Dash started and cooldown ready events",
+						"why": "The HUD and effects learn about the dash by listening, not by checking every frame."
+					},
+					{
+						"id": "tunables",
+						"kind": "data",
+						"label": "Distance, lock time, and cooldown as editable values",
+						"why": "Designers tune the feel without asking a programmer to rebuild."
+					},
+					{
+						"id": "hud-wedge",
+						"kind": "class",
+						"label": "HUD cooldown wedge that listens to the events",
+						"why": "Shows the player when the next dash is ready and proves the events work."
+					}
+				],
+				"referencePlans": [
+					{
+						"id": "dash-component",
+						"title": "A dash component owns the dash and its cooldown",
+						"pieces": [
+							{
+								"id": "input",
+								"kind": "step",
+								"label": "Character binds the dash input action to the dash component's TryDash",
+								"covers": [
+									"dash-input"
+								]
+							},
+							{
+								"id": "dash",
+								"kind": "component",
+								"label": "UDojoDashComponent with TryDash that launches its owner character",
+								"covers": [
+									"dash-executor"
+								]
+							},
+							{
+								"id": "cooldown",
+								"kind": "component",
+								"label": "UDojoCooldownComponent with StartCooldown and IsReady backed by a timer",
+								"covers": [
+									"cooldown"
+								]
+							},
+							{
+								"id": "lock",
+								"kind": "step",
+								"label": "Dash component ignores move input on the controller and restores it when a short timer ends",
+								"covers": [
+									"movement-lock"
+								]
+							},
+							{
+								"id": "wall",
+								"kind": "step",
+								"label": "Dash component listens to the owner's hit event and zeroes the velocity while a dash is active",
+								"covers": [
+									"wall-stop"
+								]
+							},
+							{
+								"id": "events",
+								"kind": "event",
+								"label": "OnDashStarted on the dash component and OnCooldownReady on the cooldown component",
+								"covers": [
+									"dash-events"
+								]
+							},
+							{
+								"id": "settings",
+								"kind": "data",
+								"label": "EditAnywhere distance and lock time on the dash component and duration on the cooldown component",
+								"covers": [
+									"tunables"
+								]
+							},
+							{
+								"id": "wedge",
+								"kind": "class",
+								"label": "Cooldown wedge widget bound to both events",
+								"covers": [
+									"hud-wedge"
+								]
+							}
+						],
+						"edges": [
+							{
+								"from": "input",
+								"to": "dash",
+								"label": "a press calls TryDash"
+							},
+							{
+								"from": "dash",
+								"to": "cooldown",
+								"label": "asks IsReady and then starts the cooldown"
+							},
+							{
+								"from": "dash",
+								"to": "lock",
+								"label": "starts the lock window"
+							},
+							{
+								"from": "dash",
+								"to": "wall",
+								"label": "arms the wall stop for the dash"
+							},
+							{
+								"from": "dash",
+								"to": "events",
+								"label": "broadcasts the dash start"
+							},
+							{
+								"from": "cooldown",
+								"to": "events",
+								"label": "broadcasts ready when its timer ends"
+							},
+							{
+								"from": "events",
+								"to": "wedge",
+								"label": "the wedge empties and refills"
+							},
+							{
+								"from": "settings",
+								"to": "dash",
+								"label": "values read when dashing"
+							}
+						]
+					},
+					{
+						"id": "dash-on-character",
+						"title": "The character dashes and borrows a reusable cooldown",
+						"pieces": [
+							{
+								"id": "input",
+								"kind": "step",
+								"label": "SetupPlayerInputComponent binds the dash action to ADojoDashCharacter::Dash",
+								"covers": [
+									"dash-input"
+								]
+							},
+							{
+								"id": "character",
+								"kind": "class",
+								"label": "ADojoDashCharacter with a Dash function that launches itself with LaunchCharacter",
+								"covers": [
+									"dash-executor"
+								]
+							},
+							{
+								"id": "cooldown",
+								"kind": "component",
+								"label": "UDojoCooldownComponent added to the character in the constructor",
+								"covers": [
+									"cooldown"
+								]
+							},
+							{
+								"id": "lock",
+								"kind": "step",
+								"label": "Character skips its move handler while a lock flag set by a timer is on",
+								"covers": [
+									"movement-lock"
+								]
+							},
+							{
+								"id": "sweep",
+								"kind": "step",
+								"label": "Character sweeps its capsule along the dash path first and shortens the launch to the first blocking hit",
+								"covers": [
+									"wall-stop"
+								]
+							},
+							{
+								"id": "events",
+								"kind": "event",
+								"label": "OnDashStarted on the character and OnCooldownReady on the cooldown component",
+								"covers": [
+									"dash-events"
+								]
+							},
+							{
+								"id": "settings",
+								"kind": "data",
+								"label": "A dash settings data asset holding distance and lock time and cooldown",
+								"covers": [
+									"tunables"
+								]
+							},
+							{
+								"id": "wedge",
+								"kind": "class",
+								"label": "Cooldown wedge widget that binds to the character and its cooldown component",
+								"covers": [
+									"hud-wedge"
+								]
+							}
+						],
+						"edges": [
+							{
+								"from": "input",
+								"to": "character",
+								"label": "a press calls Dash"
+							},
+							{
+								"from": "character",
+								"to": "cooldown",
+								"label": "checks IsReady and starts it"
+							},
+							{
+								"from": "character",
+								"to": "lock",
+								"label": "sets the lock flag and its timer"
+							},
+							{
+								"from": "character",
+								"to": "sweep",
+								"label": "measures the free distance before launching"
+							},
+							{
+								"from": "character",
+								"to": "events",
+								"label": "broadcasts the dash start"
+							},
+							{
+								"from": "cooldown",
+								"to": "events",
+								"label": "broadcasts ready"
+							},
+							{
+								"from": "events",
+								"to": "wedge",
+								"label": "the wedge refills"
+							},
+							{
+								"from": "settings",
+								"to": "character",
+								"label": "values read at BeginPlay"
+							}
+						]
+					}
+				],
+				"rubric": [
+					"The cooldown is its own component (or clearly reusable piece) with a start call and a ready query, not a timestamp buried in the dash code.",
+					"A press during the cooldown is refused before anything moves, and the refusal does not restart the cooldown.",
+					"Distance, lock time, and cooldown are named as editable data.",
+					"The HUD learns about dashes and readiness through events; nothing polls in Tick.",
+					"The plan states a wall stop, by sweep before launching or by reacting to a hit.",
+					"The dependency direction is stated: the dash and cooldown know nothing about the HUD."
+				],
+				"alternativeNote": "Both reference plans pass. The first keeps the character thin and lets any pawn gain a dash by adding a component, which suits a game where enemies dash too. The second keeps the dash on the character, which is simpler when only the player dashes, and its sweep stops the dash before it starts instead of after the hit. Either way, the cooldown component is the piece worth extracting: the same start and ready pair will serve a shield, a grenade, and a door that cannot be spammed. A plan that uses the Gameplay Ability System also passes if it names where the cooldown, the lock, and the events live, though that system is a much heavier tool than this mechanic needs."
+			},
+			{
+				"id": "f1-boss-training-yard",
+				"title": "Boss: the training yard",
+				"order": 12,
+				"difficulty": 3,
+				"patterns": [
+					"state"
+				],
+				"skills": [
+					"planning",
+					"reflection",
+					"object-model"
+				],
+				"terms": [
+					"uproperty",
+					"ufunction",
+					"blueprintcallable",
+					"blueprintnativeevent",
+					"uenum",
+					"cast",
+					"isa",
+					"editanywhere"
+				],
+				"prerequisites": [
+					"f1-training-dummy",
+					"f1-popup-target",
+					"f1-score-keeper",
+					"f1-practice-bell",
+					"f1-dash-with-cooldown"
+				],
+				"xp": 300,
+				"estimatedMinutes": 60,
+				"concepts": [
+					"C++ owns the rules while the editor and Blueprint drive the round",
+					"Reusing earlier actors inside a bigger system by adding to them, never rewriting them"
+				],
+				"kind": "boss",
+				"pieces": [
+					"f1-training-dummy",
+					"f1-popup-target",
+					"f1-score-keeper",
+					"f1-practice-bell"
+				],
+				"spec": "The client's training yard runs a timed practice round. The yard holds 6 pop-up targets and 2 training dummies. A round lasts 45 seconds. Every second a lowered target (never a broken one) is chosen at random and raised, unless 2 targets are already up; a raised target that nobody hits within 2.5 seconds drops back by itself. Each target breaks after 2 hits and each dummy goes down after 3 strikes. The score keeper counts 5 points per dummy strike and 25 per broken target, so the most a round can score is 180 (150 from six broken targets, 30 from two downed dummies). When the score first reaches 150 the bell is struck at full force. When the round ends, the keeper shows the final score on its label, then every target is repaired and lowered and every dummy stands up again, so the next round starts the same way. With a rise every second and 2.5 seconds up, an unhit target is still up when the next two rises come, so the 2 at once limit really decides which rises are skipped. Reference game: the archery and shooting galleries of The Legend of Zelda: Ocarina of Time, where a short timed round with targets popping up is the whole game.\n\nHow the player hits things: keys 1 to 6 call Hit on the matching pop-up target, and Q and E call Strike on the two dummies. Map them in the level Blueprint with keyboard events, or bind input actions on a C++ director; either way the key only calls the target's own BlueprintCallable function.\n\nThe point of the boss is the split. Your four earlier classes keep their rules; something new drives the round, and every number above can be changed by a designer in the editor without a rebuild. The earlier classes need exactly two additions, and nothing else in them changes: the pop-up target gains `Lower` (raised to lowered without counting a hit, for the target nobody hit in time), and the dummy gains `ResetHits` (back to standing for the next round). Timers get a full world later; for the round clock and the rise rhythm you may use the level Blueprint's Delay and Set Timer nodes calling your BlueprintCallable functions, or a C++ director actor with the timer manager.\n\nCore numbers are fixed: 6 targets, 2 dummies, 45 second round, a rise every second, 2.5 seconds up, at most 2 up at once, 2 hits per target, 3 strikes per dummy, 5 and 25 points, bell at 150.\n\nExtensions, in order of importance:\n\n1. A golden target: a second enum on the target, its kind (`EDojoF1TargetKind` with ETK_Normal and ETK_Golden), set on one random target at the start of each round; a broken golden target scores double. The kind is separate from the state, because a golden target still moves through lowered, raised, and broken like any other.\n2. A best score kept on the director across rounds, visible read only in the Details panel while playing.\n3. A Blueprint child of the bell that overrides Ring to play a sound whose volume follows the ring volume.\n\nFeel: tune the time a target stays up until a missed target feels like your own slow reaction, not the yard cheating you.",
+				"requiredPieces": [
+					{
+						"id": "targets",
+						"kind": "class",
+						"label": "Pop-up targets and dummies reused from the earlier quests",
+						"why": "The rules for one target are already written and tested; the boss must not fork them."
+					},
+					{
+						"id": "additions",
+						"kind": "step",
+						"label": "Add Lower to the pop-up target and ResetHits to the dummy",
+						"why": "The round needs to drop an unhit target and stand dummies up again, and these are the only changes the earlier classes need."
+					},
+					{
+						"id": "player-input",
+						"kind": "step",
+						"label": "Map keys 1 to 6 to Hit on each target and Q and E to Strike on each dummy",
+						"why": "The player's only verbs; each key calls the target's own function and nothing else."
+					},
+					{
+						"id": "round-driver",
+						"kind": "class",
+						"label": "Something that runs the round clock and the rise rhythm",
+						"why": "A round has a start, a rhythm, and an end that no single target should own."
+					},
+					{
+						"id": "rise-rule",
+						"kind": "step",
+						"label": "Pick a random lowered target and raise it, respecting the up limit",
+						"why": "This is where the 2 at once rule and the random choice live."
+					},
+					{
+						"id": "auto-lower",
+						"kind": "step",
+						"label": "Lower a raised target that was not hit in time",
+						"why": "Without it targets stay up forever and the round has no pressure."
+					},
+					{
+						"id": "scoring",
+						"kind": "class",
+						"label": "The score keeper wired to every target and dummy",
+						"why": "One place totals the score, so the bell threshold and the final label read the same number."
+					},
+					{
+						"id": "bell-trigger",
+						"kind": "step",
+						"label": "Strike the bell once when the score first reaches the threshold",
+						"why": "The reward moment, and a check that the systems talk in the right direction."
+					},
+					{
+						"id": "round-reset",
+						"kind": "step",
+						"label": "Show the final score, then repair and lower every target and stand every dummy up",
+						"why": "A second round must start from the same state as the first."
+					},
+					{
+						"id": "tunables",
+						"kind": "data",
+						"label": "Round length, rhythm, up time, up limit, points, and threshold as editable values",
+						"why": "The feel criterion is met by tuning, not by rebuilding."
+					}
+				],
+				"referencePlans": [
+					{
+						"id": "cpp-director",
+						"title": "A C++ director actor runs the round",
+						"pieces": [
+							{
+								"id": "reused",
+								"kind": "class",
+								"label": "The dummy and pop-up target classes from the earlier quests",
+								"covers": [
+									"targets"
+								]
+							},
+							{
+								"id": "added",
+								"kind": "step",
+								"label": "Lower on ADojoF1PopupTarget and ResetHits on ADojoF1TrainingDummy as the only new functions",
+								"covers": [
+									"additions"
+								]
+							},
+							{
+								"id": "director",
+								"kind": "class",
+								"label": "ADojoF1YardDirector with StartRound and EndRound and arrays of targets and dummies set in Details",
+								"covers": [
+									"round-driver",
+									"tunables"
+								]
+							},
+							{
+								"id": "keys",
+								"kind": "step",
+								"label": "Director binds number keys and Q and E to Hit and Strike on the matching array entries",
+								"covers": [
+									"player-input"
+								]
+							},
+							{
+								"id": "rise",
+								"kind": "step",
+								"label": "Director's rise step counts raised targets with GetState and raises a random lowered one",
+								"covers": [
+									"rise-rule"
+								]
+							},
+							{
+								"id": "lower",
+								"kind": "step",
+								"label": "Director remembers when each target rose and calls Lower after the up time if it is still raised",
+								"covers": [
+									"auto-lower"
+								]
+							},
+							{
+								"id": "keeper",
+								"kind": "class",
+								"label": "The score keeper placed in the level with every target and dummy in its list",
+								"covers": [
+									"scoring"
+								]
+							},
+							{
+								"id": "bell",
+								"kind": "step",
+								"label": "Director checks CountScore after each hit and strikes the bell once past the threshold",
+								"covers": [
+									"bell-trigger"
+								]
+							},
+							{
+								"id": "reset",
+								"kind": "step",
+								"label": "EndRound calls ShowScore on the keeper and then Repair and Lower on every target and ResetHits on every dummy",
+								"covers": [
+									"round-reset"
+								]
+							}
+						],
+						"edges": [
+							{
+								"from": "added",
+								"to": "reused",
+								"label": "extends the earlier classes"
+							},
+							{
+								"from": "keys",
+								"to": "reused",
+								"label": "calls Hit and Strike"
+							},
+							{
+								"from": "director",
+								"to": "keys",
+								"label": "owns the bindings"
+							},
+							{
+								"from": "director",
+								"to": "rise",
+								"label": "runs it on the rhythm"
+							},
+							{
+								"from": "director",
+								"to": "lower",
+								"label": "runs it after each rise"
+							},
+							{
+								"from": "rise",
+								"to": "reused",
+								"label": "raises targets"
+							},
+							{
+								"from": "lower",
+								"to": "reused",
+								"label": "lowers targets"
+							},
+							{
+								"from": "director",
+								"to": "keeper",
+								"label": "asks for the score"
+							},
+							{
+								"from": "keeper",
+								"to": "reused",
+								"label": "casts each entry and reads its state"
+							},
+							{
+								"from": "director",
+								"to": "bell",
+								"label": "strikes once at the threshold"
+							},
+							{
+								"from": "director",
+								"to": "reset",
+								"label": "runs at the end of the round"
+							}
+						]
+					},
+					{
+						"id": "blueprint-director",
+						"title": "The level Blueprint drives the round through the C++ API",
+						"pieces": [
+							{
+								"id": "reused",
+								"kind": "class",
+								"label": "The four earlier classes placed in the level",
+								"covers": [
+									"targets",
+									"scoring"
+								]
+							},
+							{
+								"id": "added",
+								"kind": "step",
+								"label": "Lower on the pop-up target and ResetHits on the dummy as BlueprintCallable additions",
+								"covers": [
+									"additions"
+								]
+							},
+							{
+								"id": "level",
+								"kind": "class",
+								"label": "Level Blueprint with a round timer and a rise timer calling the C++ functions",
+								"covers": [
+									"round-driver"
+								]
+							},
+							{
+								"id": "keys",
+								"kind": "step",
+								"label": "Keyboard events 1 to 6 and Q and E in the level Blueprint call Hit or Strike on placed actors",
+								"covers": [
+									"player-input"
+								]
+							},
+							{
+								"id": "rise",
+								"kind": "step",
+								"label": "Rise event filters the target array by GetState and calls Raise on a random lowered one",
+								"covers": [
+									"rise-rule"
+								]
+							},
+							{
+								"id": "lower",
+								"kind": "step",
+								"label": "A delay of the up time after each Raise calls Lower on that target if it is still raised",
+								"covers": [
+									"auto-lower"
+								]
+							},
+							{
+								"id": "bell",
+								"kind": "step",
+								"label": "After each Hit or Strike the Blueprint compares CountScore with the threshold and strikes the bell once",
+								"covers": [
+									"bell-trigger"
+								]
+							},
+							{
+								"id": "reset",
+								"kind": "step",
+								"label": "Round end calls ShowScore and then loops the targets calling Repair and Lower and the dummies calling ResetHits",
+								"covers": [
+									"round-reset"
+								]
+							},
+							{
+								"id": "settings",
+								"kind": "data",
+								"label": "Blueprint variables marked instance editable for every number",
+								"covers": [
+									"tunables"
+								]
+							}
+						],
+						"edges": [
+							{
+								"from": "added",
+								"to": "reused",
+								"label": "extends the earlier classes"
+							},
+							{
+								"from": "keys",
+								"to": "reused",
+								"label": "calls Hit and Strike"
+							},
+							{
+								"from": "keys",
+								"to": "bell",
+								"label": "each hit triggers the threshold check"
+							},
+							{
+								"from": "level",
+								"to": "rise",
+								"label": "fires every rise interval"
+							},
+							{
+								"from": "rise",
+								"to": "lower",
+								"label": "schedules the drop"
+							},
+							{
+								"from": "rise",
+								"to": "reused",
+								"label": "calls Raise"
+							},
+							{
+								"from": "lower",
+								"to": "reused",
+								"label": "calls Lower"
+							},
+							{
+								"from": "bell",
+								"to": "reused",
+								"label": "calls Strike on the bell"
+							},
+							{
+								"from": "level",
+								"to": "reset",
+								"label": "runs when the round timer ends"
+							},
+							{
+								"from": "settings",
+								"to": "level",
+								"label": "numbers read by every step"
+							}
+						]
+					}
+				],
+				"integrationRubric": [
+					"The dummy, pop-up target, score keeper, and bell are reused; the only changes to them are the new Lower and ResetHits functions (plus the kind enum if extension 1 is built), with no rewrite of their rules.",
+					"Targets know nothing about the director, the keeper, or the bell; references point from the driver and the keeper toward the targets, and keys only call each target's own function.",
+					"Every fixed number is an editable property or instance editable variable with the given default.",
+					"The up limit of 2 holds even when the rise step and an auto lower happen in the same moment.",
+					"The bell is struck exactly once per round, through Strike, never by calling its reaction directly.",
+					"Ending the round shows the final score first, then leaves every target lowered and repaired and every dummy standing, so a second round plays the same as the first.",
+					"Nothing ticks to poll state; the round runs on timers or delays and on calls into the C++ API.",
+					"The tuned up time is written in the submission with one sentence on why it felt fair."
+				]
+			}
+		]
+	},
+	"hints": {
+		"f1-training-dummy": [
+			"Compare the declaration of Strike with the two getters below it: one line above them is missing above Strike.",
+			"Strike changes state, so it wants the specifier that gives a node with execution pins; its body only needs the knocked-down check, the counter, and the existing label helper.",
+			"The function flags the test reads are listed in `UObject/Script.h`; the specifier you need is the one that sets the callable flag."
+		],
+		"f1-popup-target": [
+			"Every function body starts by asking which state the target is in now; write that guard first, then the change.",
+			"The enum needs the reflection macro with BlueprintType above it, a byte-sized underlying type, and a display-name annotation after each value; the label wants the enum's display value as text.",
+			"`UEnum` in `UObject/Class.h` has a static helper that turns any reflected enum value into its display text."
+		],
+		"f1-score-keeper": [
+			"Look at what the test puts in the Targets list: not every entry is a dummy or a target, and one is not anything at all.",
+			"One kind of conversion returns null when the object is the wrong class, and an if statement can declare and test its result in one go; the yes-or-no question has its own member function on every UObject.",
+			"Both live in `Templates/Casts.h` and `UObject/UObjectBaseUtility.h`; `IsValid` comes from `UObject/Object.h`."
+		],
+		"f1-practice-bell": [
+			"Decide which lines are the rule (they must run no matter what a Blueprint does) and which are the reaction (a Blueprint may replace them); only the reaction belongs in the event.",
+			"The event needs the UFUNCTION specifier that pairs a Blueprint override with a C++ default, and the default body lives in a second function with a fixed suffix; Strike calls the event by its plain name.",
+			"The function specifiers are listed in `UObject/ObjectMacros.h`, and the percentage text helper is a static function on `FText` in `Internationalization/Text.h`."
+		]
+	}
+}
