@@ -76,6 +76,9 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M0.3 Design tokens and frame | ui-core | ui-core (session) | claude/m0-3-tokens-a00ed1 @ 94e9b05 | review | Rebased on main; 8 unit, 4 e2e |
 | M0.4 Content types, parser, verifier | content-engine | content-engine (session) | claude/m0-4-content-parser-89f0d1 @ 548122a | review | Rebased on main; 42 tests; 300 quests verify in 0.28 s |
 | M0.6 CI matrix | qa | tester (session) | claude/m0-6-ci-1eed5d @ 8b7eead | review | Rebased on main; every step passes in a clean clone; green Actions run waits for a private repo (A05) |
+| M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | from claude/m0-2-ipc-834665 | building | Rebases onto main after M0.2 merges |
+| M1.7 AI review providers and graders | ai-review | builder-review (session) | from claude/m0-2-ipc-834665 | building | Rebases onto main after M0.2 merges |
+| M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | from claude/m0-2-ipc-834665 | building | Real Mac run against UE 5.8.3; Windows via fakes only |
 
 Stages: waiting, building, review, fixes, testing, merged. Only the Lead edits this board (A06).
 
