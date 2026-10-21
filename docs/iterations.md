@@ -508,3 +508,26 @@ exit code 0
 *Codex search: the top match stays highlighted until the keyboard or a real pointer movement changes it.*
 
 - Decisions made: none new; the pointer rule is a bug fix under A240's data layer and A390's path layout.
+
+## M1.8b Verifier follow-ups (content-engine, builder-content-engine)
+- What changed:
+  - **Bare-name includes:** a quest that includes another quest's header by its bare file name, which compiles because every quest folder is on the include path, must now declare that quest on its "Compiles against earlier quests:" line just like a path include. Two quests sharing a file name is reported, since such an include would pick one of them silently.
+  - **Ctrl+C:** stopping an engine run with Ctrl+C or SIGTERM now kills the running build or editor and keeps the sandbox copy for inspection.
+  - **Template copy:** build products in the sandbox template are no longer copied.
+  - **Starter checks:** each starter is now checked in the sandbox a learner would have at that quest. It holds that quest's starter, everything the quest builds on (including a boss's extended pieces when the quest comes after the boss), and nothing later. This lets a World 2 quest rely on the World 1 boss's additions.
+- How to see it: `npx tsx tools/verify-content.ts --engine ~/Applications/UE_5.8`, then press Ctrl+C during the build. It prints where it stopped and where the sandbox is kept, and exits with code 130.
+- Proof:
+  - typecheck passes.
+  - `npm test`: 51 files, 601 tests passed.
+  - The verifier on main's content reports no problems and 5 warnings: coverage, plus two bosses without integrations.
+  - Ctrl+C on the real engine 25 s into the first build: the verifier reported "cancelled during the first build" and exited 130. The sandbox's `Build.sh`, UnrealBuildTool, and clang processes, alive before the interrupt, were gone 5 s after it. The only Unreal process left was another session's editor.
+  - `--engine` with the new per-check sandbox, started once no other Unreal work had run for 30 s: all 9 reference solutions pass and all 9 starters fail, in 515 s (first build 50 s, tests 42 s, starter checks 422 s).
+- Decisions made: A440 (Ctrl+C and exit code 130), A441 (bare includes are dependencies), A442 (no shared file names), A443 (per-check sandbox).
+- Not done or left for later:
+  - no boss integration is on main yet, so the boss override path has only been tested with the fake sandbox
+  - the run has not been done on Windows
+
+### Follow-up: clearer inconclusive starter checks
+- What changed: author-foundations saw five "inconclusive" starter checks on World 2 and could not see why, because the sandbox had been deleted. An inconclusive check now quotes its first three build errors in the report, and the sandbox and its build logs are kept whenever any check is inconclusive.
+- Proof: 106 content tests pass, including the quoted errors and the kept sandbox.
+
