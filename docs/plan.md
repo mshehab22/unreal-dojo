@@ -99,6 +99,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.P1.4 Pack 1 World 4 "The gameplay framework" | content-foundations | author-foundations (session "M0.5 Glossary...") | merged | merged | 1 fix round; keeper rides the pawn (A620); glossary conflict resolved keeping both |
 | M4.P1.T Term coverage (A72), then Pack 1 World 5 "communication" | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-terms-world5 @ 50017e1 (term coverage merged 81cafd8) | review (World 5) | 12 quests, beacon drill boss with A67 integration; 54 of 54; decisions A681, A682 |
 | M4.P1.6 Pack 1 World 6 "Data and tools" | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-world6 | building | Data Assets, Data Tables, curves, soft references, logging, ensure and check; decisions A720 to A739 |
+| M1.7d Real retryReview (A356) | ai-review | builder-review (session "M1.7 AI review...") | m1-7d-retry-review | building | Review stored files again without a new run; decisions A740 to A749 |
+| M1.8f Close the old M1.8 queued items | content-engine | content-engine (session "M0.4 Content types...") | m1-8f-queued-items | building | choices minimum, lantern order, inline-code linking; decisions A750 to A759 |
 | M1.8c Missing boss integration is an error | content-engine | content-engine (session "M0.4 Content types...") | merged | merged | Lead checked the small diff; --engine 18 of 18 by the builder; example boss stays a warning (A520) |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | merged 07794f5 | merged | 4 fix rounds; at 1100x700 the revision note starts below the fold (accepted) |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
@@ -118,11 +120,11 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.8d Verifier warns on later-taught terms (A72) | content-engine | content-engine (session "M0.4 Content types...") | merged | merged | Small diff checked by the Lead; 16 warnings on main |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
 
-Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
+Dispatched as M1.8f. Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
 Queued for unreal-pipeline (from the M0.2c review, A426): `docs/systems/unreal-pipeline.md` lines 29 and 84 still name `ElectronStoreSandboxPathStore`; the class is unused once settings land.
 Queued for qa (from the M0.2c review): `ui-core-screens.spec.ts` and other specs not yet on the harness run against the real user data folder; with settings real, move every spec onto the harness so no run shares `config.json`.
 Queued for app-shell and progress (from the M2.2 review, A357): revealed hint texts are lost after a restart; store revealed hints in progress and return them with the quest.
-Queued for ai-review (from the M2.2 review, A356): a real `retryReview(attemptId)` that reviews the stored submitted files again without a new run; the screen resubmits as a stopgap.
+Dispatched as M1.7d. Queued for ai-review (from the M2.2 review, A356): a real `retryReview(attemptId)` that reviews the stored submitted files again without a new run; the screen resubmits as a stopgap.
 Queued for ui-quests (from the M1.6c review, A503): read `revealedHints` from quest data and send `hintIndex` to `revealHint`, so a reload never reveals and charges the next hint by mistake.
 Queued for content authors (from M1.8d, A72): 16 term-order warnings. Terms never taught by any concept quest: ue-log, character, character-movement-component, launch-character, object-pool, super; teach them in a concept quest (or drop them from terms). Others are taught later and are fine to leave or move earlier.
 Queued for progress-and-rules (from the M1.6e review): test-out status and `testedOutWorldIds` are keyed by world id alone, while world ids are only unique inside a pack (A510); key them by pack and world.
