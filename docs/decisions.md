@@ -85,6 +85,9 @@ Options: an app flag or environment variable that calls `app.setPath("userData",
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A710 2026-10-21 Which world loses when two packs share a world id (M1.8e, builder-content-engine)
+A73 makes a world id used in two packs a loader and verifier error. Open points decided: packs are taken in pack order and the first world keeps the id; the later world is reported on its own `world.json` ("already used by <earlier world.json> in another pack") and left out together with its quests, so those quests never claim quest ids, enter `questSources`, or reach the catalog. The verifier reports it as an error because loader problems are errors. Within one pack the existing duplicate check still applies. Options considered: drop both worlds (loses content that is fine); keep both and only warn (the catalog would still hide one). Reverse cost: low.
+
 ### A701 2026-10-21 `startDrill`'s test-out request names the pack; small renderer edits (M1.6f, builder-rules)
 A world id alone cannot say which pack's world to test, and a `pack/world` key would not pass the IPC id rule (letters, digits, dot, underscore, dash), so the request becomes `{ kind: "test-out", packId, worldId }` (`src/shared/types/drill.ts`, `drillRequestSchema`). Renderer call sites changed with it, each a line or two: the World Map looks up `getTestOutStatus()[worldKeyOf(pack, world)]` and passes the pack to `ContractCard`, whose Test out button and the drill route (`drillRequestFromRoute`) now carry `pack`; the fake API keys its test-out status and saved test-outs the same way. A drill route without a pack falls back to the due drill, like any incomplete route. Reverse cost: low.
 

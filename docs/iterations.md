@@ -1111,3 +1111,11 @@ total                                       39.2  PASSED
 - Decisions made: A700 (the key and how old saves are kept) and A701 (the test-out request names the pack, and the renderer lines that changed with it).
 - Not done or left for later: the content catalog's `getWorld(worldId)` is still looked up by world id alone (app-shell), so two packs sharing a world id would collide there too; that is a follow-up for app-shell before any world id is reused.
 
+## M1.8e World ids unique across packs (content-engine, builder-content-engine)
+- What changed: two packs can no longer use the same world id. The app finds worlds by id alone, so a second world with the same id would hide the first: its world map entry and its test-out drill would not open. The loader now keeps the first world in pack order and leaves the second out, together with its quests, and reports it on the second world's `world.json`, naming the first. The verifier fails on it (A73, A710).
+- How to see it: copy a world folder from one pack into another and run `npx tsx tools/verify-content.ts`; the copy's `world.json` shows as FAIL with "already used by ... in another pack".
+- Proof:
+  - typecheck passes; `npm test`: 69 files, 838 tests passed. New tests cover a two-pack fixture where the later pack's world and its quest are left out with one problem naming both files, and a verifier run that fails on it.
+  - The verifier on main's content: 100 files, no problems, 14 warnings. No world on main shares an id.
+- Decisions made: A710.
+
