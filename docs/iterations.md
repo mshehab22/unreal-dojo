@@ -568,3 +568,9 @@ exit code 0
 ### Fix round 2
 - What the reviewer asked for: the target rack's last rubric bullet still said the pop-up target is reused without changes.
 - What changed: it now says the pop-up target is reused as the training yard boss extended it, with no further changes. Text only; committed together with M2.3b fix round 4.
+
+### Boss reference integration (A67)
+- What was asked: the clay range boss was held back from review until it shipped a compiled C++ reference integration with tests that play two rounds.
+- What changed: `tools/solutions/f2-boss-clay-range/` now holds a clay range actor that follows the C++ plan, the dummy spawner extended with DestroyAll, and two tests. One plays two perfect rounds (every disc shot the moment the spotter has it, every bonus target broken) and checks R is ignored during a round, the spotter only ever watches clay discs, three bonuses, 175 on the label, every bonus target back in the rack, keys ignored after the round, and round 2 starting from 0. The other lets discs fall and checks the broken streak, one penalty dummy per fallen disc, no throws while one stands, oldest-first strikes, throwing resuming, and every penalty dummy gone at the round end. Building it found four gaps in the spec, all fixed in the text, both plans, and the rubric: no round start, reading a destroyed disc's fate, a bonus target that could never take its second hit, and a round that could end while a bonus was still lent (A343).
+- Proof (UE 5.8.3, main's template, engine lock): every solution and both boss integrations built and passed 22 of 22 headless, including Dojo.F2.ClayRange.PerfectRoundsPlayAlike and Dojo.F2.ClayRange.FallenDiscsCostTime. The first run failed one assertion because the test pressed Space one frame before the first disc existed; the test now waits for the disc. The verifier on the pack reports no problems. Nothing visible in the app changed.
+- Decisions made: A343.
