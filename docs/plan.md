@@ -70,12 +70,12 @@ Reviewers are spawned fresh per task; they do not own systems.
 | Task | System | Owner | Worktree | Stage | Notes |
 | --- | --- | --- | --- | --- | --- |
 | M0.1 Scaffold the app | app-shell | builder-shell (agent) | merged | merged | Review round 1 fixed 5 issues; re-review PASS. On main: typecheck, test, verifier, build, e2e green. Parked duplicate branch claude/m0-1-scaffold-de80f2 not merged. |
-| M0.5 Glossary and pattern cards | content-foundations | author-foundations (session) | claude/m0-5-glossary-50e7f9 | building | Parse check waits for M0.4 |
-| M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | claude/m1-2a-sandbox-template-d9043b | building | Started early (A04) |
-| M0.2 Typed IPC contract | app-shell | shell-ipc (session) | from m0-1-scaffold | building | Rebases onto main after M0.1 merges; content methods may split to M0.2b after M0.4 |
-| M0.3 Design tokens and frame | ui-core | ui-core (session) | from m0-1-scaffold | building | Rebases onto main after M0.1 merges |
-| M0.4 Content types, parser, verifier | content-engine | content-engine (session) | from m0-1-scaffold | building | Owns src/shared/types/content.ts |
-| M0.6 CI matrix | qa | tester (session) | from m0-1-scaffold | building | Green run needs a private GitHub repo (A05) |
+| M0.5 Glossary and pattern cards | content-foundations | author-foundations (session) | claude/m0-5-glossary-50e7f9 @ f30b857 | review | 191 terms, 22 pattern cards, 110 drill items. Reviewer also checks shapes against M0.4. Needs a docs rebase onto main at merge. |
+| M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | claude/m1-2a-sandbox-template-d9043b @ 4d639c1 | review | Build 22 s, headless test 18 s, MCP RunTests 55 ms on UE 5.8.3 Mac. Windowed editor needs the Metal toolchain; Mac has no Live Coding (A45). Reviewer reproduces the build. |
+| M0.2 Typed IPC contract | app-shell | shell-ipc (session) | claude/m0-2-ipc-834665 @ 62b3c69 | review | Rebased on main; zod validation; 27 tests |
+| M0.3 Design tokens and frame | ui-core | ui-core (session) | claude/m0-3-tokens-a00ed1 @ 94e9b05 | review | Rebased on main; 8 unit, 4 e2e |
+| M0.4 Content types, parser, verifier | content-engine | content-engine (session) | claude/m0-4-content-parser-89f0d1 @ 548122a | review | Rebased on main; 42 tests; 300 quests verify in 0.28 s |
+| M0.6 CI matrix | qa | tester (session) | claude/m0-6-ci-1eed5d @ 8b7eead | review | Rebased on main; every step passes in a clean clone; green Actions run waits for a private repo (A05) |
 
 Stages: waiting, building, review, fixes, testing, merged. Only the Lead edits this board (A06).
 
