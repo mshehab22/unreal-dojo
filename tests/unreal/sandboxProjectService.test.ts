@@ -38,7 +38,7 @@ function createService(version: string, build: ScriptedProcess = { exitCode: 0, 
 		fileSystem,
 		builder: new UnrealBuilder(paths, launcher, timer),
 		engineInspector: { inspectFolder: async () => engine },
-		pathStore: { setSandboxPath: (sandboxPath) => savedPaths.push(sandboxPath), setEnginePath: (enginePath) => savedPaths.push(`engine ${enginePath}`) },
+		pathStore: { setSandboxPath: (sandboxPath) => savedPaths.push(sandboxPath), setEnginePath: (enginePath) => void savedPaths.push(`engine ${enginePath}`) },
 		timer,
 		templateFolder: "/App/resources/sandbox-template",
 	});

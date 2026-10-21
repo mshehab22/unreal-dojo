@@ -1,10 +1,11 @@
 // Runs a quest for the renderer: finds the quest and the sandbox, fills skipped prerequisites, and hands the files to the chosen runner.
+import type { PackOutline } from "@shared/types/catalog";
 import type { AuthoredQuest } from "@shared/types/content";
 import type { SandboxSetupResult } from "@shared/types/engine";
 import type { RunResult, SyntaxCheckResult } from "@shared/types/run";
 
 import { AppErrorException } from "../../errors/AppErrorException";
-import type { PassedCheck, PrerequisiteFiller } from "./PrerequisiteFiller";
+import type { FilledPrerequisite, PrerequisiteFiller } from "./PrerequisiteFiller";
 import type { ProgressListener } from "./ProgressUpdate";
 import { prerequisiteQuestIds } from "./QuestDependencies";
 import type { RunnerFactory } from "./RunnerFactory";
@@ -13,11 +14,24 @@ import type { SandboxProjectService } from "./SandboxProjectService";
 import type { SnippetSyntaxChecker } from "./SnippetSyntaxChecker";
 import type { UnrealSettingsStore } from "./UnrealSettingsStore";
 
-/** Finds an authored quest by id. ContentCatalog satisfies it. */
+/** Finds quests. ContentCatalog satisfies it. */
 export interface AuthoredQuestSource
 {
 	/** The quest, or undefined for an unknown id. */
 	getAuthoredQuest(questId: string): Promise<AuthoredQuest | undefined>;
+
+	/** Every pack with its worlds and quest ids, for matching quest ids on a dependency line (A407). */
+	listPacks(): Promise<PackOutline[]>;
+}
+
+/** What the run service reads about the learner (the progress service). */
+export interface LearnerRecord
+{
+	/** Whether the learner passed a quest themselves. */
+	isPassed(questId: string): boolean;
+
+	/** The learner's autosaved files for a quest, or an empty map (A408). */
+	savedFiles(questId: string): Record<string, string>;
 }
 
 /** What the run service is built from. */
@@ -32,8 +46,8 @@ export interface QuestRunDependencies
 	/** The platform's snippet checker, or null where none is built yet (Windows, A402). */
 	snippetChecker: SnippetSyntaxChecker | null;
 
-	/** Whether the learner passed a quest themselves (from the progress service). */
-	isPassed: PassedCheck;
+	/** What the progress service knows about the learner's quests. */
+	learner: LearnerRecord;
 }
 
 /** `runQuest`, `checkSnippetSyntax`, and `rebuildSandbox` behind one object for the IPC handlers. */
@@ -53,18 +67,23 @@ export class QuestRunService
 		const context = this.requireContext();
 		const quest = await this.requireCodeQuest(questId);
 
-		const prerequisites = prerequisiteQuestIds(quest.brief);
+		const prerequisites = prerequisiteQuestIds(quest.brief, await this.knownQuestIds());
 
 		if (prerequisites.length > 0)
 		{
 			onProgress({ phase: "preparing", lastLine: `Checking earlier quests this one compiles against: ${prerequisites.join(", ")}` });
 
-			const filled = await this.dependencies.prerequisiteFiller.fill(context.sandboxFolder, prerequisites, this.dependencies.isPassed);
+			const bossIds = new Set<string>();
+			for (const prerequisite of prerequisites) if ((await this.dependencies.quests.getAuthoredQuest(prerequisite))?.kind === "boss") bossIds.add(prerequisite);
 
-			for (const prerequisite of filled)
-			{
-				onProgress({ phase: "writing", lastLine: `Using the reference solution for ${prerequisite.questId} (${prerequisite.fileNames.join(", ")}) because ${prerequisite.reason}.` });
-			}
+			const learner = this.dependencies.learner;
+			const filled = await this.dependencies.prerequisiteFiller.fill(context.sandboxFolder, prerequisites, {
+				isPassed: (questId) => learner.isPassed(questId),
+				savedFiles: (questId) => learner.savedFiles(questId),
+				isBoss: (questId) => bossIds.has(questId),
+			});
+
+			for (const prerequisite of filled) onProgress({ phase: "writing", lastLine: describeFill(prerequisite) });
 		}
 
 		return this.dependencies.runnerFactory.forContext(context).run(quest, files, onProgress, signal);
@@ -89,6 +108,14 @@ export class QuestRunService
 		return this.dependencies.sandboxService.rebuild(context.engineRoot, context.sandboxFolder, onProgress, signal);
 	}
 
+	/** Every quest id in the content. */
+	private async knownQuestIds(): Promise<string[]>
+	{
+		const packs = await this.dependencies.quests.listPacks();
+
+		return packs.flatMap((pack) => pack.worlds.flatMap((world) => world.quests.map((outline) => outline.id)));
+	}
+
 	/** The engine and sandbox from settings. Throws `sandbox-not-ready` before setup. */
 	private requireContext(): RunnerContext
 	{
@@ -109,4 +136,12 @@ export class QuestRunService
 
 		return quest;
 	}
+}
+
+/** One progress line naming every filled file and where it came from, for example "Filled f1-training-dummy because ...: DojoF1TrainingDummy.h from your saved code." */
+export function describeFill(prerequisite: FilledPrerequisite): string
+{
+	const files = prerequisite.files.map((file) => `${file.name} from ${file.source}`).join(", ");
+
+	return `Filled ${prerequisite.questId} because ${prerequisite.reason}: ${files}.`;
 }

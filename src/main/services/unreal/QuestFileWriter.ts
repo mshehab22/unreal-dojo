@@ -70,6 +70,16 @@ export class QuestFileWriter
 		for (const fileName of fileNames) await this.fileSystem.writeTextFile(this.paths.join(questFolder, fileName), files[fileName] ?? "");
 	}
 
+	/** Writes the given learner files fresh and leaves every other file in the folder alone; used to fill only what is missing (A408) and to apply a boss's piece overrides (A409). */
+	async writeSomeLearnerFiles(sandboxFolder: string, questId: string, files: Record<string, string>): Promise<void>
+	{
+		assertSafeQuestId(questId);
+
+		for (const fileName of Object.keys(files)) assertSafeFileName(fileName);
+
+		for (const [fileName, text] of Object.entries(files)) await this.fileSystem.writeTextFile(this.paths.join(this.questFolder(sandboxFolder, questId), fileName), text);
+	}
+
 	/** The learner file names currently in a quest's sandbox folder. */
 	async existingLearnerFiles(sandboxFolder: string, questId: string): Promise<string[]>
 	{

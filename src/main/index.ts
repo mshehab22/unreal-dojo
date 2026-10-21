@@ -96,7 +96,10 @@ async function start(): Promise<void>
 			engineInspector: getEngineLocator(),
 			settings: new SettingsServiceUnrealSettings(settingsService),
 			quests: contentCatalog,
-			isPassed: (questId) => progressService.getProgress().quests[questId]?.status === "passed",
+			learner: {
+				isPassed: (questId) => progressService.getProgress().quests[questId]?.status === "passed",
+				savedFiles: (questId) => progressService.getProgress().quests[questId]?.savedFiles ?? {},
+			},
 		}));
 
 	// Built on first use; read here only for the provider statuses. The review handlers are wired by ai-review.

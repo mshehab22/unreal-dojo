@@ -3,7 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { AuthoredQuest, ContentProblem } from "../../../src/shared/types/content";
-import { readBossSolution } from "../bossSolution";
+import { readBossSolution } from "../../../src/main/services/unreal/bossSolution";
 import type { ContentCheck, QuestRecord } from "../ContentCheck";
 import { errorAt } from "./checkHelpers";
 

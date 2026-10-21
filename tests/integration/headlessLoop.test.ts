@@ -57,7 +57,7 @@ describe.skipIf(!HAS_ENGINE)(`headless loop against ${ENGINE_ROOT || "no engine"
 	let sandboxFolder = "";
 	const settings = new MemoryUnrealSettings();
 	const services = HAS_ENGINE
-		? createUnrealServices({ templateFolder: TEMPLATE_FOLDER, solutionsFolder: join(__dirname, "..", "..", "tools", "solutions"), engineInspector: createEngineLocator(), settings, quests: { getAuthoredQuest: async () => undefined }, isPassed: () => false })
+		? createUnrealServices({ templateFolder: TEMPLATE_FOLDER, solutionsFolder: join(__dirname, "..", "..", "tools", "solutions"), engineInspector: createEngineLocator(), settings, quests: { getAuthoredQuest: async () => undefined, listPacks: async () => [] }, learner: { isPassed: () => false, savedFiles: () => ({}) } })
 		: null;
 
 	afterAll(async () =>

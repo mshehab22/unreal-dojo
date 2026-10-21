@@ -12,8 +12,8 @@ import { NodeSandboxFileSystem } from "./NodeSandboxFileSystem";
 import { QuestFileWriter } from "./QuestFileWriter";
 import { RunnerFactory } from "./RunnerFactory";
 import { ClangSnippetSyntaxChecker } from "./ClangSnippetSyntaxChecker";
-import { type PassedCheck, PrerequisiteFiller } from "./PrerequisiteFiller";
-import { type AuthoredQuestSource, QuestRunService } from "./QuestRunService";
+import { PrerequisiteFiller } from "./PrerequisiteFiller";
+import { type AuthoredQuestSource, type LearnerRecord, QuestRunService } from "./QuestRunService";
 import { ReferenceSolutions } from "./ReferenceSolutions";
 import type { UnrealSettingsStore } from "./UnrealSettingsStore";
 import { SandboxProjectService } from "./SandboxProjectService";
@@ -36,8 +36,8 @@ export interface UnrealServiceInputs
 	/** Finds quests by id (the content catalog). */
 	quests: AuthoredQuestSource;
 
-	/** Whether the learner passed a quest themselves (the progress service). */
-	isPassed: PassedCheck;
+	/** What the progress service knows about the learner's quests. */
+	learner: LearnerRecord;
 
 	/** The reference solutions folder (`tools/solutions` in the source tree, A403). */
 	solutionsFolder: string;
@@ -79,7 +79,7 @@ export function createUnrealServices(inputs: UnrealServiceInputs): UnrealService
 	// Only the Mac check exists so far; Windows answers not-implemented (A402).
 	const snippetChecker = paths.buildPlatform === "Mac" ? new ClangSnippetSyntaxChecker(paths, fileSystem, commandRunner) : null;
 
-	const questRunService = new QuestRunService({ settings: inputs.settings, quests: inputs.quests, runnerFactory, prerequisiteFiller, sandboxService, snippetChecker, isPassed: inputs.isPassed });
+	const questRunService = new QuestRunService({ settings: inputs.settings, quests: inputs.quests, runnerFactory, prerequisiteFiller, sandboxService, snippetChecker, learner: inputs.learner });
 
 	return { sandboxService, runnerFactory, questFileWriter, questRunService };
 }

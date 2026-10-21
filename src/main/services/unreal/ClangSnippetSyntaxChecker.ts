@@ -1,4 +1,6 @@
 // The macOS snippet check: UBT's own clang response file for a sandbox source, with the source swapped for the snippet and `-fsyntax-only` added.
+import { randomUUID } from "node:crypto";
+
 import type { SyntaxCheckResult, SyntaxDiagnostic } from "@shared/types/run";
 
 import { AppErrorException } from "../../errors/AppErrorException";
@@ -39,7 +41,13 @@ const PRELUDE = [
 ].join("\n");
 
 /** `file:line:column: severity: message` as clang prints it. */
-const DIAGNOSTIC = /^(.*):(\d+):(\d+): (fatal error|error|warning): (.*)$/;
+const DIAGNOSTIC = /^(.*):(\d+):(\d+): (fatal error|error|warning|note): (.*)$/;
+
+/** `In file included from <file>:<line>:` and its continuation lines, which say which snippet line pulled a header in. */
+const INCLUDED_FROM = /^\s*(?:In file included )?from (.*):(\d+):$/;
+
+/** The command runner's limit for one check (NodeCommandRunner), named in the timeout message. */
+const CHECK_TIMEOUT_SECONDS = 20;
 
 /** Messages caused by skipping UHT, not by the learner: names GENERATED_BODY would have declared. */
 const UHT_ARTIFACTS = [/'Super'/, /'ThisClass'/, /StaticClass/, /\.generated\.h/];
@@ -56,35 +64,43 @@ export class ClangSnippetSyntaxChecker implements SnippetSyntaxChecker
 	private readonly paths: PlatformPaths;
 	private readonly fileSystem: SandboxFileSystem;
 	private readonly commandRunner: CommandRunner;
+	private readonly makeCheckId: () => string;
 
-	/** Takes the platform's paths, the file system, and the command runner. */
-	constructor(paths: PlatformPaths, fileSystem: SandboxFileSystem, commandRunner: CommandRunner)
+	/** Takes the platform's paths, the file system, the command runner, and (for tests) the id each check's files are named with. */
+	constructor(paths: PlatformPaths, fileSystem: SandboxFileSystem, commandRunner: CommandRunner, makeCheckId: () => string = () => randomUUID())
 	{
 		this.paths = paths;
 		this.fileSystem = fileSystem;
 		this.commandRunner = commandRunner;
+		this.makeCheckId = makeCheckId;
 	}
 
-	/** Writes the snippet, prelude, and response file under `Intermediate/DojoSnippets`, runs clang from `Engine/Source` (the response file's include paths are relative to it), and parses the snippet's diagnostics. */
+	/** Writes this check's own snippet, prelude, and response file under `Intermediate/DojoSnippets` (named per check, so two quick checks cannot race, A410), runs clang from `Engine/Source` (the response file's include paths are relative to it), parses the diagnostics, and removes the files. */
 	async check(engineRoot: string, sandboxFolder: string, code: string): Promise<SyntaxCheckResult>
 	{
 		const paths = this.paths;
 		const donor = await this.readDonorResponseFile(sandboxFolder);
+		const checkId = this.makeCheckId();
 		const snippetFolder = paths.join(sandboxFolder, "Intermediate", "DojoSnippets");
-		const snippetFile = paths.join(snippetFolder, "Snippet.cpp");
-		const preludeFile = paths.join(snippetFolder, "SnippetPrelude.h");
-		const responseFile = paths.join(snippetFolder, "Snippet.rsp");
+		const snippetFile = paths.join(snippetFolder, `Snippet-${checkId}.cpp`);
+		const preludeFile = paths.join(snippetFolder, `SnippetPrelude-${checkId}.h`);
+		const responseFile = paths.join(snippetFolder, `Snippet-${checkId}.rsp`);
 
-		await this.fileSystem.writeTextFile(preludeFile, PRELUDE);
-		await this.fileSystem.writeTextFile(snippetFile, prepareSnippet(code));
-		await this.fileSystem.writeTextFile(responseFile, snippetResponseFile(donor, preludeFile, snippetFile));
+		try
+		{
+			await this.fileSystem.writeTextFile(preludeFile, PRELUDE);
+			await this.fileSystem.writeTextFile(snippetFile, prepareSnippet(code));
+			await this.fileSystem.writeTextFile(responseFile, snippetResponseFile(donor, preludeFile, snippetFile));
 
-		const result = await this.commandRunner.run("xcrun", ["clang++", `@${responseFile}`], paths.join(engineRoot, "Engine", "Source"));
-		if (!result.started) throw new AppErrorException("toolchain-missing", "The C++ compiler could not be started for the syntax check.", "Check that Xcode is installed and selected, then try again.", result.stderr);
+			const result = await this.commandRunner.run("xcrun", ["clang++", `@${responseFile}`], paths.join(engineRoot, "Engine", "Source"));
+			if (!result.started) throw new AppErrorException("toolchain-missing", "The C++ compiler could not be started for the syntax check.", "Check that Xcode is installed and selected, then try again.", result.stderr);
 
-		const diagnostics = parseDiagnostics(result.stderr, snippetFile);
-
-		return { ok: !diagnostics.some((diagnostic) => diagnostic.severity === "error"), diagnostics };
+			return resultOf(result.exitCode, result.stderr, snippetFile);
+		}
+		finally
+		{
+			for (const file of [snippetFile, preludeFile, responseFile]) await this.fileSystem.removeFile(file);
+		}
 	}
 
 	/** The donor's response file text. Throws `sandbox-not-ready` before the first build. */
@@ -124,21 +140,109 @@ export function snippetResponseFile(donor: string, preludeFile: string, snippetF
 	return [...kept, `-include "${preludeFile}"`, "-fsyntax-only", "-fno-color-diagnostics", "-Wno-pragma-once-outside-header", "-Wno-infinite-recursion", `"${snippetFile}"`, ""].join("\n");
 }
 
-/** The snippet's own errors and warnings in line order, without the ones skipping UHT causes. */
+/** The check's answer from clang's exit code and output: `ok` only on exit code 0 with no errors; a killed run is a timeout error; a failure with no message about the snippet still fails on line 1 (A411). */
+export function resultOf(exitCode: number | null, compilerOutput: string, snippetFile: string): SyntaxCheckResult
+{
+	if (exitCode === null) return { ok: false, diagnostics: [{ line: 1, severity: "error", message: `The syntax check took longer than ${CHECK_TIMEOUT_SECONDS} seconds and was stopped. Try again; the first check after a build can be slower.` }] };
+
+	const diagnostics = parseDiagnostics(compilerOutput, snippetFile);
+	const hasError = diagnostics.some((diagnostic) => diagnostic.severity === "error");
+
+	if (exitCode !== 0 && !hasError)
+	{
+		const firstLine = compilerOutput.split(/\r?\n/).find((line) => line.trim() !== "") ?? `exit code ${exitCode}`;
+
+		diagnostics.unshift({ line: 1, severity: "error", message: `The compiler failed: ${firstLine.trim()}` });
+	}
+
+	return { ok: exitCode === 0 && !hasError, diagnostics };
+}
+
+/** A header error waiting to learn which snippet line caused it. */
+interface PendingHeaderError
+{
+	message: string;
+	line: number | null;
+	column?: number;
+
+	/** True once an "in instantiation ... requested here" note in the snippet placed it; other snippet notes only place it until then. */
+	placedByInstantiation: boolean;
+}
+
+/**
+ * The snippet's errors and warnings in line order. An error inside a header (an engine template the snippet
+ * instantiated, a header it included) is reported on the snippet line that caused it: the "in instantiation of ...
+ * requested here" note in the snippet, else the "In file included from Snippet:N" line, else line 1, with the
+ * header's message and file name. Header warnings and what skipping UHT causes are dropped.
+ */
 export function parseDiagnostics(compilerOutput: string, snippetFile: string): SyntaxDiagnostic[]
 {
+	const snippetName = snippetFile.slice(Math.max(snippetFile.lastIndexOf("/"), snippetFile.lastIndexOf("\\")) + 1);
+	const isSnippet = (file: string): boolean => file.endsWith(snippetName);
 	const diagnostics: SyntaxDiagnostic[] = [];
+	let includedFromLine: number | null = null;
+	const state: { pending: PendingHeaderError | null; lastInstantiation: { line: number; column?: number } | null } = { pending: null, lastInstantiation: null };
+
+	const flush = (): void =>
+	{
+		const waiting = state.pending;
+		state.pending = null;
+		if (!waiting) return;
+
+		// Clang prints the instantiation stack only for the first error of an instantiation; follow-on errors carry just a forward-declaration note.
+		const place = waiting.placedByInstantiation ? { line: waiting.line ?? 1, column: waiting.column } : (state.lastInstantiation ?? { line: waiting.line ?? 1, column: waiting.column });
+		if (waiting.placedByInstantiation) state.lastInstantiation = place;
+
+		diagnostics.push({ line: place.line, ...(place.column === undefined ? {} : { column: place.column }), severity: "error", message: waiting.message });
+	};
 
 	for (const line of compilerOutput.split(/\r?\n/))
 	{
-		const match = DIAGNOSTIC.exec(line);
-		if (!match || !match[1]?.endsWith(snippetFile.slice(snippetFile.lastIndexOf("/")))) continue;
+		const included = INCLUDED_FROM.exec(line);
+		if (included)
+		{
+			if (isSnippet(included[1] ?? "")) includedFromLine = Number(included[2]);
+			continue;
+		}
 
-		const message = match[5] ?? "";
+		const match = DIAGNOSTIC.exec(line);
+		if (!match) continue;
+
+		const [, file = "", lineText = "1", columnText = "1", severity = "error", message = ""] = match;
+
+		if (severity === "note")
+		{
+			// An instantiation note in the snippet names the line that caused the header error; any other snippet note (a forward declaration) only stands in until one comes.
+			const waiting = state.pending;
+			const instantiation = message.includes("requested here");
+
+			if (waiting && isSnippet(file) && !waiting.placedByInstantiation && (instantiation || waiting.column === undefined))
+			{
+				state.pending = { message: waiting.message, line: Number(lineText), column: Number(columnText), placedByInstantiation: instantiation };
+			}
+			continue;
+		}
+
+		flush();
+
 		if (UHT_ARTIFACTS.some((pattern) => pattern.test(message))) continue;
 
-		diagnostics.push({ line: Number(match[2]), column: Number(match[3]), severity: match[4] === "warning" ? "warning" : "error", message });
+		if (isSnippet(file))
+		{
+			state.lastInstantiation = null;
+			diagnostics.push({ line: Number(lineText), column: Number(columnText), severity: severity === "warning" ? "warning" : "error", message });
+		}
+		else if (severity !== "warning")
+		{
+			const headerName = file.slice(Math.max(file.lastIndexOf("/"), file.lastIndexOf("\\")) + 1);
+
+			state.pending = { message: `${message} (in ${headerName})`, line: includedFromLine, placedByInstantiation: false };
+		}
+
+		includedFromLine = null;
 	}
+
+	flush();
 
 	return diagnostics.sort((left, right) => left.line - right.line || (left.column ?? 0) - (right.column ?? 0));
 }
