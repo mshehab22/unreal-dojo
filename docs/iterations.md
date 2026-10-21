@@ -508,3 +508,9 @@ exit code 0
 *Codex search: the top match stays highlighted until the keyboard or a real pointer movement changes it.*
 
 - Decisions made: none new; the pointer rule is a bug fix under A240's data layer and A390's path layout.
+## M2.3b World 1 follow-ups: miss penalty in the boss, enum names in the State card (content-authoring, author-foundations)
+- What was asked: in the training yard boss, pressing keys on lowered targets cost nothing, so mashing 1 to 6 broke every target as it rose; the Lead decided a hit on a lowered or broken target is a miss that costs 5 points (A330). Separately, one State pattern card question still used enum values without the enum's initials (A66).
+- What changed: the boss spec now says a refused hit is a miss: the target's label reads MISS, the score drops by 5 and never below 0. The fixed numbers, the "additions" piece and both reference plans, the integration rubric, and the feel criterion all carry it. The miss count and the penalty are listed as boss additions next to Lower and ResetHits, so the World 1 build quests stay one idea each (A331). The door example in the State card now uses EDS_Closed and friends (A332).
+- Proof: the verifier on the foundations pack reports no problems. Under the shared engine lock on the Mac (UE 5.8.3), the four World 1 reference solutions, which the boss uses as its pieces, rebuilt (`Result: Succeeded`) and passed 8 of 8 headless tests; the pieces' code did not change in this task. Nothing visible in the app changed, so no screenshots; the build log and report were in this session's scratch folder and are not kept.
+- Decisions made: A330 (the Lead's), A331, A332.
+- Still open: Windows, and the verifier's `--engine` mode on this content.

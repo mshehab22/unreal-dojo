@@ -22,13 +22,13 @@ pieces:
 
 # Spec
 
-The client's training yard runs a timed practice round. The yard holds 6 pop-up targets and 2 training dummies. A round lasts 45 seconds. Every second a lowered target (never a broken one) is chosen at random and raised, unless 2 targets are already up; a raised target that nobody hits within 2.5 seconds drops back by itself. Each target breaks after 2 hits and each dummy goes down after 3 strikes. The score keeper counts 5 points per dummy strike and 25 per broken target, so the most a round can score is 180 (150 from six broken targets, 30 from two downed dummies). When the score first reaches 150 the bell is struck at full force. When the round ends, the keeper shows the final score on its label, then every target is repaired and lowered and every dummy stands up again, so the next round starts the same way. With a rise every second and 2.5 seconds up, an unhit target is still up when the next two rises come, so the 2 at once limit really decides which rises are skipped. Reference game: the archery and shooting galleries of The Legend of Zelda: Ocarina of Time, where a short timed round with targets popping up is the whole game.
+The client's training yard runs a timed practice round. The yard holds 6 pop-up targets and 2 training dummies. A round lasts 45 seconds. Every second a lowered target (never a broken one) is chosen at random and raised, unless 2 targets are already up; a raised target that nobody hits within 2.5 seconds drops back by itself. Each target breaks after 2 hits and each dummy goes down after 3 strikes. The score keeper counts 5 points per dummy strike and 25 per broken target, so the most a round can score is 180 (150 from six broken targets, 30 from two downed dummies). A hit on a target that is lowered or broken is a miss: it costs 5 points, the score never drops below 0, and the target's label reads MISS until its next state change. Mashing every key as targets rise therefore loses points instead of breaking everything for free. When the score first reaches 150 the bell is struck at full force. When the round ends, the keeper shows the final score on its label, then every target is repaired and lowered and every dummy stands up again, so the next round starts the same way. With a rise every second and 2.5 seconds up, an unhit target is still up when the next two rises come, so the 2 at once limit really decides which rises are skipped. Reference game: the archery and shooting galleries of The Legend of Zelda: Ocarina of Time, where a short timed round with targets popping up is the whole game.
 
 How the player hits things: keys 1 to 6 call Hit on the matching pop-up target, and Q and E call Strike on the two dummies. Map them in the level Blueprint with keyboard events, or bind input actions on a C++ director; either way the key only calls the target's own BlueprintCallable function.
 
-The point of the boss is the split. Your four earlier classes keep their rules; something new drives the round, and every number above can be changed by a designer in the editor without a rebuild. The earlier classes need exactly two additions, and nothing else in them changes: the pop-up target gains `Lower` (raised to lowered without counting a hit, for the target nobody hit in time), and the dummy gains `ResetHits` (back to standing for the next round). Timers get a full world later; for the round clock and the rise rhythm you may use the level Blueprint's Delay and Set Timer nodes calling your BlueprintCallable functions, or a C++ director actor with the timer manager.
+The point of the boss is the split. Your four earlier classes keep their rules; something new drives the round, and every number above can be changed by a designer in the editor without a rebuild. The earlier classes need exactly three additions, and nothing else in their rules changes: the pop-up target gains `Lower` (raised to lowered without counting a hit, for the target nobody hit in time) and a miss count (a refused hit adds one and shows MISS), the dummy gains `ResetHits` (back to standing for the next round), and the score keeper gains `PointsPerMiss` (5), subtracting misses and clamping the total at 0. Repair clears a target's misses along with its hits. Timers get a full world later; for the round clock and the rise rhythm you may use the level Blueprint's Delay and Set Timer nodes calling your BlueprintCallable functions, or a C++ director actor with the timer manager.
 
-Core numbers are fixed: 6 targets, 2 dummies, 45 second round, a rise every second, 2.5 seconds up, at most 2 up at once, 2 hits per target, 3 strikes per dummy, 5 and 25 points, bell at 150.
+Core numbers are fixed: 6 targets, 2 dummies, 45 second round, a rise every second, 2.5 seconds up, at most 2 up at once, 2 hits per target, 3 strikes per dummy, 5 and 25 points, 5 points lost per miss with a floor of 0, bell at 150.
 
 Extensions, in order of importance:
 
@@ -36,7 +36,7 @@ Extensions, in order of importance:
 2. A best score kept on the director across rounds, visible read only in the Details panel while playing.
 3. A Blueprint child of the bell that overrides Ring to play a sound whose volume follows the ring volume.
 
-Feel: tune the time a target stays up until a missed target feels like your own slow reaction, not the yard cheating you.
+Feel: tune the time a target stays up until a missed target feels like your own slow reaction, not the yard cheating you, and a 5 point miss feels like a reason to wait for the target rather than a punishment for trying.
 
 # Required Pieces
 
@@ -47,8 +47,8 @@ Feel: tune the time a target stays up until a missed target feels like your own 
   why: The rules for one target are already written and tested; the boss must not fork them.
 - id: additions
   kind: step
-  label: Add Lower to the pop-up target and ResetHits to the dummy
-  why: The round needs to drop an unhit target and stand dummies up again, and these are the only changes the earlier classes need.
+  label: Add Lower and a miss count to the pop-up target, ResetHits to the dummy, and a miss penalty to the score keeper
+  why: The round needs to drop an unhit target, punish mashing, and stand dummies up again, and these are the only changes the earlier classes need.
 - id: player-input
   kind: step
   label: Map keys 1 to 6 to Hit on each target and Q and E to Strike on each dummy
@@ -90,7 +90,7 @@ Feel: tune the time a target stays up until a missed target feels like your own 
   title: A C++ director actor runs the round
   pieces:
     - { id: reused, kind: class, label: The dummy and pop-up target classes from the earlier quests, covers: [targets] }
-    - { id: added, kind: step, label: Lower on ADojoF1PopupTarget and ResetHits on ADojoF1TrainingDummy as the only new functions, covers: [additions] }
+    - { id: added, kind: step, label: Lower and a miss count on ADojoF1PopupTarget and ResetHits on ADojoF1TrainingDummy and PointsPerMiss on the keeper as the only additions, covers: [additions] }
     - { id: director, kind: class, label: ADojoF1YardDirector with StartRound and EndRound and arrays of targets and dummies set in Details, covers: [round-driver, tunables] }
     - { id: keys, kind: step, label: Director binds number keys and Q and E to Hit and Strike on the matching array entries, covers: [player-input] }
     - { id: rise, kind: step, label: Director's rise step counts raised targets with GetState and raises a random lowered one, covers: [rise-rule] }
@@ -107,14 +107,14 @@ Feel: tune the time a target stays up until a missed target feels like your own 
     - { from: rise, to: reused, label: raises targets }
     - { from: lower, to: reused, label: lowers targets }
     - { from: director, to: keeper, label: asks for the score }
-    - { from: keeper, to: reused, label: casts each entry and reads its state }
+    - { from: keeper, to: reused, label: casts each entry and reads its state and misses }
     - { from: director, to: bell, label: strikes once at the threshold }
     - { from: director, to: reset, label: runs at the end of the round }
 - id: blueprint-director
   title: The level Blueprint drives the round through the C++ API
   pieces:
     - { id: reused, kind: class, label: The four earlier classes placed in the level, covers: [targets, scoring] }
-    - { id: added, kind: step, label: Lower on the pop-up target and ResetHits on the dummy as BlueprintCallable additions, covers: [additions] }
+    - { id: added, kind: step, label: Lower and a miss count on the pop-up target and ResetHits on the dummy and PointsPerMiss on the keeper as the only additions, covers: [additions] }
     - { id: level, kind: class, label: Level Blueprint with a round timer and a rise timer calling the C++ functions, covers: [round-driver] }
     - { id: keys, kind: step, label: Keyboard events 1 to 6 and Q and E in the level Blueprint call Hit or Strike on placed actors, covers: [player-input] }
     - { id: rise, kind: step, label: Rise event filters the target array by GetState and calls Raise on a random lowered one, covers: [rise-rule] }
@@ -137,10 +137,10 @@ Feel: tune the time a target stays up until a missed target feels like your own 
 
 # Integration Rubric
 
-- The dummy, pop-up target, score keeper, and bell are reused; the only changes to them are the new Lower and ResetHits functions (plus the kind enum if extension 1 is built), with no rewrite of their rules.
+- The dummy, pop-up target, score keeper, and bell are reused; the only changes to them are Lower, the miss count, ResetHits, and PointsPerMiss (plus the kind enum if extension 1 is built), with no rewrite of their rules.
 - Targets know nothing about the director, the keeper, or the bell; references point from the driver and the keeper toward the targets, and keys only call each target's own function.
 - Every fixed number is an editable property or instance editable variable with the given default.
-- The up limit of 2 holds even when the rise step and an auto lower happen in the same moment.
+- The up limit of 2 holds even when the rise step and an auto lower happen in the same moment, and a hit on a lowered or broken target costs 5 points without taking the score below 0.
 - The bell is struck exactly once per round, through Strike, never by calling its reaction directly.
 - Ending the round shows the final score first, then leaves every target lowered and repaired and every dummy standing, so a second round plays the same as the first.
 - Nothing ticks to poll state; the round runs on timers or delays and on calls into the C++ API.
