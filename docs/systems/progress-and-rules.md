@@ -79,7 +79,7 @@ Last updated by M1.6 (rules, scheduler, save file).
 - Attempt (`recordAttempt`): price XP (band, first pass, repeat, rematch, hints, effort, spree, potion), update the quest, cards (any pass), skills (first pass or rematch), spree (first Submit of a never-passed build or refactor), streak (on a pass), boss rewards (freeze, armor, studio module), daily completion and chest, level and role, the attempt record, newly unlocked quests, next due dates.
 - Review (`reviewItem`): SM-2 review (a success before the due day is logged but does not count), append to the review log, update the schedule and item memory, remove the item from the Drill me queue, recompute the item's skill mastery (the weakest item of the skill) and report the change.
 - Drill (`finishDrill`): flat drill XP, streak, daily completion and chest, and any world whose terms are all proficient becomes tested out.
-- World Map (`getQuestAvailability`): today's due items surface as rematches of passed quests in other worlds, then the unlock graph answers (a rematch is flagged once its due time has come). Passing a rematch reviews the due items the quest uses, so it cannot be farmed.
+- World Map (`getQuestAvailability`): today's scheduled due items (`DrillScheduler.scheduledDueToday`, never "Drill me" or hover-injected items) surface as rematches of passed quests in other worlds, then the unlock graph answers (a rematch is flagged once its due time has come). Passing a rematch reviews the due items the quest uses, so it cannot be farmed.
 - Daily candidates: `DailyQuestService.candidatesFrom(quests, availability)` gives open concept quests and short builds (`scaffold: worked`, `addsNewClass` false).
 
 ### IPC wired in M1.6

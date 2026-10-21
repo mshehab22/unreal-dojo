@@ -505,7 +505,8 @@ export class ProgressService
 			const rematches = { ...this.progress.rematches };
 			const availabilityBefore = graph.availability(this.unlockState(this.progress));
 
-			for (const itemId of this.drillScheduler.dueToday(this.progress, now))
+			// Only scheduled due items surface rematches; "Drill me" and hover-injected items would stay due after the replay and could be farmed.
+			for (const itemId of this.drillScheduler.scheduledDueToday(this.progress, now))
 			{
 				const questId = this.rematchSelector.select(itemId, this.progress.memory[itemId]?.earnedInWorldId, allQuests, availabilityBefore);
 
@@ -584,7 +585,7 @@ export class ProgressService
 	/** Reviews the due terms and patterns a passed rematch exercised, so they move to their next interval and cannot surface the same rematch again today. */
 	private reviewRematchItems(progress: PlayerProgress, quest: RuleQuest, score: number, now: Date): PlayerProgress
 	{
-		const dueToday = new Set(this.drillScheduler.dueToday(progress, now));
+		const dueToday = new Set(this.drillScheduler.scheduledDueToday(progress, now));
 		const quality = this.sm2Quality.qualityFromScore(score, true);
 		let next = progress;
 

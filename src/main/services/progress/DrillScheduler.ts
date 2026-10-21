@@ -95,10 +95,20 @@ export class DrillScheduler
 		return this.shuffle(chosen, random);
 	}
 
+	/** Items whose scheduled due time falls by the end of today, oldest first. Only these can surface a rematch: "Drill me" and hover-injected items never do. */
+	scheduledDueToday(progress: PlayerProgress, now: Date): string[]
+	{
+		const endOfToday = endOfLocalDay(now).getTime();
+
+		return Object.entries(progress.schedule)
+			.filter(([, dueAt]) => new Date(dueAt).getTime() <= endOfToday)
+			.sort(([leftId, leftDue], [rightId, rightDue]) => leftDue.localeCompare(rightDue) || leftId.localeCompare(rightId))
+			.map(([itemId]) => itemId);
+	}
+
 	/** Every due item id in priority order, without the cap. */
 	private allDueIds(progress: PlayerProgress, now: Date): string[]
 	{
-		const endOfToday = endOfLocalDay(now).getTime();
 		const ordered: string[] = [];
 		const seen = new Set<string>();
 		const add = (itemId: string): void =>
@@ -110,11 +120,7 @@ export class DrillScheduler
 
 		progress.drillQueue.forEach(add);
 		this.hoveredTermsToInject(progress).forEach(add);
-
-		Object.entries(progress.schedule)
-			.filter(([, dueAt]) => new Date(dueAt).getTime() <= endOfToday)
-			.sort(([leftId, leftDue], [rightId, rightDue]) => leftDue.localeCompare(rightDue) || leftId.localeCompare(rightId))
-			.forEach(([itemId]) => add(itemId));
+		this.scheduledDueToday(progress, now).forEach(add);
 
 		return ordered;
 	}
