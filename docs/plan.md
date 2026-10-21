@@ -79,21 +79,21 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | merged 267739b | merged | Passed first review; Windows unverified (problems.md) |
 | M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | merged | merged | 2 fix rounds; rematch farming closed, proven with randomized sequences |
 | M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | m1-6b-progress-wiring @ 4a952cb | ready to merge | Re-review PASS. Merge waits for M2.1c: with real availability and real World 1, the World Map scrolls sideways at 1100x700 |
-| M2.1c World Map overflow with real content | ui-core | ui-core (session "M0.3 Design tokens...") | m2-1c-worldmap-overflow | building | Merges before M1.6b; adds a real-shaped fixture world |
+| M2.1c World Map overflow with real content | ui-core | ui-core (session "M0.3 Design tokens...") | m2-1c-worldmap-overflow @ 3c57706 | review | Balanced rows; fake mirrors real World 1; M1.6b merges after it |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 8665386 | merged | 1 fix round plus a test fix; includes the GFrameCounter timer fix |
 | M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring | building | runQuest, cancelRun, checkSnippetSyntax; fill skipped prerequisites |
-| M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | m0-2c-settings | building | electron-store, safeStorage key, environment status |
-| M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | m1-8-verifier @ ef932b1 | fixes | Round 1 and round 2 part 1 done (new checks); part 2: --engine on M1.3 runners, expect 5 of 5 |
+| M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | m0-2c-settings @ 7105220 | review | Settings, safeStorage key, environment status; 539 tests |
+| M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | m1-8-verifier @ f681a5a | re-review | --engine on M1.3 runners: 9 quests pass in 472 s; boss solutions per A67 |
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
-| M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ f3ea45b) | fixes (round 3) | Round start, C++ round timer, A67 boss reference integration |
+| M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c1b7533) | re-review (round 3) | Round start and timer; World 1 boss reference integration with two-round tests, 10 of 10, mutation caught |
 | M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ f14b61f) | fixes; boss waits on A67 | 17 of 17 on UE 5.8.3. Round 1: four GC facts wrong for 5.8 (garbage elimination nulls reflected refs), breakdown reads destroyed discs, rack Recall leaks state (Lead: reuse ResetForRound from the World 1 boss), minor items |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | m2-2-quest-screens | building | Concept, Drill, Breakdown, Build, Loot on the M2.1 data layer and fake |
-| M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | m3-1-patterns-observer | building | Engine runs under the shared lock |
-| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness | fixes | Switching the smoke to M1.3 runners (A63) |
+| M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | claude/m3-1-patterns-observer-0943eb @ 4701e8a | review | 7 quests; 9 solution tests pass on UE 5.8.3 |
+| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 94fae2a | re-review | Smoke on M1.3 runners, 39 s |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
 Queued for unreal-pipeline (A65): fill a tested-out or reset prerequisite quest's files with its reference solution before building a later quest that depends on it, and tell the learner which files came from the reference.
