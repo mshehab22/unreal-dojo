@@ -42,3 +42,20 @@ Template:
   ```
   A broken copy (an em dash, a missing related term, an out-of-range answer, a missing pattern) made it fail with 10 errors, so the checks really run.
 - Not done: `firstQuestId` and `useCaseQuestIds` stay empty until quests exist. The question shape is a proposal (A20) that the M0.4 types still have to adopt. The real verifier check waits for M0.4. Seven seed docs links were broken for 5.8 and were remapped (A21). Glossary text came from the research seed with only the links changed. A fresh reviewer should still check it for accuracy and originality.
+
+### Fix round 1
+- What the reviewer asked for and what changed:
+  - Originality (D13): four card intents echoed the book's or the Gang of Four's intent lines. All 22 intents were rewritten from scratch around a concrete Unreal example (a locked door, a turret picking targets, a mailbox drained at end of frame), not only the four flagged, because several others followed the same sentence shapes.
+  - Four spot-the-bug items had no single wrong line. Each now has exactly one wrong line: the delegate is removed with the wrong owner, the undo history keeps one entry too many, a pooled projectile comes back with collision still off, and adding a buff clears the dirty flag instead of setting it.
+  - The lantern scenario for Update Method was a when-not item written as which-pattern. It is now multiple-choice: "what should the lanterns do instead".
+  - Multiple-choice answers were almost all in the second position. The 27 answers are now spread evenly (7, 7, 7, 6 across the four positions). The drill runner also shuffles choices (A61).
+  - Glossary: generic aliases that would link ordinary prose were removed (override, virtual, verify, assert, meta, Remove, dictionary, and the wrong "physics asset"). Six entries whose term is also an everyday word (check, ensure, Cast, Destroy, Category, Super) now link only inside inline code through `linkMode: "code-only"` (A62, A24). The GEngine link now points at the UEngine class page and IsA at its own 5.8 API page. No better 5.8 page than the actor lifecycle page was found for Super.
+  - The Strategy card now names `UCLASS(Abstract, EditInlineNew)` and says the Instanced property must be the abstract UObject base, not a UINTERFACE.
+  - `docs/systems/content-authoring.md`: the category wording now allows AI and UI, question ids only need to be unique within their quest or pattern card (agreed with M0.4), and the new authoring rules from this round (code-only terms, specific aliases, one wrong line, spread answers, intents from scratch) are written down.
+- Proof: the checker now also allows `linkMode`, checks question ids per card, and retries when Epic rate limits instead of reporting a broken link. Output:
+  ```
+  glossary: 191 terms, 19 categories, 126 distinct docs links
+  live check: 126 docs pages fetched, each with a 5.8 title
+  patterns: 22 cards, 110 drill items {'explain-in-one-sentence': 17, 'fill-blank': 17, 'multiple-choice': 27, 'spot-the-bug': 10, 'which-pattern': 39}
+  result: PASS (0 errors, 0 warnings)
+  ```

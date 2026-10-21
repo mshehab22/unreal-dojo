@@ -2,7 +2,7 @@
   {
     "id": "game-loop",
     "title": "Game Loop",
-    "intent": "Keep the game running continuously, processing input, advancing the simulation, and drawing a frame over and over, while separating game time from how fast the machine happens to be.",
+    "intent": "Give the game a heartbeat of its own: every frame the engine reads input, moves the world forward by the time that really passed, and draws, so a torch flickers and a patrol walks whether or not the player touches the pad, at the same pace on every machine.",
     "problem": "A program that waits for input before doing anything cannot animate a torch, move an enemy, or count down a timer while the player sits still. The game needs its own heartbeat, and that heartbeat has to produce the same gameplay on a fast desktop and a slow laptop.",
     "unrealForm": "You do not write this loop in Unreal; the engine owns it. Each frame the engine ticks the world, which runs actors and components through tick groups (pre physics, during physics, post physics, post update work) while the render thread draws the previous frame. Your code receives DeltaSeconds and must scale motion by it. Fixed frame rate settings, physics substepping, and the async physics tick give fixed-step behavior when determinism matters.",
     "whenNot": "You never skip the loop itself; you skip writing your own. Building a second hand-rolled loop inside an Unreal actor (a while loop that blocks the game thread) freezes the editor. Only write a fixed-step accumulator when gameplay must be deterministic, such as replays or lockstep networking.",
@@ -13,12 +13,12 @@
         "type": "multiple-choice",
         "prompt": "A projectile moves 10 units every Tick with no reference to DeltaSeconds. What happens on a machine running at twice the frame rate?",
         "choices": [
-          "It moves at the same speed because Tick is throttled",
           "It moves twice as fast",
+          "It moves at the same speed because Tick is throttled",
           "It moves half as fast",
           "It stops when the frame rate passes 60"
         ],
-        "answerIndex": 1,
+        "answerIndex": 0,
         "explanation": "Movement per frame times frames per second is speed. Doubling the frames doubles the distance unless you multiply by DeltaSeconds."
       },
       {
@@ -106,7 +106,7 @@
   {
     "id": "update-method",
     "title": "Update Method",
-    "intent": "Give every live object its own small update function that advances its behavior by one frame, and have the game call all of them each frame.",
+    "intent": "Let each actor carry the code for its own next moment, so the engine can walk the list of live actors every frame and ask each one to take one small step of whatever it is doing.",
     "problem": "A world full of patrolling guards, spinning pickups, and ticking bombs cannot be written as one big function that knows about every object. Each object needs to carry its own behavior and remember where it left off between frames.",
     "unrealForm": "AActor::Tick and UActorComponent::TickComponent are this pattern, with PrimaryActorTick.bCanEverTick to opt in, tick intervals to slow it down, tick groups and tick prerequisites to order it, and SetActorTickEnabled to put idle actors to sleep. Timers and latent actions replace many countdowns that beginners write by hand inside Tick.",
     "whenNot": "Do not tick things that only change on events: a chest that opens when used should react to the use call, not poll every frame. Thousands of identical agents should live in one manager's array or in Mass instead of thousands of ticking actors.",
@@ -177,37 +177,23 @@
       },
       {
         "id": "update-method-scenario-2",
-        "type": "which-pattern",
-        "prompt": "Your village has 300 lanterns that only change when the day-night cycle flips, yet profiling shows 300 Tick calls per frame doing nothing. Which pattern have you over-applied?",
+        "type": "multiple-choice",
+        "prompt": "Your village has 300 lanterns that only change when the day-night cycle flips, yet profiling shows 300 Tick calls per frame doing nothing. What should the lanterns do instead?",
         "choices": [
-          "dirty-flag",
-          "flyweight",
-          "game-loop",
-          "update-method"
+          "Keep ticking but return early when nothing changed",
+          "Raise their tick interval to half a second",
+          "Disable tick and bind to the day-night cycle's delegate, updating only when it fires",
+          "Move all 300 into one manager actor that ticks them"
         ],
-        "answer": "update-method",
-        "distractorNotes": [
-          {
-            "choice": "flyweight",
-            "why": "Sharing lantern data would save memory, not the empty per-frame calls."
-          },
-          {
-            "choice": "game-loop",
-            "why": "The engine loop is fine; the issue is that every lantern registered itself for per-frame updates."
-          },
-          {
-            "choice": "dirty-flag",
-            "why": "A dirty flag could help a cached value, but the real fix is to stop ticking and react to the cycle event."
-          }
-        ],
-        "explanation": "Update Method is for objects that change every frame. Event-driven objects should disable tick and react to a delegate."
+        "answerIndex": 2,
+        "explanation": "Update Method is for things that change every frame. Event-driven objects should turn off tick and react to a delegate; an early return or a longer interval still pays for the calls."
       }
     ]
   },
   {
     "id": "double-buffer",
     "title": "Double Buffer",
-    "intent": "Keep two copies of some state: readers see the finished current copy while writers build the next one, then the two swap in one step.",
+    "intent": "Keep two copies of a piece of state, let every reader look at the finished copy while the next one is being built, and flip the two in one move so nobody ever sees half a change.",
     "problem": "If systems read state while another system is halfway through updating it, results depend on update order: the first cell in a simulation grid sees old neighbors and the last sees new ones, and a renderer may draw half a frame.",
     "unrealForm": "The engine double and triple buffers the screen through the swap chain, and the render thread works on a snapshot of the previous frame through scene proxies. Physics results are read from the last completed step. In gameplay code you write it yourself for cellular or crowd simulations: two TArray buffers, read from Current, write to Next, then Swap.",
     "whenNot": "Skip it when memory for a second copy is too costly or when sequential, in-order updates are the behavior you actually want, such as a turn-based board where units should see moves made earlier in the same turn.",
@@ -231,11 +217,11 @@
         "prompt": "What operation ends each step of a double-buffered simulation?",
         "choices": [
           "Clearing both buffers",
-          "Swapping which buffer is current and which is next",
           "Copying next into current element by element while readers wait",
-          "Locking the current buffer for the next frame"
+          "Locking the current buffer for the next frame",
+          "Swapping which buffer is current and which is next"
         ],
-        "answerIndex": 1,
+        "answerIndex": 3,
         "explanation": "A swap is cheap (two pointers or Swap on arrays) and makes the finished state visible all at once."
       },
       {
@@ -308,7 +294,7 @@
   {
     "id": "observer",
     "title": "Observer",
-    "intent": "Let an object announce that something happened without knowing who, if anyone, is listening.",
+    "intent": "Let a gameplay object shout \"this just happened\" into a delegate and move on, while the HUD, audio, and achievements each decide for themselves whether to listen.",
     "problem": "When the player picks up the hundredth coin, the achievement system, the HUD, and the audio system all want to know. If the coin pickup code calls each of them directly, gameplay code ends up depending on every system that cares, and every new listener means editing the pickup.",
     "unrealForm": "Delegates are Unreal's observer lists. DECLARE_MULTICAST_DELEGATE for C++ listeners, DECLARE_DYNAMIC_MULTICAST_DELEGATE for events Blueprints can bind. Built-in subjects include OnComponentBeginOverlap, OnTakeAnyDamage, and OnDestroyed. AddUObject and AddDynamic bind safely to UObjects, FDelegateHandle lets a listener unsubscribe, and Broadcast notifies everyone.",
     "whenNot": "Inside one small feature where both ends live in the same class, a direct call is easier to read and debug. Avoid it when the sender needs an answer back, when the listener must run later (use Event Queue), or in tight loops where broadcasting to many listeners per element costs too much.",
@@ -319,22 +305,22 @@
         "type": "multiple-choice",
         "prompt": "Which delegate type can a Blueprint bind to in the editor's event graph?",
         "choices": [
+          "DECLARE_DYNAMIC_MULTICAST_DELEGATE with a BlueprintAssignable UPROPERTY",
           "DECLARE_DELEGATE",
           "DECLARE_MULTICAST_DELEGATE",
-          "DECLARE_DYNAMIC_MULTICAST_DELEGATE with a BlueprintAssignable UPROPERTY",
           "TFunction"
         ],
-        "answerIndex": 2,
+        "answerIndex": 0,
         "explanation": "Only dynamic delegates are reflected, and BlueprintAssignable exposes the multicast one to Blueprint graphs."
       },
       {
         "id": "observer-recall-2",
         "type": "spot-the-bug",
-        "prompt": "This HUD widget listens to the player's health and Setup can run again when the HUD is rebuilt. Which line leaves bindings behind?",
-        "code": "void UDojoHealthBar::Setup(UDojoHealthComponent* Health)\n{\n    Health->OnHealthChanged.AddUObject(this, &UDojoHealthBar::HandleHealthChanged);\n}\n\nvoid UDojoHealthBar::NativeDestruct()\n{\n    Super::NativeDestruct();\n}",
-        "bugLine": 3,
-        "fix": "Store the FDelegateHandle returned by AddUObject and call Remove with it in NativeDestruct (or bind with AddDynamic and RemoveDynamic).",
-        "explanation": "The widget subscribes but never unsubscribes. AddUObject binds weakly, so it will not crash, but a removed widget keeps receiving updates until it is garbage collected and each extra Setup call stacks another binding."
+        "prompt": "This HUD widget listens to the player's health and stops listening when it is destroyed. Exactly one line is wrong. Which one?",
+        "code": "void UDojoHealthBar::Setup(UDojoHealthComponent* Health)\n{\n    WatchedHealth = Health;\n    HealthHandle = Health->OnHealthChanged.AddUObject(this, &UDojoHealthBar::HandleHealthChanged);\n}\n\nvoid UDojoHealthBar::NativeDestruct()\n{\n    if (WatchedHealth) { WatchedHealth->OnHealthChanged.RemoveAll(WatchedHealth); }\n    Super::NativeDestruct();\n}",
+        "bugLine": 9,
+        "fix": "Call WatchedHealth->OnHealthChanged.Remove(HealthHandle), or RemoveAll(this), so the widget's own binding is the one removed.",
+        "explanation": "RemoveAll removes bindings owned by the object you pass. Passing the health component removes nothing the widget added, so the stale binding stays and stacks again on the next Setup."
       },
       {
         "id": "observer-recall-3",
@@ -409,7 +395,7 @@
   {
     "id": "command",
     "title": "Command",
-    "intent": "Wrap an action in an object so it can be stored, swapped, queued, sent, replayed, or undone.",
+    "intent": "Turn a player or AI action, such as move this unit to that tile, into a value you can hold, so the game can remap it, hand it to a different pawn, record it for a replay, or roll it back.",
     "problem": "When a key press calls Jump directly, the binding is fixed, only the player can trigger it, and the action vanishes the instant it runs. Rebinding controls, letting an AI reuse the same actions, and undoing a move all need the action to exist as data.",
     "unrealForm": "Enhanced Input already separates the key from the action through Input Actions and Input Mapping Contexts. Gameplay Abilities are large-scale commands that can be activated, replicated, and cancelled. Editor undo uses FScopedTransaction. What you still build: an undoable gameplay command history (a TArray of TUniquePtr commands plus a cursor), command queues between an AI brain and its pawn, and recorded command streams for replays. Hold actor targets as TWeakObjectPtr if the command outlives the frame.",
     "whenNot": "If nothing about who acts, which input triggers it, or when it runs needs to change, a direct function call is clearer. Undo only works if every change goes through a command, so do not half-adopt it.",
@@ -442,11 +428,11 @@
       {
         "id": "command-recall-3",
         "type": "spot-the-bug",
-        "prompt": "This history supports undo and redo. Which line keeps stale redo entries after a new command is issued post-undo?",
-        "code": "void FDojoCommandHistory::Do(TUniquePtr<IDojoCommand> Command)\n{\n    Command->Execute();\n    Items.Add(MoveTemp(Command));\n    Cursor = Items.Num();\n}",
+        "prompt": "This history supports undo and redo, and a new command after an undo should discard the redo tail. Exactly one line is wrong. Which one?",
+        "code": "void FDojoCommandHistory::Do(TUniquePtr<IDojoCommand> Command)\n{\n    Items.SetNum(Cursor + 1);\n    Command->Execute();\n    Items.Add(MoveTemp(Command));\n    Cursor = Items.Num();\n}",
         "bugLine": 3,
-        "fix": "Before executing, truncate everything past the cursor with Items.SetNum(Cursor), so a new command discards the old redo tail.",
-        "explanation": "After an undo the cursor sits before the newest entries; a new action must throw those away or redo will replay the wrong future."
+        "fix": "Use Items.SetNum(Cursor) so everything at and past the cursor (the undone commands) is dropped.",
+        "explanation": "Cursor counts the commands still applied. Keeping Cursor + 1 entries leaves one undone command in the history, or adds an empty slot when nothing was undone."
       }
     ],
     "scenarios": [
@@ -509,7 +495,7 @@
   {
     "id": "event-queue",
     "title": "Event Queue",
-    "intent": "Decouple when an event is sent from when it is handled by putting it in a queue that the receiver drains at a time of its choosing.",
+    "intent": "Put a mailbox between the code that raises an event and the code that reacts to it, so the reaction happens at a moment the receiver picks, such as the end of the frame, instead of in the middle of the sender's call.",
     "problem": "Observer delivers news instantly, inside the sender's call. Sometimes that is the wrong moment: a burst of explosions all ask for the same sound in one frame, a handler spawns actors while physics iterates, or work arrives on a background thread that must be handled on the game thread.",
     "unrealForm": "Unreal gives you the containers (TQueue, TCircularQueue) and several engine-level queues: AsyncTask to the game thread, FTimerManager, and the audio engine's concurrency rules. What you build: a gameplay event queue a subsystem drains at end of tick, a ring buffer that merges duplicate requests (damage numbers, UI toasts, sound cues), and a thread-safe handoff from worker threads.",
     "whenNot": "If listeners can safely react immediately, a delegate is simpler. If the sender needs a reply, a queue takes that away. Remember events must carry all the data they need because the world may change before they are handled, and a central queue is still global state.",
@@ -521,11 +507,11 @@
         "prompt": "What does an Event Queue add that a plain multicast delegate does not?",
         "choices": [
           "Type safety",
-          "Decoupling in time, so handling happens later than sending",
           "Blueprint exposure",
+          "Decoupling in time, so handling happens later than sending",
           "Automatic replication"
         ],
-        "answerIndex": 1,
+        "answerIndex": 2,
         "explanation": "Observer decouples who; Event Queue also decouples when."
       },
       {
@@ -613,7 +599,7 @@
   {
     "id": "state",
     "title": "State",
-    "intent": "Let an object change its behavior when its internal mode changes, by giving each mode its own code and allowing only defined transitions between modes.",
+    "intent": "Organize an actor's behavior by the mode it is in right now (a door that is locked, closed, opening, or open), so each mode owns its own reactions and the actor can only move between modes along transitions you wrote down.",
     "problem": "A character controller grows a pile of booleans (bIsJumping, bIsCrouching, bIsDashing) and every input handler checks combinations of them. Impossible combinations slip through: crouch-jumping mid-dash, or opening a door that is already opening.",
     "unrealForm": "Movement modes on UCharacterMovementComponent are an enum state machine. Animation Blueprints have visual state machines, and State Trees and Behavior Trees handle AI. In gameplay C++ you write a UENUM for the states plus a switch, or a state object per mode with Enter, Tick, and Exit, and you keep entry and exit actions on the state so transitions stay in one place.",
     "whenNot": "Two or three independent flags that never conflict do not need a machine. Rich AI that must weigh many goals outgrows a flat state machine; reach for Behavior Trees or State Trees.",
@@ -625,11 +611,11 @@
         "prompt": "What does a finite state machine guarantee that a set of independent booleans does not?",
         "choices": [
           "Faster execution",
-          "The object is in exactly one state at a time",
           "Automatic replication",
-          "No need for transitions"
+          "No need for transitions",
+          "The object is in exactly one state at a time"
         ],
-        "answerIndex": 1,
+        "answerIndex": 3,
         "explanation": "One current state rules out impossible combinations like jumping and crouching at once."
       },
       {
@@ -713,7 +699,7 @@
   {
     "id": "subclass-sandbox",
     "title": "Subclass Sandbox",
-    "intent": "Define behavior in many subclasses that each implement one method using only a set of helper operations the base class provides.",
+    "intent": "Give a family of subclasses (traps, abilities, card effects) one base class that hands them a toolbox of protected helpers, so each subclass writes a single override using only those tools and never reaches into engine systems on its own.",
     "problem": "Fifty superpowers each need to play sounds, spawn effects, and move the hero. If every power reaches into the audio, VFX, and movement systems directly, the coupling spreads across fifty classes, and changing one engine system means touching all of them.",
     "unrealForm": "UGameplayAbility is the cleanest engine example: subclasses override ActivateAbility and use provided operations such as CommitAbility and ApplyGameplayEffectToOwner. AActor itself gives subclasses GetWorld, timers, and spawn helpers around BeginPlay and Tick. You write your own shallow base classes (UDojoTrapBase with protected helpers like DamageActorsInRadius) and let designers subclass them.",
     "whenNot": "When the variants differ only in numbers, use data (Type Object) instead of fifty classes. When the base class keeps growing helpers for every new subclass, split helpers into components or provider objects before it becomes a dumping ground.",
@@ -724,12 +710,12 @@
         "type": "multiple-choice",
         "prompt": "In Subclass Sandbox, which methods are usually protected and non-virtual on the base?",
         "choices": [
-          "The sandbox method subclasses override",
           "The provided helper operations",
+          "The sandbox method subclasses override",
           "The constructor only",
           "Nothing; everything is public"
         ],
-        "answerIndex": 1,
+        "answerIndex": 0,
         "explanation": "Helpers are protected so only subclasses use them, and non-virtual because they are shared tools, not extension points."
       },
       {
@@ -813,7 +799,7 @@
   {
     "id": "component",
     "title": "Component",
-    "intent": "Build an entity from separate pieces, each owning one domain such as health, movement, or inventory, instead of one class that knows everything.",
+    "intent": "Assemble an actor from small, self-contained parts such as health, inventory, and interaction, so each capability lives in one reusable class and a crate and a boss can share the same health code without sharing a parent class.",
     "problem": "A player class that handles input, physics, animation, health, inventory, and sound grows to thousands of lines, and reusing its health logic on a destructible barrel means copying code or inheriting from the player.",
     "unrealForm": "Unreal is built on this. AActor is the container; UActorComponent holds logic and USceneComponent adds a transform. Engine components include UCharacterMovementComponent, UStaticMeshComponent, and UAbilitySystemComponent. You write UDojoHealthComponent or UDojoInventoryComponent with UCLASS(meta=(BlueprintSpawnableComponent)), find them with FindComponentByClass, and let them talk through delegates or the owner.",
     "whenNot": "A tiny actor with one job does not need three components and wiring between them. If components constantly reach into each other, the split is in the wrong place.",
@@ -915,7 +901,7 @@
   {
     "id": "type-object",
     "title": "Type Object",
-    "intent": "Describe kinds of things with data objects, so adding a new kind means adding data instead of adding a class.",
+    "intent": "Turn \"what kind of thing is this\" into an asset: each enemy, weapon, or potion points at a data asset describing its kind, so designers add and tune kinds in the editor without a new C++ class or a recompile.",
     "problem": "A game with a hundred monster kinds, each a subclass with different health and attacks, needs a programmer and a compile for every new monster, and designers cannot tune kinds on their own.",
     "unrealForm": "This is mainstream Unreal. A UPrimaryDataAsset subclass like UDojoEnemyKind holds shared data (max health, speed, mesh), and each enemy actor keeps a TObjectPtr to its kind. Data Table rows keyed by FName do the same for tabular data. The Asset Manager loads primary assets. You still write the initialization from the kind, any parent-kind inheritance, and validation that every actor has a kind.",
     "whenNot": "If kinds mostly differ in behavior rather than numbers, data cannot express it without growing into a scripting system. With three kinds that never change, plain subclasses are simpler.",
@@ -927,11 +913,11 @@
         "prompt": "In Unreal, which asset type is the most common way to author a Type Object for something like a weapon kind?",
         "choices": [
           "A Level",
-          "A UPrimaryDataAsset subclass",
           "A Material Instance",
+          "A UPrimaryDataAsset subclass",
           "A Blueprint Function Library"
         ],
-        "answerIndex": 1,
+        "answerIndex": 2,
         "explanation": "Data assets hold per-kind data that many actors reference."
       },
       {
@@ -1016,7 +1002,7 @@
   {
     "id": "flyweight",
     "title": "Flyweight",
-    "intent": "Share the data that is identical across many objects so each instance only stores what makes it unique.",
+    "intent": "When a level holds thousands of near-identical things such as trees, tiles, or cards, store what they all have in common once and let each instance keep only its own small leftovers, like a transform or an owner.",
     "problem": "A forest of 20,000 trees where every tree carries its own copy of the mesh, materials, and wind settings wastes memory and floods the GPU with redundant work. Most of that data is the same for every tree of a species.",
     "unrealForm": "Instanced Static Mesh and Hierarchical Instanced Static Mesh components draw thousands of copies of one mesh, each instance only holding a transform. Assets in general are shared: many actors reference one UStaticMesh. In gameplay code you keep per-instance structs small (a coordinate and a pointer to a shared definition asset) and keep the shared part immutable.",
     "whenNot": "If instances need to change the shared data per instance, sharing breaks or forces copy-on-write. With a few dozen objects the savings do not justify the indirection.",
@@ -1028,11 +1014,11 @@
         "prompt": "Which Unreal component draws many copies of one mesh while storing only a transform per copy?",
         "choices": [
           "UStaticMeshComponent",
-          "UInstancedStaticMeshComponent",
           "USkeletalMeshComponent",
-          "UDecalComponent"
+          "UDecalComponent",
+          "UInstancedStaticMeshComponent"
         ],
-        "answerIndex": 1,
+        "answerIndex": 3,
         "explanation": "ISM (and HISM with LOD clustering) is the engine's flyweight for rendering."
       },
       {
@@ -1114,7 +1100,7 @@
   {
     "id": "prototype",
     "title": "Prototype",
-    "intent": "Create new objects by copying an existing, already configured object instead of building each one from scratch.",
+    "intent": "Make new objects by duplicating one that is already set up the way you want, such as a hand-tuned elite guard or a class default object, so the copy starts with that tuning instead of bare defaults.",
     "problem": "Spawners need to make not just the right class but the right starting setup: a fast ghost, a slow armored ghost, a ghost holding a key. Writing a spawner class per variant multiplies classes, and constructors cannot easily capture tuned state.",
     "unrealForm": "Every UClass has a Class Default Object, and NewObject and SpawnActor copy property defaults from it, so Unreal is prototype-based at its core. FActorSpawnParameters::Template spawns a copy of a specific actor including its tuned values, and DuplicateObject deep-copies a UObject. Blueprint child classes inherit and override defaults, and Material Instances inherit parent parameters.",
     "whenNot": "When kinds are better described as data assets (Type Object) or composed from components, cloning live objects adds confusion about what gets copied. If shallow versus deep copy of subobjects is unclear, cloning will produce subtle shared-state bugs.",
@@ -1136,12 +1122,12 @@
         "type": "multiple-choice",
         "prompt": "Which spawn parameter lets SpawnActor copy property values from an existing actor instead of the class defaults?",
         "choices": [
-          "Owner",
           "Template",
+          "Owner",
           "Instigator",
           "Name"
         ],
-        "answerIndex": 1,
+        "answerIndex": 0,
         "explanation": "FActorSpawnParameters::Template is clone-from-prototype."
       },
       {
@@ -1216,7 +1202,7 @@
   {
     "id": "bytecode",
     "title": "Bytecode",
-    "intent": "Describe behavior as data: a list of simple instructions that a small virtual machine inside the game executes.",
+    "intent": "Let designers or modders write behavior as a short list of small instructions stored in an asset, and run that list with a tiny interpreter inside the game, so new behavior ships without a C++ compile and cannot reach past what the instructions allow.",
     "problem": "Some behavior changes too often, or comes from people who should not touch C++: spell effects, card rules, modder scripts. Compiling native code for each change is slow, and running untrusted native code is unsafe.",
     "unrealForm": "Blueprint is a bytecode virtual machine: the Blueprint compiler turns graphs into instructions the engine interprets. Niagara compiles module graphs to its own VM, and materials compile to shaders. You would write your own only for a narrow domain such as card effects or item formulas, often as a TArray of instruction structs authored in a data asset, with a stack-based interpreter and hard limits on stack size and instruction count.",
     "whenNot": "Hot engine paths where interpretation is too slow, and any project without time to build authoring and debugging tools, since you lose the C++ debugger inside the VM. If Blueprint already serves designers, a custom VM is rarely worth it.",
@@ -1317,7 +1303,7 @@
   {
     "id": "singleton",
     "title": "Singleton",
-    "intent": "Guarantee a class has exactly one instance and give global access to it.",
+    "intent": "Make a class responsible for there only ever being one of it, and let any code fetch that one object through the class itself. In Unreal you mostly learn it to spot it and swap it for a subsystem with a real owner.",
     "problem": "Some things feel naturally single (the audio device, the save system), so a static GetInstance looks convenient. The trouble is that global access lets any code reach in from anywhere, hides dependencies, makes order of initialization fragile, and makes tests share state.",
     "unrealForm": "Gameplay code should rarely write a classic singleton. Unreal gives scoped, engine-managed single instances instead: UGameInstanceSubsystem lives as long as the game, UWorldSubsystem per world, ULocalPlayerSubsystem per local player, and UEngineSubsystem for the engine. Reach them with GetSubsystem<T>() from the right owner. Existing roots like the Game Mode, Game State, and Game Instance already hold per-game objects.",
     "whenNot": "Almost always skip the full pattern. If the real need is convenient access, pass the object in or use a subsystem with a defined lifetime. A static pointer to a UObject outside UPROPERTY can be garbage collected and leave a dangling pointer.",
@@ -1328,12 +1314,12 @@
         "type": "multiple-choice",
         "prompt": "Which Unreal type gives you one engine-managed instance per running game, created and destroyed for you?",
         "choices": [
-          "UGameInstanceSubsystem",
           "AActor with a static pointer",
           "UBlueprintFunctionLibrary",
+          "UGameInstanceSubsystem",
           "FTickableGameObject"
         ],
-        "answerIndex": 0,
+        "answerIndex": 2,
         "explanation": "A Game Instance Subsystem has one instance per game instance with a lifetime the engine controls."
       },
       {
@@ -1417,7 +1403,7 @@
   {
     "id": "service-locator",
     "title": "Service Locator",
-    "intent": "Give code a single place to find a service through an interface, without knowing which concrete class provides it or who created it.",
+    "intent": "Let code ask a central registry for \"the audio service\" or \"the analytics service\" by interface and get back whichever implementation was registered (real, silent, or a test double), without knowing which class that is.",
     "problem": "Audio, analytics, and haptics are needed from all over the codebase. Passing them through every function is tedious, and a singleton welds callers to one concrete class, which blocks swapping in a silent or logging version for tests or a different platform.",
     "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem can hold a provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's literal locator for plugin features. Always provide a null provider so callers never check for nullptr.",
     "whenNot": "If the dependency can be passed in through a constructor or function parameter, do that; it stays visible. Do not use a locator for something that should only be reachable in one context or phase, because a global lookup cannot enforce that.",
@@ -1429,11 +1415,11 @@
         "prompt": "What does a null service provide?",
         "choices": [
           "A crash when used, to catch bugs",
-          "A do-nothing implementation so callers never have to check for a missing service",
           "A cached copy of the last service",
-          "A network fallback"
+          "A network fallback",
+          "A do-nothing implementation so callers never have to check for a missing service"
         ],
-        "answerIndex": 1,
+        "answerIndex": 3,
         "explanation": "The null object keeps code working when no real provider is registered, such as in tests or a dedicated server."
       },
       {
@@ -1491,12 +1477,12 @@
         "type": "multiple-choice",
         "prompt": "A trap is spawned by a spawner that already holds a reference to the audio subsystem. The trap needs audio. What is the better choice than having the trap look the service up globally?",
         "choices": [
-          "Make the audio subsystem a static singleton",
           "Have the spawner pass the audio interface to the trap when it spawns it",
+          "Make the audio subsystem a static singleton",
           "Broadcast a delegate asking someone to play the sound",
           "Queue the sound request for the next frame"
         ],
-        "answerIndex": 1,
+        "answerIndex": 0,
         "explanation": "When a caller already has the dependency, passing it in keeps it visible in the trap's interface. A locator is the fallback when passing in is impractical, not the default."
       }
     ]
@@ -1504,7 +1490,7 @@
   {
     "id": "object-pool",
     "title": "Object Pool",
-    "intent": "Keep a set of reusable objects alive and hand them out and back instead of creating and destroying them repeatedly.",
+    "intent": "Spawn a batch of projectiles, effects, or enemies up front, then lend them out and take them back as play needs them, so the busiest moments of a fight never pay the cost of spawning and destroying actors.",
     "problem": "A minigun fires 20 bullets per second. Spawning an actor for each runs construction, component registration, and BeginPlay, then destroying it feeds the garbage collector. The hitches show up exactly when the action is most intense.",
     "unrealForm": "Actor spawning is expensive, so pooling actors is a standard optimization. Niagara already pools its components. You write a pool as a UWorldSubsystem or a manager actor holding a TArray of inactive actors per class, with an explicit reset protocol: hide with SetActorHiddenInGame, disable collision and tick, clear timers and delegates, then fully reinitialize on acquire.",
     "whenNot": "If objects are created rarely, or vary wildly in size and type, the pool wastes memory and adds a reset burden. Measure spawn cost before pooling. Forgetting to reset a field gives bugs that look almost right.",
@@ -1526,11 +1512,11 @@
       {
         "id": "object-pool-recall-2",
         "type": "spot-the-bug",
-        "prompt": "This pool returns a projectile for reuse. Which line is missing a reset, causing old behavior to leak into the next shot?",
-        "code": "void UDojoProjectilePool::Release(ADojoProjectile* Projectile)\n{\n    Projectile->SetActorHiddenInGame(true);\n    Projectile->SetActorEnableCollision(false);\n    Projectile->SetActorTickEnabled(false);\n    Inactive.Add(Projectile);\n}",
-        "bugLine": 6,
-        "fix": "Before this line, also reset gameplay state (for example call Projectile->ResetForPool() to clear velocity, owner, hit list, and pending timers) before adding it back.",
-        "explanation": "Hiding and disabling is not enough; stale velocity, timers, or hit lists from the last life carry into the next one."
+        "prompt": "This pool hands a projectile back out for its next shot. Exactly one line is wrong. Which one?",
+        "code": "ADojoProjectile* UDojoProjectilePool::Acquire(const FTransform& Muzzle)\n{\n    if (Inactive.IsEmpty()) { return SpawnFreshProjectile(Muzzle); }\n    ADojoProjectile* Projectile = Inactive.Pop();\n    Projectile->SetActorTransform(Muzzle);\n    Projectile->ResetForPool();\n    Projectile->SetActorHiddenInGame(false);\n    Projectile->SetActorEnableCollision(false);\n    Projectile->SetActorTickEnabled(true);\n    return Projectile;\n}",
+        "bugLine": 8,
+        "fix": "Turn collision back on with SetActorEnableCollision(true); release turned it off, so acquire must undo it.",
+        "explanation": "Acquire must reverse every step of release. Leaving collision off makes every reused projectile pass straight through its target."
       },
       {
         "id": "object-pool-recall-3",
@@ -1578,11 +1564,11 @@
         "prompt": "A dungeon spawns its single boss once per level, and a teammate proposes pooling it. What is the best response?",
         "choices": [
           "Pool it, since pooling is always faster",
-          "Skip pooling; one spawn per level costs little and pooling adds a reset burden for no gain",
           "Pool it with a capacity of ten to be safe",
+          "Skip pooling; one spawn per level costs little and pooling adds a reset burden for no gain",
           "Make the boss a singleton instead"
         ],
-        "answerIndex": 1,
+        "answerIndex": 2,
         "explanation": "Pool things created and destroyed often. A once-per-level spawn does not justify reset logic and a pool's memory."
       }
     ]
@@ -1590,7 +1576,7 @@
   {
     "id": "dirty-flag",
     "title": "Dirty Flag",
-    "intent": "Mark derived data as out of date when its inputs change, and recompute it only when someone actually reads it.",
+    "intent": "When an expensive result (final stats, a total weight, a world transform) depends on inputs that change often, just raise a flag on each change and do the real recompute once, the next time someone asks for the result.",
     "problem": "A character's final stats depend on base stats, ten equipment slots, and active buffs. Recomputing every time any input changes wastes work when several changes land in one frame, while recomputing every Tick wastes work when nothing changed.",
     "unrealForm": "The engine uses dirty flags everywhere: scene components cache world transforms and mark them stale when local transforms change, MarkRenderStateDirty tells the render thread what to resend, packages track unsaved changes, and push-model replication marks properties dirty. In gameplay code you keep a bStatsDirty bool, set it in every setter, and recompute inside the getter when it is set.",
     "whenNot": "When a running total is simpler (adding and subtracting one value), keep the total. When deferring could lose work or cause a hitch at a bad moment, compute eagerly. The risk is missing a mutation path, so route every change through a small set of functions.",
@@ -1610,11 +1596,11 @@
       {
         "id": "dirty-flag-recall-2",
         "type": "spot-the-bug",
-        "prompt": "Stats are cached behind a dirty flag. Which function breaks the cache?",
-        "code": "void UDojoStatsComponent::EquipItem(const UDojoItemKind* Item)\n{\n    Equipped.Add(Item);\n    bStatsDirty = true;\n}\n\nvoid UDojoStatsComponent::AddBuff(const FDojoBuff& Buff)\n{\n    ActiveBuffs.Add(Buff);\n}",
-        "bugLine": 9,
-        "fix": "Set bStatsDirty = true in AddBuff too, or route both changes through one function that sets it.",
-        "explanation": "Any mutation path that forgets to set the flag leaves stale derived data."
+        "prompt": "Stats are cached behind a dirty flag. Exactly one line is wrong. Which one?",
+        "code": "void UDojoStatsComponent::EquipItem(const UDojoItemKind* Item)\n{\n    Equipped.Add(Item);\n    bStatsDirty = true;\n}\n\nvoid UDojoStatsComponent::AddBuff(const FDojoBuff& Buff)\n{\n    ActiveBuffs.Add(Buff);\n    bStatsDirty = false;\n}",
+        "bugLine": 10,
+        "fix": "Set bStatsDirty = true after adding the buff; only the recompute should clear the flag.",
+        "explanation": "Clearing the flag on a change tells the getter the cached stats are current, so the new buff never shows up in them."
       },
       {
         "id": "dirty-flag-recall-3",
@@ -1622,11 +1608,11 @@
         "prompt": "When is a dirty flag the wrong tool?",
         "choices": [
           "When derived data is expensive and read rarely",
-          "When a simple running total can be updated in constant time per change",
           "When several changes land in one frame",
-          "When derived data is cached"
+          "When derived data is cached",
+          "When a simple running total can be updated in constant time per change"
         ],
-        "answerIndex": 1,
+        "answerIndex": 3,
         "explanation": "If you can update the result incrementally for free, a flag only adds a branch and a chance to forget."
       }
     ],
@@ -1690,7 +1676,7 @@
   {
     "id": "spatial-partition",
     "title": "Spatial Partition",
-    "intent": "Store objects in a structure organized by position so you can find what is near a point without checking everything.",
+    "intent": "Bucket objects by where they are in the world, like cells on a grid, so a question such as \"which guards are within 15 meters\" only looks in the nearby buckets instead of at every guard in the level.",
     "problem": "Each of 2,000 boids needs its neighbors within 5 meters. Checking every pair is four million distance tests per frame, almost all between boids that are nowhere near each other.",
     "unrealForm": "The engine partitions space for you in most places: the physics broadphase answers overlaps, sweeps, and traces (OverlapMultiByChannel, SweepSingleByChannel), World Partition streams by grid cell, the renderer culls through an octree, and TOctree2 is a reusable template. You write your own for gameplay data physics does not know about: a uniform grid keyed by FIntPoint in a TMap for flocking neighbors, influence maps, or tile logic, and you re-file objects when they move between cells.",
     "whenNot": "With a few dozen objects, a plain loop is simpler and fast enough. If physics already tracks the objects, an overlap query is usually better than a second structure you must keep in sync.",
@@ -1701,12 +1687,12 @@
         "type": "multiple-choice",
         "prompt": "What must happen when an object in a uniform grid moves across a cell boundary?",
         "choices": [
-          "Nothing; the grid recalculates each query",
           "It must be removed from its old cell and added to its new one",
+          "Nothing; the grid recalculates each query",
           "The whole grid must be rebuilt",
           "The cell size must change"
         ],
-        "answerIndex": 1,
+        "answerIndex": 0,
         "explanation": "A grid is like a hash table whose keys change as objects move, so moves must re-file entries."
       },
       {
@@ -1780,7 +1766,7 @@
   {
     "id": "data-locality",
     "title": "Data Locality",
-    "intent": "Arrange data in memory so the processor reads it in order from cache, instead of jumping around through pointers.",
+    "intent": "Lay out the data a hot loop touches as tightly packed arrays it can walk front to back, so the CPU finds the next element already sitting in cache instead of stalling on pointer after pointer.",
     "problem": "Updating 10,000 particles that each live in their own heap object means following 10,000 pointers to scattered memory. The CPU spends most of the frame waiting on cache misses, not doing math.",
     "unrealForm": "Mass Entity is Unreal's data-oriented framework: fragments are plain structs stored in chunks per archetype, and processors iterate them in bulk. Niagara and instanced meshes keep packed buffers. In gameplay code you replace thousands of actors with one manager that holds a TArray of small structs, keeps active elements packed at the front, and splits rarely used fields into a separate array. Unreal Insights confirms whether it helped.",
     "whenNot": "Code that runs rarely, or only for a handful of objects, gains nothing and loses readability, interfaces, and inheritance. Always profile first; this is an optimization with real design cost.",
@@ -1792,11 +1778,11 @@
         "prompt": "Why is iterating a TArray<FDojoParticle> usually faster than iterating a TArray<UDojoParticle*>?",
         "choices": [
           "Structs are smaller than pointers",
-          "The struct array is contiguous, so the CPU reads neighbors from cache instead of chasing pointers",
           "Pointers cannot be iterated in a range-based for",
+          "The struct array is contiguous, so the CPU reads neighbors from cache instead of chasing pointers",
           "UObjects are always slower to read than structs"
         ],
-        "answerIndex": 1,
+        "answerIndex": 2,
         "explanation": "Contiguous memory lets cache lines and prefetching do their job."
       },
       {
@@ -1854,11 +1840,11 @@
         "prompt": "A menu with 30 buttons feels sluggish, and a teammate proposes rewriting the buttons as packed struct arrays for cache efficiency. What should come first?",
         "choices": [
           "Do the rewrite; cache misses are always the cause",
-          "Profile with Unreal Insights, because 30 buttons cannot plausibly cause a cache bottleneck",
           "Convert the buttons to Mass entities",
-          "Pool the buttons"
+          "Pool the buttons",
+          "Profile with Unreal Insights, because 30 buttons cannot plausibly cause a cache bottleneck"
         ],
-        "answerIndex": 1,
+        "answerIndex": 3,
         "explanation": "Data Locality is for large, hot loops confirmed by a profiler. Thirty widgets are almost certainly slow for another reason."
       }
     ]
@@ -1866,9 +1852,9 @@
   {
     "id": "strategy",
     "title": "Strategy",
-    "intent": "Put one interchangeable algorithm behind an interface so the object using it can be handed a different one without changing its own code.",
+    "intent": "Hand an object a pluggable rule object, such as how a turret picks its target, so different actors run different rules (picked by a designer in the Details panel) while the class that uses the rule stays exactly the same.",
     "problem": "An AI targeting component picks a target by nearest, lowest health, or highest threat depending on the enemy. A growing switch statement inside the component mixes every rule together, and adding a rule means editing a class many enemies depend on.",
-    "unrealForm": "Write a UINTERFACE or an abstract UObject class (UDojoTargetingRule with a virtual ChooseTarget), give the component an Instanced UPROPERTY of that type so designers pick and tune a rule per enemy in the Details panel, and call it through the interface. Environment Query tests and Behavior Tree decorators are engine examples of pluggable algorithms. A TFunction member is the lightweight form for one-off cases.",
+    "unrealForm": "Write an abstract UObject base marked UCLASS(Abstract, EditInlineNew), for example UDojoTargetingRule with a virtual ChooseTarget, and give the component a UPROPERTY(EditAnywhere, Instanced) TObjectPtr<UDojoTargetingRule>. Designers then pick and tune a rule per enemy in the Details panel. The Instanced property must point at that abstract UObject base, not at a UINTERFACE, because the editor can only create inline subobjects of a UObject class. Environment Query tests and Behavior Tree decorators are engine examples of pluggable rules. A TFunction member is the lightweight form for one-off cases.",
     "whenNot": "If there are two fixed variants that never change, an if statement is clearer. If the object changes its own behavior based on its mode, that is State, not Strategy. Strategies that need lots of the owner's private data are a sign the split is wrong.",
     "useCaseQuestIds": [],
     "recall": [
@@ -1877,12 +1863,12 @@
         "type": "multiple-choice",
         "prompt": "What separates Strategy from State?",
         "choices": [
-          "Strategy uses interfaces and State does not",
           "A strategy is usually chosen from outside and stays put, while states switch themselves in response to events",
+          "Strategy uses interfaces and State does not",
           "State is only for AI",
           "They are the same pattern"
         ],
-        "answerIndex": 1,
+        "answerIndex": 0,
         "explanation": "Same shape, different intent: who chooses the delegate and how often it changes."
       },
       {
@@ -1967,7 +1953,7 @@
   {
     "id": "factory-method",
     "title": "Factory Method",
-    "intent": "Move the decision of which concrete class to create into one function, so callers ask for an object and receive the right kind without naming its class.",
+    "intent": "Route \"make me a projectile\" through one creation function that decides which class to spawn and sets it up, so call sites ask for a result and never hard-code a concrete class.",
     "problem": "Spawning code across the project names concrete classes directly, so changing which projectile a weapon fires, or routing creation through a pool, means editing every spawn site.",
     "unrealForm": "In Unreal the class choice is usually data: a TSubclassOf<ADojoProjectile> UPROPERTY that a designer sets, passed to SpawnActor. A factory function (UDojoWeaponKind::SpawnProjectile, or a static Create helper) centralizes deferred spawning with SpawnActorDeferred and FinishSpawning so initialization happens before BeginPlay, and is the natural place to add pooling later.",
     "whenNot": "If there is one class and one call site, a direct SpawnActor is clearer. Do not build abstract factory hierarchies when a TSubclassOf property already lets designers choose the class.",
@@ -2066,7 +2052,7 @@
   {
     "id": "facade",
     "title": "Facade",
-    "intent": "Offer one small, simple interface in front of a complicated subsystem, so most callers never deal with the subsystem's details.",
+    "intent": "Put a short list of plain, task-named functions such as SaveCheckpoint and LoadLatest in front of a tangled system, so the rest of the game uses those few calls and never has to learn the system's internals.",
     "problem": "Saving the game touches USaveGame objects, slot names, user indices, async callbacks, and version migration. If every menu and checkpoint actor talks to all of that directly, the details leak everywhere and a change in the save format touches dozens of files.",
     "unrealForm": "UGameplayStatics is a facade over many engine services (spawning, saving, sound, level loading). You build your own as a subsystem with a few intention-revealing functions, for example UDojoSaveSubsystem with SaveCheckpoint and LoadLatest that hides SaveGameToSlot, AsyncSaveGameToSlot, and slot naming. Blueprint function libraries are a lightweight facade for designers.",
     "whenNot": "If callers truly need the subsystem's full power, a thin facade becomes a bottleneck that keeps growing pass-through functions. Do not wrap a simple API just to wrap it.",
@@ -2077,12 +2063,12 @@
         "type": "multiple-choice",
         "prompt": "Which engine class is a broad facade over many engine services such as spawning, sound, and saving?",
         "choices": [
-          "UGameplayStatics",
           "UCharacterMovementComponent",
           "FVector",
+          "UGameplayStatics",
           "UInputAction"
         ],
-        "answerIndex": 0,
+        "answerIndex": 2,
         "explanation": "UGameplayStatics exposes many unrelated services through simple static functions."
       },
       {

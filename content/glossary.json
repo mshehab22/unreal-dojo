@@ -704,13 +704,13 @@
       "uproperty",
       "ufunction",
       "meta-specifier"
-    ]
+    ],
+    "linkMode": "code-only"
   },
   {
     "id": "meta-specifier",
     "term": "meta specifiers",
     "aliases": [
-      "meta",
       "meta=()",
       "metadata specifiers",
       "ClampMin",
@@ -1500,7 +1500,6 @@
       "RemoveDynamic",
       "RemoveAll",
       "Unbind",
-      "Remove",
       "FDelegateHandle"
     ],
     "category": "framework",
@@ -1585,7 +1584,8 @@
       "isvalid",
       "uinterface",
       "overlap-event"
-    ]
+    ],
+    "linkMode": "code-only"
   },
   {
     "id": "isa",
@@ -1598,7 +1598,7 @@
     "category": "object model",
     "short": "A check that answers whether an object is a given class or a child of it, without converting the pointer.",
     "long": "Other->IsA(ADojoEnemy::StaticClass()) or Other->IsA<ADojoEnemy>() returns true or false. Use it when you only need the yes or no answer, for example to decide which sound to play. When you also need to call functions on the result, Cast is better because it checks and converts in one step. StaticClass() returns the UClass that describes a C++ type, which is also what you pass when a function asks for a class.",
-    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/UObject?application_version=5.8",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/UObjectBaseUtility/IsA?application_version=5.8",
     "related": [
       "cast",
       "tsubclassof",
@@ -1624,7 +1624,8 @@
       "isvalid",
       "object-pool",
       "spawnactor"
-    ]
+    ],
+    "linkMode": "code-only"
   },
   {
     "id": "on-construction",
@@ -1665,8 +1666,7 @@
     "term": "TMap",
     "aliases": [
       "TMap<K, V>",
-      "map container",
-      "dictionary"
+      "map container"
     ],
     "category": "containers",
     "short": "A container of key and value pairs with fast lookup by key, like a dictionary.",
@@ -2110,7 +2110,6 @@
       "AddImpulse",
       "AddForce",
       "Chaos",
-      "physics asset",
       "ragdoll"
     ],
     "category": "physics",
@@ -3001,9 +3000,7 @@
     "term": "check",
     "aliases": [
       "check()",
-      "checkf",
-      "verify",
-      "assert"
+      "checkf"
     ],
     "category": "debugging",
     "short": "An assertion that stops the program immediately if a condition you swear is always true turns out false.",
@@ -3013,7 +3010,8 @@
       "ensure-macro",
       "isvalid",
       "ue-log"
-    ]
+    ],
+    "linkMode": "code-only"
   },
   {
     "id": "ensure-macro",
@@ -3031,7 +3029,8 @@
       "check-macro",
       "isvalid",
       "ue-log"
-    ]
+    ],
+    "linkMode": "code-only"
   },
   {
     "id": "live-coding",
@@ -3416,7 +3415,7 @@
     "category": "framework",
     "short": "A global pointer to the running engine object, used for engine-wide services such as on-screen debug messages.",
     "long": "GEngine points at the single UEngine instance. Gameplay code mostly touches it for AddOnScreenDebugMessage and for engine subsystems, and it can be null very early in startup, so check it before use. It is a global, which makes it convenient and also easy to overuse; prefer reaching things through the world, the game instance, or a subsystem so dependencies stay visible.",
-    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UEngine/AddOnScreenDebugMessage?application_version=5.8",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UEngine?application_version=5.8",
     "related": [
       "on-screen-debug-message",
       "engine-subsystem",
@@ -3481,9 +3480,7 @@
     "term": "Super",
     "aliases": [
       "Super::BeginPlay",
-      "Super::Tick",
-      "override",
-      "virtual"
+      "Super::Tick"
     ],
     "category": "cpp idiom",
     "short": "An alias for the parent class, used to call the parent's version of a function you have overridden.",
@@ -3494,7 +3491,8 @@
       "tick",
       "endplay",
       "setup-player-input-component"
-    ]
+    ],
+    "linkMode": "code-only"
   },
   {
     "id": "object-pool",

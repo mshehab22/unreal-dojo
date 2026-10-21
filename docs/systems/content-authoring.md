@@ -24,17 +24,19 @@ One complete example per kind lives in `content/examples/` (concept, breakdown, 
 
 ### Glossary entries (`content/glossary.json`)
 
-Ids are kebab-case (`actor-component`). `short` is one sentence ending in a period, for the hover card. `long` is one paragraph in our own words. `unrealDocsUrl` is locale-free and pinned to the engine version: `https://dev.epicgames.com/documentation/unreal-engine/<path>?application_version=5.8`. API links use 5.8's flat paths (`API/Runtime/<Module>/<Symbol>`). Every `related` id must exist in the file. `category` is a lowercase display label from the existing set (for example `framework`, `reflection`, `object model`); reuse one before adding a new one. Leave `firstQuestId` out until the quest exists.
+Ids are kebab-case (`actor-component`). `short` is one sentence ending in a period, for the hover card. `long` is one paragraph in our own words. `unrealDocsUrl` is locale-free and pinned to the engine version: `https://dev.epicgames.com/documentation/unreal-engine/<path>?application_version=5.8`. API links use 5.8's flat paths (`API/Runtime/<Module>/<Symbol>`). Every `related` id must exist in the file. `category` is a display label copied exactly from the existing set (mostly lowercase words such as `framework` or `object model`; acronyms such as `AI` and `UI` stay uppercase); reuse one before adding a new one. Leave `firstQuestId` out until the quest exists. Set `linkMode: "code-only"` on any entry whose term is also an everyday English word (`check`, `ensure`, `Cast`, `Destroy`, `Category`, `Super`), so it links only inside inline code (A62). Aliases must be specific to the entry: never a bare English or C++ keyword such as `override`, `virtual`, `assert`, or `Remove`.
 
 ### Drill items (pattern `recall[]` and `scenarios[]`, concept `questions[]`)
 
-Every item has `id` (kebab-case, unique across all content; pattern items use `<pattern-id>-recall-<n>` and `<pattern-id>-scenario-<n>`), `type`, `prompt`, and `explanation` (shown after answering). Extra fields per type:
+Every item has `id` (kebab-case, unique within its quest or pattern card; pattern items use `<pattern-id>-recall-<n>` and `<pattern-id>-scenario-<n>`), `type`, `prompt`, and `explanation` (shown after answering). Extra fields per type:
 
 - `multiple-choice`: `choices[]` (3 or more, distinct), `answerIndex` (0-based).
 - `fill-blank`: `prompt` holds exactly one `___`; `acceptedAnswers[]` lists every spelling that counts as correct.
 - `which-pattern`: `choices[]` are pattern ids from `content/patterns.json`, `answer` is one of them, `distractorNotes[]` is `{ choice, why }` for every wrong choice (why it looks right and why it is not).
 - `spot-the-bug`: `code` (C++ snippet, no leading or trailing blank line), `bugLine` (1-based line in `code`), `fix` (one sentence, no code dump).
 - `explain-in-one-sentence`: `modelAnswer`, `rubric[]` (the points a learner's sentence must hit).
+
+Spot-the-bug code has exactly one wrong line; a missing line is not a bug line, so write the code so the mistake sits on a line that is present. Spread `answerIndex` across positions (the drill runner also shuffles, A61). Intents and every other card field are written from scratch around an Unreal example, never as a rewording of a book or Gang of Four intent line.
 
 Pattern cards list ids in Part 3 teaching order, with Strategy, Factory Method (`factory-method`), and Facade after the 19 book patterns. Scenarios are mostly `which-pattern`; a scenario may answer a neighboring pattern to sharpen the contrast, and a "when not" scenario is written as `multiple-choice`, never as a which-pattern item whose answer is the pattern to avoid.
 
