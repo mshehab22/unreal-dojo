@@ -37,6 +37,59 @@ The M0.2 shape had one message and one action. The Mac can have a blocking probl
 
 ### A160 2026-10-21 `EngineSource` gains `launcher`; the launcher's install list is read first on both platforms (builder-unreal, M1.1)
 Options: treat engines from `LauncherInstalled.dat` as `default-folder`; give them their own source. Chosen: their own source, because the launcher list also finds engines in non-default folders (as on this Mac). Search order is launcher list, registry, default folders; a folder found twice keeps the first source. Plugin entries in the list (`QuixelBridge_5.8`, `FabPlugin_5.8`) share the engine's folder and are skipped by name (`UE_<version>` only). Reverse cost: none.
+### A137 2026-10-21 A first boss pass adds a module to the studio (M1.6, builder-rules)
+product.md says each shipped mechanic adds a module to the engine room but no rule says when. Options: every build pass; every boss pass; leave it to the UI. Chosen: the first pass of a boss adds the boss id to `studio.modules`, alongside the freeze and armor the boss earns. Reverse cost: low.
+
+### A136 2026-10-21 Rules read a narrow `RuleQuest`, not the content types (M1.6, builder-rules)
+`src/shared/types/content.ts` is empty on this branch (M0.4 is in review). Options: wait; copy the content types; define the few facts the rules need. Chosen: `RuleQuest` (id, title, kind, difficulty, xp, pack and world ids with their orders, order, scaffold, prerequisites, terms, patterns, skills) plus `contentFacts.ts` mirroring `QuestKind` and `ScaffoldLevel`. After M0.4 merges, `contentFacts.ts` re-exports from `content.ts` and a small mapper turns a loaded `Pack` into `RuleQuest[]`. Reverse cost: low.
+
+### A135 2026-10-21 Ten progress IPC methods wired now; the rest wait for content (M1.6, builder-rules)
+Wired: `getProgress`, `getRules`, `setPlayerName`, `saveQuestDraft`, `resetQuest`, `recordTermHover`, `queueDrillItem`, `chooseDailyOffer`, `resetProgress`, `getDrillSummary`. Not yet: `getQuestAvailability`, `revealHint`, `submitConcept`, `submitBreakdown`, `reviseBreakdown`, `getDailyQuest`, `answerDrillItem`, `finishDrill`, because they need quest facts, hint text, questions, or drill items from the content loader; the service methods behind them exist and are tested. `revealHint` with no hints left answers `invalid-payload` (no closer error code exists). `HandlerDependencies` gained `progressService`. Reverse cost: none.
+
+### A134 2026-10-21 Rematches replay passed quests and are found when the World Map loads (M1.6, builder-rules)
+Options: a due item surfaces any quest using it; only passed quests. Chosen: passed non-boss quests that use the term or pattern, from a different world than the item was earned in when one exists, else the same world, ties in map order. Found in `getQuestAvailability` from today's due items. A rematch pays 50% only once it is due. Reverse cost: low.
+
+### A133 2026-10-21 Save file keeps a backup and quarantines a corrupt file (M1.6, builder-rules)
+Options for corrupt-file recovery: start fresh; keep a `.bak` of the last good save and fall back to it. Chosen: every write copies the current file to `progress.json.bak` before the rename; a bad main file is renamed to `progress.json.corrupt-<time>` (kept, never deleted) and the backup is loaded; both bad gives a fresh save. A save from a newer app version is refused with `save-failed` instead of being overwritten. Reverse cost: none.
+
+### A132 2026-10-21 Daily quest details (M1.6, builder-rules)
+Offers with no candidate (no available concept, no short build) are left out, so a day can have fewer than three. The chest picks with equal odds among rewards the learner can still hold (freeze below 2, armor below 2, stone below 2, an unowned cosmetic); the potion is always possible. Cosmetics are eight placeholder ids in `rules.ts` until ui-core designs them. A drill offer matches any finished drill; concept and build offers need their quest passed. A new save has an empty daily date so the first day gets offers. Reverse cost: low.
+
+### A131 2026-10-21 Pack gates are written by pack and world order (M1.6, builder-rules)
+"Pack 4 unlocks after Pack 1 world 5 and Pack 2 world 4 bosses" is stored as `PACK_GATES` in `rules.ts` by order, not by id, so renaming pack folders does not break it. The gate locks every quest of Pack 4, including its first quest. Reverse cost: none.
+
+### A130 2026-10-21 Test-out is checked after every drill (M1.6, builder-rules)
+Options: a special "world test-out drill"; check after any drill. Chosen: after any finished drill, every world whose terms (all terms of its quests) are at least proficient is tested out. In a tested-out world the term rule is waived, worked and faded build quests are marked skippable, and a skippable quest counts as a met prerequisite. Bosses never skip. Reverse cost: medium once learners rely on it.
+
+### A129 2026-10-21 Order of XP modifiers and the potion (M1.6, builder-rules)
+Hint cost comes off the first-pass XP and can never take it below 0. The spree bonus is 5% of what is left after hints. The XP potion adds 50% to everything earned while active, including drill XP (10 becomes 15) and effort XP. Reverse cost: none.
+
+### A128 2026-10-21 Skill points on first pass and rematch only (M1.6, builder-rules)
+Options: points on every pass; first pass only; first pass and rematch. Chosen: first pass and rematch, matching XP so repeats cannot farm points. Cards count each quest once per pattern anyway. Reverse cost: none.
+
+### A127 2026-10-21 Mastery lives on items; a skill shows its weakest item (M1.6, builder-rules)
+The spec has mastery on skills but says it comes from the scheduler, whose items are terms, cards, Parsons blocks, and scenarios; unlocks also need terms at familiar. Chosen: each review item has its own mastery in `memory` (attempted on first sight, familiar after 1 success in a row, proficient after 3 in a row, mastered at an interval of 30 days or more; any miss drops one level). A skill's mastery is the lowest of its items (items carry `skillId` from the drill that reviewed them), so one missed item shows the skill as due for review. Every miss of a scheduled item drops mastery, not only misses inside mixed drills, because every drill is mixed. Reverse cost: medium.
+
+### A126 2026-10-21 Streak counts active days in local time (M1.6, builder-rules)
+The count goes up by one per calendar day (learner's local time) with a completed drill or passed quest. A gap of up to 3 days keeps it; each freeze covers 3 more days and is spent automatically; without enough freezes the streak restarts at 1 and the unused freezes stay. Milestones 7, 30, 100 are celebrated each time the count reaches them and recorded once. Reverse cost: low.
+
+### A125 2026-10-21 Only the first Submit of a never-passed build or refactor moves the spree (M1.6, builder-rules)
+A first-try pass adds 1; a first-try miss resets to 0 unless armor absorbs it. Later submits of the same quest neither add nor break (the first miss already counted), and repeats of passed quests do not count, so the spree cannot be farmed. Reverse cost: low.
+
+### A124 2026-10-21 Armor is capped at 2 and comes from first boss passes and chests (M1.6, builder-rules)
+The spec gives no cap. Options: 1; 2 like freezes and stones; none. Chosen: 2. Reverse cost: none.
+
+### A123 2026-10-21 SM-2 ease changes on every review (M1.6, builder-rules)
+Original SM-2 is unclear on whether a miss changes ease. Chosen: the standard ease formula runs on every review (so misses lower ease, never below 1.3); the next interval uses the ease before this review's change. A miss restarts at 1 day. Reverse cost: none until FSRS replaces it.
+
+### A122 2026-10-21 Quality of plain drill answers and low misses (M1.6, builder-rules)
+The spec maps scores to quality but drill items are right or wrong. Chosen: right is 4, wrong is 1; scored items use the table, and a miss scoring 50 or more is 2, lower is 1. Reverse cost: none.
+
+### A121 2026-10-21 How rematch and solution views pay (M1.6, builder-rules)
+A rematch pass pays 50% of the full first-pass XP after the difficulty multiplier, and counts only once its due time has come. After viewing the solution without a stone, passing before the rematch is due pays 0; the rematch (3 days later) pays 50%. With a stone, the pass pays in full and the rematch is still scheduled. The solution is offered after two failed submits. Reverse cost: low.
+
+### A120 2026-10-21 Progress types extended for the rules (M1.6, builder-rules)
+`src/shared/types/progress.ts` changes: `PlayerProgress` gains `memory` (per item SM-2 state, mastery, skill, world earned in), `drillQueue`, `rematches`, `testedOutWorldIds`, `xpPotionUntil`, `studio.cosmetics`; `DailyQuestState` gains `completedDates` (for the month badge); `QuestProgress` gains `seerStoneSpent` and `effortXpGranted`; `QuestAvailability` gains `skippable`; `DrillOutcome` gains `chest`; `RulesSnapshot` gains `maxArmor`, `hintsPerQuest`, `rematchAfterDays`, `xpPotion`. Nothing was removed or renamed. Reverse cost: low while no UI reads them.
 
 ### A89 2026-10-21 Content methods and `startDrill` wait for M0.2b (M0.2, builder-shell)
 `src/shared/types/content.ts` is still empty on this branch (M0.4 is writing it). Options: invent placeholder content types in app-shell; leave the methods out. Chosen: leave them out and add them in M0.2b after M0.4 merges: `listPacks`, `getPack` or `getWorld`, `getQuest`, `getGlossary`, the flat glossary term list for Monaco, `getPatternCards`, and `startDrill` (its items carry content shapes such as questions and Parsons blocks). Everything else in the specs is in the contract now. Reverse cost: none.

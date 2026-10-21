@@ -81,6 +81,12 @@ export interface QuestProgress
 	/** True once the reference solution was viewed. */
 	solutionViewed: boolean;
 
+	/** True when a Seer Stone was spent to view the solution, so the quest still pays XP. */
+	seerStoneSpent: boolean;
+
+	/** True once the 5% effort XP for a failed but compiled attempt was paid (once per quest). */
+	effortXpGranted: boolean;
+
 	/** Autosaved learner files by file name. */
 	savedFiles: Record<string, string>;
 
@@ -144,6 +150,31 @@ export interface ReviewLogEntry
 	stability?: number;
 }
 
+/** What the scheduler remembers about one review item between reviews. The review log is the history; this is the current state. */
+export interface ItemMemory
+{
+	/** SM-2 ease (2.5 at the start, never below 1.3). */
+	ease: number;
+
+	/** Current interval in days (0 before the first successful review). */
+	intervalDays: number;
+
+	/** Successful reviews in a row since the last miss. */
+	repetitions: number;
+
+	/** Item mastery: rises with spaced recalls, drops one level on a miss. */
+	mastery: MasteryLevel;
+
+	/** The skill this item trains, when known, so skill mastery can follow its items. */
+	skillId?: string;
+
+	/** The world the item was earned in, so a rematch can come from a different world. */
+	earnedInWorldId?: string;
+
+	/** When the item was last reviewed (ISO 8601). */
+	lastReviewedAt: string;
+}
+
 /** The learner's save file, `<userData>/progress.json`, written atomically by the main process. */
 export interface PlayerProgress
 {
@@ -154,7 +185,7 @@ export interface PlayerProgress
 	playerName: string;
 
 	/** The learner's studio: its name and the engine-room modules earned. */
-	studio: { name: string; modules: string[] };
+	studio: { name: string; modules: string[]; cosmetics: string[] };
 
 	/** Total XP. Only rises. */
 	xp: number;
@@ -188,6 +219,21 @@ export interface PlayerProgress
 
 	/** Next due time (ISO 8601) by item id. */
 	schedule: Record<string, string>;
+
+	/** Scheduler state by item id (ease, interval, mastery). */
+	memory: Record<string, ItemMemory>;
+
+	/** Items the learner asked to drill next ("Drill me"), oldest first. */
+	drillQueue: string[];
+
+	/** Rematch due times (ISO 8601) by quest id: after a viewed solution, or when a due item surfaced the quest. */
+	rematches: Record<string, string>;
+
+	/** Worlds whose test-out the learner passed. Their worked and faded build quests may be skipped. */
+	testedOutWorldIds: string[];
+
+	/** When the active XP potion runs out (ISO 8601), or null when none is active. */
+	xpPotionUntil: string | null;
 
 	/** How many times the learner hovered each glossary term. */
 	hoverCounts: Record<string, number>;
@@ -232,6 +278,9 @@ export interface DailyQuestState
 
 	/** Months (YYYY-MM) where every day's daily quest was done. */
 	monthBadges: string[];
+
+	/** Every calendar day (YYYY-MM-DD) whose daily quest was done, for the month badge. */
+	completedDates: string[];
 }
 
 /** Whether a quest can be started, with the reason when it cannot, for the World Map. */
@@ -245,6 +294,9 @@ export interface QuestAvailability
 
 	/** True when a due pattern or term surfaced this quest as a rematch. */
 	dueForRematch: boolean;
+
+	/** True for a worked or faded build quest in a tested-out world: it may be skipped. */
+	skippable: boolean;
 }
 
 /** What a chest can hold. */
@@ -494,6 +546,9 @@ export interface DrillOutcome
 
 	/** Worlds whose test-out this drill passed, letting the learner skip their worked and faded quests. */
 	testedOutWorldIds: string[];
+
+	/** Chest earned when this drill finished the chosen daily offer. */
+	chest?: ChestReward;
 }
 
 /** Due drill counts for the Studio home. */
@@ -578,4 +633,16 @@ export interface RulesSnapshot
 
 	/** Failed submits before the Seer Stone and Parsons fallback offers appear. */
 	failedSubmitsBeforeOffers: number;
+
+	/** Most spree armor held at once. */
+	maxArmor: number;
+
+	/** Hint spells per quest. */
+	hintsPerQuest: number;
+
+	/** Days until the rematch a viewed solution schedules. */
+	rematchAfterDays: number;
+
+	/** XP potion bonus share (0.5) and how long it lasts in minutes. */
+	xpPotion: { share: number; minutes: number };
 }
