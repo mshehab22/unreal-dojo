@@ -89,6 +89,7 @@ function initialState(scenario: FakeScenario): FakeState
 			reviewProvider: "auto",
 			modelId: "claude-sonnet-5-5",
 			theme: "dark",
+			mcpPort: 8000,
 			hasApiKey: false,
 			firstRunCompletedAt: isFresh ? null : daysFromNow(-32),
 		},

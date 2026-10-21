@@ -11,7 +11,9 @@ import { idSchema, playerNameSchema } from "../src/main/ipc/requestSchemas";
 import { registerHandlers, wrapHandler, type IpcHandleRegistrar, type WrappedHandler } from "../src/main/ipc/registerHandlers";
 import { createTestProgressContent } from "./support/contentFixture";
 import { createTestProgressService } from "./support/progressFixtures";
+import { SettingsService } from "../src/main/services/settings/SettingsService";
 import { RunRegistry } from "../src/main/services/unreal/RunRegistry";
+import { FakeSecretEncryptor, FakeSettingsChecks, MemorySettingsStore } from "./settings/settingsFakes";
 
 /** A fake toolchain answer the engine handlers pass through. */
 const FAKE_TOOLCHAIN = { ok: true, tool: "xcode-select", message: "Xcode 27.1 is selected.", toolVersion: "27.1", problems: [] } as const;
@@ -57,6 +59,8 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 	runRegistry: new RunRegistry(),
 	sendProgress: () => undefined,
 	progressContentService: createTestProgressContent().content,
+	settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
+	readEnvironmentStatus: async () => ({ engine: null, sandbox: { path: null, ready: false }, reviewProvider: null, loopMode: "auto", editorConnected: false }),
 };
 
 /** A stand-in for ipcMain that records each registered channel. */
@@ -194,10 +198,43 @@ describe("registerHandlers", () =>
 		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "lucky" }), "invalid-payload");
 	});
 
+	it("answers the settings channels from the settings service and never sends the API key back", async () =>
+	{
+		const encryptor = new FakeSecretEncryptor();
+		const { registrar, handlersByChannel } = createFakeRegistrar();
+		registerHandlers(registrar, createHandlers({ ...FAKE_DEPENDENCIES, settingsService: new SettingsService(new MemorySettingsStore(), encryptor, new FakeSettingsChecks()) }));
+
+		const call = (channel: string, ...methodArguments: unknown[]) => handlersByChannel.get(channel)?.({} as Parameters<WrappedHandler>[0], ...methodArguments) as Promise<IpcResponse<unknown>>;
+		const apiKey = "sk-ant-test-abcdef0123456789";
+
+		expect(await call(IPC_CHANNELS.setApiKey, `  ${apiKey}  `)).toEqual({ ok: true, value: undefined });
+
+		const settings = await call(IPC_CHANNELS.getSettings);
+		expect(settings).toMatchObject({ ok: true, value: { hasApiKey: true } });
+		expect(JSON.stringify(settings)).not.toContain(apiKey);
+
+		expect(await call(IPC_CHANNELS.updateSettings, { mcpPort: 8123 })).toMatchObject({ ok: true, value: { mcpPort: 8123, hasApiKey: true } });
+		expectError(await call(IPC_CHANNELS.updateSettings, { mcpPort: 80 }), "invalid-payload");
+		expectError(await call(IPC_CHANNELS.updateSettings, { hasApiKey: false }), "invalid-payload");
+		expectError(await call(IPC_CHANNELS.updateSettings, { sandboxPath: "/definitely/not/a/sandbox" }), "invalid-payload");
+		expectError(await call(IPC_CHANNELS.updateSettings, { enginePath: "/tmp" }), "engine-not-found");
+		expect(await call(IPC_CHANNELS.updateSettings, { enginePath: "/Engines/UE_5.8/Engine", sandboxPath: null })).toMatchObject({ ok: true, value: { enginePath: "/Engines/UE_5.8", sandboxPath: null } });
+
+		expect(await call(IPC_CHANNELS.clearApiKey)).toEqual({ ok: true, value: undefined });
+		expect(await call(IPC_CHANNELS.getSettings)).toMatchObject({ ok: true, value: { hasApiKey: false } });
+
+		encryptor.available = false;
+		const refusal = expectError(await call(IPC_CHANNELS.setApiKey, apiKey), "secure-storage-unavailable");
+		expect(JSON.stringify(refusal)).not.toContain(apiKey);
+
+		expect(await call(IPC_CHANNELS.getEnvironmentStatus)).toMatchObject({ ok: true, value: { loopMode: "auto", editorConnected: false } });
+		expectError(await call(IPC_CHANNELS.completeFirstRun), "settings-invalid");
+	});
+
 	it("answers a stub with a not-implemented AppError that names when it arrives", async () =>
 	{
 		const invoke = createInvoker();
-		const error = expectError(await invoke(IPC_CHANNELS.getSettings), "not-implemented");
+		const error = expectError(await invoke(IPC_CHANNELS.getReviewProviders), "not-implemented");
 
 		expect(error.suggestedAction).toMatch(/arrives with/);
 	});
@@ -210,7 +247,7 @@ describe("registerHandlers", () =>
 		{
 			const response = await invoke(IPC_CHANNELS[method]);
 
-			if (!response.ok) expect(["not-implemented", "invalid-payload"]).toContain(response.error.code);
+			if (!response.ok) expect(["not-implemented", "invalid-payload", "settings-invalid"]).toContain(response.error.code);
 		}
 	});
 });
@@ -257,7 +294,7 @@ describe("payload validation", () =>
 
 		expectError(await invoke(IPC_CHANNELS.runQuest, { runId: "run-1", questId: "w1-health", files: { "DojoHealthComponent.h": "#pragma once" } }), "not-implemented");
 		expectError(await invoke(IPC_CHANNELS.openEditor, null), "not-implemented");
-		expectError(await invoke(IPC_CHANNELS.updateSettings, { loopMode: "fast", enginePath: null }), "not-implemented");
+		expect(await invoke(IPC_CHANNELS.updateSettings, { loopMode: "fast", enginePath: null })).toMatchObject({ ok: true, value: { loopMode: "fast", enginePath: null } });
 	});
 
 	it("creates the sandbox through the service, streaming progress stamped with the run id", async () =>

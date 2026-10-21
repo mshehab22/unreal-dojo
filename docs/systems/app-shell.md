@@ -31,7 +31,7 @@ content/, resources/, research/, docs/
 - Window: 1440x900 default, min 1100x700, dark background, hiddenInset title bar on macOS (traffic lights at x 14, y 12), external links open in the browser, CSP `script-src 'self'`, contextIsolation on, nodeIntegration off, sandbox on where Monaco workers allow it.
 - Drag region: with the hidden macOS title bar the window can only be moved through a renderer element marked `app-region: drag`. ui-core must keep a drag strip at the top of the real frame (36px tall, left inset of 80px on macOS for the traffic lights, interactive children `no-drag`). The placeholder uses `TitleBarDragRegion` and the `.app-drag-region` class in `global.css`; the smoke test checks it.
 - Typed IPC: every method in the system specs is a `DojoApi` member; `IPC_CHANNELS` derives names from the method names; a unit test asserts every channel has a handler. Long operations stream `BuildProgressEvent` on a dedicated channel with a run id; the renderer can cancel by id.
-- Settings: electron-store for paths, provider choice, model id, theme; API key through `safeStorage` only. `SettingsService.current()` is synchronous after first load so services read it through closures without restarts.
+- Settings: electron-store for paths, provider choice, model id, theme, loop mode, MCP port; API key through `safeStorage` only. `SettingsService.current()` is synchronous after first load so services read it through closures without restarts.
 - First-run flow support: engine detection results, sandbox creation progress, toolchain checks (vswhere, xcode-select) exposed through IPC with clear messages.
 - Friendly errors: a single `AppError` type with a code, a plain-English message, and a suggested action; the renderer shows them in one component.
 - Packaging config: electron-builder with nsis and dmg, `files`: `out/**`, `package.json`, with `content/` and `resources/` copied beside the app as `extraResources` (see A13 in `docs/decisions.md`); unsigned first (`CSC_IDENTITY_AUTO_DISCOVERY=false`), Gatekeeper note in the README.
@@ -44,7 +44,7 @@ content/, resources/, research/, docs/
 
 ## Architecture (keep current)
 
-Last updated by M0.2b (content IPC).
+Last updated by M0.2c (settings service).
 
 ### Processes and files
 - `src/main/index.ts`: composition root. Waits for `app.whenReady()`, opens the `ProgressService` on `<userData>/progress.json` (M1.6), calls `registerHandlers()`, opens the window, reopens it from the macOS dock, quits when all windows close on Windows.
@@ -52,7 +52,11 @@ Last updated by M0.2b (content IPC).
 - `src/main/ipc/`: the IPC boundary (see "IPC surface" below). `createHandlers.ts` builds the table with one `HandlerDefinition` per method (a zod schema per argument plus the answering function); `registerHandlers.ts` wraps each one and registers it on its channel; `requestSchemas.ts` holds the zod schemas, each typed against its shared type (A83); `notImplemented.ts` builds the stub error; `sendBuildProgress.ts` pushes progress events to every window.
 - `src/main/errors/AppErrorException.ts`: what services throw to send a specific `AppError` to the renderer (A84).
 - `src/main/content/`: the content the renderer reads (A220). `resolveContentRoot.ts` picks `<appPath>/content` in dev and `<process.resourcesPath>/content` when packaged (A13). `ContentCatalog.ts` loads the folder once through the content-engine's `ContentLoader`, starting in the background at startup, and answers every content request from memory; `createContentCatalog.ts` wires it to the real loader and file system. `contentViews.ts` makes the World Map outlines and the learner quests (hint texts left out, A222). `buildGlossaryAliases.ts` makes the flat alias table (A223).
-- `src/main/services/settings/`: empty; SettingsService arrives with the settings task.
+- `src/main/services/settings/`: the learner's settings (A420 to A426).
+  - `SettingsService.ts`: reads electron-store's default `config.json` once at startup and keeps the settings in memory; `current()` is synchronous, so services read settings through a closure (`() => settingsService.current()`) and see a change at once. `update(patch)` writes through. `setApiKey` encrypts with `safeStorage` and stores the bytes as base64 under `apiKeyEncrypted`; the key is never logged, never kept in plain text, and never returned (only `hasApiKey`). `loadEncryptedApiKey()` hands the bytes to the review service, which decrypts only when a review needs them (A149). Paths are never trusted blindly (A427): a non-null `enginePath` in `update` must pass `EngineLocator.inspectFolder` (through `SettingsChecks`) and is stored as the engine root it found; the renderer can only reset `sandboxPath` to null, because only the sandbox service sets it, as the `SandboxPathStore`, after creating the folder and resolving its real path (A190). `completeFirstRun()` checks the same way: engine and sandbox set, the engine folder still a supported engine, the sandbox folder holding `Dojo.uproject`.
+  - `storedSettings.ts`: the file's keys, the defaults (`loopMode` auto, `reviewProvider` auto, `modelId` `claude-sonnet-5-5`, `theme` dark, `mcpPort` 8000), and one zod check per stored value; a missing or invalid value falls back to its default alone.
+  - `SettingsStore.ts`, `ElectronSettingsStore.ts`, `MemorySettingsStore.ts`: the file behind an interface, electron-store, and an in-memory fallback. `openSettingsStore.ts` opens the file at startup; an unparseable `config.json` is renamed to `config.invalid-<time>.json` and settings start from the defaults, logged once; if that fails too, the app runs on the memory store for the session (A429). `SecretEncryptor.ts`: the two `safeStorage` calls used; `SettingsChecks.ts`: the engine and sandbox folder checks. Tests pass fakes for all three.
+  - `EnvironmentStatusReader.ts`: answers `getEnvironmentStatus` from the engine in settings (`EngineLocator.inspectFolder`), the sandbox folder (ready when it holds `Dojo.uproject` and `Binaries`), the review provider a review would use now (`resolveReviewProvider` over the review service's statuses), the loop mode, and the editor connection (false until M1.4). A part whose source fails reports as missing; the call never throws.
 - `src/preload/index.ts`: exposes `window.dojo` (a `DojoApi`) through `contextBridge`. It builds one forwarding function per method from `IPC_CHANNELS`, so adding a method never needs a preload edit, and adds `onBuildProgress` and `isPackaged()` (synchronous, read from the `--dojo-packaged` argument `createMainWindow` passes in packaged builds; the renderer uses it to refuse its fake data source, A251). Built as CommonJS (`out/preload/index.cjs`) because sandboxed preloads cannot be ES modules. `src/preload/index.d.ts` types `window.dojo` for the renderer.
 - `src/shared/ipc.ts`: `DojoInvokeApi` (request methods), `DojoApi` (those plus `onBuildProgress`), `IPC_CHANNELS`, `DOJO_METHODS`, `BUILD_PROGRESS_CHANNEL`, `IpcResponse`.
 - `src/shared/types/`: `errors.ts` (`AppError`, `AppErrorCode`, `isAppError`), `settings.ts`, `engine.ts` (engine installs, toolchain, sandbox folder, environment status), `run.ts` (`BuildProgressEvent`, `RunResult`, `RunRequest`, `SandboxSetupRequest`), `review.ts` (the three grader results, provider status), `progress.ts` (save file, attempt outcomes, drills, daily quest, `RulesSnapshot`), `catalog.ts` (`PackOutline`, `WorldOutline`, `QuestOutline`, `LearnerQuest`, `LearnerWorld`, `GlossaryAlias`, `ContentStatus`), `drill.ts` (`DrillRequest`, `DrillSession`). `content.ts` belongs to content-engine (M0.4).
@@ -71,14 +75,14 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Group | Method | Answer | Built by |
 | --- | --- | --- | --- |
 | App | `getAppVersion()` | version from package.json | done (M0.1) |
-| Settings | `getSettings()` | `Settings` (with `hasApiKey`, never the key) | settings task |
-| Settings | `updateSettings(patch)` | `Settings` | settings task |
-| Settings | `setApiKey(apiKey)`, `clearApiKey()` | nothing; key kept in safeStorage | settings task |
+| Settings | `getSettings()` | `Settings` (with `hasApiKey`, never the key) | done (M0.2c) |
+| Settings | `updateSettings(patch)` | `Settings`; the patch may set `enginePath` (must be a supported engine, else the locator's `engine-not-found` or `engine-version-unsupported`), reset `sandboxPath` to null, and set loop mode, provider, model id, theme, and `mcpPort` (1024 to 65535) | done (M0.2c) |
+| Settings | `setApiKey(apiKey)`, `clearApiKey()` | nothing; key kept in safeStorage; `secure-storage-unavailable` when it cannot encrypt | done (M0.2c) |
 | First run | `detectEngines()` | `EngineInstall[]` | done (M1.1), through `EngineLocator` |
 | First run | `pickEngineFolder()` | `EngineInstall` or null when cancelled | done (M0.2b): native folder dialog, then `EngineLocator.inspectFolder` |
 | First run | `checkToolchain()` | `ToolchainCheck` (vswhere or xcode-select) | done (M1.1), through `EngineLocator` |
-| First run | `getEnvironmentStatus()` | `EnvironmentStatus` for the Title chips | M1.1 with settings |
-| First run | `completeFirstRun()` | `Settings` with `firstRunCompletedAt` | settings task |
+| First run | `getEnvironmentStatus()` | `EnvironmentStatus` for the Title chips | done (M0.2c); `editorConnected` stays false until M1.4 |
+| First run | `completeFirstRun()` | `Settings` with `firstRunCompletedAt`; `settings-invalid` while a path is unset, the locator's error for an engine folder that is no longer an engine, `sandbox-not-ready` when the sandbox has no `Dojo.uproject` | done (M0.2c) |
 | Sandbox | `pickSandboxFolder()` | `SandboxFolderChoice` (path and warnings) or null | M1.2 |
 | Sandbox | `createSandbox(request)`, `rebuildSandbox(runId)` | `SandboxSetupResult`, streams progress | M1.2 |
 | Sandbox | `openEditor(questId or null)` | nothing; opens the editor (with the quest's map for See it run) | M1.4 |
