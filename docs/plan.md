@@ -111,7 +111,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | merged | merged | 1 fix round; refused save safe; migration verified |
 | M1.6d Pack 4 gate by world id (A68) | progress-and-rules | builder-rules (session) | merged 365d0b4 | merged | Passed first review; future world ids foundations/communication and patterns/component are conventions authors must use |
 | M1.6e Term gate by course order (A72) | progress-and-rules | builder-rules (session) | m1-6e-term-gate-order | building | Blocker found by M2.4: World 1 builds locked by later-taught terms |
-| M1.8d Verifier warns on later-taught terms (A72) | content-engine | content-engine (session "M0.4 Content types...") | m1-8d-term-order-check | building | |
+| M1.8d Verifier warns on later-taught terms (A72) | content-engine | content-engine (session "M0.4 Content types...") | merged | merged | Small diff checked by the Lead; 16 warnings on main |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
@@ -120,6 +120,7 @@ Queued for qa (from the M0.2c review): `ui-core-screens.spec.ts` and other specs
 Queued for app-shell and progress (from the M2.2 review, A357): revealed hint texts are lost after a restart; store revealed hints in progress and return them with the quest.
 Queued for ai-review (from the M2.2 review, A356): a real `retryReview(attemptId)` that reviews the stored submitted files again without a new run; the screen resubmits as a stopgap.
 Queued for ui-quests (from the M1.6c review, A503): read `revealedHints` from quest data and send `hintIndex` to `revealHint`, so a reload never reveals and charges the next hint by mistake.
+Queued for content authors (from M1.8d, A72): 16 term-order warnings. Terms never taught by any concept quest: ue-log, character, character-movement-component, launch-character, object-pool, super; teach them in a concept quest (or drop them from terms). Others are taught later and are fine to leave or move earlier.
 Queued for unreal-pipeline (A65): fill a tested-out or reset prerequisite quest's files with its reference solution before building a later quest that depends on it, and tell the learner which files came from the reference.
 Queued for M2.2 (from the M1.7b review): the Build screen shows a "Retry review" button when a review falls back to tests-only with `retryReviewSuggested`.
 Queued for the verifier (from the M1.6b review): a concept quest must have at least one question that is not explain-in-one-sentence, since tests-only grading cannot pass explain items.
