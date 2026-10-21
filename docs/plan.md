@@ -77,15 +77,15 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M0.6 CI matrix | qa | tester (session) | merged 0deefe6 (squashed) | merged | Green Actions run waits for a private repo (A05); Windows steps unverified |
 | M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | merged 329a995 | merged | 1 fix round; build about 20 s, headless test about 18 s on UE 5.8.3 Mac |
 | M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | merged 267739b | merged | Passed first review; Windows unverified (problems.md) |
-| M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | claude/m1-6-rules-b3c2e0 @ 30216a8 | fixes | Round 1: lost updates under concurrent calls, rematch XP farming, unspaced recalls count to mastery, bad save blocks startup, Windows rename retry, rematch flag timing, short-build rule, effort XP (Lead: code quests only), potion and badge. Rebasing onto main. |
+| M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | claude/m1-6-rules-b3c2e0 @ 4d9b9c4 | re-review | Fix round 1: all nine items; 305 tests |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
-| M1.7b Review fallback edges | ai-review | builder-review (session) | m1-7b-review-edges | building | Timeout never auto-bills the API; secure storage failure falls back; tests-only ignores kind words |
-| M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop | building | Integration test on the Mac with UE 5.8.3 |
-| M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | m1-8-verifier | building | Runs --engine on content/examples |
-| M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | m0-2b-content-ipc | building | Shares registerHandlers with M1.3; merge in order |
-| M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | m2-1-core-screens | building | Built against a typed fake DojoApi until services are wired |
-| M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3-pack1-world1 | building | Compiles solutions by hand until M1.8 --engine lands |
-| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness | building | |
+| M1.7b Review fallback edges | ai-review | builder-review (session) | m1-7b-review-edges @ c14de07 | review | A300 to A302; 235 tests |
+| M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop @ 3891f21 | review | 7 of 7 real UE 5.8.3 runs on the Mac; runQuest IPC not wired yet |
+| M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | m1-8-verifier @ 5ac6787 | review | --engine on examples: 3 of 5 pass; 2 timer examples blocked on a sandbox helper bug (fix sent to builder-unreal) |
+| M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | m0-2b-content-ipc @ a09d7b7 | review | 152 tests; startDrill typed stub for M1.6 |
+| M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | m2-1-core-screens @ ad8b2ec | review | Seven screens on a typed fake DojoApi; 13 e2e |
+| M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3-pack1-world1 @ 5928451 | review | 8 reference tests pass by hand on the Mac; 4 starters fail as they should |
+| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 8b6e368 | review | Engine smoke passed on UE 5.8.3 in 40 s |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
 Note for M2.1 (from the M1.1 review): `supportsFastLoop` is true for 5.8 on the Mac, but the Mac has no Live Coding (A45); first-run and Title must not promise the fast loop on the Mac.
