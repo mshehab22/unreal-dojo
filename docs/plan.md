@@ -111,7 +111,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.4c Reset and editor-engine follow-ups | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged | merged | Passed first review |
 | M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | merged | merged | 1 fix round; refused save safe; migration verified |
 | M1.6d Pack 4 gate by world id (A68) | progress-and-rules | builder-rules (session) | merged 365d0b4 | merged | Passed first review; future world ids foundations/communication and patterns/component are conventions authors must use |
-| M1.6e Term gate by course order (A72) | progress-and-rules | builder-rules (session) | m1-6e-term-gate-order | building | Blocker found by M2.4: World 1 builds locked by later-taught terms |
+| M1.6e Term gate by course order (A72) | progress-and-rules | builder-rules (session) | m1-6e-term-gate-order @ ea7a8a0 | review | All of World 1 opens on a fresh save |
 | M1.8d Verifier warns on later-taught terms (A72) | content-engine | content-engine (session "M0.4 Content types...") | merged | merged | Small diff checked by the Lead; 16 warnings on main |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
 
