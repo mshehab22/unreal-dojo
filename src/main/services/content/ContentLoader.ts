@@ -65,13 +65,15 @@ export class ContentLoader
 			this.readPacks(options, run),
 		]);
 
-		content.glossary = glossary;
-		content.patterns = patterns;
-		content.packs = packs;
+		content.glossary = this.dropDuplicates(glossary, "glossary entry", "glossary.json", content.problems);
+		content.patterns = this.dropDuplicates(patterns, "pattern card", "patterns.json", content.problems);
 
-		this.reportDuplicates(glossary, "glossary entry", "glossary.json", content.problems);
-		this.reportDuplicates(patterns, "pattern card", "patterns.json", content.problems);
-		this.reportDuplicateQuestIds(run);
+		const dropped = this.dropDuplicateQuestIds(run);
+
+		content.packs = packs.map((pack) => ({
+			...pack,
+			worlds: pack.worlds.map((world) => ({ ...world, quests: world.quests.filter((quest) => !dropped.has(quest)) })),
+		}));
 
 		content.files.sort();
 
@@ -93,9 +95,11 @@ export class ContentLoader
 		const parsed = await Promise.all(names.map((name) => this.readQuest(join(folder, name), run.content)));
 
 		run.parsedQuests = parsed.filter((result): result is QuestFromFile => result !== undefined);
-		this.reportDuplicateQuestIds(run);
 
-		return { quests: run.parsedQuests.map((result) => result.quest), files: run.content.files.sort(), problems: run.content.problems };
+		const dropped = this.dropDuplicateQuestIds(run);
+		const quests = run.parsedQuests.map((result) => result.quest).filter((quest) => !dropped.has(quest));
+
+		return { quests, files: run.content.files.sort(), problems: run.content.problems };
 	}
 
 	/** Reads `glossary.json` or `patterns.json` if present; an absent file means no entries yet. */
@@ -131,9 +135,7 @@ export class ContentLoader
 		}
 
 		const packs = await Promise.all(chosen.map((name) => this.readPack(join(packsFolder, name), name, run)));
-		const loaded = packs.filter((pack): pack is Pack => pack !== undefined);
-
-		this.reportDuplicates(loaded, "pack", "packs", content.problems);
+		const loaded = this.dropDuplicates(packs.filter((pack): pack is Pack => pack !== undefined), "pack", "packs", content.problems);
 
 		return loaded.sort((first, second) => first.order - second.order);
 	}
@@ -152,9 +154,8 @@ export class ContentLoader
 		const worldsFolder = join(folder, "worlds");
 		const worldFolderNames = (await this.isDirectory(worldsFolder)) ? await this.listFolders(worldsFolder) : [];
 		const worlds = await Promise.all(worldFolderNames.map((name) => this.readWorld(join(worldsFolder, name), name, run)));
-		const loadedWorlds = worlds.filter((world): world is World => world !== undefined).sort((first, second) => first.order - second.order);
-
-		this.reportDuplicates(loadedWorlds, "world", this.relativePath(worldsFolder), content.problems);
+		const sortedWorlds = worlds.filter((world): world is World => world !== undefined).sort((first, second) => first.order - second.order);
+		const loadedWorlds = this.dropDuplicates(sortedWorlds, "world", this.relativePath(worldsFolder), content.problems);
 
 		return manifest === undefined ? undefined : { ...manifest, worlds: loadedWorlds };
 	}
@@ -182,7 +183,8 @@ export class ContentLoader
 			content.problems.push({ file: this.relativePath(manifestPath), section: "id", message: `world id "${manifest.id}" must match the folder name after the number ("${worldId}")` });
 		}
 
-		const entries = await readdir(folder, { withFileTypes: true });
+		// Sorted so "the earlier file" in duplicate reports is the same on every platform.
+		const entries = (await readdir(folder, { withFileTypes: true })).sort((first, second) => first.name.localeCompare(second.name));
 		const questFiles: string[] = [];
 
 		for (const entry of entries)
@@ -196,9 +198,7 @@ export class ContentLoader
 		}
 
 		const parsed = await Promise.all(questFiles.map((name) => this.readQuest(join(folder, name), content)));
-		const quests = parsed.filter((result): result is QuestFromFile => result !== undefined);
-
-		this.reportRepeatedOrder(quests, content.problems);
+		const quests = this.dropRepeatedOrder(parsed.filter((result): result is QuestFromFile => result !== undefined), content.problems);
 
 		// Quests of a world whose world.json failed are still checked for duplicate ids.
 		run.parsedQuests.push(...quests);
@@ -254,45 +254,74 @@ export class ContentLoader
 		return manifest;
 	}
 
-	/** Reports quest ids used by more than one file, and records where each quest came from. */
-	private reportDuplicateQuestIds(run: LoadRun): void
+	/**
+	 * Reports quest ids used by more than one file and records where each kept quest came from. The first file
+	 * by path keeps the id; every later file is flagged and its quest is returned so it can be left out.
+	 */
+	private dropDuplicateQuestIds(run: LoadRun): Set<AuthoredQuest>
 	{
 		const sorted = [...run.parsedQuests].sort((first, second) => first.file.localeCompare(second.file));
+		const dropped = new Set<AuthoredQuest>();
 
 		for (const { quest, file } of sorted)
 		{
 			const earlier = run.content.questSources[quest.id];
 
-			if (earlier !== undefined) run.content.problems.push({ file, section: "front matter", message: `duplicate quest id "${quest.id}" (also used in ${earlier})` });
-			else run.content.questSources[quest.id] = file;
+			if (earlier === undefined)
+			{
+				run.content.questSources[quest.id] = file;
+				continue;
+			}
+
+			run.content.problems.push({ file, section: "front matter", message: `duplicate quest id "${quest.id}" (also used in ${earlier})` });
+			dropped.add(quest);
 		}
+
+		return dropped;
 	}
 
-	/** Reports two quest files in one world that share an `order`. */
-	private reportRepeatedOrder(quests: readonly QuestFromFile[], problems: ContentProblem[]): void
+	/** Reports quest files in one world that reuse an earlier file's `order`, and returns the quests without them. */
+	private dropRepeatedOrder(quests: readonly QuestFromFile[], problems: ContentProblem[]): QuestFromFile[]
 	{
 		const byOrder = new Map<number, string>();
+		const kept: QuestFromFile[] = [];
 
-		for (const { quest, file } of quests)
+		for (const result of quests)
 		{
-			const earlier = byOrder.get(quest.order);
+			const earlier = byOrder.get(result.quest.order);
 
-			if (earlier !== undefined) problems.push({ file, section: "front matter", message: `order ${quest.order} is already used by ${earlier} in this world` });
-			else byOrder.set(quest.order, file);
+			if (earlier !== undefined)
+			{
+				problems.push({ file: result.file, section: "front matter", message: `order ${result.quest.order} is already used by ${earlier} in this world` });
+				continue;
+			}
+
+			byOrder.set(result.quest.order, result.file);
+			kept.push(result);
 		}
+
+		return kept;
 	}
 
-	/** Reports entries that share an id inside one list (glossary, patterns, packs, worlds). */
-	private reportDuplicates(entries: readonly { id: string }[], what: string, file: string, problems: ContentProblem[]): void
+	/** Reports entries that reuse an earlier entry's id inside one list (glossary, patterns, packs, worlds) and returns the list without them. */
+	private dropDuplicates<Entry extends { id: string }>(entries: readonly Entry[], what: string, file: string, problems: ContentProblem[]): Entry[]
 	{
 		const seen = new Set<string>();
+		const kept: Entry[] = [];
 
 		for (const entry of entries)
 		{
-			if (seen.has(entry.id)) problems.push({ file, message: `duplicate ${what} id "${entry.id}"` });
+			if (seen.has(entry.id))
+			{
+				problems.push({ file, message: `duplicate ${what} id "${entry.id}"` });
+				continue;
+			}
 
 			seen.add(entry.id);
+			kept.push(entry);
 		}
+
+		return kept;
 	}
 
 	/** Lists the sub-folders of a folder, sorted by name, skipping hidden ones. */

@@ -3,7 +3,8 @@ import type { z } from "zod";
 
 import type { GlossaryEntry, PatternCard } from "@shared/types/content";
 
-import type { ProblemList } from "./ProblemList";
+import type { ProblemList, ProblemLocation } from "./ProblemList";
+import { reportRepeatedIds } from "./reportRepeatedIds";
 import { glossaryEntrySchema, patternCardSchema } from "./schemas/contentFileSchemas";
 import { validateWith } from "./schemas/validateWith";
 
@@ -31,8 +32,8 @@ function parseJsonList(text: string, problems: ProblemList): unknown[] | undefin
 	return data;
 }
 
-/** Validates every entry of a JSON list on its own, naming each bad entry by its index and id. */
-function readEntries<Entry>(text: string, problems: ProblemList, schema: z.ZodType<Entry>): Entry[]
+/** Validates every entry of a JSON list on its own, naming each bad entry by its index and id; `checkEntry` adds checks beyond the schema. */
+function readEntries<Entry>(text: string, problems: ProblemList, schema: z.ZodType<Entry>, checkEntry?: (entry: Entry, location: ProblemLocation) => void): Entry[]
 {
 	const data = parseJsonList(text, problems);
 
@@ -44,9 +45,14 @@ function readEntries<Entry>(text: string, problems: ProblemList, schema: z.ZodTy
 	{
 		const id = typeof value === "object" && value !== null && "id" in value ? String(value.id) : undefined;
 		const section = id === undefined ? `entry ${index}` : `entry ${index} (${id})`;
+		const before = problems.count;
 		const entry = validateWith(schema, value, problems, { section }, `[${index}]`);
 
-		if (entry !== undefined) entries.push(entry);
+		if (entry === undefined) return;
+
+		checkEntry?.(entry, { section });
+
+		if (problems.count === before) entries.push(entry);
 	});
 
 	return entries;
@@ -61,5 +67,10 @@ export function readGlossary(text: string, problems: ProblemList): GlossaryEntry
 /** Reads the pattern cards file's text. Entries with problems are left out and reported. */
 export function readPatterns(text: string, problems: ProblemList): PatternCard[]
 {
-	return readEntries(text, problems, patternCardSchema);
+	return readEntries(text, problems, patternCardSchema, (card, location) =>
+	{
+		const questionIds = [...card.recall, ...card.scenarios].map((question) => question.id);
+
+		reportRepeatedIds(questionIds, "question", "this pattern card", problems, location);
+	});
 }

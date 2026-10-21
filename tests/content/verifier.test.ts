@@ -76,6 +76,22 @@ describe("runVerifier", () =>
 		expect(result.reports.map((report) => report.file)).toEqual(["packs/p1/worlds/01-first/02-b.md"]);
 	});
 
+	it("keeps both files with --quest when that quest id is duplicated", async () =>
+	{
+		const concept = (await readExamples()).get("01-concept-uproperty.md") ?? "";
+
+		await writePack(fixture, "p1");
+		await writeWorld(fixture, "p1", "01-first");
+		await writeWorld(fixture, "p1", "02-second");
+		await fixture.write("packs/p1/worlds/01-first/01-a.md", retagQuest(concept, "twin", 1));
+		await fixture.write("packs/p1/worlds/02-second/01-b.md", retagQuest(concept, "twin", 1));
+
+		const result = await runVerifier({ contentFolder: fixture.root, questId: "twin", help: false });
+
+		expect(result.reports.map((report) => report.file)).toEqual(["packs/p1/worlds/01-first/01-a.md", "packs/p1/worlds/02-second/01-b.md"]);
+		expect(result.problemCount).toBe(1);
+	});
+
 	it("runs registered checks after parsing and reports their problems", async () =>
 	{
 		const check = { name: "always", run: () => [{ file: "glossary.json", message: "from a check" }] };

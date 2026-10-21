@@ -71,7 +71,7 @@ public:
   explanation: EditAnywhere allows edits on the class default and on instances; EditInstanceOnly allows instances only. Both answer the question.
 - id: spot-missing-macro
   type: spot-the-bug
-  prompt: This light pointer is cleared by the garbage collector at random times. Which line is wrong?
+  prompt: Sometimes the light this pointer refers to is destroyed while the lantern still holds the pointer, and the next use crashes on a dangling pointer. Which line is wrong?
   code: |
     UCLASS()
     class ADojoExLantern : public AActor
@@ -81,7 +81,7 @@ public:
     };
   bugLine: 5
   fix: Put UPROPERTY() on the line above the pointer.
-  explanation: The garbage collector only follows pointers that reflection knows about, so an unmarked pointer does not keep its object alive.
+  explanation: The garbage collector only follows pointers that reflection knows about, so it can destroy the object behind an unmarked pointer and leave that pointer dangling.
 - id: visible-versus-edit
   type: multiple-choice
   prompt: You want the Details panel to show a component but never let anyone swap it for another one. Which specifier fits?

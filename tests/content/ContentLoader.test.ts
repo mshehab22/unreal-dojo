@@ -90,6 +90,30 @@ describe("ContentLoader", () =>
 				message: "duplicate quest id \"same-id\" (also used in packs/foundations/worlds/01-first/01-a.md)",
 			},
 		]);
+
+		// The flagged second file is left out; the first keeps the id.
+		const [firstWorld, secondWorld] = content.packs[0]?.worlds ?? [];
+
+		expect(firstWorld?.quests.map((quest) => quest.id)).toEqual(["same-id"]);
+		expect(secondWorld?.quests).toEqual([]);
+		expect(content.questSources["same-id"]).toBe("packs/foundations/worlds/01-first/01-a.md");
+	});
+
+	it("leaves out a quest file that reuses another file's order in the same world", async () =>
+	{
+		const concept = (await readExamples()).get("01-concept-uproperty.md") ?? "";
+
+		await writePack(fixture, "foundations");
+		await writeWorld(fixture, "foundations", "01-first");
+		await fixture.write("packs/foundations/worlds/01-first/01-a.md", retagQuest(concept, "a", 1));
+		await fixture.write("packs/foundations/worlds/01-first/02-b.md", retagQuest(concept, "b", 1));
+
+		const content = await new ContentLoader(fixture.root).load();
+
+		expect(content.problems).toEqual([
+			{ file: "packs/foundations/worlds/01-first/02-b.md", section: "front matter", message: "order 1 is already used by packs/foundations/worlds/01-first/01-a.md in this world" },
+		]);
+		expect(content.packs[0]?.worlds[0]?.quests.map((quest) => quest.id)).toEqual(["a"]);
 	});
 
 	it("reports duplicate glossary and pattern ids", async () =>
@@ -106,6 +130,22 @@ describe("ContentLoader", () =>
 			{ file: "glossary.json", message: "duplicate glossary entry id \"actor\"" },
 			{ file: "patterns.json", message: "duplicate pattern card id \"observer\"" },
 		]);
+		expect(content.glossary).toHaveLength(1);
+		expect(content.patterns).toHaveLength(1);
+	});
+
+	it("leaves out a pattern card whose recall and scenario questions share an id", async () =>
+	{
+		const question = { id: "observer-1", type: "explain-in-one-sentence", prompt: "Why?", modelAnswer: "Because.", rubric: ["Says why"], explanation: "E." };
+
+		await fixture.write("patterns.json", JSON.stringify([
+			{ id: "observer", title: "Observer", intent: "i", problem: "p", unrealForm: "u", whenNot: "w", useCaseQuestIds: [], recall: [question], scenarios: [question] },
+		]));
+
+		const content = await new ContentLoader(fixture.root).load();
+
+		expect(content.patterns).toEqual([]);
+		expect(content.problems).toEqual([{ file: "patterns.json", section: "entry 0 (observer)", message: "question id \"observer-1\" is used twice in this pattern card" }]);
 	});
 
 	it("names the glossary entry and field that is wrong", async () =>

@@ -54,7 +54,7 @@ export interface MultipleChoiceQuestion
 	explanation: string;
 }
 
-/** A prompt with a `___` gap and every answer that counts as right. */
+/** A prompt with exactly one `___` gap and every answer that counts as right. */
 export interface FillBlankQuestion
 {
 	id: string;
@@ -80,7 +80,9 @@ export interface WhichPatternQuestion
 	prompt: string;
 	choices: string[];
 	answer: string;
-	distractorNotes?: DistractorNote[];
+
+	/** Why each wrong choice does not fit (M1.8 checks there is one per wrong choice). */
+	distractorNotes: DistractorNote[];
 	explanation: string;
 }
 
@@ -90,6 +92,8 @@ export interface SpotTheBugQuestion
 	id: string;
 	type: "spot-the-bug";
 	prompt: string;
+
+	/** Trimmed of blank lines before and whitespace after, so `bugLine` counts the lines the learner sees. */
 	code: string;
 
 	/** 1-based line number of the bug inside `code`. */

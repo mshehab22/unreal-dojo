@@ -16,6 +16,7 @@ import type {
 import type { ProblemList } from "./ProblemList";
 import { parseYaml } from "./parseYaml";
 import { readStarterFile } from "./readStarterFile";
+import { reportRepeatedIds } from "./reportRepeatedIds";
 import { FRONT_MATTER_SCHEMAS } from "./schemas/frontMatterSchemas";
 import { parsonsSchema, referencePlanSchema, requiredPieceSchema } from "./schemas/planSchemas";
 import { questionSchema } from "./schemas/questionSchemas";
@@ -124,17 +125,10 @@ function codeOf(source: SectionSource, title: string, language: string): string
 	return section === undefined ? "" : readSingleCodeBlock(section.body, section.bodyLine, language, title, source.problems);
 }
 
-/** Reports any id used twice inside one quest's list (question ids, piece ids, plan ids). */
-function reportRepeatedIds(ids: readonly string[], what: string, section: string, problems: ProblemList): void
+/** Reports ids used twice inside this quest, under the given section. */
+function reportRepeatedQuestIds(ids: readonly string[], what: string, section: string, problems: ProblemList): void
 {
-	const seen = new Set<string>();
-
-	for (const id of ids)
-	{
-		if (seen.has(id)) problems.add(`${what} id "${id}" is used twice in this quest`, { section });
-
-		seen.add(id);
-	}
+	reportRepeatedIds(ids, what, "this quest", problems, { section });
 }
 
 /** Reads the concept sections: Predict, Card, Example, Questions. */
@@ -145,7 +139,7 @@ function readConceptBody(source: SectionSource): { predict: Question; card: stri
 	const example = codeOf(source, "Example", "cpp");
 	const questions = yamlListOf(source, "Questions", questionSchema);
 
-	reportRepeatedIds([...(predict ? [predict.id] : []), ...questions.map((question) => question.id)], "question", "Questions", source.problems);
+	reportRepeatedQuestIds([...(predict ? [predict.id] : []), ...questions.map((question) => question.id)], "question", "Questions", source.problems);
 
 	// A missing or broken Predict was already reported; the placeholder never leaves the parser because the problem count rose.
 	return { predict: predict ?? ({} as Question), card, example, questions };
@@ -180,8 +174,8 @@ function readPlanBody(source: SectionSource): { spec: string; requiredPieces: Re
 	const referencePlans = yamlListOf(source, "Reference Plans", referencePlanSchema);
 	const requiredIds = new Set(requiredPieces.map((piece) => piece.id));
 
-	reportRepeatedIds(requiredPieces.map((piece) => piece.id), "required piece", "Required Pieces", source.problems);
-	reportRepeatedIds(referencePlans.map((plan) => plan.id), "reference plan", "Reference Plans", source.problems);
+	reportRepeatedQuestIds(requiredPieces.map((piece) => piece.id), "required piece", "Required Pieces", source.problems);
+	reportRepeatedQuestIds(referencePlans.map((plan) => plan.id), "reference plan", "Reference Plans", source.problems);
 
 	for (const plan of referencePlans) checkPlanReferences(plan, requiredIds, source.problems);
 
@@ -211,7 +205,7 @@ function readCodeQuestBody(source: SectionSource, scaffold: ScaffoldLevel): Code
 
 		for (const subsection of subsections) files.push(readStarterFile(subsection, source.problems));
 
-		reportRepeatedIds(files.map((file) => file.name), "file", "Files", source.problems);
+		reportRepeatedQuestIds(files.map((file) => file.name), "file", "Files", source.problems);
 	}
 
 	const tests = codeOf(source, "Tests", "cpp");
@@ -227,7 +221,7 @@ function readCodeQuestBody(source: SectionSource, scaffold: ScaffoldLevel): Code
 	if (source.sections.has("Parsons"))
 	{
 		fields.parsons = yamlListOf(source, "Parsons", parsonsSchema);
-		reportRepeatedIds(fields.parsons.map((block) => block.id), "Parsons block", "Parsons", source.problems);
+		reportRepeatedQuestIds(fields.parsons.map((block) => block.id), "Parsons block", "Parsons", source.problems);
 	}
 
 	return fields;

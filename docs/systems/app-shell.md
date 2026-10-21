@@ -20,7 +20,7 @@ src/
   renderer/src/        React app (see ui-core and ui-quests)
 tests/                 vitest
 e2e/                   Playwright
-tools/                 verify-content.ts, scripts
+tools/                 verify-content.ts, verifier/ (the verifier's argument parsing, runner, report, and check extension point), scripts
 content/, resources/, research/, docs/
 ```
 
@@ -64,7 +64,7 @@ Last updated by M0.1 (scaffold). M0.2 adds the full typed IPC contract.
 
 ### Build and tooling
 - `electron.vite.config.ts`: `build.externalizeDeps: true` for main (anything in `dependencies` stays a real import, loaded from `node_modules`); `externalizeDeps: false` for the preload, because a sandboxed preload cannot `require` packages, so everything it imports is bundled in (electron-vite still keeps `electron` and Node built-ins external). `@shared` alias in all three targets, `@` alias and the React and Tailwind plugins in the renderer.
-- `package.json` is `"type": "module"`, so the main bundle is ESM (`out/main/index.js`). `dependencies` holds only what the main process loads at runtime (electron-store, the MCP and Anthropic SDKs, zod, gray-matter, fast-xml-parser, and unified, remark-parse, remark-gfm, unist-util-visit for the content parser in `src/main/services/content/`); renderer libraries are `devDependencies` because Vite bundles them, which keeps the installer smaller.
+- `package.json` is `"type": "module"`, so the main bundle is ESM (`out/main/index.js`). `dependencies` holds only what the main process loads at runtime (electron-store, the MCP and Anthropic SDKs, zod, gray-matter, fast-xml-parser, and unified, remark-parse, remark-gfm, unist-util-visit, kept for main-process markdown work such as the glossary service in M1.8; the M0.4 content parser does not use remark-parse, it splits sections with its own fence-aware scanner and uses gray-matter and zod); renderer libraries are `devDependencies` because Vite bundles them, which keeps the installer smaller.
 - TypeScript: `tsconfig.base.json` (strict plus `noUncheckedIndexedAccess`), `tsconfig.node.json` (main, preload, shared, tests, e2e, tools, configs), `tsconfig.web.json` (renderer and shared). `npm run typecheck` runs both.
 - Tests: `vitest.config.ts` runs `tests/**/*.test.ts`; `playwright.config.ts` runs `e2e/` against the built app (run `npm run build` first). The smoke test saves its screenshot under the gitignored `test-results/` folder (Playwright's `testInfo.outputPath`), so test runs never change tracked files. Run `SAVE_PROOF=1 npm run test:e2e` to also copy it to `docs/iterations/m0-1-window.png` for an iterations entry.
 - Packaging: electron-builder config in `package.json` `build`. `out/**` goes into the asar; `content/` and `resources/` are copied next to it as `extraResources` (read through `process.resourcesPath`) so the sandbox template can be copied as real files. macOS `dmg` with `identity: null` (unsigned), Windows `nsis` (assisted installer). Output in `dist/`.

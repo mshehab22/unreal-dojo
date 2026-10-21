@@ -55,13 +55,13 @@ What each section holds (A100):
 - A bullet list (`- ` per item; indented lines continue the item above): Hints (exactly 3), Rubric, Integration Rubric. Rubric sizes (5 to 6, 8 for bosses) are a verifier check in M1.8.
 - Files: one `## <FileName>` subsection per starter file, each with one ` ```cpp ` block. A worked or faded starter marks a line for the self-explanation gate with an end-of-line comment `// @explain: <model reason>`; the parser removes the comment from the starter and records `markedLines` with the line number and reason (A102).
 
-Question shapes (shared with `patterns.json`): every question has `id` (unique in the quest), `type`, `prompt`, `explanation`. multiple-choice adds `choices` and `answerIndex`; fill-blank adds `acceptedAnswers` and needs a `___` gap in the prompt; which-pattern adds `choices` and `answer` (pattern ids) and optional `distractorNotes` (`{ choice, why }`); spot-the-bug adds `code`, `bugLine` (1-based), `fix`; explain-in-one-sentence adds `modelAnswer` and `rubric`. multiple-choice, fill-blank, and explain-in-one-sentence may add `code`.
+Question shapes (shared with `patterns.json`): every question has `id`, `type`, `prompt`, `explanation`. Question ids are unique within their quest (predict plus questions) or within their pattern card (recall plus scenarios). multiple-choice adds `choices` (at least 2) and `answerIndex`; fill-blank adds `acceptedAnswers` and needs exactly one `___` gap in the prompt; which-pattern adds `choices` and `answer` (pattern ids) and `distractorNotes` (`{ choice, why }`, at least one); spot-the-bug adds `code`, `bugLine` (1-based, counted after blank lines before the code and whitespace after it are trimmed), `fix`; explain-in-one-sentence adds `modelAnswer` and `rubric`. multiple-choice, fill-blank, and explain-in-one-sentence may add `code`.
 
 Plan shapes: a required piece is `{ id, kind, label, why }`; a reference plan is `{ id, title, pieces, edges }` where each piece is `{ id, kind, label, covers }` (`covers` lists required piece ids) and each edge is `{ from, to, label }` between pieces of the same plan. The parser checks that every `covers` id and edge end exists; "every required piece appears in each plan" is a verifier check (M1.8).
 
 Folder rules: a pack folder name equals its `pack.json` id; a world folder is `<nn>-<world-id>` and its number is the world order; a world folder holds only `world.json` and `<nn>-<slug>.md` files.
 
-Errors name the file (relative to `content/`), and the section and line when known, for example `packs/p1/worlds/01-actors/03-door.md line 41, Hints: expected exactly 3 hints, found 2`. Duplicate ids are errors: quest ids across every loaded pack, pack ids, world ids in a pack, glossary ids, pattern ids, and question, piece, plan, file, and Parsons ids inside one quest. A file with any problem is left out of the loaded content; the rest still loads.
+Errors name the file (relative to `content/`), and the section and line when known, for example `packs/p1/worlds/01-actors/03-door.md line 41, Hints: expected exactly 3 hints, found 2`. Duplicate ids are errors: quest ids across every loaded pack, pack ids, world ids in a pack, glossary ids, pattern ids, and question, piece, plan, file, and Parsons ids inside one quest. A file or entry with any problem is left out of the loaded content and the rest still loads. For a duplicate id or a repeated `order`, the first file or entry (by path, then position) keeps it and each later one is flagged and left out.
 
 ## Parser structure
 
@@ -84,6 +84,10 @@ Checks, all with file names in the output (the ones beyond parsing arrive in M1.
 - from world 3 of each pack on, each world has at least one quest whose brief names an earlier pattern or term (checked through `patterns[]` or `terms[]` overlap with earlier worlds)
 - every pattern has at least three build quests listing it across packs (warning until complete)
 - breakdown quests have at least two reference plans and every required piece appears in each plan
+- multiple-choice and which-pattern questions have 3 or more distinct choices
+- which-pattern choices and answer are pattern ids in patterns.json, with one distractor note per wrong choice
+- glossary `related` ids resolve to glossary entries
+- glossary `unrealDocsUrl` links are pinned to `?application_version=5.8`
 - `--engine <path>`: copies the sandbox template to a temp folder, writes every build quest's reference solution and tests, builds once, runs all `Dojo.*` tests headless, and reports per quest; also checks that a build quest's starter does not already pass its tests (starter compile may fail; that is fine)
 - `--pack <id>` and `--quest <id>` filters
 

@@ -258,6 +258,26 @@ describe("parseQuestFile malformed files", () =>
 		expect(messages).toContain("Questions[3].modelAnswr: unknown field");
 	});
 
+	it("applies the stricter question rules: two choices, one gap, notes on which-pattern", () =>
+	{
+		const text = example("01-concept-uproperty.md")
+			.replace("  choices: [EditAnywhere, VisibleAnywhere, BlueprintReadWrite, Transient]\n  answerIndex: 1", "  choices: [VisibleAnywhere]\n  answerIndex: 0")
+			.replace("write UPROPERTY(___, Category", "write UPROPERTY(___, ___ = ");
+		const messages = parse(text).problems.map((problem) => problem.message);
+
+		expect(messages).toContain("Questions[2].choices: expected at least 2 entries");
+		expect(messages).toContain("Questions[0].prompt: a fill-blank prompt needs exactly one ___ gap (found 2)");
+	});
+
+	it("counts spot-the-bug lines after trimming trailing blank lines", () =>
+	{
+		const text = example("01-concept-uproperty.md").replace("  bugLine: 5\n", "  bugLine: 7\n");
+		const { problems } = parse(text);
+
+		// The block scalar ends with a newline; trimmed, the code has 6 lines, so line 7 does not exist.
+		expect(problems).toContainEqual(expect.objectContaining({ message: "Questions[1].bugLine: expected a whole number, 1 to 6" }));
+	});
+
 	it("reports a file with no front matter", () =>
 	{
 		const { problems } = parse("# Card\n\nHello");

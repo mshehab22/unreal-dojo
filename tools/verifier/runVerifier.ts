@@ -53,6 +53,20 @@ function groupByFile(files: readonly string[], problems: readonly ContentProblem
 	return [...reports.values()].sort((first, second) => first.file.localeCompare(second.file));
 }
 
+/**
+ * Keeps the report of the file that defines `questId` plus every file whose problems quote that id, so a
+ * duplicate id flagged on a second file still shows up. Says so when no file matches.
+ */
+function filterToQuest(reports: readonly FileReport[], questId: string, questFile: string | undefined): FileReport[]
+{
+	const quoted = `"${questId}"`;
+	const kept = reports.filter((report) => report.file === questFile || report.problems.some((problem) => problem.message.includes(quoted)));
+
+	if (kept.length > 0) return kept;
+
+	return [{ file: "(none)", problems: [{ file: "(none)", message: `no quest with id "${questId}" parsed; run without --quest to see every problem` }] }];
+}
+
 /** Loads the content folder and the examples, runs `checks`, and returns per-file reports filtered by `--quest`. */
 export async function runVerifier(options: VerifierOptions, checks: readonly ContentCheck[] = PARSE_ONLY_CHECKS): Promise<VerifierResult>
 {
@@ -64,14 +78,7 @@ export async function runVerifier(options: VerifierOptions, checks: readonly Con
 	const problems = [...content.problems, ...examples.problems, ...checks.flatMap((check) => check.run(input))];
 	let reports = groupByFile([...content.files, ...examples.files], problems);
 
-	if (options.questId !== undefined)
-	{
-		const questFile = content.questSources[options.questId];
-
-		reports = questFile === undefined
-			? [{ file: "(none)", problems: [{ file: "(none)", message: `no quest with id "${options.questId}" parsed; run without --quest to see every problem` }] }]
-			: reports.filter((report) => report.file === questFile);
-	}
+	if (options.questId !== undefined) reports = filterToQuest(reports, options.questId, content.questSources[options.questId]);
 
 	const counts: VerifierCounts = {
 		packs: content.packs.length,

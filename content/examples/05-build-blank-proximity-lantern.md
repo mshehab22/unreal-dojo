@@ -18,15 +18,21 @@ concepts:
 
 # Brief
 
-When any pawn walks within 300 units of the lantern it lights up, and it goes dark only after the last pawn has left.
+When any actor with collision comes within 300 units of the lantern it lights up, and it goes dark only after the last one has left.
 
 Write `ADojoExProximityLantern` from nothing. It owns a sphere for detection and a point light. It listens to its own sphere's overlap events; nothing outside the lantern knows it exists.
 
-This one fails on purpose the first time for most people: walk two pawns in, walk one out, and watch what happens. Find out why before you read the hints.
+The tests use this public interface, so keep these names:
+
+- `bool IsLit() const` returns whether the light is on.
+- `UPROPERTY(EditAnywhere) float Radius = 300.f;` sets the sphere radius.
+- The sphere uses the `OverlapAllDynamic` collision profile with overlap events on.
+
+This one fails on purpose the first time for most people: bring two visitors in, take one out, and watch what happens. Find out why before you read the hints.
 
 ## See it in the editor
 
-Place the lantern in the sandbox map with `show Collision` typed in the console so you can see the sphere. Press Play and walk into the sphere: the lantern lights. Eject with F8, drag a second pawn in, then walk your own pawn out: the lantern must stay lit until both are gone.
+Place the lantern in the sandbox map with `show Collision` typed in the console so you can see the sphere. Press Play and walk into the sphere: the lantern lights. Eject with F8, drag a cube with collision into the sphere, then walk your own pawn out: the lantern must stay lit until both are gone.
 
 # Files
 
@@ -49,32 +55,55 @@ Place the lantern in the sandbox map with `show Collision` typed in the console 
 
 #if WITH_AUTOMATION_TESTS
 
-#include "Components/PointLightComponent.h"
 #include "Components/SphereComponent.h"
 #include "DojoExProximityLantern.h"
 #include "Support/DojoTestActor.h"
 #include "Support/DojoTestWorld.h"
 
+namespace DojoExamplesProximity
+{
+	/** Far enough from the lantern at the origin that a 300 unit sphere never reaches it. */
+	const FVector Far(2000.f, 0.f, 0.f);
+
+	/** Spawns a test actor, moves it far away, then gives it a small overlapping sphere so it can trigger the lantern. */
+	ADojoTestActor* SpawnVisitor(FDojoTestWorld& TestWorld)
+	{
+		ADojoTestActor* Visitor = TestWorld.SpawnActor<ADojoTestActor>();
+		if (!Visitor) return nullptr;
+
+		Visitor->SetActorLocation(Far);
+
+		USphereComponent* Shape = TestWorld.AddComponent<USphereComponent>(Visitor);
+		Shape->AttachToComponent(Visitor->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		Shape->SetSphereRadius(20.f);
+		Shape->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+		Shape->SetGenerateOverlapEvents(true);
+
+		return Visitor;
+	}
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_Examples_Proximity_CountsVisitors, "Dojo.Examples.Proximity.CountsVisitors", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Moves two test actors in and out of the sphere and checks the light follows the visitor count, not the last event. */
+/** Moves two visitors in and out of the sphere and checks the light follows the visitor count, not the last event. */
 bool FDojo_Examples_Proximity_CountsVisitors::RunTest(const FString& Parameters)
 {
+	using namespace DojoExamplesProximity;
+
 	FDojoTestWorld TestWorld;
 
 	ADojoExProximityLantern* Lantern = TestWorld.SpawnActor<ADojoExProximityLantern>();
-	ADojoTestActor* First = TestWorld.SpawnActor<ADojoTestActor>();
-	ADojoTestActor* Second = TestWorld.SpawnActor<ADojoTestActor>();
-	if (!TestNotNull(TEXT("Lantern spawned"), Lantern) || !TestNotNull(TEXT("Visitors spawned"), Second)) return false;
+	ADojoTestActor* First = SpawnVisitor(TestWorld);
+	ADojoTestActor* Second = SpawnVisitor(TestWorld);
+	if (!TestNotNull(TEXT("Lantern spawned"), Lantern) || !TestNotNull(TEXT("Visitors spawned"), First) || !TestNotNull(TEXT("Visitors spawned"), Second)) return false;
 
-	const FVector Far(2000.f, 0.f, 0.f);
-	First->SetActorLocation(Far);
-	Second->SetActorLocation(Far);
+	TestEqual(TEXT("Radius defaults to 300"), Lantern->Radius, 300.f);
+
 	TestWorld.Tick(2);
 	TestFalse(TEXT("Dark with nobody near"), Lantern->IsLit());
 
-	First->SetActorLocation(FVector::ZeroVector, false, nullptr, ETeleportType::None);
-	Second->SetActorLocation(FVector::ZeroVector, false, nullptr, ETeleportType::None);
+	First->SetActorLocation(FVector(100.f, 0.f, 0.f));
+	Second->SetActorLocation(FVector(-100.f, 0.f, 0.f));
 	TestWorld.Tick(2);
 	TestTrue(TEXT("Lit with two visitors"), Lantern->IsLit());
 

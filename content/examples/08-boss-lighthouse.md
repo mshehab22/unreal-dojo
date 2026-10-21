@@ -102,7 +102,7 @@ Feel: tune the turn speed until choosing which lantern to relight feels like a d
 # Integration Rubric
 
 - Lanterns broadcast; neither the ship nor the tracker is referenced by a lantern.
-- Every repeating rhythm (beam, glow, grace, cooldown) is a timer; nothing polls in Tick.
+- Every repeating rhythm (glow, grace, cooldown) is a timer; nothing polls in Tick.
 - Delegates bound in BeginPlay are unbound in EndPlay.
 - The fixed numbers are editable properties or one data asset, with the given defaults.
 - The lantern from the earlier quests is reused, not rewritten.

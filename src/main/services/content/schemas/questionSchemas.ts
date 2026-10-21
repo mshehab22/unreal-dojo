@@ -12,13 +12,13 @@ const questionBase = {
 	explanation: text(),
 };
 
-/** A pick-one question; the answer index must point at one of the choices. */
+/** A pick-one question with at least two choices; the answer index must point at one of them. */
 const multipleChoiceSchema = z
 	.strictObject({
 		...questionBase,
 		type: z.literal("multiple-choice"),
 		code: text().optional(),
-		choices: textList(1),
+		choices: textList(2),
 		answerIndex: wholeNumber(0),
 	})
 	.superRefine((question, context) =>
@@ -29,7 +29,7 @@ const multipleChoiceSchema = z
 		}
 	});
 
-/** A gap-filling question; the prompt must show the gap as ___. */
+/** A gap-filling question; the prompt must show exactly one gap as ___. */
 const fillBlankSchema = z
 	.strictObject({
 		...questionBase,
@@ -39,29 +39,37 @@ const fillBlankSchema = z
 	})
 	.superRefine((question, context) =>
 	{
-		if (!question.prompt.includes("___")) context.addIssue({ code: "custom", path: ["prompt"], message: "a fill-blank prompt needs a ___ gap" });
+		const gapCount = question.prompt.split("___").length - 1;
+
+		if (gapCount !== 1) context.addIssue({ code: "custom", path: ["prompt"], message: `a fill-blank prompt needs exactly one ___ gap (found ${gapCount})` });
 	});
 
-/** A which-pattern question; the answer must be one of the choices. */
+/** A which-pattern question; the answer must be one of the choices, and wrong choices carry notes. */
 const whichPatternSchema = z
 	.strictObject({
 		...questionBase,
 		type: z.literal("which-pattern"),
 		choices: textList(1),
 		answer: text(),
-		distractorNotes: z.array(z.strictObject({ choice: text(), why: text() })).optional(),
+		distractorNotes: z.array(z.strictObject({ choice: text(), why: text() })).min(1),
 	})
 	.superRefine((question, context) =>
 	{
 		if (!question.choices.includes(question.answer)) context.addIssue({ code: "custom", path: ["answer"], message: `"${question.answer}" is not one of the choices` });
 	});
 
-/** A find-the-wrong-line question; the bug line must exist in the code. */
+/** Drops blank lines before the code and whitespace after it, so line numbers match what the learner sees. */
+function trimCode(code: string): string
+{
+	return code.replace(/^(?:[ \t]*\r?\n)+/, "").trimEnd();
+}
+
+/** A find-the-wrong-line question; the bug line must exist in the trimmed code. */
 const spotTheBugSchema = z
 	.strictObject({
 		...questionBase,
 		type: z.literal("spot-the-bug"),
-		code: text(),
+		code: text().transform(trimCode),
 		bugLine: wholeNumber(1),
 		fix: text(),
 	})
