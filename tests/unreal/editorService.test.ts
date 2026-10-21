@@ -39,7 +39,7 @@ function createRig(options: { version?: "5.8.3" | "5.6.1"; toolchain?: Toolchain
 	const engine: EngineInstall = { path: ENGINE, version, source: "launcher", supportsFastLoop: version === "5.8.3" };
 	const service = new EditorService({ settings, engineInspector: { inspectFolder: async () => engine }, editorLauncher, ledger, paths, checkToolchain: async () => options.toolchain ?? HEALTHY });
 
-	return { service, processes, clients, ledger, timer, editorLauncher };
+	return { service, processes, clients, ledger, timer, editorLauncher, settings };
 }
 
 describe("EditorService", () =>
@@ -93,6 +93,19 @@ describe("EditorService", () =>
 
 		expect(processes.specs).toHaveLength(2);
 		expect(processes.exitRequestCount).toBe(1);
+	});
+
+	it("restarts the editor on the new engine when the engine in Settings changed while it was open (M1.4c)", async () =>
+	{
+		const { service, processes, settings, editorLauncher } = createRig();
+		await service.openEditor();
+
+		settings.enginePath = "/Users/Shared/Epic Games/UE_5.8";
+		await service.openEditor();
+
+		expect(processes.specs).toHaveLength(2);
+		expect(processes.specs[1]?.command).toBe("/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor");
+		expect(editorLauncher.current()?.engineRoot).toBe("/Users/Shared/Epic Games/UE_5.8");
 	});
 
 	it("refuses before setup", async () =>
