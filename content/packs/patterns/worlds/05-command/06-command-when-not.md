@@ -40,7 +40,7 @@ A command is a layer between asking and doing, and lesson zero's rule applies: i
 
 **Undo is all or nothing.** An undo history only knows about changes that went through it. One shortcut that edits the state directly (a randomize button, a script, a cheat) and undo starts restoring the wrong things. If you cannot route every change through commands, do not promise undo.
 
-**A new command ends the old future.** After an undo, the commands that were taken back can be redone, but only until something new happens. A new command must cut them off; otherwise redo brings back edits from a line of history the designer abandoned.
+**A new command ends the old future.** After an undo, the commands that were taken back can be redone, but only until something new happens. A new command must cut them off; otherwise redo brings back edits from a line of history the player abandoned.
 
 **Snapshots have their place.** When a change is too tangled to describe as a small value, saving a whole copy and restoring it is simpler and safer, as long as nothing outside the history touches that state in between.
 
@@ -95,7 +95,7 @@ void ADojoArenaLever::Pull()
     }
   bugLine: 3
   fix: Cut the history back to AppliedCount first, then add the new edit at the end.
-  explanation: Inserting keeps the taken-back edits after the new one, so a later redo would apply an edit from a line the designer abandoned.
+  explanation: Inserting keeps the taken-back edits after the new one, so a later redo would apply an edit from a line the player abandoned.
 - id: when-not-held-stick
   type: multiple-choice
   prompt: "A held thumbstick moves a camera every frame. Someone creates a new move command object each frame and queues it. What is the better shape?"

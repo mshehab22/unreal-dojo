@@ -19,9 +19,9 @@ concepts:
 
 # Brief
 
-When you press Play and edit the course from the console, the label above the planner shows it as a row of letters such as `H_W_____`, and `ke * Undo` and `ke * Redo` step back and forward through your edits one at a time.
+When you press Play and set up your run in the build phase from the console, the label above the planner shows your course as a row of letters such as `H_W_____`, and `ke * Undo` and `ke * Redo` step back and forward through your placements one at a time.
 
-Designers lay out the arena's obstacle course in eight slots, each empty or holding a hurdle, a wall, or a pit. They want to try things and back out of them. Every change therefore becomes an `FDojoP5CourseEdit`: the slot, what stood there before, and what the edit put there. That is enough to apply the edit again or take it back, without copying the whole course.
+Before each obstacle run in the arena, the player gets a short build phase to set up their own course: eight slots, each empty or holding a hurdle, a wall, or a pit, chosen to suit their runner. Players try a layout, change their mind, and take placements back before the run starts. Every change therefore becomes an `FDojoP5CourseEdit`: the slot, what stood there before, and what the edit put there. That is enough to apply the edit again or take it back, without copying the whole course.
 
 The planner keeps every edit in `History`, oldest first, and `AppliedCount` says how many of them are currently applied. Undo steps the count back and puts the slot's "before" back. Redo applies the next edit's "after" and steps the count forward. The declarations, the constructor, the getters, `Clear`, and the label are given. Yours:
 
@@ -78,7 +78,7 @@ struct FDojoP5CourseEdit
 	EDojoP5Obstacle After = EDojoP5Obstacle::EO_None;
 };
 
-/** A designer's planner for the arena's obstacle course, with undo and redo through a history of edits. */
+/** The player's build-phase planner for their own obstacle run, with undo and redo through a history of edits. */
 UCLASS()
 class ADojoP5CoursePlanner : public AActor
 {
@@ -350,4 +350,4 @@ bool FDojo_P5_CoursePlanner_OnlyRealEditsAreKept::RunTest(const FString& Paramet
 
 # Alternative
 
-The planner could keep a copy of the whole course before every edit and undo by restoring the last copy. With eight slots that is cheap and very simple. It stops being cheap when the course has hundreds of slots and long sessions, and it has a subtler cost: restoring a whole copy also throws away anything that changed the course from outside the history (a scripted event, another designer's edit), where an edit that records its own slot takes back only what it did. The referee desk later in this world runs into exactly that.
+The planner could keep a copy of the whole course before every edit and undo by restoring the last copy. With eight slots that is cheap and very simple. It stops being cheap when the course has hundreds of slots and long sessions, and it has a subtler cost: restoring a whole copy also throws away anything that changed the course from outside the history (a trap the arena sets off, a teammate's placement), where an edit that records its own slot takes back only what it did. The referee desk later in this world runs into exactly that.

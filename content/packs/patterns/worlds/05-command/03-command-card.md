@@ -80,7 +80,7 @@ public:
 ```yaml
 - id: plan-and-rewind
   type: which-pattern
-  prompt: "In an arena trap designer, every placement, rotation, and removal must be undoable, and a playtest recording must be able to rebuild the layout step by step. Which pattern?"
+  prompt: "In a defense round's build phase, the player places, turns, and sells traps and can take each one back until the wave starts, and the match recording must rebuild their layout step by step. Which pattern?"
   choices: [command, observer, prototype, state]
   answer: command
   distractorNotes:
@@ -89,8 +89,8 @@ public:
     - choice: prototype
       why: Cloning a template trap helps create traps, not record and reverse the edits that placed them.
     - choice: state
-      why: The tool may have modes, but the need here is to keep each edit as something that can be reversed and replayed.
-  explanation: Each edit becomes a value with enough information to apply it again and take it back.
+      why: The round may have phases, but the need here is to keep each placement as something that can be reversed and replayed.
+  explanation: Each placement becomes a value with enough information to apply it again and take it back.
 - id: same-moves-any-body
   type: which-pattern
   prompt: "A tutorial ghost, the player, and a sparring AI should all be able to perform the same set of moves, chosen by different sources. Which pattern lets one set of moves serve all three?"
@@ -106,7 +106,7 @@ public:
   explanation: Moves as command objects with the performer handed in let any source drive any body.
 - id: spot-undo-bypass
   type: spot-the-bug
-  prompt: This course planner keeps a history so designers can undo. Which line makes a change undo can never see?
+  prompt: This course planner keeps a history so the player can undo placements during the build phase. Which line makes a change undo can never see?
   code: |
     void ADojoArenaPlanner::RandomizeSlot(int32 Slot)
     {

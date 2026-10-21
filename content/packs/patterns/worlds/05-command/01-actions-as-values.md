@@ -36,7 +36,7 @@ explanation: A function call leaves nothing behind once it returns. To list, rep
 
 Most game code acts by calling: the referee's button calls `AwardPoint`, the sergeant's script calls `Dummy->Block()`. A call is quick and clear, and it fixes three things at once: **what** happens, **to whom**, and **when**: right now, exactly once, to that target.
 
-Lots of features want to pull those apart. A replay wants to run the same actions again later. A designer's tool wants to take actions back. A drill wants to queue moves and play them on a beat. An AI and a player want to send the same kinds of action to whatever they control. None of that is possible while the action exists only as a call.
+Lots of features want to pull those apart. A replay wants to run the same actions again later. A player setting up their own obstacle run before a round wants to take placements back. A drill wants to queue moves and play them on a beat. An AI and a player want to send the same kinds of action to whatever they control. None of that is possible while the action exists only as a call.
 
 **Write the request down.** Turn the action into a value: a small struct or object that names the action, holds its parameters, and says who it is for. Now it can sit in a list, wait for its moment, be read by a debug screen, be sent over the network, or be undone if it also remembers what it changed.
 

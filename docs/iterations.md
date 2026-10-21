@@ -958,3 +958,7 @@ total                                       39.2  PASSED
   - The obvious planner (append without cutting the history back): fails only `NewEditEndsTheOldFuture` ("history 3, expected 2"; the second undo takes back the wrong edit).
   - Content verifier `--pack patterns`: no problems. One expected warning: the Pack 4 gate names the Component world, which does not exist yet.
 - Not done: no boss for this world yet (A551). No screenshots (editor runs with `-NullRHI` on this Mac). Windows unverified. Decisions A550 to A557.
+
+### Fix round 1
+- Originality (D13): the course planner no longer puts undo in a designer's level-editing tool. It is now the player's build phase before an obstacle run: the runner sets up their own eight-slot course and can take placements back until the run starts. Mechanics, the redo-tail cut (A555), and the class and quest names are unchanged. The planner's brief, its class comment (starter and reference solution), the world summary, the actions-as-values card line, the card's which-pattern item (now a defense round's build phase), the card's spot-the-bug prompt, and the when-not quest's two "designer" mentions are reworded to match.
+- Only a header comment changed in the code. Rebuilt from fresh sandboxes on UE 5.8.3 under the engine lock: reference solutions 45 of 45 pass, including the three planner tests; starters compile and 38 of 45 fail, the same split as before. Verifier `--pack patterns`: no problems, plus the expected Pack 4 gate warning.

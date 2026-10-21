@@ -35,7 +35,7 @@ struct FDojoP5CourseEdit
 	EDojoP5Obstacle After = EDojoP5Obstacle::EO_None;
 };
 
-/** A designer's planner for the arena's obstacle course, with undo and redo through a history of edits (Command: each edit is a value that can be redone and taken back). */
+/** The player's build-phase planner for their own obstacle run, with undo and redo through a history of edits (Command: each edit is a value that can be redone and taken back). */
 UCLASS()
 class ADojoP5CoursePlanner : public AActor
 {
