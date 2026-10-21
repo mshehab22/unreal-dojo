@@ -187,6 +187,14 @@ export class ProgressService
 		return this.refusal;
 	}
 
+	/** The revealed hint indexes of one quest, in reveal order. Empty for an untouched quest, and on a refused save, so quest screens still load (A502). */
+	getRevealedHintIndexes(questId: string): number[]
+	{
+		if (this.refusal) return [];
+
+		return [...(this.progress.quests[questId]?.revealedHints ?? [])];
+	}
+
 	/** A copy of the whole save. */
 	getProgress(): PlayerProgress
 	{

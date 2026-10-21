@@ -150,3 +150,22 @@ describe("save migration from version 1", () =>
 		expect(migrateSave({ version: 7 })).toEqual({ version: 7 });
 	});
 });
+
+describe("revealed hints on a refused save", () =>
+{
+	it("still answers getQuest and getWorld, with no revealed hints, when the save could not be opened (A133)", async () =>
+	{
+		const fileSystem = new MemoryFileSystem();
+		fileSystem.files.set("/user-data/progress.json", JSON.stringify({ version: 99 }));
+		const { service, progressContent } = await startApp(fileSystem, new FixedClock(localMoment(2026, 10, 21, 9)));
+
+		expect(service.getRefusal()?.code).toBe("save-failed");
+		expect(await progressContent.getQuest("w1-build")).toMatchObject({ id: "w1-build", hintCount: 3, revealedHints: [] });
+
+		const world = await progressContent.getWorld("world-1");
+		expect(world.quests.find((quest) => quest.id === "w1-build")).toMatchObject({ revealedHints: [] });
+		expect(world.quests.map((quest) => quest.id)).toEqual(["w1-concept", "w1-build", "w1-breakdown", "w1-boss"]);
+		expect(service.getRevealedHintIndexes("w1-build")).toEqual([]);
+	});
+});
+

@@ -341,7 +341,7 @@ export class ProgressContentService
 
 		const authored = await this.content.getAuthoredQuest(quest.id);
 		const hints: string[] = authored && (authored.kind === "build" || authored.kind === "refactor") ? [...authored.hints] : [];
-		const revealedIndexes = this.progress.getProgress().quests[quest.id]?.revealedHints ?? [];
+		const revealedIndexes = this.progress.getRevealedHintIndexes(quest.id);
 
 		return { ...quest, revealedHints: revealedIndexes.map((index) => hints[index]).filter((text): text is string => text !== undefined) };
 	}
