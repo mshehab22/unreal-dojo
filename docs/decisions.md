@@ -864,6 +864,9 @@ Options: a marker string such as `{{ENGINE}}`; empty; a real version. Chosen: em
 ### A40 2026-10-21 The sample quest ships in the template as the sandbox smoke test (builder-unreal, M1.2a)
 Options: keep the sample out of the shipped template; ship it. Chosen: ship it as `Quests/SampleHealth/USampleHealthComponent` with test `Dojo.Sample.Health.TakesDamage`, so the first-run build has something to compile and the first test run proves the whole chain. Named "Sample" so it cannot clash with a content pack's own health component class (all quests share one module, so two `UHealthComponent` classes would not compile). Content authors should give quest classes names unique within the module. Reverse cost: delete two folders.
 
+### A69 2026-10-21 Strategy, Factory Method, and Facade get Pack 2 worlds 20 to 22, after Nystrom's 19
+With one world per pattern (A491), the three patterns added beyond Nystrom's book need places. Options: interleave them where they fit thematically; append them after the 19 in card order. Chosen: append as worlds 20 to 22 in card order, after the combos world's prerequisites, so Part 3's teaching order stays intact. Reverse cost: low (folder renames).
+
 ### A68 2026-10-21 The Pack 4 gate names its Pack 2 world by id, pointed at the Component world
 Pack 2 now has one world per pattern (A491), so "Pack 2 world 4" no longer means the Component world and will keep shifting as worlds are added. Options: keep the gate by order (A131) and renumber it each time; store the gate by world id. Chosen: the gate becomes "Pack 1 world 5 boss and the Pack 2 Component world's boss", stored by world id, and the verifier reports a gate whose world id does not exist. Supersedes the "by order" part of A131. Reverse cost: low.
 
