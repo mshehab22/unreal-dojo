@@ -79,6 +79,7 @@ interface ServiceOptions
 	saved?: Record<string, Record<string, string>>;
 	files?: Record<string, string>;
 	settings?: MemoryUnrealSettings;
+	ledger?: FullBuildLedger;
 }
 
 /** The service over fakes. */
@@ -116,6 +117,8 @@ function createService(options: ServiceOptions = {})
 			isPassed: (questId) => (options.passed ?? []).includes(questId),
 			savedFiles: (questId) => options.saved?.[questId] ?? {},
 		},
+		questFileWriter: writer,
+		buildLedger: options.ledger ?? new FullBuildLedger(),
 	});
 
 	return { service, fileSystem, runs, rebuilds };
@@ -343,6 +346,22 @@ describe("PrerequisiteFiller through runQuest", () =>
 			["f1-popup-target", { "DojoF1PopupTarget.cpp": "target cpp" }, false],
 		]);
 		expect(ledger.sandboxChangedSinceBuild()).toBe(true);
+	});
+
+	it("removes a reset quest's folder and test from the sandbox and tells the build record; does nothing before setup (M1.4b)", async () =>
+	{
+		const ledger = new FullBuildLedger();
+		const { service, fileSystem } = createService({ ledger, files: { [`${questFolder("f1-training-dummy")}/Dummy.h`]: "h", "/S/Source/Dojo/Tests/f1-training-dummy.Test.cpp": "tests" } });
+		ledger.recordBuild("f1-training-dummy", { "Dummy.h": "h" }, "tests", 10);
+
+		await service.removeQuestFiles("f1-training-dummy");
+
+		expect(fileSystem.files.has(`${questFolder("f1-training-dummy")}/Dummy.h`)).toBe(false);
+		expect(fileSystem.files.has("/S/Source/Dojo/Tests/f1-training-dummy.Test.cpp")).toBe(false);
+		expect(ledger.sandboxChangedSinceBuild()).toBe(true);
+
+		const { service: unset } = createService({ settings: new MemoryUnrealSettings() });
+		await expect(unset.removeQuestFiles("f1-training-dummy")).resolves.toBeUndefined();
 	});
 
 	it("checks a snippet and rebuilds with the engine and sandbox from settings", async () =>

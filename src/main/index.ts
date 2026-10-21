@@ -29,6 +29,7 @@ import { EnvironmentStatusReader } from "./services/settings/EnvironmentStatusRe
 import { openSettingsStore } from "./services/settings/openSettingsStore";
 import { SettingsService } from "./services/settings/SettingsService";
 import { RunRegistry } from "./services/unreal/RunRegistry";
+import { stopEngineWorkBeforeQuit } from "./services/unreal/stopEngineWorkBeforeQuit";
 import { createMainWindow } from "./window/createMainWindow";
 
 /** Opens the native folder picker over the focused window. Resolves null when the learner cancels. */
@@ -86,9 +87,12 @@ async function start(): Promise<void>
 	if (refusal) console.error(`Progress refused: ${refusal.message} ${refusal.detail ?? ""}`);
 
 	const runRegistry = new RunRegistry();
-	stopRunsBeforeQuit(runRegistry);
 
 	let unrealServices: UnrealServices | null = null;
+
+	// Runs, then the editor, before quitting; never builds the Unreal services just to quit (A530).
+	stopEngineWorkBeforeQuit(app, { runs: runRegistry, editorLauncher: () => unrealServices?.editorLauncher ?? null });
+
 	const getUnrealServices = (): UnrealServices =>
 		(unrealServices ??= createUnrealServices({
 			templateFolder: appResourceFolder(["resources", "sandbox-template"], ["resources", "sandbox-template"]),
@@ -112,7 +116,7 @@ async function start(): Promise<void>
 		inspectEngine: (folder) => getEngineLocator().inspectFolder(folder),
 		pathExists,
 		reviewStatuses: () => getReviewService().getProviderStatuses(),
-		editorConnected: async () => false,
+		editorConnected: async () => (unrealServices ? unrealServices.editorService.isConnected() : false),
 	});
 
 	// Tests-only graders stand in until the review service is wired with the settings service (A318).
@@ -129,6 +133,7 @@ async function start(): Promise<void>
 			progressContentService,
 			getSandboxService: () => getUnrealServices().sandboxService,
 			getQuestRunService: () => getUnrealServices().questRunService,
+			getEditorService: () => getUnrealServices().editorService,
 			runRegistry,
 			sendProgress: sendBuildProgress,
 			settingsService,
@@ -140,24 +145,6 @@ async function start(): Promise<void>
 	app.on("activate", () =>
 	{
 		if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
-	});
-}
-
-/** How long quitting waits for cancelled builds and test runs to end. Killing a process tree takes well under a second. */
-const QUIT_WAIT_MS = 5000;
-
-/** Cancels every running build and test before the app quits, so no UBT or editor is orphaned holding UBT's mutex. */
-function stopRunsBeforeQuit(runRegistry: RunRegistry): void
-{
-	let stopping = false;
-
-	app.on("before-quit", (event) =>
-	{
-		if (stopping || !runRegistry.hasRuns()) return;
-
-		stopping = true;
-		event.preventDefault();
-		void runRegistry.cancelAll(QUIT_WAIT_MS).finally(() => app.quit());
 	});
 }
 

@@ -1,5 +1,5 @@
 // The pipeline's view of the app's settings service: the engine and sandbox folders (A400, A426).
-import type { Settings, SettingsPatch } from "@shared/types/settings";
+import type { LoopModeSetting, Settings, SettingsPatch } from "@shared/types/settings";
 
 import type { UnrealSettingsStore } from "./UnrealSettingsStore";
 
@@ -37,6 +37,18 @@ export class SettingsServiceUnrealSettings implements UnrealSettingsStore
 	getSandboxPath(): string | null
 	{
 		return this.settings.current().sandboxPath;
+	}
+
+	/** The loop mode in settings. */
+	getLoopMode(): LoopModeSetting
+	{
+		return this.settings.current().loopMode;
+	}
+
+	/** The MCP port in settings. */
+	getMcpPort(): number
+	{
+		return this.settings.current().mcpPort;
 	}
 
 	/** Saves the sandbox folder. */

@@ -31,6 +31,7 @@ function createService(version: string, build: ScriptedProcess = { exitCode: 0, 
 	const launcher = new FakeProcessLauncher([build]);
 	const timer = new FakeTimer();
 	const savedPaths: string[] = [];
+	const hookCalls: string[] = [];
 	const engine: EngineInstall = { path: "/Engines/UE", version, source: "launcher", supportsFastLoop: version.startsWith("5.8") };
 
 	const service = new SandboxProjectService({
@@ -41,9 +42,16 @@ function createService(version: string, build: ScriptedProcess = { exitCode: 0, 
 		pathStore: { setSandboxPath: (sandboxPath) => savedPaths.push(sandboxPath), setEnginePath: (enginePath) => void savedPaths.push(`engine ${enginePath}`) },
 		timer,
 		templateFolder: "/App/resources/sandbox-template",
+		buildHooks: {
+			beforeBuild: async (sandboxFolder) =>
+			{
+				hookCalls.push(`before ${sandboxFolder} (${fileSystem.removedFolders.length} folders removed)`);
+			},
+			afterBuild: (succeeded) => void hookCalls.push(`after ${succeeded}`),
+		},
 	});
 
-	return { service, fileSystem, launcher, savedPaths };
+	return { service, fileSystem, launcher, savedPaths, hookCalls };
 }
 
 /** Reads the written project file. */
@@ -135,6 +143,19 @@ describe("SandboxProjectService", () =>
 		expect(result.ok).toBe(true);
 		expect(fileSystem.removedFolders).toEqual(["/S/Binaries", "/S/Intermediate", "/S/Saved", "/S/DerivedDataCache"]);
 		await expect(service.rebuild("/Engines/UE", "/Empty", () => undefined, new AbortController().signal)).rejects.toMatchObject({ appError: { code: "sandbox-not-ready" } });
+	});
+
+	it("calls the build hooks once around create and rebuild, before a rebuild deletes anything (M1.4b)", async () =>
+	{
+		const created = createService("5.8.3");
+		await created.service.create("/Engines/UE", "/Users/learner/Dojo", () => undefined, new AbortController().signal);
+
+		expect(created.hookCalls).toEqual(["before /Users/learner/Dojo/DojoSandbox (0 folders removed)", "after true"]);
+
+		const rebuilt = createService("5.8.3", { exitCode: 6, lines: ["Result: Failed"] }, { "/S/Dojo.uproject": "{}" });
+		await rebuilt.service.rebuild("/Engines/UE", "/S", () => undefined, new AbortController().signal);
+
+		expect(rebuilt.hookCalls).toEqual(["before /S (0 folders removed)", "after false"]);
 	});
 
 	it("sends the long-path warning as a preparing line when creating on Windows", async () =>

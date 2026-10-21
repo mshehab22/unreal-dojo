@@ -40,6 +40,19 @@ export interface SandboxProjectDependencies
 
 	/** The shipped template folder (`resources/sandbox-template`). */
 	templateFolder: string;
+
+	/** Told around every full build, so the fast loop can close an editor on this sandbox first and record the build (M1.4b). */
+	buildHooks?: SandboxBuildHooks;
+}
+
+/** Called before and after the full build of create and rebuild. */
+export interface SandboxBuildHooks
+{
+	/** Runs before anything in the sandbox is deleted or built; closes an editor that has this sandbox open. */
+	beforeBuild(sandboxFolder: string): Promise<void>;
+
+	/** Runs after the build finished (not after a cancel). */
+	afterBuild(succeeded: boolean): void;
 }
 
 /** Copies the template, writes EngineAssociation, drops the 5.8 plugins for older engines, builds, and remembers the folder. */
@@ -99,6 +112,7 @@ export class SandboxProjectService
 		// Remember the folder before building: a failed first build is fixed by rebuilding the same sandbox.
 		this.dependencies.pathStore.setSandboxPath(sandboxFolder);
 		await this.dependencies.pathStore.setEnginePath(enginePath);
+		await this.dependencies.buildHooks?.beforeBuild(sandboxFolder);
 
 		return this.buildSandbox(enginePath, sandboxFolder, startedAt, onProgress, signal);
 	}
@@ -110,6 +124,8 @@ export class SandboxProjectService
 		const startedAt = timer.now();
 
 		if ((await fileSystem.readTextFile(paths.join(sandboxFolder, PROJECT_FILE_NAME))) === null) throw sandboxNotReady(sandboxFolder);
+
+		await this.dependencies.buildHooks?.beforeBuild(sandboxFolder);
 
 		onProgress({ phase: "preparing", lastLine: "Removing old build products" });
 		for (const folderName of BUILD_PRODUCT_FOLDERS) await fileSystem.removeFolder(paths.join(sandboxFolder, folderName));
@@ -166,6 +182,8 @@ export class SandboxProjectService
 		});
 
 		if (outcome.cancelled) throw runCancelled();
+
+		this.dependencies.buildHooks?.afterBuild(outcome.succeeded);
 
 		const compilerOutput = outcome.pipelineError ? `${outcome.pipelineError}\n${outcome.filteredOutput}`.trim() : outcome.filteredOutput;
 

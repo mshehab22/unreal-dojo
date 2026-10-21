@@ -69,6 +69,7 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 				progressService: {} as never,
 				getSandboxService: () => services.sandboxService,
 				getQuestRunService: () => services.questRunService,
+				getEditorService: () => services.editorService,
 				runRegistry: new RunRegistry(),
 				sendProgress: (event) => events.push(event),
 				progressContentService: {} as never,

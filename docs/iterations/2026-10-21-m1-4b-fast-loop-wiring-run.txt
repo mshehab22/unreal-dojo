@@ -1,0 +1,54 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - import "./tools/fake/fakeWorldPlugin" without a file extension (vitest.config.ts:6:34). Add the file extension
+  - import "./readFakeWorldFixture" without a file extension (tools/fake/fakeWorldPlugin.ts:4:42). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.3 /Users/mshehab22/Projects/unreal-dojo/.claude/worktrees/m1-1-engine-locator-016bb6
+
+ ✓ tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > creates the sandbox and its first full build passes 23610ms
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > runs headless while no editor is open, and records the full build
+headlessWithEditorClosed: loop=headless ok=true 1/1 in 32351 ms; Full build: the editor is not open (open it from Unreal Dojo for the fast loop).
+
+ ✓ tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > runs headless while no editor is open, and records the full build 32353ms
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > opens the editor with the MCP server on a free port, and the sample test passes through RunTests
+fastRunFirst: loop=fast ok=true 1/1 in 3981 ms; Fast loop: the code is unchanged since the editor loaded it, so only the tests run again.
+
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > opens the editor with the MCP server on a free port, and the sample test passes through RunTests
+fastRunSecond: loop=fast ok=true 1/1 in 65 ms; Fast loop: the code is unchanged since the editor loaded it, so only the tests run again.
+
+ ✓ tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > opens the editor with the MCP server on a free port, and the sample test passes through RunTests 16041ms
+ ✓ tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > refuses to open a second editor on the port the first one holds, and starts no process (fix round 1) 1ms
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > builds headless after a code change, then counts the open editor stale until it restarts (A45)
+headlessAfterChange: loop=headless ok=true 1/1 in 30795 ms; Full build: the code changed, and Live Coding is not available on the Mac.
+
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > builds headless after a code change, then counts the open editor stale until it restarts (A45)
+staleEditorRun: loop=headless ok=true 1/1 in 26618 ms; Full build: the open editor still has older code. Restart the editor to use the fast loop again.
+
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > builds headless after a code change, then counts the open editor stale until it restarts (A45)
+fastRunAfterRestart: loop=fast ok=true 1/1 in 4434 ms; Fast loop: the code is unchanged since the editor loaded it, so only the tests run again.
+
+ ✓ tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > builds headless after a code change, then counts the open editor stale until it restarts (A45) 78572ms
+ ✓ tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > quits the editor cleanly and leaves no process on the sandbox 1822ms
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8
+Timings (ms): {"createAndColdBuild":23606,"headlessWithEditorClosed":32351,"editorLaunchToAnswering":11991,"fastRunFirst":3981,"fastRunSecond":65,"headlessAfterChange":30795,"staleEditorRun":26618,"editorRestartToAnswering":16725,"fastRunAfterRestart":4434,"editorClose":1808}
+
+ ✓ tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > creates the sandbox through createSandbox 24110ms
+stdout | tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > runs the quest headless while no editor is open
+firstRunHeadless: loop=headless ok=true 2/2 in 31149 ms; Full build: the editor is not open (open it from Unreal Dojo for the fast loop).
+
+ ✓ tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > runs the quest headless while no editor is open 31150ms
+ ✓ tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > opens the editor through openEditor on the MCP port from settings, and it reports connected 13921ms
+stdout | tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > runs the same quest again through runQuest in the fast loop
+secondRunFast: loop=fast ok=true 2/2 in 4453 ms; Fast loop: the code is unchanged since the editor loaded it, so only the tests run again.
+
+ ✓ tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > runs the same quest again through runQuest in the fast loop 4454ms
+ ✓ tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > quits through the app's quit sequence: the quit is held, the editor closes, and nothing is left on the sandbox 2672ms
+stdout | tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8
+Timings (ms): {"createAndColdBuild":24106,"firstRunHeadless":31149,"openEditorUntilAnswering":13895,"secondRunFast":4453,"quit":2658}
+
+
+ Test Files  2 passed (2)
+      Tests  11 passed (11)
+   Start at  17:15:28
+   Duration  229.22s (tests 100%)
+

@@ -37,6 +37,12 @@ const FAKE_CONTENT_CATALOG: ContentCatalogService = {
 };
 
 /** Handler dependencies with a fixed version and a fake engine locator that finds one engine. */
+/** Quest ids whose sandbox files the fake run service was asked to remove. */
+const removedQuestFiles: string[] = [];
+
+/** One entry per openEditor call the fake editor service received. */
+const editorOpens: string[] = [];
+
 const FAKE_DEPENDENCIES: HandlerDependencies = {
 	getAppVersion: () => "9.9.9",
 	getEngineLocator: () => ({
@@ -65,7 +71,12 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 		},
 		checkSnippetSyntax: async (code) => ({ ok: !code.includes("oops"), diagnostics: code.includes("oops") ? [{ line: 1, column: 1, severity: "error", message: "oops" }] : [] }),
 		rebuildSandbox: async () => ({ ok: true, sandboxPath: "/S/DojoSandbox", durationMs: 3, compilerOutput: "" }),
+		removeQuestFiles: async (questId) =>
+		{
+			removedQuestFiles.push(questId);
+		},
 	}),
+	getEditorService: () => ({ openEditor: async () => void editorOpens.push("open") }),
 	runRegistry: new RunRegistry(),
 	sendProgress: () => undefined,
 	// The progress content service reads the same fake catalog, so getWorld and getQuest answer from it.
@@ -304,8 +315,26 @@ describe("payload validation", () =>
 		const invoke = createInvoker();
 
 		expect(await invoke(IPC_CHANNELS.runQuest, { runId: "run-1", questId: "w1-health", files: { "DojoHealthComponent.h": "#pragma once" } })).toMatchObject({ ok: true, value: { ok: true, testsPassed: 1 } });
-		expectError(await invoke(IPC_CHANNELS.openEditor, null), "not-implemented");
 		expect(await invoke(IPC_CHANNELS.updateSettings, { loopMode: "fast", enginePath: null })).toMatchObject({ ok: true, value: { loopMode: "fast", enginePath: null } });
+	});
+
+	it("opens the editor through the editor service, with or without a quest id (M1.4b)", async () =>
+	{
+		const invoke = createInvoker();
+		editorOpens.length = 0;
+
+		expect(await invoke(IPC_CHANNELS.openEditor, null)).toEqual({ ok: true });
+		expect(await invoke(IPC_CHANNELS.openEditor, "f1-training-dummy")).toEqual({ ok: true });
+		expect(editorOpens).toEqual(["open", "open"]);
+	});
+
+	it("removes a reset quest's sandbox files after resetting its progress (M1.4b)", async () =>
+	{
+		const invoke = createInvoker();
+		removedQuestFiles.length = 0;
+
+		expect((await invoke(IPC_CHANNELS.resetQuest, "f1-training-dummy")).ok).toBe(true);
+		expect(removedQuestFiles).toEqual(["f1-training-dummy"]);
 	});
 
 	it("creates the sandbox through the service, streaming progress stamped with the run id", async () =>

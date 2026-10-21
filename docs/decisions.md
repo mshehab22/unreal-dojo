@@ -4,6 +4,24 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A535 2026-10-21 The wiring's integration test drives the real handlers and a stand-in for Electron's app (builder-unreal, M1.4b)
+Options: a Playwright run of the packaged app against a real engine; the real `createHandlers` and services in vitest with a fake `app` that replays `before-quit`. Chosen: the second, like M1.3b's `runQuest` test. It exercises the same handler code, services, and quit sequence; what it does not cover is Electron itself emitting `before-quit`. A Playwright engine run would need the app's userData seeded with an engine and sandbox, which is a larger change to the e2e setup. Reverse cost: medium.
+
+### A534 2026-10-21 `resetQuest` also removes the quest's sandbox files (builder-unreal, M1.4b)
+The IPC contract already said a reset removes the quest's files from the sandbox, but nothing did. Options: leave the files (the next run rewrites them); remove them. Chosen: remove the quest folder and its test file after the progress reset, and record it in the build ledger, so the fast loop does not trust an editor that loaded them. A sandbox that cannot be reached (no sandbox yet, an unsupported platform) only logs a warning: the reset itself never fails because of it. Reverse cost: none.
+
+### A533 2026-10-21 `openEditor(questId)` opens the sandbox; the quest id is ignored for now (builder-unreal, M1.4b)
+The contract mentions opening "that quest's map for See it run", but no quest ships a map. Options: refuse a quest id; accept it and open the sandbox. Chosen: accept and open the sandbox, so the renderer can pass it today and gain the map later without a contract change. Reverse cost: none.
+
+### A532 2026-10-21 `openEditor` opens a windowless editor when the editor window cannot open (builder-unreal, M1.4b)
+On this Mac the editor with a window quits at startup because the Metal toolchain is missing; the toolchain check reports that as a non-blocking problem. Options: open with a window anyway and fail; refuse and show the fix; open windowless. Chosen: windowless (`-NullRHI`) whenever the toolchain check lists a non-blocking problem, so the fast loop still works; the toolchain check's message already tells the learner how to get the window. Today the only non-blocking problem is the Metal toolchain. Reverse cost: low.
+
+### A531 2026-10-21 Sandbox create and rebuild close an editor on that sandbox first and record the build (builder-unreal, M1.4b)
+`SandboxProjectService` gains optional `buildHooks`. Before a rebuild deletes `Binaries` and the other build folders (and before create's first build), an editor the app opened on that sandbox is closed: a rebuild would delete the modules it loaded, and on Windows UBT cannot rebuild them while it runs. After a successful build the ledger records it, which makes any other open editor stale. Options: refuse to rebuild while the editor is open; close it. Chosen: close it; the learner reopens it with Open editor. Reverse cost: low.
+
+### A530 2026-10-21 One quit sequence for runs and the editor (builder-unreal, M1.4b)
+The app had one `before-quit` hook for the run registry (5 seconds) and M1.4 added one for the editor (15 seconds); each one's `quit()` would re-fire the other, which then let the quit through early. Options: keep two hooks and make them aware of each other; one sequence. Chosen: `stopEngineWorkBeforeQuit` replaces both: cancel runs first (a run may be using the editor), then dispose the launcher, holding every quit attempt until both are done. It never builds the Unreal services just to quit. Reverse cost: low.
+
 ### A286 2026-10-21 Engine smoke builds the cmd.exe command line by hand for Build.bat (QA harness fix round 1, tester) (superseded by A63)
 Superseded 2026-10-21: after M1.3 merged, the smoke calls `SandboxProjectService`, `UnrealBuilder`, and `AutomationTestRunner`; `tools/qa/windowsCommandLine.ts`, its test, and the hand-written tree kill were deleted. The text below is kept as history.
 
@@ -202,7 +220,7 @@ Unreal's MCP server does not fail when its port is taken, so the client could en
 ### A490 2026-10-21 One RunResult builder for both loops (builder-unreal, M1.4)
 `HeadlessRunner` had its own private function that fills a `RunResult`. Options: copy it into the fast runner; move it to `runResultOf.ts` and use it in both. Chosen: move it, so `ok` means the same in both loops. Reverse cost: none.
 
-### A489 2026-10-21 Fast loop built and tested, wired into the app after M1.3b merges (builder-unreal, M1.4)
+### A489 2026-10-21 Fast loop built and tested, wired into the app after M1.3b merges (builder-unreal, M1.4; wired in M1.4b, A530 to A535)
 M1.3b's fix round is editing `createUnrealServices.ts`, `createHandlers.ts`, and `src/main/index.ts`. Options: wire now and conflict with it; build beside it and wire after it merges. Chosen: build beside it. After the rebase onto M1.3b: `createUnrealServices` creates the one `FullBuildLedger`, returns it as `buildLedger`, and passes `PrerequisiteFiller` a listener that calls `recordSandboxWrite(questId, files, replaceFolder)` after each folder it writes (a partial write keeps the folder's other files). `RunnerFactory` takes the fast loop pieces as an optional second argument, so today's call stays valid. Left for the wiring step: pass the pieces in `createUnrealServices` (with a `NodePortProbe`); answer `openEditor` with `EditorLauncher`; report `editorConnected` and a stale editor in `getEnvironmentStatus`; record sandbox create and rebuild in the ledger (`recordSandboxBuild`); call `recordSandboxWrite(questId, null)` when a quest reset removes its sandbox files (nothing calls `QuestFileWriter.remove` yet); and call `stopEditorBeforeQuit(app, editorLauncher)` in `src/main/index.ts`. That hook holds the quit while the editor closes (up to the 15 second grace, longer than the run registry's 5 seconds) and disposes the launcher, so `LoopSelectingRunner`'s background `reopen()` cannot start an editor once quit began; the run registry's own `before-quit` handler and this one should be checked together at wiring, since either one's `quit()` re-fires the other (fix round 1). Reverse cost: none.
 
 ### A488 2026-10-21 Cancel during a fast run takes effect between steps (builder-unreal, M1.4)

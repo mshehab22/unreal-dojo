@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import { AppErrorException } from "../../src/main/errors/AppErrorException";
 import { CLOSE_GRACE_MS, EditorLauncher } from "../../src/main/services/unreal/EditorLauncher";
 import { NodePortProbe } from "../../src/main/services/unreal/NodePortProbe";
-import { stopEditorBeforeQuit, type QuittingApp } from "../../src/main/services/unreal/stopEditorBeforeQuit";
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
 import type { PlatformPaths } from "../../src/main/services/unreal/PlatformPaths";
 import { WindowsPlatformPaths } from "../../src/main/services/unreal/WindowsPlatformPaths";
@@ -257,56 +256,5 @@ describe("NodePortProbe", () =>
 		{
 			await server.stop();
 		}
-	});
-});
-
-describe("stopEditorBeforeQuit", () =>
-{
-	/** A stand-in for Electron's app that records quits and replays before-quit. */
-	function createApp()
-	{
-		let listener: (event: { preventDefault(): void }) => void = () => undefined;
-		const app = { quitCount: 0, on: (_eventName: "before-quit", newListener: typeof listener) => (listener = newListener), quit: () => app.quitCount++ };
-		const fire = (): boolean =>
-		{
-			let prevented = false;
-			listener({ preventDefault: () => (prevented = true) });
-
-			return prevented;
-		};
-
-		return { app: app as QuittingApp & { quitCount: number }, fire };
-	}
-
-	it("holds the quit until the open editor is closed, holds any quit attempt meanwhile, then quits", async () =>
-	{
-		const { launcher, processes, timer } = createLauncher();
-		processes.honorsExitRequests = false;
-		await launcher.launch({ engineRoot: MAC_ENGINE, projectFile: MAC_PROJECT, port: 8000, startMcpServer: true, windowless: false });
-		const { app, fire } = createApp();
-		stopEditorBeforeQuit(app, launcher);
-
-		expect(fire()).toBe(true);
-		await settle();
-		expect(fire()).toBe(true);
-		expect(app.quitCount).toBe(0);
-
-		timer.advance(CLOSE_GRACE_MS);
-		for (let step = 0; step < 4; step++) await settle();
-
-		expect(processes.killCount).toBe(1);
-		expect(app.quitCount).toBe(1);
-		expect(fire()).toBe(false);
-	});
-
-	it("lets the quit through when no editor is open, and still stops any later reopen", async () =>
-	{
-		const { launcher } = createLauncher();
-		const { app, fire } = createApp();
-		stopEditorBeforeQuit(app, launcher);
-
-		expect(fire()).toBe(false);
-		await settle();
-		expect(await launcher.reopen()).toBeNull();
 	});
 });
