@@ -83,7 +83,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 8665386 | merged | 1 fix round plus a test fix; includes the GFrameCounter timer fix |
-| M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring | building | runQuest, cancelRun, checkSnippetSyntax; fill skipped prerequisites |
+| M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring @ e109d4e | review | runQuest, cancelRun, checkSnippetSyntax, rebuildSandbox; prerequisite fill; adding tools/solutions to extraResources (Lead permission) |
 | M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | m0-2c-settings @ 7105220 | review | Settings, safeStorage key, environment status; 539 tests |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | merged b06a722 | merged | 2 rounds; --engine 9 of 9 on UE 5.8.3 through M1.3 runners |
 | M1.8b Verifier follow-ups | content-engine | content-engine (session "M0.4 Content types...") | m1-8b-verifier-followups | building | Bare-name cross-quest includes, Ctrl+C cancel, template copy skips build folders |
@@ -91,7 +91,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
 | M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c1b7533) | re-review (round 3) | Round start and timer; World 1 boss reference integration with two-round tests, 10 of 10, mutation caught |
-| M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ f14b61f) | fixes; boss waits on A67 | 17 of 17 on UE 5.8.3. Round 1: four GC facts wrong for 5.8 (garbage elimination nulls reflected refs), breakdown reads destroyed discs, rack Recall leaks state (Lead: reuse ResetForRound from the World 1 boss), minor items |
+| M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c3c9c14) | re-review; boss waits on A67 | All 11 items; 20 of 20 on UE 5.8.3 with the World 1 boss pieces |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | m2-2-quest-screens | building | Concept, Drill, Breakdown, Build, Loot on the M2.1 data layer and fake |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | claude/m3-1-patterns-observer-0943eb @ 4701e8a | review | 7 quests; 9 solution tests pass on UE 5.8.3 |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 94fae2a | re-review | Smoke on M1.3 runners, 39 s |
