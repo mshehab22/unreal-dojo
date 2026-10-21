@@ -19,7 +19,7 @@ concepts:
 
 # Brief
 
-When you press Play and run `ke * Hit 0` three times between two frames, the pad's score jumps by 30 on the next frame and never counts those hits again, however many frames pass.
+When you press Play and run `ke * Hit 0`, the pad's score rises by 10 on the frame after the hit and never counts that hit again, however many frames pass; three hits typed one after another add 10 each.
 
 In the arena's rhythm round, hits on the drum pad come from several places: the player's input bindings, a training dummy that drums along, and a level Blueprint replaying a pattern. They can arrive at any point in a frame, including while the scoring code is halfway through reading the last batch. Scoring must see one finished batch per frame, and a hit that lands while scoring is under way must wait for the next frame rather than sneak into this one.
 
@@ -34,7 +34,7 @@ Write the obvious version first and run the tests. One of them fails on purpose 
 
 ## See it in the editor
 
-Place a `DojoP4DrumPad` in a map with no other pads, press Play, and open the console. Run `ke * Hit 0`, `ke * Hit 0`, `ke * Hit 3`: the label jumps from 0 to 30 on the next frame and stays there. Run `ke * Hit 9`: nothing changes, because lane 9 is not on the pad. In the Level Blueprint, bind a key to call Hit on the pad with lane 1: every press adds 10, once.
+Place a `DojoP4DrumPad` in a map with no other pads, press Play, and open the console. Run `ke * Hit 0`, then `ke * Hit 3`: each command runs on its own frame, so the label rises by 10 on the frame after each one, to 20, and stays there. Run `ke * Hit 9`: nothing changes, because lane 9 is not on the pad. In the Level Blueprint, bind a key to call Hit on the pad with lane 1: every press adds 10, once.
 
 # Files
 

@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: [double-buffer]
 skills: [double-buffer]
-terms: [tarray, render-thread, tick]
+terms: [tarray, render-thread, tick, game-thread]
 prerequisites: [p4-straw-fire]
 xp: 25
 estimatedMinutes: 8

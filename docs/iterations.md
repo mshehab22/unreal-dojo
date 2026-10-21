@@ -917,3 +917,9 @@ total                                       39.2  PASSED
   - The obvious drum pad (swap without emptying): fails only `OldHitsNeverReturn` ("expected 1, was 4") and `EachHitScoresOnce` ("expected 20, was 40").
   - Content verifier `--pack patterns`: no problems. One expected warning: the Pack 4 gate names the Component world, which does not exist yet.
 - Not done: no boss for this world yet (A541). No screenshots (editor runs with `-NullRHI` on this Mac). Windows unverified. Decisions A540 to A547.
+
+### Fix round 1
+- Straw fire brief: it now says what an in-place write really does. The fire dies out in the direction of the walk and creeps one square per step against it, so the shape depends on the walk direction. The strip test catches the forward walk, and the two-fire test compares both directions.
+- Glossary: `render-thread` no longer lists "game thread" as an alias. A new `game-thread` entry has its own short and long text and Epic's 5.8 Threaded Rendering page, which describes the game thread's role. Its first quest is the Game Loop card, and the five quests that mention the game thread now list it in their terms.
+- Drum pad brief: each `ke * Hit` typed in the console runs on its own frame, so the brief now says the score rises by 10 on the frame after each hit instead of promising a jump of 30.
+- No code or tests changed, so the engine results above stand. Verifier `--pack patterns`: no problems, plus the expected Pack 4 gate warning.

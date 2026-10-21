@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: []
 skills: [double-buffer]
-terms: [tick, tarray, render-thread]
+terms: [tick, tarray, render-thread, game-thread]
 prerequisites: [p3-per-frame-behavior]
 xp: 25
 estimatedMinutes: 7

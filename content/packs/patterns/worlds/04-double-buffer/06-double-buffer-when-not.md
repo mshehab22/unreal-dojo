@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: [double-buffer]
 skills: [double-buffer, architecture]
-terms: [tarray, tick, multicast-delegate]
+terms: [tarray, tick, multicast-delegate, game-thread]
 prerequisites: [p4-standings-refactor]
 xp: 25
 estimatedMinutes: 6

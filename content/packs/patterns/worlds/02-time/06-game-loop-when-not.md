@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: [game-loop]
 skills: [game-loop, architecture]
-terms: [tick, deltatime, timer-manager, physics-substepping]
+terms: [tick, deltatime, timer-manager, physics-substepping, game-thread]
 prerequisites: [p2-boulder-refactor]
 xp: 25
 estimatedMinutes: 6

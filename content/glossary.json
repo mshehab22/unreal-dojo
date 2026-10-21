@@ -1399,11 +1399,28 @@
     "firstQuestId": "p3-per-frame-behavior"
   },
   {
+    "id": "game-thread",
+    "term": "Game Thread",
+    "aliases": [
+      "GameThread",
+      "IsInGameThread"
+    ],
+    "category": "framework",
+    "short": "The thread that runs gameplay: ticking actors and components, Blueprint, input, timers, and delegates.",
+    "long": "Almost all gameplay code runs on the game thread, which owns every actor and UObject and works through the frame: input, ticks in their tick groups, timers, and delegates. Drawing is prepared on the separate render thread, and some work such as physics or async tasks can run on other threads, but the results come back to the game thread to be read. Code on another thread must not touch actors or UObjects directly; it hands its results to the game thread, and IsInGameThread lets code check where it is running.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/threaded-rendering-in-unreal-engine?application_version=5.8",
+    "related": [
+      "render-thread",
+      "tick",
+      "tick-groups"
+    ],
+    "firstQuestId": "p2-game-loop-card"
+  },
+  {
     "id": "render-thread",
     "term": "Render Thread",
     "aliases": [
       "rendering thread",
-      "game thread",
       "FSceneProxy",
       "scene proxy",
       "scene proxies"
@@ -1414,7 +1431,8 @@
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/threaded-rendering-in-unreal-engine?application_version=5.8",
     "related": [
       "tick",
-      "tick-groups"
+      "tick-groups",
+      "game-thread"
     ],
     "firstQuestId": "p4-read-while-writing"
   },

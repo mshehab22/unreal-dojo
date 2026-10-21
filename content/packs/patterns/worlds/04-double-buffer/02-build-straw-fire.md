@@ -21,11 +21,11 @@ concepts:
 
 When you press Play and light the middle of the floor with `ke * Ignite 6 4`, a ring of orange squares spreads across the arena's straw one square per half second in every direction at the same pace, and it spreads exactly the same if you flip Walk Backward on.
 
-The rule is simple: a burning square turns to ash, and straw next to a burning square catches. The trap is in how a step applies it. Walk the floor left to right and write each square's new state straight into the floor, and the square you just set burning is already "next to fire" when the walk reaches its neighbor. The fire then races through a whole row in one step in the direction of the walk, or dies out the other way. The outcome depends on the order of a loop nobody chose on purpose.
+The rule is simple: a burning square turns to ash, and straw next to a burning square catches. The trap is in how a step applies it. Walk the floor left to right and write each square's new state straight into the floor, and a square the walk has already handled no longer shows what it was when the step began. A burning square turns to ash before its right-hand neighbor is checked, so that neighbor never catches: the fire dies out in the direction of the walk. Against the walk, a neighbor is checked before the burning square changes, so the fire still creeps one square per step that way. The shape of the fire depends on the order of a loop nobody chose on purpose.
 
 `ADojoP4StrawFloor` keeps two floors: `Squares`, the finished one that every rule reads, and `NextSquares`, the one the step writes. Most of the class is written, including `NextStateOf`, which reads only `Squares`. First read the marked lines and say in a sentence why each one is there. Then fill the two gaps in `Step`: write each square's next state into `NextSquares`, and after the walk make the new floor the one everybody reads. `Swap(Squares, NextSquares)` exchanges the two arrays' contents in constant time, without copying a square.
 
-Naive first: write `Squares[Index] = NextStateOf(Index);` and run the tests. The line of straw that should burn one square per step does something else, and it does a different wrong thing with Walk Backward on.
+Naive first: write `Squares[Index] = NextStateOf(Index);` and run the tests. The strip lit at its left end should burn one square per step; walking forward, the in-place version lets the fire die after the first square, and the strip test catches it. Walking backward the strip happens to look right, which is exactly why the two-fire test compares both directions.
 
 ## See it in the editor
 
