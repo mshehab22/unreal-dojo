@@ -1,0 +1,36 @@
+
+ RUN  v5.0.3 /Users/mshehab22/Projects/unreal-dojo/.claude/worktrees/m1-1-engine-locator-016bb6
+
+ ✓ tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > creates the sandbox and its first full build passes 52509ms
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > runs headless while no editor is open, and records the full build
+headlessWithEditorClosed: loop=headless ok=true 1/1 in 52351 ms; Full build: the editor is not open (open it from Unreal Dojo for the fast loop).
+
+ ✓ tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > runs headless while no editor is open, and records the full build 52356ms
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > opens the editor with the MCP server on a free port, and the sample test passes through RunTests
+fastRunFirst: loop=fast ok=true 1/1 in 3823 ms; Fast loop: the code is unchanged since the editor loaded it, so only the tests run again.
+
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > opens the editor with the MCP server on a free port, and the sample test passes through RunTests
+fastRunSecond: loop=fast ok=true 1/1 in 32 ms; Fast loop: the code is unchanged since the editor loaded it, so only the tests run again.
+
+ ✓ tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > opens the editor with the MCP server on a free port, and the sample test passes through RunTests 16502ms
+ ✓ tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > refuses to open a second editor on the port the first one holds, and starts no process (fix round 1) 1ms
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > builds headless after a code change, then counts the open editor stale until it restarts (A45)
+headlessAfterChange: loop=headless ok=true 1/1 in 39227 ms; Full build: the code changed, and Live Coding is not available on the Mac.
+
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > builds headless after a code change, then counts the open editor stale until it restarts (A45)
+staleEditorRun: loop=headless ok=true 1/1 in 38103 ms; Full build: the open editor still has older code. Restart the editor to use the fast loop again.
+
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > builds headless after a code change, then counts the open editor stale until it restarts (A45)
+fastRunAfterRestart: loop=fast ok=true 1/1 in 4063 ms; Fast loop: the code is unchanged since the editor loaded it, so only the tests run again.
+
+ ✓ tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > builds headless after a code change, then counts the open editor stale until it restarts (A45) 103255ms
+ ✓ tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8 > quits the editor cleanly and leaves no process on the sandbox 2322ms
+stdout | tests/integration/fastLoop.test.ts > fast loop against /Users/mshehab22/Applications/UE_5.8
+Timings (ms): {"createAndColdBuild":52500,"headlessWithEditorClosed":52351,"editorLaunchToAnswering":12643,"fastRunFirst":3823,"fastRunSecond":32,"headlessAfterChange":39227,"staleEditorRun":38103,"editorRestartToAnswering":21857,"fastRunAfterRestart":4063,"editorClose":2307}
+
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  15:22:21
+   Duration  227.46s (tests 100%)
+

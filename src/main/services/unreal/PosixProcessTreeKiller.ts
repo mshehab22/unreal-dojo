@@ -29,4 +29,17 @@ export class PosixProcessTreeKiller implements ProcessTreeKiller
 			}
 		}
 	}
+
+	/** Sends SIGTERM to the process itself, so it can shut down cleanly and stop its own helpers. */
+	requestExit(processId: number): void
+	{
+		try
+		{
+			this.sendSignal(processId, "SIGTERM");
+		}
+		catch
+		{
+			// Already gone.
+		}
+	}
 }

@@ -29,6 +29,12 @@ export class FakeProcessLauncher implements ProcessLauncher
 	/** How many times killTree was called. */
 	killCount = 0;
 
+	/** How many times requestExit was called. */
+	exitRequestCount = 0;
+
+	/** When true, a hanging process exits cleanly on requestExit; when false it ignores the request (an editor stuck in shutdown). */
+	honorsExitRequests = true;
+
 	private readonly scripts: ScriptedProcess[];
 
 	/** Takes one script per expected start. */
@@ -66,6 +72,12 @@ export class FakeProcessLauncher implements ProcessLauncher
 			{
 				this.killCount++;
 				resolveExit({ exitCode: null, started: true });
+			},
+			requestExit: () =>
+			{
+				this.exitRequestCount++;
+
+				if (this.honorsExitRequests) resolveExit({ exitCode: 0, started: true });
 			},
 		};
 	}

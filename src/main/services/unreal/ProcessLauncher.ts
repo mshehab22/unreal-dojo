@@ -34,6 +34,9 @@ export interface RunningProcess
 
 	/** Kills the process and every process it started. Safe to call more than once or after exit. */
 	killTree(): void;
+
+	/** Asks the process to quit on its own (SIGTERM on macOS, a close request on Windows), for the editor's clean shutdown. Safe after exit. */
+	requestExit(): void;
 }
 
 /** Starts processes with stdin ignored and stdout and stderr delivered line by line. */

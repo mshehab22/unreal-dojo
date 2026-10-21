@@ -8,4 +8,7 @@ export interface ProcessTreeKiller
 
 	/** Kills the process with this id and everything it started. Never throws. */
 	killTree(processId: number): void;
+
+	/** Asks the process with this id to quit on its own; it may ignore the request. Never throws. */
+	requestExit(processId: number): void;
 }
