@@ -215,6 +215,41 @@ describe("wrapHandler", () =>
 		expect(error).toEqual({ code: "quest-not-found", message: "That quest does not exist.", suggestedAction: "Go back to the World Map.", detail: "w1-missing" });
 	});
 
+	it("returns only the four AppError fields, so a function-valued extra property still clones", async () =>
+	{
+		const definition: HandlerDefinition<"resetQuest"> = {
+			argumentSchemas: [idSchema],
+			handle: () =>
+			{
+				throw { code: "save-failed", message: "Saving failed.", suggestedAction: "Try again.", retry: () => "not cloneable" };
+			},
+		};
+
+		const response = await wrapHandler("resetQuest", definition)(fakeEvent, "w1-health");
+
+		expect(response).toEqual({ ok: false, error: { code: "save-failed", message: "Saving failed.", suggestedAction: "Try again." } });
+		expect(() => structuredClone(response)).not.toThrow();
+	});
+
+	it("copies an AppErrorException's error instead of returning the exception's own object", async () =>
+	{
+		const exception = new AppErrorException("save-failed", "Saving failed.", "Try again.");
+		Object.assign(exception.appError, { onRetry: () => undefined });
+
+		const definition: HandlerDefinition<"resetQuest"> = {
+			argumentSchemas: [idSchema],
+			handle: () =>
+			{
+				throw exception;
+			},
+		};
+
+		const response = await wrapHandler("resetQuest", definition)(fakeEvent, "w1-health");
+
+		expect(() => structuredClone(response)).not.toThrow();
+		expect(response).toEqual({ ok: false, error: { code: "save-failed", message: "Saving failed.", suggestedAction: "Try again." } });
+	});
+
 	it("turns a thrown non-Error value into an AppError", async () =>
 	{
 		const definition: HandlerDefinition<"resetQuest"> = {

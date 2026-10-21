@@ -11,7 +11,7 @@ import type {
 	QuestDraft,
 } from "@shared/types/progress";
 import type { FindingExplanationRequest, ReflectionAnswerRequest } from "@shared/types/review";
-import type { RunRequest, SandboxSetupRequest } from "@shared/types/run";
+import type { RunRequest, SandboxSetupRequest, SyntaxCheckRequest } from "@shared/types/run";
 import type { SettingsPatch } from "@shared/types/settings";
 
 /** Longest id the app accepts (quest, term, item, run, attempt, session ids). */
@@ -49,6 +49,12 @@ const DAILY_OFFER_COUNT = 3;
 
 /** Highest finding index a review can hold. */
 const MAXIMUM_FINDING_INDEX = 99;
+
+/** Largest scratch buffer accepted for a syntax check, in characters. */
+const MAXIMUM_SNIPPET_LENGTH = 50_000;
+
+/** Most self-explanations one quest holds (worked quests mark 3 to 5 lines). */
+const MAXIMUM_SELF_EXPLANATION_COUNT = 20;
 
 /** An id: letters, digits, dot, underscore, and dash, up to 128 characters. */
 export const idSchema = z.string().min(1).max(MAXIMUM_ID_LENGTH).regex(ID_PATTERN, "may only hold letters, digits, dot, underscore, and dash");
@@ -133,11 +139,23 @@ export const itemResponseSchema: z.ZodType<ItemResponse> = z.discriminatedUnion(
 	z.strictObject({ kind: z.literal("order"), lineIds: z.array(idSchema).max(MAXIMUM_LIST_LENGTH) }),
 ]);
 
-/** `QuestDraft`: quest id with optional files and optional board. */
+/** Worked-level self-explanations: marked line key to the learner's sentence. */
+const selfExplanationsSchema = z
+	.record(z.string().min(1).max(200), z.string().max(2000))
+	.refine((explanations) => Object.keys(explanations).length <= MAXIMUM_SELF_EXPLANATION_COUNT, `must have at most ${MAXIMUM_SELF_EXPLANATION_COUNT} entries`);
+
+/** `QuestDraft`: quest id with optional files, optional board, and optional self-explanations. */
 export const questDraftSchema: z.ZodType<QuestDraft> = z.strictObject({
 	questId: idSchema,
 	files: fileMapSchema.optional(),
 	breakdownPlan: breakdownPlanSchema.optional(),
+	selfExplanations: selfExplanationsSchema.optional(),
+});
+
+/** `SyntaxCheckRequest`: quest id and the scratch buffer text. */
+export const syntaxCheckRequestSchema: z.ZodType<SyntaxCheckRequest> = z.strictObject({
+	questId: idSchema,
+	code: z.string().max(MAXIMUM_SNIPPET_LENGTH),
 });
 
 /** `ConceptSubmission`: quest id, the prediction (or null), one answer per question. */

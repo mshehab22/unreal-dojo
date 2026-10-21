@@ -25,11 +25,20 @@ function invalidPayload(method: DojoMethod, problem: string): AppError
 	};
 }
 
-/** Turns anything a handler threw into an AppError. Known AppErrors pass through; anything else becomes `unexpected`. */
+/** Copies only the four AppError fields, so an extra property (a function, a class instance) can never make the answer fail to clone over IPC. */
+function copyAppError(error: AppError): AppError
+{
+	const copy: AppError = { code: error.code, message: String(error.message), suggestedAction: String(error.suggestedAction) };
+	if (error.detail !== undefined) copy.detail = String(error.detail);
+
+	return copy;
+}
+
+/** Turns anything a handler threw into an AppError. Known AppErrors pass through as clean copies; anything else becomes `unexpected`. */
 function toAppError(method: DojoMethod, thrown: unknown): AppError
 {
-	if (thrown instanceof AppErrorException) return thrown.appError;
-	if (isAppError(thrown)) return thrown;
+	if (thrown instanceof AppErrorException) return copyAppError(thrown.appError);
+	if (isAppError(thrown)) return copyAppError(thrown);
 
 	const detail = thrown instanceof Error ? thrown.message : String(thrown);
 

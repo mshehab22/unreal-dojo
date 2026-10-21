@@ -103,3 +103,39 @@ export interface SandboxSetupRequest
 	/** Folder to create the sandbox in (from `pickSandboxFolder`). */
 	folder: string;
 }
+
+/** What the renderer sends to syntax-check the editable example in a concept quest's scratch buffer. */
+export interface SyntaxCheckRequest
+{
+	/** The concept quest the example belongs to (its terms decide which headers the check includes). */
+	questId: string;
+
+	/** The scratch buffer's C++ text. */
+	code: string;
+}
+
+/** One problem the syntax check found. */
+export interface SyntaxDiagnostic
+{
+	/** Line in the scratch buffer, from 1. */
+	line: number;
+
+	/** Column, from 1, when the checker reports one. */
+	column?: number;
+
+	/** How serious it is. */
+	severity: "error" | "warning";
+
+	/** The checker's message, filtered to plain text. */
+	message: string;
+}
+
+/** Answer of a scratch buffer syntax check. Never builds or runs anything. */
+export interface SyntaxCheckResult
+{
+	/** True when there are no errors. */
+	ok: boolean;
+
+	/** Every error and warning, in line order. */
+	diagnostics: SyntaxDiagnostic[];
+}

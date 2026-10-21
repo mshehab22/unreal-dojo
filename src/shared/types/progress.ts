@@ -90,6 +90,9 @@ export interface QuestProgress
 	/** The learner's revision note after seeing a reference plan. */
 	revisionNote?: string;
 
+	/** Worked-level self-explanations: why each marked line exists, keyed by the marked line's key from the quest content. */
+	selfExplanations?: Record<string, string>;
+
 	/** When the last attempt happened (ISO 8601). */
 	lastAttemptAt: string | null;
 }
@@ -114,6 +117,9 @@ export interface AttemptRecord
 
 	/** XP granted by this attempt. */
 	xpGained: number;
+
+	/** The code review of a build, refactor, or boss Submit, kept so "why is this a finding?" and the reflection answer can find it by attempt id. */
+	review?: CodeReview;
 }
 
 /** One spaced review of one item, appended forever so FSRS can replace SM-2 later without a migration. */
@@ -243,6 +249,19 @@ export interface QuestAvailability
 
 /** What a chest can hold. */
 export type ChestReward = "freeze" | "armor" | "seer-stone" | "studio-cosmetic" | "xp-potion";
+
+/** Whether a world's test-out can be taken, for the World Map's test-out button. */
+export interface WorldTestOutStatus
+{
+	/** True when every term of the world is at least proficient, so its mixed drill can be taken as a test-out. */
+	eligible: boolean;
+
+	/** True once the learner passed the world's test-out, so its worked and faded quests can be skipped. Bosses never are. */
+	testedOut: boolean;
+
+	/** Plain-English reason when not eligible, for example "3 terms are not proficient yet." */
+	reason?: string;
+}
 
 /** Itemized XP for the loot screen. Every field is XP, positive or negative. */
 export interface XpBreakdown
@@ -396,6 +415,9 @@ export interface QuestDraft
 
 	/** Breakdown board. */
 	breakdownPlan?: BreakdownPlan;
+
+	/** Worked-level self-explanations by marked line key. Replaces the saved set when present. */
+	selfExplanations?: Record<string, string>;
 }
 
 /** Answer of revealing the next hint spell. */

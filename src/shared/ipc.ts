@@ -20,9 +20,10 @@ import type {
 	QuestProgress,
 	RulesSnapshot,
 	SubmitOutcome,
+	WorldTestOutStatus,
 } from "./types/progress";
 import type { ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "./types/review";
-import type { BuildProgressEvent, RunRequest, RunResult, SandboxSetupRequest } from "./types/run";
+import type { BuildProgressEvent, RunRequest, RunResult, SandboxSetupRequest, SyntaxCheckRequest, SyntaxCheckResult } from "./types/run";
 import type { Settings, SettingsPatch } from "./types/settings";
 
 /**
@@ -89,6 +90,9 @@ export interface DojoInvokeApi
 	/** Builds, tests, reviews, and records the attempt. Streams progress under `request.runId`. */
 	submitQuest(request: RunRequest): Promise<SubmitOutcome>;
 
+	/** Syntax-checks a concept quest's scratch buffer example with the platform compiler, without building the sandbox. */
+	checkSnippetSyntax(request: SyntaxCheckRequest): Promise<SyntaxCheckResult>;
+
 	/** Cancels a running build, test, or sandbox setup and kills its process tree. The cancelled call rejects with `run-cancelled`. */
 	cancelRun(runId: string): Promise<void>;
 
@@ -103,10 +107,13 @@ export interface DojoInvokeApi
 	/** Returns availability of every quest by quest id, with locked reasons, for the World Map. */
 	getQuestAvailability(): Promise<Record<string, QuestAvailability>>;
 
+	/** Returns test-out eligibility of every world by world id, for the World Map's test-out button. */
+	getTestOutStatus(): Promise<Record<string, WorldTestOutStatus>>;
+
 	/** Sets the learner's display name. */
 	setPlayerName(playerName: string): Promise<PlayerProgress>;
 
-	/** Autosaves a quest in progress (files or breakdown board). */
+	/** Autosaves a quest in progress (files, breakdown board, or worked-level self-explanations). */
 	saveQuestDraft(draft: QuestDraft): Promise<void>;
 
 	/** Clears a quest's saved files and board and removes its files from the sandbox. */
@@ -196,10 +203,12 @@ export const IPC_CHANNELS = {
 	openEditor: "dojo:openEditor",
 	runQuest: "dojo:runQuest",
 	submitQuest: "dojo:submitQuest",
+	checkSnippetSyntax: "dojo:checkSnippetSyntax",
 	cancelRun: "dojo:cancelRun",
 	getProgress: "dojo:getProgress",
 	getRules: "dojo:getRules",
 	getQuestAvailability: "dojo:getQuestAvailability",
+	getTestOutStatus: "dojo:getTestOutStatus",
 	setPlayerName: "dojo:setPlayerName",
 	saveQuestDraft: "dojo:saveQuestDraft",
 	resetQuest: "dojo:resetQuest",

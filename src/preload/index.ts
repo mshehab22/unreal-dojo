@@ -50,15 +50,19 @@ function createInvokeApi(): DojoInvokeApi
 	return invokeApi as unknown as DojoInvokeApi;
 }
 
-/** Subscribes a renderer listener to build progress events and returns the function that removes it. */
+/** Subscribes a renderer listener to build progress events and returns the function that removes it. Calling that function again does nothing. */
 function onBuildProgress(listener: (event: BuildProgressEvent) => void): Unsubscribe
 {
 	const forward = (_ipcEvent: IpcRendererEvent, progressEvent: BuildProgressEvent) => listener(progressEvent);
+	let subscribed = true;
 
 	ipcRenderer.on(BUILD_PROGRESS_CHANNEL, forward);
 
 	return () =>
 	{
+		if (!subscribed) return;
+
+		subscribed = false;
 		ipcRenderer.removeListener(BUILD_PROGRESS_CHANNEL, forward);
 	};
 }

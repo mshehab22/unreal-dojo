@@ -18,6 +18,7 @@ import {
 	runRequestSchema,
 	sandboxSetupRequestSchema,
 	settingsPatchSchema,
+	syntaxCheckRequestSchema,
 } from "./requestSchemas";
 
 /** What the handlers need from the outside world. Grows as services are built; tests pass fakes. */
@@ -75,11 +76,13 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 
 		runQuest: stub("runQuest", ARRIVES_WITH.runs, [runRequestSchema]),
 		submitQuest: stub("submitQuest", ARRIVES_WITH.submit, [runRequestSchema]),
+		checkSnippetSyntax: stub("checkSnippetSyntax", ARRIVES_WITH.runs, [syntaxCheckRequestSchema]),
 		cancelRun: stub("cancelRun", ARRIVES_WITH.runs, [idSchema]),
 
 		getProgress: stub("getProgress", ARRIVES_WITH.progress, []),
 		getRules: stub("getRules", ARRIVES_WITH.progress, []),
 		getQuestAvailability: stub("getQuestAvailability", ARRIVES_WITH.progress, []),
+		getTestOutStatus: stub("getTestOutStatus", ARRIVES_WITH.progress, []),
 		setPlayerName: stub("setPlayerName", ARRIVES_WITH.progress, [playerNameSchema]),
 		saveQuestDraft: stub("saveQuestDraft", ARRIVES_WITH.progress, [questDraftSchema]),
 		resetQuest: stub("resetQuest", ARRIVES_WITH.progress, [idSchema]),

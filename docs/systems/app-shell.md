@@ -82,12 +82,14 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Sandbox | `openEditor(questId or null)` | nothing; opens the editor (with the quest's map for See it run) | M1.4 |
 | Runs | `runQuest(request)` | `RunResult`, streams progress | M1.3, M1.4 |
 | Runs | `submitQuest(request)` | `SubmitOutcome` (run, review, loot), streams progress | M1.3 to M1.7 |
+| Runs | `checkSnippetSyntax(request)` | `SyntaxCheckResult` for the concept scratch buffer | M1.3 |
 | Runs | `cancelRun(runId)` | nothing | M1.3 |
 | Progress | `getProgress()`, `resetProgress()` | `PlayerProgress` | M1.6 |
 | Progress | `getRules()` | `RulesSnapshot` (every rule constant the UI shows) | M1.6 |
 | Progress | `getQuestAvailability()` | status and locked reason per quest id | M1.6 |
+| Progress | `getTestOutStatus()` | test-out eligibility per world id | M1.6 |
 | Progress | `setPlayerName(name)` | `PlayerProgress` | M1.6 |
-| Progress | `saveQuestDraft(draft)`, `resetQuest(questId)` | nothing, `QuestProgress` | M1.6 |
+| Progress | `saveQuestDraft(draft)`, `resetQuest(questId)` | nothing, `QuestProgress` (drafts hold files, board, and worked-level self-explanations) | M1.6 |
 | Progress | `revealHint(questId)` | `HintReveal` (text and XP cost) | M1.6 |
 | Progress | `submitConcept(submission)` | `ConceptOutcome` | M1.6 |
 | Progress | `submitBreakdown(submission)` | `BreakdownReferenceChoice` (which reference plan to show) | M1.6 |
@@ -101,7 +103,11 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Review | `explainFinding(request)` | plain-English text | M1.7 |
 | Review | `answerReflection(request)` | `ExplainGrade` | M1.7 |
 
-Every method except `getAppVersion` is a stub today that checks its payload and answers `not-implemented`, naming the task that builds it. Content methods (packs, worlds, quests, glossary, the flat term list for Monaco, pattern cards) and `startDrill` wait for the content types from M0.4 and arrive in M0.2b (A89).
+Every method except `getAppVersion` is a stub today that checks its payload and answers `not-implemented`, naming the task that builds it. Content methods (packs, worlds, quests, glossary, the flat term list for Monaco, pattern cards) and `startDrill` (due drills, a world's test-out, and the Parsons fallback after two failed submits) wait for the content types from M0.4 and arrive in M0.2b. The Parsons fallback offer and the self-explanation gate are renderer-only (A89).
+
+`explainFinding` and `answerReflection` find the review by attempt id: `AttemptRecord.review` holds the `CodeReview` of every build, refactor, or boss Submit that compiled.
+
+The wrapper always returns a fresh copy of an AppError with only `code`, `message`, `suggestedAction`, and `detail`, so an extra property on a thrown error (a function, a class instance) cannot make the answer fail to clone and turn into `ipc-failed`.
 
 Adding a method: add it to `DojoInvokeApi`, add its channel to `IPC_CHANNELS` (the type forces `dojo:<method>`), add its entry to `createHandlers.ts` with one zod schema per argument (the type forces the count and each schema's type; put new request schemas in `requestSchemas.ts`). The preload needs no change; `tests/ipcHandlers.test.ts` fails if a channel has no handler.
 
@@ -113,6 +119,6 @@ Adding a method: add it to `DojoInvokeApi`, add its channel to `IPC_CHANNELS` (t
 - `electron.vite.config.ts`: `build.externalizeDeps: true` for main (anything in `dependencies` stays a real import, loaded from `node_modules`); `externalizeDeps: false` for the preload, because a sandboxed preload cannot `require` packages, so everything it imports is bundled in (electron-vite still keeps `electron` and Node built-ins external). `@shared` alias in all three targets, `@` alias and the React and Tailwind plugins in the renderer.
 - `package.json` is `"type": "module"`, so the main bundle is ESM (`out/main/index.js`). `dependencies` holds only what the main process loads at runtime (electron-store, the MCP and Anthropic SDKs, zod, gray-matter, fast-xml-parser, and unified, remark-parse, remark-gfm, unist-util-visit for the content parser in `src/main/services/content/`); renderer libraries are `devDependencies` because Vite bundles them, which keeps the installer smaller.
 - TypeScript: `tsconfig.base.json` (strict plus `noUncheckedIndexedAccess`), `tsconfig.node.json` (main, preload, shared, tests, e2e, tools, configs), `tsconfig.web.json` (renderer and shared). `npm run typecheck` runs both.
-- Tests: `vitest.config.ts` runs `tests/**/*.test.ts` (`tests/ipcHandlers.test.ts` covers channel coverage, payload checks, and the error wrapper); `playwright.config.ts` runs `e2e/` against the built app (run `npm run build` first). The smoke test saves its screenshot under the gitignored `test-results/` folder (Playwright's `testInfo.outputPath`), so test runs never change tracked files. Run `SAVE_PROOF=1 npm run test:e2e` to also copy it to `docs/iterations/m0-1-window.png` for an iterations entry.
+- Tests: `vitest.config.ts` runs `tests/**/*.test.ts` (`tests/ipcHandlers.test.ts` covers channel coverage, payload checks, and the error wrapper; `tests/preloadBridge.test.ts` runs the preload against a mocked `electron` and checks what `window.dojo` exposes, how answers unwrap, and the progress subscription); `playwright.config.ts` runs `e2e/` against the built app (run `npm run build` first). The smoke test saves its screenshot under the gitignored `test-results/` folder (Playwright's `testInfo.outputPath`), so test runs never change tracked files. Run `SAVE_PROOF=1 npm run test:e2e` to also copy it to `docs/iterations/m0-1-window.png` for an iterations entry.
 - Packaging: electron-builder config in `package.json` `build`. `out/**` goes into the asar; `content/` and `resources/` are copied next to it as `extraResources` (read through `process.resourcesPath`) so the sandbox template can be copied as real files. macOS `dmg` with `identity: null` (unsigned), Windows `nsis` (assisted installer). Output in `dist/`.
 
