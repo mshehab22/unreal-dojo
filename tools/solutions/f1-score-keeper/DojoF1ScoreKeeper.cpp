@@ -25,7 +25,7 @@ int32 ADojoF1ScoreKeeper::CountScore() const
 		}
 		else if (const ADojoF1PopupTarget* Popup = Cast<ADojoF1PopupTarget>(Target))
 		{
-			if (Popup->GetState() == EDojoF1TargetState::Broken) Score += PointsPerBrokenTarget;
+			if (Popup->GetState() == EDojoF1TargetState::ETS_Broken) Score += PointsPerBrokenTarget;
 		}
 	}
 

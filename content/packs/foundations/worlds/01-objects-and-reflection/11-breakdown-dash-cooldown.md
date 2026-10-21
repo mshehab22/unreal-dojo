@@ -17,7 +17,7 @@ concepts:
 
 # Spec
 
-The player's character can dash. Pressing the dash input throws the character 600 units along the direction the camera faces, flattened so a dash never lifts off the ground. For 0.15 seconds after the press the player's movement input is ignored, so the dash cannot be steered. Dashing again is refused for 1.2 seconds. A dash that runs into a wall stops at the wall instead of sliding through or bouncing. A round wedge on the HUD fills back up while the cooldown runs and is full when a dash is ready.
+The player's character can dash. Pressing the dash input throws the character 600 units along the direction the camera faces, flattened so a dash never lifts off the ground. For 0.15 seconds after the press the player's movement input is ignored, so the dash cannot be steered. Dashing again is refused for 1.2 seconds. A dash that meets a wall ends there: the character stops against it instead of sliding along it at dash speed. A round wedge on the HUD fills back up while the cooldown runs and is full when a dash is ready.
 
 You are planning, not coding. Several of the pieces use engine features later worlds teach in depth (input actions, timers, delegates); here you only decide what the pieces are, who owns what, and who tells whom.
 
@@ -27,7 +27,7 @@ Acceptance:
 - The 600 units, 0.15 seconds, and 1.2 seconds are tunable by a designer without a rebuild.
 - The HUD wedge never asks every frame whether the dash is ready; it is told.
 - The cooldown can be reused by a second ability, such as a shield, without copying code.
-- Dashing straight at a wall leaves the character touching the wall, not inside it.
+- Dashing at a wall at an angle ends the dash at the wall; the character does not slide along it at dash speed.
 
 # Required Pieces
 
@@ -51,7 +51,7 @@ Acceptance:
 - id: wall-stop
   kind: step
   label: Stop the dash on a blocking hit
-  why: A launch with nothing to stop it carries the character into or along walls.
+  why: The movement component never lets the character pass through a wall, but a launched character hitting one at an angle slides along it and keeps its speed.
 - id: dash-events
   kind: event
   label: Dash started and cooldown ready events

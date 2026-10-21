@@ -22,7 +22,7 @@ When you press Play and run `ke * Raise`, the word above the target changes from
 
 The class is declared for you and every function has a comment naming its job. Your parts:
 
-1. Declare `EDojoF1TargetState` at the top of the header: a reflected enum class with the values Lowered, Raised, and Broken, shown to designers as Down, Up, and Broken.
+1. Declare `EDojoF1TargetState` at the top of the header: a reflected enum class with the values ETS_Lowered, ETS_Raised, and ETS_Broken (the enum's initials first, as the project's naming rule asks), shown to designers as Down, Up, and Broken.
 2. Fill in the bodies of `Raise`, `Hit`, `Repair`, and `SetState`.
 
 First version: a pair of booleans (`bIsRaised`, `bIsBroken`) would also work for three states. Try sketching the Hit rules with them on paper first and count the combinations you have to forbid (raised and broken at once makes no sense). One enum field makes those impossible combinations unrepresentable, and reflection turns its value into the label text for free.
@@ -46,7 +46,7 @@ Place a `DojoF1PopupTarget` in the sandbox map, set Hits To Break to 2, and pres
 
 class UTextRenderComponent;
 
-// Your code: declare EDojoF1TargetState here, a reflected enum class with Lowered (shown as "Down"), Raised ("Up"), and Broken ("Broken").
+// Your code: declare EDojoF1TargetState here, a reflected enum class with ETS_Lowered (shown as "Down"), ETS_Raised ("Up"), and ETS_Broken ("Broken").
 
 /** A target that pops up, drops back when hit, and breaks after enough hits. */
 UCLASS()
@@ -66,7 +66,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Target", meta = (ClampMin = "1"))
 	int32 HitsToBreak = 2;
 
-	/** Lowered to Raised; does nothing in any other state. */
+	/** Lowered to raised; does nothing in any other state. */
 	UFUNCTION(BlueprintCallable, Category = "Target")
 	void Raise();
 
@@ -74,7 +74,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Target")
 	bool Hit();
 
-	/** Broken to Lowered with the hit count cleared. */
+	/** Broken to lowered with the hit count cleared. */
 	UFUNCTION(BlueprintCallable, Category = "Target")
 	void Repair();
 
@@ -91,7 +91,7 @@ private:
 	void SetState(EDojoF1TargetState NewState);
 
 	UPROPERTY(VisibleInstanceOnly, Category = "Target") // @explain: VisibleInstanceOnly shows the live state on a placed or spawned target in Details without letting anyone edit it.
-	EDojoF1TargetState State = EDojoF1TargetState::Lowered;
+	EDojoF1TargetState State = EDojoF1TargetState::ETS_Lowered;
 
 	int32 HitsTaken = 0;
 };
@@ -167,9 +167,9 @@ bool FDojo_F1_PopupTarget_EnumIsReflected::RunTest(const FString& Parameters)
 	const UEnum* StateEnum = StaticEnum<EDojoF1TargetState>();
 	if (!TestNotNull(TEXT("EDojoF1TargetState is a UENUM"), StateEnum)) return false;
 
-	TestEqual(TEXT("Lowered shows as Down"), StateEnum->GetDisplayNameTextByValue(static_cast<int64>(EDojoF1TargetState::Lowered)).ToString(), FString(TEXT("Down")));
-	TestEqual(TEXT("Raised shows as Up"), StateEnum->GetDisplayNameTextByValue(static_cast<int64>(EDojoF1TargetState::Raised)).ToString(), FString(TEXT("Up")));
-	TestEqual(TEXT("Broken shows as Broken"), StateEnum->GetDisplayNameTextByValue(static_cast<int64>(EDojoF1TargetState::Broken)).ToString(), FString(TEXT("Broken")));
+	TestEqual(TEXT("Lowered shows as Down"), StateEnum->GetDisplayNameTextByValue(static_cast<int64>(EDojoF1TargetState::ETS_Lowered)).ToString(), FString(TEXT("Down")));
+	TestEqual(TEXT("Raised shows as Up"), StateEnum->GetDisplayNameTextByValue(static_cast<int64>(EDojoF1TargetState::ETS_Raised)).ToString(), FString(TEXT("Up")));
+	TestEqual(TEXT("Broken shows as Broken"), StateEnum->GetDisplayNameTextByValue(static_cast<int64>(EDojoF1TargetState::ETS_Broken)).ToString(), FString(TEXT("Broken")));
 
 	return true;
 }
@@ -185,31 +185,31 @@ bool FDojo_F1_PopupTarget_RaiseHitBreakRepair::RunTest(const FString& Parameters
 	if (!TestNotNull(TEXT("Target spawned"), Target)) return false;
 	if (!TestNotNull(TEXT("Target has a label"), Target->Label.Get())) return false;
 
-	TestEqual(TEXT("Starts lowered"), Target->GetState(), EDojoF1TargetState::Lowered);
+	TestEqual(TEXT("Starts lowered"), Target->GetState(), EDojoF1TargetState::ETS_Lowered);
 	TestEqual(TEXT("Label reads Down at start"), Target->Label->Text.ToString(), FString(TEXT("Down")));
 	TestFalse(TEXT("A lowered target cannot be hit"), Target->Hit());
 
 	Target->Raise();
-	TestEqual(TEXT("Raised after Raise"), Target->GetState(), EDojoF1TargetState::Raised);
+	TestEqual(TEXT("Raised after Raise"), Target->GetState(), EDojoF1TargetState::ETS_Raised);
 	TestEqual(TEXT("Label reads Up"), Target->Label->Text.ToString(), FString(TEXT("Up")));
 
 	TestTrue(TEXT("A raised target takes the hit"), Target->Hit());
-	TestEqual(TEXT("Drops back after the first hit"), Target->GetState(), EDojoF1TargetState::Lowered);
+	TestEqual(TEXT("Drops back after the first hit"), Target->GetState(), EDojoF1TargetState::ETS_Lowered);
 
 	Target->Raise();
 	Target->Hit();
-	TestEqual(TEXT("Broken after the second hit"), Target->GetState(), EDojoF1TargetState::Broken);
+	TestEqual(TEXT("Broken after the second hit"), Target->GetState(), EDojoF1TargetState::ETS_Broken);
 	TestEqual(TEXT("Label reads Broken"), Target->Label->Text.ToString(), FString(TEXT("Broken")));
 
 	Target->Raise();
-	TestEqual(TEXT("A broken target cannot be raised"), Target->GetState(), EDojoF1TargetState::Broken);
+	TestEqual(TEXT("A broken target cannot be raised"), Target->GetState(), EDojoF1TargetState::ETS_Broken);
 
 	Target->Repair();
-	TestEqual(TEXT("Repair lowers it"), Target->GetState(), EDojoF1TargetState::Lowered);
+	TestEqual(TEXT("Repair lowers it"), Target->GetState(), EDojoF1TargetState::ETS_Lowered);
 
 	Target->Raise();
 	Target->Hit();
-	TestEqual(TEXT("Repair cleared the hits, so one hit drops it instead of breaking it"), Target->GetState(), EDojoF1TargetState::Lowered);
+	TestEqual(TEXT("Repair cleared the hits, so one hit drops it instead of breaking it"), Target->GetState(), EDojoF1TargetState::ETS_Lowered);
 
 	return true;
 }
@@ -246,13 +246,13 @@ What you built is a small state machine: one field says which state the target i
   lines:
     - "bool ADojoF1PopupTarget::Hit()"
     - "{"
-    - "	if (State != EDojoF1TargetState::Raised) return false;"
+    - "	if (State != EDojoF1TargetState::ETS_Raised) return false;"
     - "	HitsTaken++;"
-    - "	SetState(HitsTaken >= HitsToBreak ? EDojoF1TargetState::Broken : EDojoF1TargetState::Lowered);"
+    - "	SetState(HitsTaken >= HitsToBreak ? EDojoF1TargetState::ETS_Broken : EDojoF1TargetState::ETS_Lowered);"
     - "	return true;"
     - "}"
   distractors:
-    - line: "	State = EDojoF1TargetState::Broken;"
+    - line: "	State = EDojoF1TargetState::ETS_Broken;"
       mistake: Writing the field directly skips SetState, so the label would keep showing the old state.
 - id: popup-set-state
   prompt: Put SetState in order.

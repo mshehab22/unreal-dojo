@@ -137,6 +137,7 @@ void ADojoF1TrainingDummy::RefreshLabel()
 
 #if WITH_AUTOMATION_TESTS
 
+#include "Components/TextRenderComponent.h"
 #include "Quests/f1-training-dummy/DojoF1TrainingDummy.h"
 #include "Support/DojoTestWorld.h"
 
@@ -158,21 +159,26 @@ bool FDojo_F1_TrainingDummy_StrikeIsReflected::RunTest(const FString& Parameters
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F1_TrainingDummy_KnockedDownAfterThree, "Dojo.F1.TrainingDummy.KnockedDownAfterThree", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Strikes a dummy four times and checks it goes down on the third and ignores the fourth. */
+/** Strikes a dummy four times and checks the count, the label, and that it goes down on the third and ignores the fourth. */
 bool FDojo_F1_TrainingDummy_KnockedDownAfterThree::RunTest(const FString& Parameters)
 {
 	FDojoTestWorld TestWorld;
 
 	ADojoF1TrainingDummy* Dummy = TestWorld.SpawnActor<ADojoF1TrainingDummy>();
 	if (!TestNotNull(TEXT("Dummy spawned"), Dummy)) return false;
+	if (!TestNotNull(TEXT("Dummy has a label"), Dummy->Label.Get())) return false;
+
+	TestEqual(TEXT("Label reads 3 at the start"), Dummy->Label->Text.ToString(), FString(TEXT("3")));
 
 	Dummy->Strike();
 	Dummy->Strike();
 	TestEqual(TEXT("Two strikes counted"), Dummy->GetHitsTaken(), 2);
 	TestFalse(TEXT("Still standing after two strikes"), Dummy->IsKnockedDown());
+	TestEqual(TEXT("Label reads 1 after two strikes"), Dummy->Label->Text.ToString(), FString(TEXT("1")));
 
 	Dummy->Strike();
 	TestTrue(TEXT("Down after the third strike"), Dummy->IsKnockedDown());
+	TestEqual(TEXT("Label reads DOWN after the third strike"), Dummy->Label->Text.ToString(), FString(TEXT("DOWN")));
 
 	Dummy->Strike();
 	TestEqual(TEXT("A downed dummy ignores more strikes"), Dummy->GetHitsTaken(), 3);

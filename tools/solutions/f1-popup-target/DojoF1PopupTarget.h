@@ -10,9 +10,9 @@ class UTextRenderComponent;
 UENUM(BlueprintType)
 enum class EDojoF1TargetState : uint8
 {
-	Lowered UMETA(DisplayName = "Down"),
-	Raised UMETA(DisplayName = "Up"),
-	Broken UMETA(DisplayName = "Broken")
+	ETS_Lowered UMETA(DisplayName = "Down"),
+	ETS_Raised UMETA(DisplayName = "Up"),
+	ETS_Broken UMETA(DisplayName = "Broken")
 };
 
 /** A target that pops up, drops back when hit, and breaks after enough hits. */
@@ -33,7 +33,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Target", meta = (ClampMin = "1"))
 	int32 HitsToBreak = 2;
 
-	/** Lowered to Raised; does nothing in any other state. */
+	/** Lowered to raised; does nothing in any other state. */
 	UFUNCTION(BlueprintCallable, Category = "Target")
 	void Raise();
 
@@ -41,7 +41,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Target")
 	bool Hit();
 
-	/** Broken to Lowered with the hit count cleared. */
+	/** Broken to lowered with the hit count cleared. */
 	UFUNCTION(BlueprintCallable, Category = "Target")
 	void Repair();
 
@@ -58,7 +58,7 @@ private:
 	void SetState(EDojoF1TargetState NewState);
 
 	UPROPERTY(VisibleInstanceOnly, Category = "Target")
-	EDojoF1TargetState State = EDojoF1TargetState::Lowered;
+	EDojoF1TargetState State = EDojoF1TargetState::ETS_Lowered;
 
 	int32 HitsTaken = 0;
 };

@@ -20,26 +20,26 @@ void ADojoF1PopupTarget::BeginPlay()
 
 void ADojoF1PopupTarget::Raise()
 {
-	if (State != EDojoF1TargetState::Lowered) return;
+	if (State != EDojoF1TargetState::ETS_Lowered) return;
 
-	SetState(EDojoF1TargetState::Raised);
+	SetState(EDojoF1TargetState::ETS_Raised);
 }
 
 bool ADojoF1PopupTarget::Hit()
 {
-	if (State != EDojoF1TargetState::Raised) return false;
+	if (State != EDojoF1TargetState::ETS_Raised) return false;
 
 	HitsTaken++;
-	SetState(HitsTaken >= HitsToBreak ? EDojoF1TargetState::Broken : EDojoF1TargetState::Lowered);
+	SetState(HitsTaken >= HitsToBreak ? EDojoF1TargetState::ETS_Broken : EDojoF1TargetState::ETS_Lowered);
 	return true;
 }
 
 void ADojoF1PopupTarget::Repair()
 {
-	if (State != EDojoF1TargetState::Broken) return;
+	if (State != EDojoF1TargetState::ETS_Broken) return;
 
 	HitsTaken = 0;
-	SetState(EDojoF1TargetState::Lowered);
+	SetState(EDojoF1TargetState::ETS_Lowered);
 }
 
 EDojoF1TargetState ADojoF1PopupTarget::GetState() const

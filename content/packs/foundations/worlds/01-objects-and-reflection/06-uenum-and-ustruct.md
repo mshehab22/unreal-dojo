@@ -35,7 +35,7 @@ explanation: Reflection can only describe a field whose type it knows, so the en
 
 Your own enums and structs can join reflection too, and then they work everywhere a built-in type does: Details panels, Blueprint pins, saving, and logs.
 
-A reflected enum is an `enum class` with a `uint8` underlying type and `UENUM()` above it. Add `BlueprintType` inside the brackets so Blueprint can use it as a variable type. `UMETA(DisplayName = "Up")` after a value changes the label designers see while the C++ name stays `Raised`. Reflection can then turn a value into readable text for you: `UEnum::GetDisplayValueAsText(State)` returns the display name, with no switch statement to keep in sync.
+A reflected enum is an `enum class` with a `uint8` underlying type and `UENUM()` above it. Add `BlueprintType` inside the brackets so Blueprint can use it as a variable type. `UMETA(DisplayName = "Up")` after a value changes the label designers see while the C++ name stays `ETS_Raised`. This project starts every value with the enum's initials (ETS for a target state), so a value reads as belonging to its enum wherever it appears. Reflection can then turn a value into readable text for you: `UEnum::GetDisplayValueAsText(State)` returns the display name, with no switch statement to keep in sync.
 
 A reflected struct is a value type with `USTRUCT()` above it and `GENERATED_BODY()` as its first line. Its name takes the `F` prefix. Fields inside that should be saved, edited, or reach Blueprint get their own UPROPERTY. Structs suit small bundles of data that travel together, such as the result of one round: score, hits, and time.
 
@@ -48,9 +48,9 @@ Neither one can hold functions that Blueprint calls; behavior stays on UObjects.
 UENUM(BlueprintType)
 enum class EDojoF1GateState : uint8
 {
-	Shut UMETA(DisplayName = "Closed"),
-	Opening,
-	Open
+	EGS_Shut UMETA(DisplayName = "Closed"),
+	EGS_Opening UMETA(DisplayName = "Opening"),
+	EGS_Open UMETA(DisplayName = "Open")
 };
 
 // What one practice round produced, passed around as a single value.
@@ -77,10 +77,10 @@ struct FDojoF1RoundResult
   explanation: Blueprint stores enums as bytes, so a BlueprintType enum must use uint8.
 - id: display-name
   type: multiple-choice
-  prompt: "A value is declared as Shut UMETA(DisplayName = \"Closed\"). What does UEnum::GetDisplayValueAsText return for it?"
-  choices: [Shut, Closed, EDojoF1GateState::Shut, "0"]
+  prompt: "A value is declared as EGS_Shut UMETA(DisplayName = \"Closed\"). What does UEnum::GetDisplayValueAsText return for it?"
+  choices: [EGS_Shut, Closed, EDojoF1GateState::EGS_Shut, "0"]
   answerIndex: 1
-  explanation: The display name comes from UMETA, so designers read Closed while code keeps Shut.
+  explanation: The display name comes from UMETA, so designers read Closed while code keeps EGS_Shut.
 - id: spot-struct-body
   type: spot-the-bug
   prompt: The header tool stops on this struct. Which line is wrong?

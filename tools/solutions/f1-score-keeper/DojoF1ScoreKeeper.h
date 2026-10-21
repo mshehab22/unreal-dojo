@@ -33,7 +33,7 @@ public:
 	int32 PointsPerBrokenTarget = 25;
 
 	/** Adds up dummy strikes and broken targets; skips empty slots and every other kind of actor. */
-	UFUNCTION(BlueprintCallable, Category = "Score")
+	UFUNCTION(BlueprintPure, Category = "Score")
 	int32 CountScore() const;
 
 	/** How many entries are pop-up targets, in any state. */

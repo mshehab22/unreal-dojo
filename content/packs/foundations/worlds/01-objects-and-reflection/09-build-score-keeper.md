@@ -32,11 +32,13 @@ The declarations are given; every body is yours. The keeper holds a list of plai
 
 Dependency direction: the keeper holds references to the targets; the dummies and targets know nothing about the keeper and never include its header. Your two earlier quests are reused here unchanged.
 
+Compiles against earlier quests: f1-training-dummy (`Quests/f1-training-dummy/DojoF1TrainingDummy.h`) and f1-popup-target (`Quests/f1-popup-target/DojoF1PopupTarget.h`).
+
 Write the obvious version first and run the tests. This one fails on purpose the first time for most people. Find out why from the test output before you read the hints.
 
 ## See it in the editor
 
-Place two dummies, two pop-up targets, a plain cube, and one `DojoF1ScoreKeeper`. In the keeper's Details panel add all five to Targets with the eyedropper, plus one empty slot. Press Play, strike one dummy twice, raise and hit one target until it reads Broken, then run `ke * ShowScore`: the keeper's label reads 35. Eject with F8, change Points Per Dummy Hit to 10 on the keeper, and run it again: 45.
+Place one dummy, one pop-up target, a plain cube, and one `DojoF1ScoreKeeper`. In the keeper's Details panel add the three to Targets with the eyedropper, plus one empty slot. Press Play, run `ke * Strike` twice, run `ke * Raise` and `ke * Hit` twice each until the target reads Broken, then run `ke * ShowScore`: the keeper's label reads 35 (two strikes at 5 and one broken target at 25). Eject with F8, change Points Per Dummy Hit to 10 on the keeper, and run it again: 45. Keep one of each kind: `ke *` calls the function on every actor that has it, so a second dummy would take every strike too.
 
 # Files
 
@@ -78,7 +80,7 @@ public:
 	int32 PointsPerBrokenTarget = 25;
 
 	/** Adds up dummy strikes and broken targets; skips empty slots and every other kind of actor. */
-	UFUNCTION(BlueprintCallable, Category = "Score")
+	UFUNCTION(BlueprintPure, Category = "Score")
 	int32 CountScore() const;
 
 	/** How many entries are pop-up targets, in any state. */

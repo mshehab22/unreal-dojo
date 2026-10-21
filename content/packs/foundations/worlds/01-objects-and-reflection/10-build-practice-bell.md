@@ -29,14 +29,15 @@ The tests use this public interface, so keep these names:
 
 - `UFUNCTION(BlueprintCallable) void Strike(float Force);`
 - `UFUNCTION(BlueprintPure) int32 GetRingCount() const;` and `float GetLastVolume() const;`
-- `UPROPERTY(EditAnywhere) float MinimumForce = 20.f;` and `float FullVolumeForce = 100.f;`
+- `UPROPERTY(EditAnywhere) float MinimumForce = 20.f;` clamped at 0 or more, and `float FullVolumeForce = 100.f;` clamped at 1 or more, so the volume division can never divide by zero.
+- `UPROPERTY(VisibleAnywhere) TObjectPtr<UTextRenderComponent> Label;` the floating text the default reaction writes, created in the constructor.
 - `void Ring(float Volume)` as a BlueprintNativeEvent; its C++ default is the reaction.
 
 Dependency direction: the bell owns its rule and its default reaction; whoever strikes it (the console, a dummy, a Blueprint) only calls `Strike` and never touches the reaction.
 
 ## See it in the editor
 
-Place a `DojoF1PracticeBell`, press Play, and run `ke * Strike 10`: nothing happens. Run `ke * Strike 50`: the label reads DONG 50% and the output log shows the ring at 0.50. Then stop, right-click the class in the Content Browser, choose Create Blueprint Class Based on DojoF1PracticeBell, open it, and override Ring with a Print String of the volume. Place that Blueprint instead and strike it: the print appears instead of the label change, and the ring count still goes up, because the rule never left C++.
+Place a `DojoF1PracticeBell` in a map with no training dummies (`ke *` would strike those too), press Play, and run `ke * Strike 10`: nothing happens. Run `ke * Strike 50`: the label reads DONG 50% and the output log shows the ring at 0.50. Then stop, right-click the class in the Content Browser, choose Create Blueprint Class Based on DojoF1PracticeBell, open it, and override Ring with a Print String of the volume. Place that Blueprint instead and strike it: the print appears instead of the label change, and the ring count still goes up, because the rule never left C++.
 
 # Files
 
@@ -59,6 +60,7 @@ Place a `DojoF1PracticeBell`, press Play, and run `ke * Strike 10`: nothing happ
 
 #if WITH_AUTOMATION_TESTS
 
+#include "Components/TextRenderComponent.h"
 #include "Quests/f1-practice-bell/DojoF1PracticeBell.h"
 #include "Support/DojoTestWorld.h"
 
@@ -81,7 +83,7 @@ bool FDojo_F1_PracticeBell_RingIsNativeEvent::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F1_PracticeBell_RingsAboveMinimum, "Dojo.F1.PracticeBell.RingsAboveMinimum", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Strikes the bell softly, then at half and double the full-volume force, and checks the count and the volume. */
+/** Strikes the bell softly, then at half and double the full-volume force, and checks the count, the volume, and the default reaction's label. */
 bool FDojo_F1_PracticeBell_RingsAboveMinimum::RunTest(const FString& Parameters)
 {
 	FDojoTestWorld TestWorld;
@@ -98,6 +100,8 @@ bool FDojo_F1_PracticeBell_RingsAboveMinimum::RunTest(const FString& Parameters)
 	Bell->Strike(50.f);
 	TestEqual(TEXT("A strike at 50 rings once"), Bell->GetRingCount(), 1);
 	TestEqual(TEXT("Half the full-volume force rings at half volume"), Bell->GetLastVolume(), 0.5f);
+	if (!TestNotNull(TEXT("Bell has a label"), Bell->Label.Get())) return false;
+	TestEqual(TEXT("The default reaction writes DONG 50%"), Bell->Label->Text.ToString(), FString(TEXT("DONG 50%")));
 
 	Bell->Strike(200.f);
 	TestEqual(TEXT("Rings again"), Bell->GetRingCount(), 2);
