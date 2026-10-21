@@ -84,7 +84,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 8665386 | merged | 1 fix round plus a test fix; includes the GFrameCounter timer fix |
 | M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring @ e109d4e | review | runQuest, cancelRun, checkSnippetSyntax, rebuildSandbox; prerequisite fill; adding tools/solutions to extraResources (Lead permission) |
-| M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | m0-2c-settings @ 7105220 | review | Settings, safeStorage key, environment status; 539 tests |
+| M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | m0-2c-settings @ 7105220 | fixes | Key handling verified in a packaged build. Round 1: paths trusted blindly (Lead: sandboxPath only via the sandbox service, enginePath validated), corrupt config.json blocks startup |
+| M1.7c submitQuest and review IPC wiring | ai-review | builder-review (session) | m1-7c-submit-wiring | waiting on M0.2c and M1.3b | Run, review, recordAttempt; provider IPC; AI graders replace the A318 stand-in |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | merged b06a722 | merged | 2 rounds; --engine 9 of 9 on UE 5.8.3 through M1.3 runners |
 | M1.8b Verifier follow-ups | content-engine | content-engine (session "M0.4 Content types...") | m1-8b-verifier-followups | building | Bare-name cross-quest includes, Ctrl+C cancel, template copy skips build folders |
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
@@ -97,6 +98,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 94fae2a | re-review | Smoke on M1.3 runners, 39 s |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
+Queued for unreal-pipeline (from the M0.2c review, A426): `docs/systems/unreal-pipeline.md` lines 29 and 84 still name `ElectronStoreSandboxPathStore`; the class is unused once settings land.
+Queued for qa (from the M0.2c review): `ui-core-screens.spec.ts` and other specs not yet on the harness run against the real user data folder; with settings real, move every spec onto the harness so no run shares `config.json`.
 Queued for unreal-pipeline (A65): fill a tested-out or reset prerequisite quest's files with its reference solution before building a later quest that depends on it, and tell the learner which files came from the reference.
 Queued for M2.2 (from the M1.7b review): the Build screen shows a "Retry review" button when a review falls back to tests-only with `retryReviewSuggested`.
 Queued for the verifier (from the M1.6b review): a concept quest must have at least one question that is not explain-in-one-sentence, since tests-only grading cannot pass explain items.
