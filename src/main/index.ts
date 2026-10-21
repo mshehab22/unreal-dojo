@@ -9,6 +9,7 @@ import { app, BrowserWindow, dialog, ipcMain, safeStorage } from "electron";
 import { createContentCatalog } from "./content/createContentCatalog";
 import { resolveContentRoot } from "./content/resolveContentRoot";
 import { createHandlers } from "./ipc/createHandlers";
+import { notImplemented } from "./ipc/notImplemented";
 import { registerHandlers } from "./ipc/registerHandlers";
 import { sendBuildProgress } from "./ipc/sendBuildProgress";
 import { createEngineLocator } from "./services/unreal/createEngineLocator";
@@ -18,10 +19,11 @@ import type { EngineLocator } from "./services/unreal/EngineLocator";
 import { MathRandomSource } from "./services/progress/MathRandomSource";
 import { NodeFileSystem } from "./services/progress/NodeFileSystem";
 import { ProgressContentService } from "./services/progress/ProgressContentService";
-import { createTestsOnlyGraders } from "./services/progress/ProgressGraders";
+import type { ProgressGraders } from "./services/progress/ProgressGraders";
 import { ProgressService } from "./services/progress/ProgressService";
 import { ProgressStore } from "./services/progress/ProgressStore";
 import { SystemClock } from "./services/progress/SystemClock";
+import { createReviewHandlers, type ReviewHandlers } from "./services/review/createReviewHandlers";
 import { createReviewService, type ReviewService } from "./services/review/ReviewService";
 import { SafeStorageReviewSettings } from "./services/review/settings/SafeStorageReviewSettings";
 import { ElectronSettingsStore } from "./services/settings/ElectronSettingsStore";
@@ -106,7 +108,7 @@ async function start(): Promise<void>
 			},
 		}));
 
-	// Built on first use; read here only for the provider statuses. The review handlers are wired by ai-review.
+	// Built on first use: the review service with the settings-backed providers (D11), for the Title chip, the review methods, Submit, and the progress graders.
 	let reviewService: ReviewService | null = null;
 	const getReviewService = (): ReviewService =>
 		(reviewService ??= createReviewService(new SafeStorageReviewSettings({ currentSettings: () => settingsService.current(), loadEncryptedApiKey: () => settingsService.loadEncryptedApiKey(), decryptor: safeStorage })));
@@ -119,8 +121,23 @@ async function start(): Promise<void>
 		editorConnected: async () => (unrealServices ? unrealServices.editorService.isConnected() : false),
 	});
 
-	// Tests-only graders stand in until the review service is wired with the settings service (A318).
-	const progressContentService = new ProgressContentService(contentCatalog, progressService, createTestsOnlyGraders(), new MathRandomSource(), () => randomUUID());
+	// Breakdowns and explain items are graded by the review service; it falls back to tests only on its own (replaces A318, A460).
+	const graders: ProgressGraders = { gradeExplain: (input) => getReviewService().gradeExplain(input), gradeBreakdown: (input) => getReviewService().gradeBreakdown(input) };
+	const progressContentService = new ProgressContentService(contentCatalog, progressService, graders, new MathRandomSource(), () => randomUUID());
+
+	let reviewHandlers: ReviewHandlers | null = null;
+	const getReviewHandlers = (): ReviewHandlers =>
+		(reviewHandlers ??= createReviewHandlers({
+			reviewService: getReviewService(),
+			content: contentCatalog,
+			progress: progressService,
+
+			// Submit runs through the same runner path as runQuest once M1.3b lands.
+			runQuest: async () =>
+			{
+				throw notImplemented("submitQuest", "the build and test loop (M1.3b)");
+			},
+		}));
 
 	registerHandlers(
 		ipcMain,
@@ -138,6 +155,7 @@ async function start(): Promise<void>
 			sendProgress: sendBuildProgress,
 			settingsService,
 			readEnvironmentStatus: () => environmentStatusReader.read(),
+			getReviewHandlers,
 		}),
 	);
 	createMainWindow();

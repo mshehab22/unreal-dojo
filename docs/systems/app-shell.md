@@ -87,7 +87,7 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Sandbox | `createSandbox(request)`, `rebuildSandbox(runId)` | `SandboxSetupResult`, streams progress | M1.2 |
 | Sandbox | `openEditor(questId or null)` | nothing; opens the editor on the sandbox with its MCP server and resolves once it answers (the quest id is ignored until per-quest maps exist, A533) | done (M1.4b) |
 | Runs | `runQuest(request)` | `RunResult`, streams progress | M1.3, M1.4 |
-| Runs | `submitQuest(request)` | `SubmitOutcome` (run, review, loot), streams progress | M1.3 to M1.7 |
+| Runs | `submitQuest(request)` | `SubmitOutcome` (run, review, loot), streams progress | wired (M1.7c); the runner step arrives with M1.3b |
 | Runs | `checkSnippetSyntax(request)` | `SyntaxCheckResult` for the concept scratch buffer | M1.3 |
 | Runs | `cancelRun(runId)` | nothing | M1.3 |
 | Progress | `getProgress()`, `resetProgress()` | `PlayerProgress` | done (M1.6) |
@@ -113,9 +113,9 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Drills | `getDrillSummary()` | `DrillSummary` | done (M1.6) |
 | Drills | `answerDrillItem(answer)` | `DrillItemResult` | done (M1.6b; AI grading when the review service is wired, A318) |
 | Drills | `finishDrill(sessionId)` | `DrillOutcome` | done (M1.6b) |
-| Review | `getReviewProviders()`, `testClaudeCode()` | `ReviewProviderStatus[]`, `ReviewProviderStatus` | M1.7 |
-| Review | `explainFinding(request)` | plain-English text | M1.7 |
-| Review | `answerReflection(request)` | `ExplainGrade` | M1.7 |
+| Review | `getReviewProviders()`, `testClaudeCode()` | `ReviewProviderStatus[]`, `ReviewProviderStatus` | done (M1.7c) |
+| Review | `explainFinding(request)` | plain-English text | done (M1.7c) |
+| Review | `answerReflection(request)` | `ExplainGrade` | done (M1.7c) |
 
 Methods marked done answer for real; every other method checks its payload and answers `not-implemented`, naming the task that builds it. The Parsons fallback offer and the self-explanation gate are renderer-only (A89).
 

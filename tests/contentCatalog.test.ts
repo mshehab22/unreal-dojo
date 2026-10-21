@@ -199,6 +199,7 @@ describe("ContentCatalog load failures", () =>
 				progressContentService: createTestProgressContent().content,
 				settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
 				readEnvironmentStatus: () => { throw new Error("not used"); },
+				getReviewHandlers: () => { throw new Error("not used"); },
 			}),
 		);
 

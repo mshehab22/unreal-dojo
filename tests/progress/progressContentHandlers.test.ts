@@ -32,6 +32,7 @@ function setup(options: Parameters<typeof createTestProgressContent>[0] = {})
 		sendProgress: () => undefined,
 		settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
 		readEnvironmentStatus: () => { throw new Error("not used"); },
+		getReviewHandlers: () => { throw new Error("not used"); },
 	};
 
 	return { ...stack, handlers: createHandlers(dependencies) };

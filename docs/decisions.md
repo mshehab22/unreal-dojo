@@ -58,6 +58,24 @@ Options: an app flag or environment variable that calls `app.setPath("userData",
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A465 2026-10-21 Review handlers arrive through `getReviewHandlers()`; the code attempt recorder lives in ai-review (M1.7c, builder-review)
+Options: add the review service and the progress pieces to `HandlerDependencies` one by one; give the IPC layer one `ReviewHandlerService` (the four review methods and Submit) built by `createReviewHandlers`. Chosen: the second, as a function so the review service is still built on first use. Scoring and recording a Submit (`CodeAttemptRecorder`) sits in `src/main/services/review/` and uses progress's `PassRules`, `toRuleQuests`, and `ProgressService.recordAttempt` without changing them; if the Lead prefers it inside `ProgressContentService`, it moves there unchanged. Four handler test files gained the new dependency as a "not used" fake. Reverse cost: low.
+
+### A464 2026-10-21 New AppError code `attempt-not-found` (M1.7c, builder-review)
+`explainFinding` and `answerReflection` look up an attempt by id. Options: reuse `invalid-payload` or `quest-not-found`; add a code. Chosen: `attempt-not-found` in `src/shared/types/errors.ts`, used when the attempt is not in the save, has no code review (concept, breakdown, or a failed build), or the finding index is past the end. Reverse cost: none.
+
+### A463 2026-10-21 Until progress stores them, the finding explainer reads the quest's draft and new attempts have no stored review (M1.7c, builder-review)
+`AttemptRecord.review` exists but `ProgressService.recordAttempt` cannot store one (its input has no review field), and attempts do not keep the submitted files. Both are progress changes; the Lead was asked who makes them. Until then: Submit passes the review and the files to the recorder (`CodeAttemptSubmission`), the recorder records score and pass only, the follow-ups answer `attempt-not-found` for attempts without a review, and the finding explainer uses `QuestProgress.savedFiles` (the draft, which can drift after Submit). Reverse cost: none; storing both is additive.
+
+### A462 2026-10-21 A tests-only review counts as no review score (M1.7c, builder-review)
+progress-and-rules says the code score is 0.6 tests plus 0.4 review, with review = tests when tests-only. The tests-only reviewer's own score is the share of tests passed, but its fallback answers carry that score only by coincidence. Chosen: `CodeAttemptRecorder` passes `reviewScore: null` to `PassRules` whenever the review's provider is `tests-only`, so the rules' own "review = tests" path decides. Reverse cost: none.
+
+### A461 2026-10-21 `submitQuest` reviews build and refactor quests only for now (M1.7c, builder-review)
+Bosses pass through their integration build (A317), whose rubric is `integrationRubric` and whose files span several build quests; that flow is not specified yet. Chosen: `submitQuest` refuses any other kind with `invalid-payload` and a message to use the quest's own Submit. Reverse cost: low, once the boss integration build is designed.
+
+### A460 2026-10-21 Breakdowns and explain items are graded by the review service (M1.7c, replaces A318)
+The tests-only stand-in for `ProgressContentService` is replaced by graders that call the review service built from the settings service. The service picks Claude Code, the API, or tests-only per call and falls back on its own (A154, A300, A301), so a missing reviewer still never blocks a breakdown or a drill. Explain items self-checked by tests-only are still not scheduled, as A318 set. `createTestsOnlyGraders` stays for tests. Reverse cost: one line.
+
 ### A547 2026-10-21 Decision numbers A540 to A549 for Pack 2 World 4 (author-patterns, M4.P2.4)
 Main uses A500 to A503, A510, A511, and A520; no branch uses A530 or above. Chosen: A540 to A549, leaving A530 to A539 free as a gap. Reverse cost: none.
 
