@@ -100,7 +100,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.x Pack 2 World 3 | content-patterns | author-patterns (session) | from the World 2 branch | building | Next pattern in Part 3 order |
 | M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop | building | McpEditorClient, EditorLauncher, LiveEditorRunner; Live Coding Windows only (A45) |
 | M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | m1-6c-revealed-hints | building | Hints survive restart, no second charge |
-| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ fedd91d | re-review | Height range check; 30 of 30 |
+| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ fedd91d | fixes (round 4) | Stable but too loose: bound to the work area within 12 points; rebase and move main's new palette and map checks onto the harness |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
 Queued for unreal-pipeline (from the M0.2c review, A426): `docs/systems/unreal-pipeline.md` lines 29 and 84 still name `ElectronStoreSandboxPathStore`; the class is unused once settings land.
