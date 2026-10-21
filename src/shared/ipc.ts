@@ -76,7 +76,10 @@ export interface DojoInvokeApi
 	/** Opens a folder picker for the sandbox and returns the choice with any warnings. Resolves null when the learner cancels. */
 	pickSandboxFolder(): Promise<SandboxFolderChoice | null>;
 
-	/** Copies the sandbox template, writes EngineAssociation, and runs the first full build. Streams progress under `request.runId`. */
+	/**
+	 * Copies the sandbox template, writes EngineAssociation, and runs the first full build. Streams progress under `request.runId`.
+	 * On a passing build the sandbox service remembers `sandboxPath` in settings itself; the renderer never stores it. The engine path is the renderer's to store, with `updateSettings`.
+	 */
 	createSandbox(request: SandboxSetupRequest): Promise<SandboxSetupResult>;
 
 	/** Runs a clean full build of the existing sandbox (Settings "rebuild sandbox"). Streams progress under `runId`. */
@@ -207,6 +210,9 @@ export type Unsubscribe = () => void;
 /** Everything the renderer can reach as `window.dojo`: the request methods plus the build progress subscription. */
 export interface DojoApi extends DojoInvokeApi
 {
+	/** True in a packaged build. Answered by the preload from a flag main passes, so it is synchronous. The renderer uses it to refuse dev-only switches such as the fake data source (A251). */
+	isPackaged(): boolean;
+
 	/** Calls `listener` for every progress event of every long operation. Filter by `event.runId`. Returns the unsubscribe function. */
 	onBuildProgress(listener: (event: BuildProgressEvent) => void): Unsubscribe;
 }

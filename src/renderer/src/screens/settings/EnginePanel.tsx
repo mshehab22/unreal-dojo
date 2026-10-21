@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { QUERY_KEYS } from "@/data/queryKeys";
 import { useDojoAction } from "@/data/useDojoAction";
 import { useSandboxBuild } from "@/data/useSandboxBuild";
+import { buildOutcome } from "@/lib/buildOutcome";
 import { formatElapsed } from "@/lib/formatting";
 import { explainSandboxFailure } from "@/lib/sandboxFailure";
 
@@ -67,9 +68,10 @@ export function EnginePanel({ settings, environment }: EnginePanelProps)
 						</Button>
 					)}
 				</div>
-				{rebuild.status !== "idle" && rebuild.status !== "errored" && <BuildProgressView event={rebuild.progress} isFinished={rebuild.status === "succeeded"} />}
+				{rebuild.status !== "idle" && rebuild.status !== "errored" && <BuildProgressView event={rebuild.progress} outcome={buildOutcome(rebuild.status)} />}
+				{rebuild.status === "cancelled" && <p className="text-xs text-paper-muted">The rebuild was cancelled. The sandbox keeps its last good build.</p>}
 				{rebuild.status === "succeeded" && rebuild.result && <p className="text-xs text-pass">Rebuilt in {formatElapsed(rebuild.result.durationMs)}.</p>}
-				{rebuild.status === "failed" && rebuild.result && <AppErrorView error={{ code: "sandbox-not-ready", ...explainSandboxFailure(rebuild.result.compilerOutput), detail: rebuild.result.compilerOutput }} onRetry={rebuild.start} />}
+				{rebuild.status === "failed" && rebuild.result && <AppErrorView error={{ code: "sandbox-not-ready", ...explainSandboxFailure(rebuild.result.compilerOutput, "rebuild"), detail: rebuild.result.compilerOutput }} onRetry={rebuild.start} />}
 				{rebuild.status === "errored" && rebuild.error && <AppErrorView error={rebuild.error} onRetry={rebuild.start} />}
 			</SettingRow>
 		</Panel>

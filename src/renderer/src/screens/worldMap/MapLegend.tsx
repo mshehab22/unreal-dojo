@@ -1,5 +1,5 @@
-// The key to the World Map's stage states.
-import { CheckIcon, LockIcon } from "lucide-react";
+// The key to the World Map's stage states, drawn with the same shapes as the stages.
+import { CheckIcon, LockIcon, RotateCcwIcon } from "lucide-react";
 
 /** One sample node and its meaning per state. */
 export function MapLegend()
@@ -19,7 +19,9 @@ export function MapLegend()
 				Open
 			</span>
 			<span className="flex items-center gap-2">
-				<span className={`${node} border-pack bg-pack-soft`} />
+				<span className={`${node} border-[3px] border-pack bg-surface`}>
+					<span className="size-1.5 rounded-pill bg-pack" />
+				</span>
 				In progress
 			</span>
 			<span className="flex items-center gap-2">
@@ -29,7 +31,9 @@ export function MapLegend()
 				Passed
 			</span>
 			<span className="flex items-center gap-2">
-				<span className={`${node} border-pack bg-pack shadow-glow`} />
+				<span className={`${node} border-warn bg-warn/15 text-warn shadow-[0_0_10px_-1px_var(--color-warn)]`}>
+					<RotateCcwIcon className="size-2.5" strokeWidth={3} />
+				</span>
 				Rematch due
 			</span>
 			<span>The large node at the end of each path is the boss.</span>

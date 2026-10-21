@@ -25,7 +25,7 @@ export function FirstRunScreen()
 
 	return (
 		<section data-testid="screen-firstRun" className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-			<ScreenHeader eyebrow="First-run setup" title="Set up your studio" summary="Four steps, once. After this, every quest compiles and tests in your own Unreal sandbox." />
+			<ScreenHeader eyebrow="First-run setup" title="Set up your studio" summary="A few steps, once. After this, every quest compiles and tests in your own Unreal sandbox." />
 			<div className="grid grid-cols-[13rem_minmax(0,1fr)] items-start gap-6">
 				<StepRail current={step} />
 				{step === "engine" && <EngineStep selected={engine} onSelect={selectEngine} onNext={() => setStep("sandbox")} />}

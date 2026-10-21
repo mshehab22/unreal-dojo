@@ -38,7 +38,7 @@ export function StudioScreen()
 				<div className="grid grid-cols-12 gap-4">
 					<LeadCard progress={progress.data} rules={rules.data} />
 					<TodayPanel progress={progress.data} rules={rules.data} drills={drills.data} glossary={glossary.data} />
-					<DailyOffers daily={daily.data} quests={quests} />
+					<DailyOffers daily={daily.data} quests={quests} rules={rules.data} />
 					<ContinuePanel progress={progress.data} availability={availability.data} quests={quests} />
 					<EngineRoomPanel progress={progress.data} quests={quests} />
 				</div>

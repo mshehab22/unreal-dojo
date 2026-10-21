@@ -1,9 +1,10 @@
 // One world as a client contract: the client's brief, progress, test-out, and the quest path with the boss at the end.
 import { GraduationCapIcon } from "lucide-react";
 
-import type { World } from "@shared/types/content";
+import type { WorldOutline } from "@shared/types/catalog";
 import type { QuestAvailability, WorldTestOutStatus } from "@shared/types/progress";
 
+import { DisabledWithReason } from "@/components/DisabledWithReason";
 import { StudioPortrait } from "@/components/StudioPortrait";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,13 +14,14 @@ import { StageNode } from "./StageNode";
 /** Props for ContractCard. */
 interface ContractCardProps
 {
-	readonly world: World;
+	readonly world: WorldOutline;
 	readonly availability: Readonly<Record<string, QuestAvailability>>;
 	readonly testOut: WorldTestOutStatus | undefined;
+	readonly rematchShare: number;
 }
 
 /** A world's contract card. Bosses can never be tested out of. */
-export function ContractCard({ world, availability, testOut }: ContractCardProps)
+export function ContractCard({ world, availability, testOut, rematchShare }: ContractCardProps)
 {
 	const passed = world.quests.filter((quest) => availability[quest.id]?.status === "passed").length;
 	const isOpen = world.quests.some((quest) => availability[quest.id]?.status !== "locked");
@@ -41,10 +43,12 @@ export function ContractCard({ world, availability, testOut }: ContractCardProps
 				</div>
 				<div className="flex shrink-0 flex-col items-end gap-1">
 					{testOut?.eligible && !testOut.testedOut && (
-						<Button variant="outline" size="sm" data-testid="test-out" disabled title="Taking a test-out opens with the drill screen (M2.2).">
-							<GraduationCapIcon />
-							Test out
-						</Button>
+						<DisabledWithReason testId="test-out" reason="Taking a test-out opens with the drill screen, which comes next (M2.2).">
+							<Button variant="outline" size="sm" disabled>
+								<GraduationCapIcon />
+								Test out
+							</Button>
+						</DisabledWithReason>
 					)}
 					{testOut && !testOut.eligible && !testOut.testedOut && testOut.reason && isOpen && <span className="max-w-40 text-right text-2xs text-paper-faint">{testOut.reason}</span>}
 				</div>
@@ -52,7 +56,7 @@ export function ContractCard({ world, availability, testOut }: ContractCardProps
 			<div className="relative flex items-start justify-between gap-1 px-1">
 				<span aria-hidden="true" className="absolute top-5 right-10 left-10 h-px bg-line-strong" />
 				{world.quests.map((quest) => (
-					<StageNode key={quest.id} quest={quest} availability={availability[quest.id]} />
+					<StageNode key={quest.id} quest={quest} availability={availability[quest.id]} rematchShare={rematchShare} />
 				))}
 			</div>
 		</article>

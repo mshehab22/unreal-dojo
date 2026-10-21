@@ -4,6 +4,7 @@ import { PlayIcon } from "lucide-react";
 import type { GlossaryEntry } from "@shared/types/content";
 import type { DrillSummary, PlayerProgress, RulesSnapshot } from "@shared/types/progress";
 
+import { DisabledWithReason } from "@/components/DisabledWithReason";
 import { Panel } from "@/components/Panel";
 import { StreakFlame } from "@/components/StreakFlame";
 import { Button } from "@/components/ui/button";
@@ -35,10 +36,12 @@ export function TodayPanel({ progress, rules, drills, glossary }: TodayPanelProp
 					<span className="text-sm text-paper-muted">{drills.dueToday === 1 ? "item due for review" : "items due for review"}</span>
 					{drills.overflow > 0 && <span className="text-xs text-paper-faint">{drills.overflow} more slid to tomorrow</span>}
 				</div>
-				<Button variant="pack" disabled={drills.dueToday === 0} title="Drill sessions open with the quest screens (M2.2).">
-					<PlayIcon />
-					Start drill
-				</Button>
+				<DisabledWithReason testId="start-drill" reason="Drill sessions open with the drill screen, which comes next (M2.2).">
+					<Button variant="pack" disabled>
+						<PlayIcon />
+						Start drill
+					</Button>
+				</DisabledWithReason>
 			</div>
 			<StreakFlame count={progress.streak.count} freezes={progress.streak.freezes} maxFreezes={rules.maxFreezes} milestones={rules.streakMilestones} windowDays={rules.streakWindowDays} />
 			{upcoming.length > 0 && (

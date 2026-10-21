@@ -1,5 +1,4 @@
 // Holds the one DojoClient the app uses, chosen once at startup before React mounts.
-import { createBridgeClient } from "./createBridgeClient";
 import { chooseDataSource, DATA_SOURCE_STORAGE_KEY, type DataSourceChoice } from "./dataSourceChoice";
 import type { DojoClient } from "./DojoClient";
 
@@ -19,10 +18,10 @@ function readStoredChoice(): string | null
 	}
 }
 
-/** Picks the data source and builds its client. The fake is loaded on demand, so the real app never ships its fixtures in the main chunk. */
+/** Picks the data source and builds its client. The fake is loaded on demand, so the real app never loads its fixtures, and a packaged build never picks it. */
 export async function loadDojoClient(): Promise<DojoClient>
 {
-	activeChoice = chooseDataSource(readStoredChoice(), import.meta.env["VITE_DOJO_FAKE"] as string | undefined);
+	activeChoice = chooseDataSource(readStoredChoice(), import.meta.env["VITE_DOJO_FAKE"] as string | undefined, window.dojo.isPackaged());
 
 	if (activeChoice.kind === "fake")
 	{
@@ -31,7 +30,7 @@ export async function loadDojoClient(): Promise<DojoClient>
 	}
 	else
 	{
-		activeClient = createBridgeClient(window.dojo);
+		activeClient = window.dojo;
 	}
 
 	return activeClient;

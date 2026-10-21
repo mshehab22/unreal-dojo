@@ -4,16 +4,15 @@ import { describe, expect, it } from "vitest";
 import { DOJO_METHODS } from "@shared/ipc";
 import type { BuildProgressEvent } from "@shared/types/run";
 
-import { CONTENT_METHODS } from "../../src/renderer/src/data/DojoClient";
 import { FakeDojoApi } from "../../src/renderer/src/data/fake/FakeDojoApi";
 
 describe("FakeDojoApi", () =>
 {
-	it("implements every contract method, the progress subscription, and the content methods", () =>
+	it("implements every contract method and the bridge-only functions", () =>
 	{
 		const fake = new FakeDojoApi("returning") as unknown as Record<string, unknown>;
 
-		for (const method of [...DOJO_METHODS, ...CONTENT_METHODS, "onBuildProgress"]) expect(typeof fake[method], method).toBe("function");
+		for (const method of [...DOJO_METHODS, "onBuildProgress", "isPackaged"]) expect(typeof fake[method], method).toBe("function");
 	});
 
 	it("answers copies, so a screen cannot change the fake's state by editing an answer", async () =>

@@ -20,22 +20,37 @@ export const SANDBOX_PHASES: readonly PhaseStep[] = [
 	{ label: "Check the result", phases: ["parsing", "reviewing"] },
 ];
 
+/** How the build stands: still going, or how it ended. */
+export type BuildOutcome = "running" | "succeeded" | "failed" | "cancelled";
+
 /** Props for BuildProgressView. */
 interface BuildProgressViewProps
 {
 	readonly event: BuildProgressEvent | null;
+	readonly outcome: BuildOutcome;
 	readonly steps?: readonly PhaseStep[];
-	readonly isFinished?: boolean;
 }
 
-/** The phase list on the left, the bar and log line under it. Before the first event it shows "Starting". */
-export function BuildProgressView({ event, steps = SANDBOX_PHASES, isFinished = false }: BuildProgressViewProps)
+/** The label above the bar: the live phase while running, otherwise how it ended. */
+function statusLabel(event: BuildProgressEvent | null, outcome: BuildOutcome): string
 {
+	if (outcome === "succeeded") return "Done";
+	if (outcome === "failed") return "Failed";
+	if (outcome === "cancelled") return "Cancelled";
+
+	return event ? event.phase : "Starting";
+}
+
+/** The phase list, then the status, elapsed time, bar, and latest log line. A failed bar turns red; a cancelled one goes quiet. */
+export function BuildProgressView({ event, outcome, steps = SANDBOX_PHASES }: BuildProgressViewProps)
+{
+	const isFinished = outcome === "succeeded";
 	const currentIndex = isFinished ? steps.length : event ? Math.max(0, steps.findIndex((step) => step.phases.includes(event.phase))) : 0;
 	const percent = isFinished ? 100 : (event?.percent ?? 0);
+	const barClass = outcome === "failed" ? "bg-fail" : outcome === "cancelled" ? "bg-line-strong" : "bg-pack";
 
 	return (
-		<div data-testid="build-progress" data-phase={event?.phase ?? "starting"} className="flex flex-col gap-4">
+		<div data-testid="build-progress" data-phase={event?.phase ?? "starting"} data-outcome={outcome} className="flex flex-col gap-4">
 			<ol className="flex flex-wrap gap-x-6 gap-y-2">
 				{steps.map((step, index) => (
 					<li key={step.label} className={cn("flex items-center gap-2 text-sm", index < currentIndex ? "text-paper-muted" : index === currentIndex ? "text-paper" : "text-paper-faint")}>
@@ -53,13 +68,13 @@ export function BuildProgressView({ event, steps = SANDBOX_PHASES, isFinished = 
 			</ol>
 			<div className="flex flex-col gap-2">
 				<div className="flex items-baseline justify-between">
-					<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">{event ? event.phase : "Starting"}</span>
+					<span className={cn("font-mono text-2xs tracking-widest uppercase", outcome === "failed" ? "text-fail" : "text-paper-faint")}>{statusLabel(event, outcome)}</span>
 					<span data-testid="build-elapsed" className="font-display text-2xl font-bold tabular-nums">
 						{formatElapsed(event?.elapsedMs ?? 0)}
 					</span>
 				</div>
 				<div role="progressbar" aria-label="Build progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} className="h-2 overflow-hidden rounded-pill bg-raised">
-					<div className="h-full rounded-pill bg-pack" style={{ width: `${percent}%` }} />
+					<div className={cn("h-full rounded-pill", barClass)} style={{ width: `${percent}%` }} />
 				</div>
 				<p className="truncate font-mono text-xs text-paper-faint">{event?.lastLine ?? "Waiting for the first line from the build"}</p>
 			</div>

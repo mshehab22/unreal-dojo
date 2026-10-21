@@ -13,7 +13,7 @@ import { toAppError } from "./toAppError";
 import { useBuildProgress } from "./useBuildProgress";
 
 /** Where a sandbox build stands. */
-export type SandboxBuildStatus = "idle" | "running" | "succeeded" | "failed" | "errored";
+export type SandboxBuildStatus = "idle" | "running" | "succeeded" | "failed" | "cancelled" | "errored";
 
 /** The build's state and controls. */
 export interface SandboxBuild
@@ -53,8 +53,10 @@ export function useSandboxBuild(operation: (client: DojoClient, runId: string) =
 			},
 			(thrown: unknown) =>
 			{
-				setError(toAppError(thrown));
-				setStatus("errored");
+				const appError = toAppError(thrown);
+
+				setError(appError);
+				setStatus(appError.code === "run-cancelled" ? "cancelled" : "errored");
 			},
 		);
 		// The operation is fixed for the component's life.

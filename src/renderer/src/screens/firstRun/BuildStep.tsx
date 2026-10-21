@@ -8,6 +8,7 @@ import { AppErrorView } from "@/components/AppErrorView";
 import { BuildProgressView } from "@/components/BuildProgressView";
 import { Button } from "@/components/ui/button";
 import { useSandboxBuild } from "@/data/useSandboxBuild";
+import { buildOutcome } from "@/lib/buildOutcome";
 import { formatElapsed } from "@/lib/formatting";
 import { explainSandboxFailure } from "@/lib/sandboxFailure";
 
@@ -59,7 +60,7 @@ export function BuildStep({ engine, folder, onBack, onNext }: BuildStepProps)
 				</>
 			}
 		>
-			{build.status !== "idle" && <BuildProgressView event={build.progress} isFinished={build.status === "succeeded"} />}
+			{build.status !== "idle" && build.status !== "errored" && <BuildProgressView event={build.progress} outcome={buildOutcome(build.status)} />}
 			{build.status === "idle" && (
 				<p className="rounded-lg border border-line bg-raised/50 p-4 text-sm text-paper-muted">
 					You can keep using your computer while it builds. Cancelling is safe; the next start picks up from a clean copy.
@@ -74,7 +75,7 @@ export function BuildStep({ engine, folder, onBack, onNext }: BuildStepProps)
 			{build.status === "failed" && build.result && (
 				<div data-testid="build-failed" className="flex flex-col gap-2">
 					<AppErrorView
-						error={{ code: "sandbox-not-ready", ...explainSandboxFailure(build.result.compilerOutput) }}
+						error={{ code: "sandbox-not-ready", ...explainSandboxFailure(build.result.compilerOutput, "first-run") }}
 						onRetry={build.start}
 						retryLabel="Build again"
 					/>
@@ -82,6 +83,14 @@ export function BuildStep({ engine, folder, onBack, onNext }: BuildStepProps)
 						{showOutput ? "Hide the compiler output" : "Show the compiler output"}
 					</button>
 					{showOutput && <pre className="max-h-40 overflow-auto rounded-md bg-ink p-3 font-mono text-2xs whitespace-pre-wrap text-paper-muted select-text">{build.result.compilerOutput}</pre>}
+				</div>
+			)}
+			{build.status === "cancelled" && (
+				<div data-testid="build-cancelled" className="flex items-center justify-between gap-3 rounded-lg border border-line bg-raised/50 p-4 text-sm text-paper-muted">
+					The build was cancelled. Nothing is half done; starting again begins from a clean copy.
+					<Button variant="secondary" size="sm" onClick={build.start}>
+						Start again
+					</Button>
 				</div>
 			)}
 			{build.status === "errored" && build.error && <AppErrorView error={build.error} onRetry={build.start} retryLabel="Start again" />}

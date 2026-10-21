@@ -1,12 +1,14 @@
-// Pure helpers behind the screens: level standing, loop wording (never fast on macOS), formatting, skill groups, glossary search.
+// Pure helpers behind the screens: level standing, loop wording (never fast on macOS), formatting, skill groups and names, glossary search, build failure wording.
 import { describe, expect, it } from "vitest";
 
 import type { GlossaryEntry } from "@shared/types/content";
 
-import { humanizeId, formatDue, formatElapsed } from "../../src/renderer/src/lib/formatting";
+import { formatDue, formatElapsed, formatMonth, humanizeId } from "../../src/renderer/src/lib/formatting";
 import { levelStanding, xpToNextLevel } from "../../src/renderer/src/lib/levels";
 import { describeLoop } from "../../src/renderer/src/lib/loopDescription";
+import { explainSandboxFailure } from "../../src/renderer/src/lib/sandboxFailure";
 import { groupSkills, skillPrefix } from "../../src/renderer/src/lib/skillGroups";
+import { skillGroupName, skillLabel } from "../../src/renderer/src/lib/skillNames";
 import { searchGlossary } from "../../src/renderer/src/lib/searchGlossary";
 
 /** A rules snapshot fragment, as getRules would answer it in a test. */
@@ -75,6 +77,11 @@ describe("formatting", () =>
 	{
 		expect(humanizeId("night-market-lighting")).toBe("Night market lighting");
 	});
+
+	it("writes months out", () =>
+	{
+		expect(formatMonth("2026-09")).toBe("September 2026");
+	});
 });
 
 describe("groupSkills", () =>
@@ -110,5 +117,33 @@ describe("searchGlossary", () =>
 	it("lists everything by term for an empty query", () =>
 	{
 		expect(searchGlossary(entries, "  ").map((found) => found.id)).toEqual(["tarray", "uclass", "uproperty"]);
+	});
+});
+
+describe("skill names", () =>
+{
+	it("reads branch prefixes and skill ids as words", () =>
+	{
+		expect(skillGroupName("ue.objects")).toBe("Objects");
+		expect(skillGroupName("breakdown")).toBe("Breakdown");
+		expect(skillLabel("soft-refs")).toBe("Soft refs");
+		expect(skillLabel("gc")).toBe("GC");
+	});
+});
+
+describe("explainSandboxFailure", () =>
+{
+	const output = "DojoTestActor.cpp(14): error C2065: 'UStaticMeshComponent': undeclared identifier";
+
+	it("blames the template on a first build", () =>
+	{
+		expect(explainSandboxFailure(output, "first-run").message).toContain("not in anything you wrote");
+	});
+
+	it("never mentions setup steps on a rebuild", () =>
+	{
+		const explanation = explainSandboxFailure(output, "rebuild");
+
+		expect(`${explanation.message} ${explanation.suggestedAction}`).not.toMatch(/step 1|not in anything you wrote/);
 	});
 });

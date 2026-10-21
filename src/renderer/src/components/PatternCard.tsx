@@ -70,13 +70,14 @@ export function PatternCard({ card, tier, useCasesPassed, tierThresholds }: Patt
 			</div>
 			<h3 className="font-display text-base leading-tight font-semibold">{card.title}</h3>
 			{showBack ? (
-				<div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden text-2xs leading-snug text-paper-muted">
+				<div className="flex flex-col gap-2 text-2xs leading-snug text-paper-muted">
 					<p className="line-clamp-4">{card.unrealForm}</p>
 					<p className="line-clamp-3 text-paper-faint">Not when: {card.whenNot}</p>
 				</div>
 			) : (
-				<p className="line-clamp-5 min-h-0 flex-1 text-xs leading-snug text-paper-muted">{card.intent}</p>
+				<p className="line-clamp-5 text-xs leading-snug text-paper-muted">{card.intent}</p>
 			)}
+			<span aria-hidden="true" className="flex-1" />
 			<div className="text-2xs text-paper-faint tabular-nums">
 				{useCasesPassed} use case{useCasesPassed === 1 ? "" : "s"}
 				{upcoming ? `, ${upcoming} at ${tierThresholds[upcoming]}` : ", top tier"}

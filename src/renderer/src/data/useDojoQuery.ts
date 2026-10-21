@@ -12,7 +12,7 @@ export interface QueryResult<Value> extends QueryState<Value>
 	reload: () => void;
 }
 
-/** Fetches `load(client)` once per key, shares the answer with every caller of the same key, and refreshes on invalidate. */
+/** Fetches `load(client)` on mount (in the background when it is cached), shares the answer with every caller of the same key, and refreshes on invalidate and window focus. */
 export function useDojoQuery<Value>(key: QueryKey, load: (client: DojoClient) => Promise<Value>): QueryResult<Value>
 {
 	const read = useCallback(() => queryCache.read<Value>(key), [key]);
@@ -20,7 +20,7 @@ export function useDojoQuery<Value>(key: QueryKey, load: (client: DojoClient) =>
 
 	useEffect(() =>
 	{
-		queryCache.ensure(key, () => load(dojo()));
+		return queryCache.observe(key, () => load(dojo()));
 		// The loader for a key never changes meaning, so only the key restarts the fetch.
 	}, [key]);
 

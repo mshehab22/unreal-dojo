@@ -11,12 +11,13 @@ export interface QueryState<Value>
 	readonly isLoading: boolean;
 }
 
-/** One cached query: its state and the loader that refreshes it. */
+/** One cached query: its state, the loader that refreshes it, and how many mounted screens read it. */
 interface CacheEntry
 {
 	state: QueryState<unknown>;
 	load: () => Promise<unknown>;
 	generation: number;
+	observers: number;
 }
 
 /** The state of a key nobody asked for yet. Shared so useSyncExternalStore sees a stable value. */
@@ -42,19 +43,31 @@ export class QueryCache
 		return (this.entries.get(key)?.state ?? NOT_STARTED) as QueryState<Value>;
 	}
 
-	/** Starts the first fetch of a key; does nothing when it was fetched before. */
-	ensure(key: string, load: () => Promise<unknown>): void
+	/**
+	 * A screen starts reading a key: the first time it fetches, later it refetches in the background while the cached answer stays visible.
+	 * Returns the function to call when the screen stops reading it.
+	 */
+	observe(key: string, load: () => Promise<unknown>): () => void
 	{
-		const existing = this.entries.get(key);
+		const entry = this.entries.get(key) ?? { state: NOT_STARTED, load, generation: 0, observers: 0 };
 
-		if (existing)
-		{
-			existing.load = load;
-			return;
-		}
-
-		this.entries.set(key, { state: NOT_STARTED, load, generation: 0 });
+		entry.load = load;
+		entry.observers += 1;
+		this.entries.set(key, entry);
 		void this.fetch(key);
+
+		return () =>
+		{
+			entry.observers = Math.max(0, entry.observers - 1);
+		};
+	}
+
+	/** Refetches every key a mounted screen is reading, in the background (on window focus). */
+	refetchObserved(): Promise<void[]>
+	{
+		const keys = [...this.entries.entries()].filter(([, entry]) => entry.observers > 0).map(([key]) => key);
+
+		return Promise.all(keys.map((key) => this.fetch(key)));
 	}
 
 	/** Fetches a key again, keeping the old answer visible meanwhile. */

@@ -26,8 +26,13 @@ function parseChoice(value: string | null | undefined): DataSourceChoice | null
 	return { kind: "fake", scenario: known ?? "returning" };
 }
 
-/** The stored runtime choice wins over the build-time `VITE_DOJO_FAKE` flag; with neither, the real bridge. */
-export function chooseDataSource(storedValue: string | null | undefined, buildFlag: string | null | undefined): DataSourceChoice
+/**
+ * The stored runtime choice wins over the build-time `VITE_DOJO_FAKE` flag; with neither, the real bridge.
+ * A packaged build always uses the real bridge, whatever is stored (A251).
+ */
+export function chooseDataSource(storedValue: string | null | undefined, buildFlag: string | null | undefined, isPackaged: boolean): DataSourceChoice
 {
+	if (isPackaged) return { kind: "bridge" };
+
 	return parseChoice(storedValue) ?? parseChoice(buildFlag === "1" ? "fake" : buildFlag) ?? { kind: "bridge" };
 }

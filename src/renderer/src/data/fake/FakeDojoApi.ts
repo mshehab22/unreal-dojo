@@ -1,7 +1,9 @@
 // An in-memory DojoClient with realistic answers, used by the e2e tests and by `npm run dev` with the fake flag (A240).
 // It mirrors the IPC contract exactly; services that are not built yet are what it stands in for.
 import type { Unsubscribe } from "@shared/ipc";
-import type { GlossaryEntry, Pack, PatternCard } from "@shared/types/content";
+import type { ContentStatus, GlossaryAlias, LearnerQuest, LearnerWorld, PackOutline } from "@shared/types/catalog";
+import type { GlossaryEntry, PatternCard } from "@shared/types/content";
+import type { DrillSession } from "@shared/types/drill";
 import type { EngineInstall, EnvironmentStatus, SandboxFolderChoice, SandboxSetupResult, ToolchainCheck } from "@shared/types/engine";
 import type { AppError } from "@shared/types/errors";
 import type {
@@ -32,9 +34,15 @@ import { daysFromNow } from "./fixtures/fakeClock";
 import { enginesFixture, manualEngineFixture, reviewProvidersFixture, sandboxFolderFixture, sandboxPathIn, toolchainFixture } from "./fixtures/machineFixture";
 import { MAP_FIXTURE } from "./fixtures/mapFixture";
 import { freshProgressFixture, returningProgressFixture } from "./fixtures/progressFixture";
-import { buildQuest } from "./fixtures/questFactory";
+import { buildQuestOutline } from "./fixtures/questFactory";
 import { rulesFixture } from "./fixtures/rulesFixture";
 import { FAILED_BUILD_OUTPUT, SandboxBuildSimulator } from "./SandboxBuildSimulator";
+
+/** The real glossary, typed. */
+const GLOSSARY = glossaryJson as unknown as GlossaryEntry[];
+
+/** The real pattern cards, typed. */
+const PATTERN_CARDS = patternsJson as unknown as PatternCard[];
 
 /** How long every fake answer takes, so loading states are real but short. */
 const LATENCY_MS = 60;
@@ -97,6 +105,7 @@ export class FakeDojoApi implements DojoClient
 	private readonly listeners = new Set<(event: BuildProgressEvent) => void>();
 	private readonly builds = new Map<string, SandboxBuildSimulator>();
 
+	/** Starts the fake in one scenario's state; the state lives until the page reloads. */
 	constructor(scenario: FakeScenario)
 	{
 		this.state = initialState(scenario);
@@ -189,7 +198,7 @@ export class FakeDojoApi implements DojoClient
 		return answer(sandboxFolderFixture());
 	}
 
-	/** Simulates copying the template and the first full build. Fails once in the first-build-fails scenario. */
+	/** Simulates copying the template and the first full build, then remembers the sandbox path on a pass, as the sandbox service does. Fails once in the first-build-fails scenario. */
 	async createSandbox(request: SandboxSetupRequest): Promise<SandboxSetupResult>
 	{
 		const engine = [...enginesFixture(), manualEngineFixture()].find((candidate) => candidate.path === request.enginePath);
@@ -197,7 +206,6 @@ export class FakeDojoApi implements DojoClient
 		const shouldFail = this.state.failNextBuild;
 
 		this.state.failNextBuild = false;
-		this.state.settings = { ...this.state.settings, enginePath: request.enginePath };
 
 		const end = await this.simulateBuild(request.runId, engine?.version ?? "5.8.3", shouldFail);
 
@@ -444,12 +452,26 @@ export class FakeDojoApi implements DojoClient
 		return () => void this.listeners.delete(listener);
 	}
 
-	// Content (M0.2b)
-
-	/** The fixture packs with stand-in quest bodies. */
-	listPacks(): Promise<Pack[]>
+	/** The fake only ever runs unpackaged; the real bridge answers this from main. */
+	isPackaged(): boolean
 	{
-		const packs: Pack[] = MAP_FIXTURE.map((pack, packIndex) => ({
+		return false;
+	}
+
+	// Content
+
+	/** Counts of what the fake serves. */
+	getContentStatus(): Promise<ContentStatus>
+	{
+		const questCount = MAP_FIXTURE.flatMap((pack) => pack.worlds.flatMap((world) => world.stages)).length;
+
+		return answer({ root: "fake", packCount: MAP_FIXTURE.length, questCount, glossaryCount: GLOSSARY.length, patternCount: PATTERN_CARDS.length, problems: [] });
+	}
+
+	/** The fixture map as outlines. */
+	listPacks(): Promise<PackOutline[]>
+	{
+		const packs: PackOutline[] = MAP_FIXTURE.map((pack, packIndex) => ({
 			id: pack.id,
 			title: pack.title,
 			summary: pack.summary,
@@ -459,23 +481,55 @@ export class FakeDojoApi implements DojoClient
 				title: world.title,
 				summary: world.summary,
 				order: worldIndex + 1,
-				quests: world.stages.map((stage, stageIndex) => buildQuest(stage, stageIndex + 1)),
+				quests: world.stages.map((stage, stageIndex) => buildQuestOutline(stage, stageIndex + 1)),
 			})),
 		}));
 
 		return answer(packs);
 	}
 
+	/** Not answered by the fake yet: full quests belong to the quest screens (M2.2). */
+	getWorld(): Promise<LearnerWorld>
+	{
+		return notInFake("getWorld");
+	}
+
+	/** Not answered by the fake yet: full quests belong to the quest screens (M2.2). */
+	getQuest(): Promise<LearnerQuest>
+	{
+		return notInFake("getQuest");
+	}
+
 	/** The real glossary from `content/glossary.json`. */
 	getGlossary(): Promise<GlossaryEntry[]>
 	{
-		return answer(glossaryJson as unknown as GlossaryEntry[]);
+		return answer(GLOSSARY);
+	}
+
+	/** Every term and alias of the real glossary, longest first. */
+	getGlossaryAliases(): Promise<GlossaryAlias[]>
+	{
+		const aliases = GLOSSARY.flatMap((entry) => [entry.term, ...entry.aliases].map((text) => ({
+			text,
+			entryId: entry.id,
+			caseSensitive: /[A-Z]/.test(text.slice(1)) || text === text.toUpperCase(),
+			codeOnly: entry.linkMode === "code-only",
+			short: entry.short,
+		})));
+
+		return answer(aliases.sort((first, second) => second.text.length - first.text.length));
 	}
 
 	/** The real pattern cards from `content/patterns.json`. */
 	getPatternCards(): Promise<PatternCard[]>
 	{
-		return answer(patternsJson as unknown as PatternCard[]);
+		return answer(PATTERN_CARDS);
+	}
+
+	/** Not answered by the fake yet: drill sessions belong to the drill screen (M2.2). */
+	startDrill(): Promise<DrillSession>
+	{
+		return notInFake("startDrill");
 	}
 
 	// Helpers

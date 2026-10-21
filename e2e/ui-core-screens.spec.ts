@@ -1,8 +1,7 @@
 // ui-core M2.1: every core screen against the typed fake DojoApi (A240), at 1100x700 and 1440x900, plus the first-run flow,
 // a failing first build with retry, Codex search, a locked stage's reason, Settings actions, and the real bridge's error view.
 // Page scripts are passed as strings because e2e is typechecked without the DOM library.
-// Saves screenshots to test-results/; SAVE_PROOF=1 also copies them to docs/iterations/m2-1-*.png.
-import { copyFileSync } from "node:fs";
+// Saves screenshots to test-results/; SAVE_PROOF=1 also writes them to docs/iterations/m2-1-*.jpg at one pixel per CSS pixel.
 import { resolve } from "node:path";
 
 import { _electron as electron, expect, test, type ElectronApplication, type Page, type TestInfo } from "@playwright/test";
@@ -13,14 +12,14 @@ const SIZES = [
 	{ width: 1440, height: 900 },
 ] as const;
 
-/** Each screen's route hash, test id, and screenshot name, for a returning learner. */
+/** Each screen's route hash, test id, screenshot name, and the element that proves its slowest data arrived, for a returning learner. */
 const SCREENS = [
-	{ hash: "#/", testId: "screen-title", file: "title" },
-	{ hash: "#/studio", testId: "screen-studio", file: "studio" },
-	{ hash: "#/world-map", testId: "screen-worldMap", file: "world-map" },
-	{ hash: "#/character", testId: "screen-character", file: "character" },
-	{ hash: "#/codex", testId: "screen-codex", file: "codex" },
-	{ hash: "#/settings", testId: "screen-settings", file: "settings" },
+	{ hash: "#/", testId: "screen-title", file: "title", ready: "environment-chips" },
+	{ hash: "#/studio", testId: "screen-studio", file: "studio", ready: "studio-engine-room" },
+	{ hash: "#/world-map", testId: "screen-worldMap", file: "world-map", ready: "test-out" },
+	{ hash: "#/character", testId: "screen-character", file: "character", ready: "skill-tree" },
+	{ hash: "#/codex", testId: "screen-codex", file: "codex", ready: "codex-entry" },
+	{ hash: "#/settings", testId: "screen-settings", file: "settings", ready: "review-providers" },
 ] as const;
 
 const SHORTCUT_MODIFIER = process.platform === "darwin" ? "Meta" : "Control";
@@ -28,14 +27,12 @@ const SHORTCUT_MODIFIER = process.platform === "darwin" ? "Meta" : "Control";
 let electronApp: ElectronApplication;
 let window: Page;
 
-/** Screenshots the page into test-results/, and into docs/iterations/ as proof when SAVE_PROOF=1. */
+/** Screenshots the page into test-results/, and as a JPG at CSS pixel size into docs/iterations/ when SAVE_PROOF=1. */
 async function saveScreenshot(testInfo: TestInfo, name: string): Promise<void>
 {
-	const path = testInfo.outputPath(`m2-1-${name}.png`);
+	await window.screenshot({ path: testInfo.outputPath(`m2-1-${name}.png`) });
 
-	await window.screenshot({ path });
-
-	if (process.env["SAVE_PROOF"] === "1") copyFileSync(path, resolve(`docs/iterations/m2-1-${name}.png`));
+	if (process.env["SAVE_PROOF"] === "1") await window.screenshot({ path: resolve(`docs/iterations/m2-1-${name}.jpg`), type: "jpeg", quality: 82, scale: "css" });
 }
 
 /** Forces the page to render at an exact size, independent of how large the OS lets the window be (A90). */
@@ -54,12 +51,15 @@ async function useDataSource(value: string, hash = "#/"): Promise<void>
 	await window.waitForLoadState("domcontentloaded");
 }
 
-/** Moves the app to a route hash and waits for its screen, its data, and fonts. */
-async function goTo(hash: string, testId: string): Promise<void>
+/** Moves the app to a route hash and waits for its screen, its data (and the given element, when named), and fonts. */
+async function goTo(hash: string, testId: string, ready?: string): Promise<void>
 {
 	await window.evaluate(`location.hash = ${JSON.stringify(hash)}`);
 	await expect(window.getByTestId(testId)).toBeVisible();
 	await expect(window.getByTestId(testId).getByTestId("loading")).toHaveCount(0);
+
+	if (ready) await expect(window.getByTestId(ready).first()).toBeVisible();
+
 	await window.evaluate("document.fonts.ready.then(() => true)");
 }
 
@@ -97,7 +97,7 @@ test("every core screen renders for a returning learner at both sizes", async ({
 
 		for (const screen of SCREENS)
 		{
-			await goTo(screen.hash, screen.testId);
+			await goTo(screen.hash, screen.testId, screen.ready);
 			await expect(window.getByRole("heading", { level: 1 })).toHaveCount(1);
 			await expect(window.getByTestId("app-error")).toHaveCount(0);
 			await expectNoSidewaysScroll(`${screen.file} at ${size.width}x${size.height}`);
@@ -116,7 +116,7 @@ test("the long screens in full at 1440 wide", async ({}, testInfo) =>
 	for (const screen of SCREENS.filter((candidate) => candidate.file !== "title"))
 	{
 		await setViewport(1440, 900);
-		await goTo(screen.hash, screen.testId);
+		await goTo(screen.hash, screen.testId, screen.ready);
 
 		// The stage scrolls inside the frame, so grow the viewport to the content's height for one full-length picture.
 		const contentHeight = await window.evaluate<number>("(document.querySelector('main')?.scrollHeight ?? 0) + 48");
@@ -142,11 +142,21 @@ test("screens show the returning learner's real numbers", async () =>
 	await expect(window.getByRole("heading", { level: 1 })).toHaveText("Night Owl Studio");
 	await expect(window.getByTestId("xp-bar")).toContainText("Level 4");
 	await expect(window.getByTestId("daily-offer")).toHaveCount(3);
+	await expect(window.getByTestId("daily-offer").first()).toContainText("6 to 10 due items");
+	await expect(window.getByTestId("studio-daily")).toContainText("September 2026");
+	await window.getByTestId("start-drill").focus();
+	await expect(window.getByRole("tooltip")).toContainText("drill screen");
+	await window.keyboard.press("Escape");
 	await window.getByTestId("daily-offer").nth(1).getByRole("button", { name: "Pick this one" }).click();
 	await expect(window.getByTestId("daily-offer").nth(1)).toHaveAttribute("data-chosen", "true");
 
-	await goTo("#/world-map", "screen-worldMap");
+	await goTo("#/world-map", "screen-worldMap", "test-out");
 	await expect(window.locator('[data-testid="stage-node"][data-rematch="true"]')).toHaveCount(1);
+	await expect(window.locator('[data-testid="stage-node"][data-status="in_progress"]')).toHaveCount(1);
+
+	// A disabled button still explains itself on hover (A245).
+	await window.getByTestId("test-out").hover();
+	await expect(window.getByRole("tooltip")).toContainText("drill screen");
 
 	await goTo("#/character", "screen-character");
 	await expect(window.locator('[data-testid="pattern-card"][data-tier]')).toHaveCount(3);
@@ -157,7 +167,7 @@ test("a locked stage explains why on hover", async ({}, testInfo) =>
 {
 	await useDataSource("fake:returning");
 	await setViewport(1440, 900);
-	await goTo("#/world-map", "screen-worldMap");
+	await goTo("#/world-map", "screen-worldMap", "test-out");
 
 	const locked = window.locator('[data-testid="stage-node"][data-status="locked"]').first();
 	await locked.scrollIntoViewIfNeeded();
@@ -195,7 +205,8 @@ test("Settings: test Claude Code, store an API key masked, and confirm before a 
 {
 	await useDataSource("fake:returning");
 	await setViewport(1100, 700);
-	await goTo("#/settings", "screen-settings");
+	await goTo("#/settings", "screen-settings", "review-providers");
+	await expect(window.getByTestId("review-providers").getByRole("listitem")).toHaveCount(3);
 
 	await window.getByRole("button", { name: "Test Claude Code" }).click();
 	await expect(window.getByTestId("claude-test-result")).toContainText("answered");
@@ -256,6 +267,11 @@ test("first run: name, engine, sandbox folder, full build with progress, editor,
 	await expect(window.getByTestId("studio-lead")).toContainText("Mohammad");
 	await expect(window.getByTestId("studio-lead")).toContainText("Apprentice");
 	await saveScreenshot(testInfo, "studio-fresh-1100x700");
+
+	// Setup stored the engine through updateSettings and the sandbox through createSandbox.
+	await goTo("#/settings", "screen-settings", "review-providers");
+	await expect(window.getByTestId("settings-engine")).toContainText("UE 5.8.3");
+	await expect(window.getByTestId("settings-engine")).toContainText("DojoSandbox");
 });
 
 test("a failing first build explains itself in plain English and the retry works", async ({}, testInfo) =>
@@ -271,10 +287,32 @@ test("a failing first build explains itself in plain English and the retry works
 
 	await expect(window.getByTestId("build-failed")).toBeVisible({ timeout: 15_000 });
 	await expect(window.getByTestId("build-failed")).toContainText("not in anything you wrote");
+	await expect(window.getByTestId("build-progress")).toHaveAttribute("data-outcome", "failed");
 	await window.getByRole("button", { name: "Show the compiler output" }).click();
 	await saveScreenshot(testInfo, "first-run-build-failed-1100x700");
 
 	await window.getByRole("button", { name: "Build again" }).click();
+	await expect(window.getByTestId("build-succeeded")).toBeVisible({ timeout: 15_000 });
+});
+
+test("a cancelled first build is calm, and starting again works", async () =>
+{
+	await useDataSource("fake:fresh", "#/first-run");
+	await setViewport(1100, 700);
+	await goTo("#/first-run", "screen-firstRun");
+
+	await window.getByRole("button", { name: "Use this engine" }).click();
+	await window.getByRole("button", { name: "Choose a folder" }).click();
+	await window.getByRole("button", { name: "Use this folder" }).click();
+	await window.getByRole("button", { name: "Start the build" }).click();
+	await expect(window.getByTestId("build-progress")).toHaveAttribute("data-phase", "building");
+	await window.getByRole("button", { name: "Cancel" }).click();
+
+	await expect(window.getByTestId("build-cancelled")).toBeVisible();
+	await expect(window.getByTestId("build-progress")).toHaveAttribute("data-outcome", "cancelled");
+	await expect(window.getByTestId("app-error")).toHaveCount(0);
+
+	await window.getByRole("button", { name: "Start again" }).click();
 	await expect(window.getByTestId("build-succeeded")).toBeVisible({ timeout: 15_000 });
 });
 

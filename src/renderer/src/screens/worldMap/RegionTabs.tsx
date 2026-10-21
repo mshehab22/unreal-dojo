@@ -1,5 +1,5 @@
 // The packs as regions along the top of the World Map, each in its accent with how many quests are passed.
-import type { Pack } from "@shared/types/content";
+import type { PackOutline } from "@shared/types/catalog";
 import type { QuestAvailability } from "@shared/types/progress";
 
 import { cn } from "@/lib/utils";
@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 /** Props for RegionTabs. */
 interface RegionTabsProps
 {
-	readonly packs: readonly Pack[];
+	readonly packs: readonly PackOutline[];
 	readonly availability: Readonly<Record<string, QuestAvailability>>;
 	readonly selectedId: string;
 	readonly onSelect: (packId: string) => void;
@@ -43,7 +43,7 @@ export function RegionTabs({ packs, availability, selectedId, onSelect }: Region
 							<span className="font-mono text-2xs tracking-widest text-pack uppercase">Region {pack.order}</span>
 							<span className="font-mono text-2xs text-paper-faint tabular-nums">{isLocked ? "Locked" : `${passed}/${quests.length}`}</span>
 						</span>
-						<span className="truncate font-display text-base font-semibold">{pack.title}</span>
+						<span className="min-h-10 font-display text-base leading-tight font-semibold">{pack.title}</span>
 						<span className="h-1 overflow-hidden rounded-pill bg-raised">
 							<span className="block h-full rounded-pill bg-pack" style={{ width: `${quests.length ? Math.round((passed / quests.length) * 100) : 0}%` }} />
 						</span>

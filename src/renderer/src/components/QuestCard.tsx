@@ -1,7 +1,7 @@
 // A quest as a card: kind, title, difficulty, XP, time, and state, with an optional action below.
 import type { ReactNode } from "react";
 
-import type { AuthoredQuest } from "@shared/types/content";
+import type { QuestOutline } from "@shared/types/catalog";
 import type { QuestAvailability } from "@shared/types/progress";
 
 import { cn } from "@/lib/utils";
@@ -13,7 +13,7 @@ import { QuestStatusBadge } from "./QuestStatusBadge";
 /** Props for QuestCard. */
 interface QuestCardProps
 {
-	readonly quest: AuthoredQuest;
+	readonly quest: QuestOutline;
 	readonly availability?: QuestAvailability;
 	readonly context?: string;
 	readonly action?: ReactNode;

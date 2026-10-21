@@ -28,11 +28,12 @@ export function EngineStep({ selected, onSelect, onNext }: EngineStepProps)
 	const engines = useDojoQuery(QUERY_KEYS.engines, (client) => client.detectEngines());
 	const toolchain = useDojoQuery(QUERY_KEYS.toolchain, (client) => client.checkToolchain());
 	const pickFolder = useDojoAction((client) => client.pickEngineFolder());
+	const saveEngine = useDojoAction((client, enginePath: string) => client.updateSettings({ enginePath }), [QUERY_KEYS.settings, QUERY_KEYS.environment]);
 	const [manual, setManual] = useState<EngineInstall | null>(null);
 
 	const options = [...(engines.data ?? []), ...(manual ? [manual] : [])];
 	const blockingProblem = toolchain.data?.problems.find((problem) => problem.blocksBuild);
-	const canContinue = selected !== null && toolchain.data !== undefined && !blockingProblem;
+	const canContinue = selected !== null && toolchain.data !== undefined && !blockingProblem && !saveEngine.isPending;
 
 	// Preselect the newest detected install so the common case is one click.
 	useEffect(() =>
@@ -41,6 +42,12 @@ export function EngineStep({ selected, onSelect, onNext }: EngineStepProps)
 
 		if (!selected && newest) onSelect(newest);
 	}, [engines.data, selected, onSelect]);
+
+	/** Stores the chosen engine in settings, then moves on. */
+	const confirmEngine = async (): Promise<void> =>
+	{
+		if (selected && (await saveEngine.run(selected.path))) onNext();
+	};
 
 	/** Opens the folder picker and selects what it returns. */
 	const browse = async (): Promise<void> =>
@@ -60,7 +67,7 @@ export function EngineStep({ selected, onSelect, onNext }: EngineStepProps)
 			title="Pick the engine"
 			lead="Quests build against a real Unreal install. 5.8 or later is best; 5.4 to 5.7 work with the slower headless loop."
 			footer={
-				<Button variant="pack" onClick={onNext} disabled={!canContinue}>
+				<Button variant="pack" onClick={confirmEngine} disabled={!canContinue}>
 					Use this engine
 				</Button>
 			}
@@ -84,6 +91,7 @@ export function EngineStep({ selected, onSelect, onNext }: EngineStepProps)
 				</Button>
 			</div>
 			{pickFolder.error && <AppErrorView error={pickFolder.error} compact onRetry={browse} />}
+			{saveEngine.error && <AppErrorView error={saveEngine.error} compact onRetry={confirmEngine} />}
 
 			<div className="flex flex-col gap-2 border-t border-line pt-4">
 				<div className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Build toolchain</div>

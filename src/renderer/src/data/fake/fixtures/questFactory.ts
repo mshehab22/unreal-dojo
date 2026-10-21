@@ -1,7 +1,8 @@
-// Builds full quest objects from the few fields the map fixture cares about; quest bodies are short stand-ins.
-import type { AuthoredQuest, AuthoredQuestKind, QuestFrontMatter, ScaffoldLevel } from "@shared/types/content";
+// Builds the quest outlines the World Map receives from the few fields the map fixture sets.
+import type { AuthoredQuestKind, ScaffoldLevel } from "@shared/types/content";
+import type { QuestOutline } from "@shared/types/catalog";
 
-/** The fields a map stage fixture sets; the rest of the quest is filled in. */
+/** The fields a map stage fixture sets; the rest of the outline is filled in. */
 export interface QuestSeed
 {
 	id: string;
@@ -17,13 +18,10 @@ export interface QuestSeed
 	prerequisites?: string[];
 }
 
-/** The body text every stand-in quest uses. Screens in M2.1 never show quest bodies. */
-const STAND_IN = "Stand-in body from the fake DojoApi.";
-
-/** Turns a seed into a complete AuthoredQuest of its kind. */
-export function buildQuest(seed: QuestSeed, order: number): AuthoredQuest
+/** Turns a seed into a QuestOutline, as `listPacks` answers it. */
+export function buildQuestOutline(seed: QuestSeed, order: number): QuestOutline
 {
-	const frontMatter: QuestFrontMatter = {
+	return {
 		id: seed.id,
 		title: seed.title,
 		order,
@@ -36,35 +34,6 @@ export function buildQuest(seed: QuestSeed, order: number): AuthoredQuest
 		xp: seed.xp,
 		estimatedMinutes: seed.minutes,
 		concepts: [],
+		...(seed.scaffold ? { scaffold: seed.scaffold } : {}),
 	};
-
-	switch (seed.kind)
-	{
-		case "concept":
-			return {
-				...frontMatter,
-				kind: "concept",
-				predict: { id: "predict", type: "fill-blank", prompt: "___", acceptedAnswers: ["x"], explanation: STAND_IN },
-				card: STAND_IN,
-				example: STAND_IN,
-				questions: [],
-			};
-		case "breakdown":
-			return { ...frontMatter, kind: "breakdown", spec: STAND_IN, requiredPieces: [], referencePlans: [], rubric: [], alternativeNote: STAND_IN };
-		case "boss":
-			return { ...frontMatter, kind: "boss", spec: STAND_IN, requiredPieces: [], referencePlans: [], pieces: [], integrationRubric: [] };
-		case "build":
-		case "refactor":
-			return {
-				...frontMatter,
-				kind: seed.kind,
-				scaffold: seed.scaffold ?? "stub",
-				brief: STAND_IN,
-				files: [],
-				tests: "",
-				hints: [STAND_IN, STAND_IN, STAND_IN],
-				rubric: [],
-				alternative: STAND_IN,
-			};
-	}
 }

@@ -39,3 +39,13 @@ export function humanizeId(id: string): string
 
 	return words.charAt(0).toUpperCase() + words.slice(1);
 }
+
+/** A month stored as YYYY-MM, written out, for example "September 2026". */
+export function formatMonth(yearMonth: string): string
+{
+	const [year, month] = yearMonth.split("-").map(Number);
+
+	if (!year || !month) return yearMonth;
+
+	return new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
