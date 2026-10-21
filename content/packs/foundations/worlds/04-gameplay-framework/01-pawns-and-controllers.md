@@ -82,7 +82,7 @@ void ADojoF4TurretSeat::Dismount(APlayerController* Player)
   explanation: Possess connects the controller to the pawn; UnPossess disconnects them.
 - id: spot-pawn-owns-hud
   type: spot-the-bug
-  prompt: The HUD disappears every time the player dies and respawns. Which line puts it in the wrong place?
+  prompt: After a few deaths, the screen shows several score widgets stacked on top of each other, each with a different score. Which line creates the HUD in the wrong place?
   code: |
     void ADojoF4Hero::BeginPlay()
     {
@@ -92,7 +92,7 @@ void ADojoF4TurretSeat::Dismount(APlayerController* Player)
     }
   bugLine: 4
   fix: Create the score widget from the player controller, which survives the pawn's death, and keep the reference there.
-  explanation: Anything created and owned by the pawn goes when the pawn goes.
+  explanation: A widget added to the viewport stays until it is removed or the level goes away, so every fresh pawn's BeginPlay adds another one, and the old ones keep showing what their dead pawn knew.
 - id: character-or-pawn
   type: multiple-choice
   prompt: "A rolling ball the player steers with physics forces needs no walking, jumping, or capsule. What should its class derive from?"

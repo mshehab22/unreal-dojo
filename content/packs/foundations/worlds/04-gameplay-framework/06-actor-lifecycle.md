@@ -82,17 +82,21 @@ void ADojoF4Corridor::BeginPlay()
   prompt: "The first line of an override of BeginPlay is ___::BeginPlay();"
   acceptedAnswers: [Super]
   explanation: Super calls the parent class's version, which sets up components and Blueprint events.
-- id: spot-onconstruction-leftovers
-  type: spot-the-bug
-  prompt: Every time the designer nudges this fence in the editor, more posts pile up on top of the old ones. Which line is missing its counterpart?
+- id: onconstruction-leftovers
+  type: multiple-choice
+  prompt: Every time the designer nudges this fence in the editor, more posts pile up on top of the old ones. What is missing?
   code: |
     void ADojoF4Fence::OnConstruction(const FTransform& Transform)
     {
     	Super::OnConstruction(Transform);
     	for (int32 Index = 0; Index < PostCount; ++Index) AddPost(Index);
     }
-  bugLine: 4
-  fix: Destroy the posts from the previous construction before adding new ones.
+  choices:
+    - A call to Super::BeginPlay
+    - Destroying the posts the previous construction made before adding new ones
+    - Marking the fence to tick
+    - Moving the loop into the constructor
+  answerIndex: 1
   explanation: OnConstruction runs again on every move or edit, so whatever it builds must be cleared first.
 - id: endplay-order
   type: multiple-choice

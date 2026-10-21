@@ -110,5 +110,5 @@ void ADojoF4Lamppost::HangLantern(AActor* Lantern)
   rubric:
     - Mentions writing it once or reusing it
     - Mentions adding it to many or unrelated actors
-  explanation: This is the Component pattern, the shape most Unreal gameplay code takes.
+  explanation: Components are how most Unreal gameplay code is shared between actors.
 ```

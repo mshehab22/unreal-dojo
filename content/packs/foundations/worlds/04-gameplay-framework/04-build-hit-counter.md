@@ -44,7 +44,7 @@ Place a cube and a `DojoF1PopupTarget`. Select each, press Add in the Details pa
 #include "Components/ActorComponent.h" // @explain: The base header for UActorComponent, behavior without a transform.
 #include "DojoF4HitCounterComponent.generated.h"
 
-/** Counts hits on whatever actor it is added to and reports when that actor is down. Component pattern: the behavior lives here, not in the owner's class. */
+/** Counts hits on whatever actor it is added to and reports when that actor is down. */
 // Your code: let designers add this from the Add Component menu, grouped under Dojo.
 UCLASS()
 class UDojoF4HitCounterComponent : public UActorComponent

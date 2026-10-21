@@ -162,6 +162,10 @@ bool FDojo_F4_Carrier_CargoRidesAndStays::RunTest(const FString& Parameters)
 	Carrier->SetActorLocation(FVector(500.f, 0.f, 0.f));
 	TestEqual(TEXT("The cargo rides along"), Dummy->GetActorLocation(), FVector(500.f, 0.f, 150.f));
 
+	Carrier->SetActorRotation(FRotator(0.f, 90.f, 0.f));
+	TestEqual(TEXT("The cargo turns with the carrier"), Dummy->GetActorRotation().Yaw, 90.0, 0.01);
+	TestEqual(TEXT("A mount straight above stays above when turning"), Dummy->GetActorLocation(), FVector(500.f, 0.f, 150.f));
+
 	TestTrue(TEXT("Drop returns the dummy"), Carrier->Drop() == Dummy);
 	TestFalse(TEXT("Carrying nothing after the drop"), Carrier->IsCarrying());
 	TestNull(TEXT("No parent after the drop"), Dummy->GetAttachParentActor());

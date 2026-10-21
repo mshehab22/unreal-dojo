@@ -27,6 +27,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Course")
 	TObjectPtr<ADojoF4Carrier> Keeper;
 
+	/** The actor the keeper rides with; when empty, the director uses the first player's pawn. */
+	UPROPERTY(EditAnywhere, Category = "Course")
+	TObjectPtr<AActor> FollowTarget;
+
 	/** The fence whose posts are the places to fill. */
 	UPROPERTY(EditAnywhere, Category = "Course")
 	TObjectPtr<ADojoF4Fence> Fence;
@@ -80,7 +84,7 @@ public:
 	float GetFinishSeconds() const;
 
 protected:
-	/** Remembers where every dummy starts, binds the keys when a player controller exists, and starts round 1. */
+	/** Remembers where every dummy starts, attaches the keeper to the player's pawn (or FollowTarget), binds the keys when a player controller exists, and starts round 1. */
 	virtual void BeginPlay() override;
 
 private:

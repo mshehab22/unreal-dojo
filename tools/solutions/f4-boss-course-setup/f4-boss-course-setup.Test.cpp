@@ -4,6 +4,7 @@
 
 #include "Components/TextRenderComponent.h"
 #include "Engine/World.h"
+#include "GameFramework/DefaultPawn.h"
 #include "Quests/f1-training-dummy/DojoF1TrainingDummy.h"
 #include "Quests/f4-boss-course-setup/DojoF4CourseDirector.h"
 #include "Quests/f4-carrier/DojoF4Carrier.h"
@@ -18,6 +19,7 @@ namespace DojoF4CourseTest
 	/** Every piece of the course, wired the way a designer would. */
 	struct FCourse
 	{
+		ADefaultPawn* Player = nullptr;
 		ADojoF4Carrier* Keeper = nullptr;
 		ADojoF4Fence* Fence = nullptr;
 		TArray<ADojoF1TrainingDummy*> Dummies;
@@ -49,10 +51,14 @@ namespace DojoF4CourseTest
 			Course.Dummies.Add(Dummy);
 		}
 
+		// The test world has no player controller, so a default pawn stands in for the player's pawn and is named as the follow target.
+		Course.Player = TestWorld.SpawnActor<ADefaultPawn>();
 		Course.Keeper = TestWorld.SpawnActor<ADojoF4Carrier>();
+		Course.Keeper->SetActorLocation(FVector(0.f, -3000.f, 0.f));
 
 		Course.Director = World->SpawnActorDeferred<ADojoF4CourseDirector>(ADojoF4CourseDirector::StaticClass(), FTransform::Identity);
 		Course.Director->Keeper = Course.Keeper;
+		Course.Director->FollowTarget = Course.Player;
 		Course.Director->Fence = Course.Fence;
 		for (ADojoF1TrainingDummy* Dummy : Course.Dummies) Course.Director->Dummies.Add(Dummy);
 		Course.Director->FinishSpawning(FTransform::Identity);
@@ -61,10 +67,10 @@ namespace DojoF4CourseTest
 		return Course;
 	}
 
-	/** Moves the keeper and lets half a second pass, like a player walking there. */
+	/** Moves the player's pawn and lets half a second pass, like a player walking there; the keeper rides along. */
 	void WalkTo(FDojoTestWorld& TestWorld, FCourse& Course, const FVector& Location)
 	{
-		Course.Keeper->SetActorLocation(Location);
+		Course.Player->SetActorLocation(Location);
 		TestWorld.Tick(30);
 	}
 
@@ -151,6 +157,11 @@ bool FDojo_F4_CourseSetup_RangesTiesAndPar::RunTest(const FString& Parameters)
 	ADojoF4CourseDirector* Director = Course.Director;
 	ADojoF1TrainingDummy* First = Course.Dummies[0];
 
+	TestTrue(TEXT("The keeper rides on the player's pawn"), Course.Keeper->GetAttachParentActor() == Course.Player);
+	TestTrue(TEXT("The keeper starts where the pawn is"), Course.Keeper->GetActorLocation().Equals(Course.Player->GetActorLocation(), 0.01));
+	WalkTo(TestWorld, Course, FVector(123.f, 456.f, 0.f));
+	TestTrue(TEXT("Moving the pawn moves the keeper"), Course.Keeper->GetActorLocation().Equals(FVector(123.f, 456.f, 0.f), 0.01));
+
 	WalkTo(TestWorld, Course, DummyStarts[0] + FVector(0.f, 260.f, 0.f));
 	Director->PressInteract();
 	TestFalse(TEXT("260 away is out of the 250 pickup range"), Course.Keeper->IsCarrying());
@@ -198,6 +209,14 @@ bool FDojo_F4_CourseSetup_RangesTiesAndPar::RunTest(const FString& Parameters)
 	WalkTo(TestWorld, Course, Course.Fence->GetPostLocation(3));
 	Director->PressInteract();
 	TestEqual(TEXT("Every post filled"), Director->GetPlacedCount(), 4);
+
+	// The 200 test range: 210 from the nearest placed dummy strikes nothing, 190 strikes it.
+	WalkTo(TestWorld, Course, Course.Fence->GetPostLocation(0) + FVector(0.f, -210.f, 0.f));
+	Director->PressTest();
+	TestEqual(TEXT("210 from the nearest placed dummy is out of the 200 test range"), CounterOf(First)->GetHits(), 0);
+	WalkTo(TestWorld, Course, Course.Fence->GetPostLocation(0) + FVector(0.f, -190.f, 0.f));
+	Director->PressTest();
+	TestEqual(TEXT("190 from it is inside the test range"), CounterOf(First)->GetHits(), 1);
 
 	// Dawdle past the 60 second par, then knock every placed dummy down.
 	TestWorld.Tick(60 * 60);

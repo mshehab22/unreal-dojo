@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "InputCoreTypes.h"
+#include "Kismet/GameplayStatics.h"
 #include "Quests/f4-carrier/DojoF4Carrier.h"
 #include "Quests/f4-fence/DojoF4Fence.h"
 #include "Quests/f4-hit-counter/DojoF4HitCounterComponent.h"
@@ -27,6 +28,10 @@ void ADojoF4CourseDirector::BeginPlay()
 	{
 		if (IsValid(Dummy)) StartLocations.Add(Dummy, Dummy->GetActorLocation());
 	}
+
+	// The keeper walks with the player: it rides on the pawn (or a designer's chosen actor) through attachment, so it needs no movement code of its own.
+	AActor* Host = IsValid(FollowTarget) ? FollowTarget.Get() : UGameplayStatics::GetPlayerPawn(this, 0);
+	if (IsValid(Keeper) && IsValid(Host)) Keeper->AttachToActor(Host, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
 	if (APlayerController* Player = GetWorld()->GetFirstPlayerController())
 	{

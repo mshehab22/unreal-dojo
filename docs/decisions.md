@@ -4,6 +4,9 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A620 2026-10-21 The course setup keeper rides on the player's pawn (Lead, Pack 1 World 4 fix round 1)
+From the World 4 review: the keeper is a plain carrier actor and nothing moved it, so the boss could not be played; the tests hid this by teleporting it. Decided by the Lead: in BeginPlay the director (and the level Blueprint in plan 2) attaches the keeper to the player's pawn with AttachToActor, snapped on, so it walks with the default pawn and reuses the world's attach lesson with no piece addition. The director also takes an optional Follow Target, which the tests use because the test world has no player controller; the tests now move an ADefaultPawn instead of the keeper. Reverse cost: low.
+
 ### A562 2026-10-21 Course setup boss: no additions, a loose-only registry, and a fixed registration order (author-foundations, Pack 1 World 4)
 The boss needed a way to keep placed dummies out of pickup and to make round 2 break ties exactly like round 1. Options: add a "placed" flag to the registry or the hit counter; use the registry as the list of loose dummies only. Chosen: placing a dummy unregisters it, and every round start unregisters all dummies and registers them again in the designer's order, so the registry's first-registered tie rule gives the same pickup every round. No piece needs an addition. Ties between free posts go to the lower post. Reference game: Moving Out. Reverse cost: low.
 

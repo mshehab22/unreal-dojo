@@ -22,7 +22,7 @@ pieces:
 
 # Spec
 
-The yard must be set up before practice, against the clock. A fence lays out 4 posts, 300 apart. Six training dummies stand loose around the yard; each carries a hit counter (down after 3 hits) and a registry entry. The keeper, a carrier from this world, is the player.
+The yard must be set up before practice, against the clock. A fence lays out 4 posts, 300 apart. Six training dummies stand loose around the yard; each carries a hit counter (down after 3 hits) and a registry entry. The keeper, a carrier from this world, rides with the player: when play begins the director attaches it to the player's pawn (or to a Follow Target actor a designer picks), snapped on, so walking the default pawn walks the keeper. The world's own attachment lesson does the moving; the carrier needs no movement code.
 
 Setting up: pressing E with empty hands picks up the nearest loose dummy within 250 units of the keeper; if two are equally near, the one that registered first is picked. Pressing E while carrying drops the dummy. If a free post is within 200 units of the keeper, the dummy is placed on that post (moved onto it exactly) and stops being loose; if two free posts are equally near, the lower-numbered post wins. Otherwise the dummy is dropped where it is and stays loose. A post holds one dummy.
 
@@ -87,7 +87,7 @@ Feel: tune the pickup range until a missed pickup feels like your own positionin
 - id: cpp-director
   title: A C++ course director ties the pieces together
   pieces:
-    - { id: director, kind: class, label: ADojoF4CourseDirector with references to the keeper and the fence and a list of dummies set in Details and a running flag and a start time, covers: [course-driver, tunables] }
+    - { id: director, kind: class, label: ADojoF4CourseDirector with references to the keeper and the fence and a list of dummies set in Details and a running flag and a start time and a BeginPlay that records each dummy's starting location and attaches the keeper to the player's pawn with AttachToActor, covers: [course-driver, tunables] }
     - { id: pickup, kind: step, label: PressInteract with empty hands calls FindNearest on the registry from the keeper within PickupRange and Carry on the keeper, covers: [pickup] }
     - { id: place, kind: step, label: PressInteract while carrying calls Drop and then looks for the nearest free post with GetPostLocation keeping the lower index on a tie and moves the dummy onto it, covers: [place] }
     - { id: loose, kind: step, label: A placed dummy is passed to Unregister on the registry, covers: [loose-list] }
@@ -104,13 +104,13 @@ Feel: tune the pickup range until a missed pickup feels like your own positionin
 - id: blueprint-director
   title: The level Blueprint ties the pieces together through their C++ API
   pieces:
-    - { id: level, kind: class, label: Level Blueprint with Start Round from Event BeginPlay and a Running variable and a start time and variables for the ranges and par, covers: [course-driver, tunables] }
+    - { id: level, kind: class, label: Level Blueprint whose Event BeginPlay stores each dummy's location in a map variable of starting locations and attaches the keeper to Get Player Pawn with Attach Actor To Actor and then calls Start Round and that keeps a Running variable and a start time and variables for the ranges and par, covers: [course-driver, tunables] }
     - { id: pickup, kind: step, label: The E event behind a branch on Running and on Is Carrying being false calls Find Nearest on the registry node and Carry on the keeper, covers: [pickup] }
     - { id: place, kind: step, label: The E event while Is Carrying calls Drop and loops over Get Built Post Count with Get Post Location keeping the first strictly nearer free post and sets the dummy's location on it, covers: [place] }
     - { id: loose, kind: step, label: A placed dummy is passed to Unregister on the registry node and stored in a post occupant array, covers: [loose-list] }
     - { id: strikes, kind: step, label: The T event behind branches on Running and all posts filled gets the Hit Counter of the nearest placed dummy and calls Register Hit, covers: [test-strikes] }
     - { id: finish, kind: step, label: After each strike a loop checks Is Down on every placed counter and on all down clears Running and sets the result text on a Text Render actor, covers: [finish] }
-    - { id: reset, kind: step, label: Start Round from BeginPlay and from the R event behind a branch on Running being false calls Drop and then Unregister on every dummy and then Set Actor Location and Reset Hits and Register in array order, covers: [reset] }
+    - { id: reset, kind: step, label: Start Round from BeginPlay and from the R event behind a branch on Running being false calls Drop and then Unregister on every dummy and then Set Actor Location from the map of starting locations and Reset Hits and Register in array order, covers: [reset] }
   edges:
     - { from: level, to: pickup, label: E with empty hands }
     - { from: level, to: place, label: E while carrying }
@@ -127,6 +127,6 @@ Feel: tune the pickup range until a missed pickup feels like your own positionin
 - Placing uses the nearest free post within 200, the lower post winning a tie, moves the dummy exactly onto it, and never puts two dummies on one post.
 - T does nothing until all four posts are filled, then strikes only the nearest placed dummy within 200.
 - The round ends when every placed dummy is down, with the time to one decimal and UNDER PAR or OVER PAR against 60 seconds.
-- Round 1 starts with play, R starts later rounds only between rounds, and E and T do nothing outside a round.
+- The keeper is attached to the player's pawn at the start of play, so the player walks it around; round 1 starts with play, R starts later rounds only between rounds, and E and T do nothing outside a round.
 - Starting a round restores starting places, clears counters and posts, and re-registers dummies in a fixed order, so round 2 plays exactly like round 1.
 - The tuned pickup range is written in the submission with one sentence on why it felt fair.
