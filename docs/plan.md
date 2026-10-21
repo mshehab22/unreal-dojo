@@ -79,7 +79,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | merged 267739b | merged | Passed first review; Windows unverified (problems.md) |
 | M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | claude/m1-6-rules-b3c2e0 @ 4d9b9c4 | fixes | Round 1 held for 8 of 9. Round 2: rematches still farmable through "Drill me" and hover-injected terms; candidates must come only from scheduled due items |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
-| M1.7b Review fallback edges | ai-review | builder-review (session) | m1-7b-review-edges @ c14de07 | review | A300 to A302; 235 tests |
+| M1.7b Review fallback edges | ai-review | builder-review (session) | m1-7b-review-edges @ c14de07 | fixes | Decisions 1 and 2 exact; round 1: plural kind words still match |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop @ 3891f21 | review | 7 of 7 real UE 5.8.3 runs on the Mac; runQuest IPC not wired yet |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | m1-8-verifier @ 5ac6787 | review | --engine on examples: 3 of 5 pass; 2 timer examples blocked on a sandbox helper bug (fix sent to builder-unreal) |
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
@@ -88,6 +88,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 8b6e368 | review | Engine smoke passed on UE 5.8.3 in 40 s |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
+Queued for M2.2 (from the M1.7b review): the Build screen shows a "Retry review" button when a review falls back to tests-only with `retryReviewSuggested`.
+Queued for the verifier (from the M1.7b review): a breakdown required-piece label must have a core of at least 4 characters after kind words are removed, so tests-only matching stays meaningful.
 Note for M2.1 (from the M1.1 review): `supportsFastLoop` is true for 5.8 on the Mac, but the Mac has no Live Coding (A45); first-run and Title must not promise the fast loop on the Mac.
 
 Stages: waiting, building, review, fixes, testing, merged. Only the Lead edits this board (A06).
