@@ -1,0 +1,3652 @@
+[
+  {
+    "id": "uobject",
+    "term": "UObject",
+    "aliases": [
+      "UObjects",
+      "Unreal object"
+    ],
+    "category": "object model",
+    "short": "The base class for almost every engine type, which gives a class reflection, garbage collection, and editor support.",
+    "long": "Think of UObject as the membership card for the engine's club. Once your class derives from it, the engine can list its properties in the editor, save it to disk, find it by name, and clean it up when nothing uses it anymore. Data-only classes such as a quest definition or an inventory item rule usually derive straight from UObject, while things that live in a level derive from AActor, which is itself a UObject. Class names that start with U, like UHealthComponent, signal a UObject that is not an actor.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/objects-in-unreal-engine?application_version=5.8",
+    "related": [
+      "actor",
+      "reflection",
+      "garbage-collection",
+      "uclass",
+      "newobject",
+      "cdo"
+    ]
+  },
+  {
+    "id": "actor",
+    "term": "Actor",
+    "aliases": [
+      "AActor",
+      "actors"
+    ],
+    "category": "framework",
+    "short": "Any object that can be placed in or spawned into a level, such as a door, a pickup, a light, or a character.",
+    "long": "An actor is a container that exists in the world and owns a set of components that give it shape and behavior. On its own it has no mesh or position; its root component supplies the transform. A pressure plate actor might own a box component to detect feet and a static mesh component so you can see it. Actors get lifecycle calls like BeginPlay, Tick, and EndPlay, can replicate over the network, and are created at runtime with SpawnActor rather than NewObject.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/actors-in-unreal-engine?application_version=5.8",
+    "related": [
+      "uobject",
+      "actor-component",
+      "root-component",
+      "spawnactor",
+      "beginplay",
+      "world"
+    ]
+  },
+  {
+    "id": "pawn",
+    "term": "Pawn",
+    "aliases": [
+      "APawn",
+      "pawns"
+    ],
+    "category": "framework",
+    "short": "An actor that a player or an AI can control, like a vehicle, a turret, or a floating camera.",
+    "long": "A pawn is the body, and a controller is the mind that drives it. The pawn holds the physical representation and reacts to commands, while the controller decides what those commands are. A tank in a strategy game could be a pawn possessed by a player controller in one match and by an AI controller in another, with no change to the tank class itself. If you need walking, jumping, and a skeletal mesh out of the box, use the Character subclass instead.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/APawn?application_version=5.8",
+    "related": [
+      "actor",
+      "character",
+      "player-controller",
+      "ai-controller",
+      "possession"
+    ]
+  },
+  {
+    "id": "character",
+    "term": "Character",
+    "aliases": [
+      "ACharacter",
+      "characters"
+    ],
+    "category": "framework",
+    "short": "A ready-made pawn for walking creatures that comes with a capsule, a skeletal mesh, and a movement component.",
+    "long": "ACharacter saves you from building humanoid movement by hand. It ships with a capsule for collision, a skeletal mesh slot for the visible body, an arrow showing which way is forward, and the Character Movement Component that handles walking, falling, jumping, swimming, and network smoothing. A hero, an enemy grunt, and a shopkeeper NPC are all good fits. A good habit is to put shared stats in a common parent such as ADojoCharacter so player and enemy classes do not duplicate code.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/characters-in-unreal-engine?application_version=5.8",
+    "related": [
+      "pawn",
+      "character-movement-component",
+      "capsule-component",
+      "skeletal-mesh-component",
+      "anim-instance"
+    ]
+  },
+  {
+    "id": "actor-component",
+    "term": "Actor Component",
+    "aliases": [
+      "UActorComponent",
+      "actor components"
+    ],
+    "category": "components",
+    "short": "A reusable piece of behavior that you attach to an actor, with no position of its own.",
+    "long": "Components let you build actors from parts instead of deep inheritance trees. A UActorComponent holds logic or data but has no transform, which makes it ideal for things like a health pool, an inventory, or a quest tracker. Drop a UHealthComponent onto a barrel, a boss, and a player and all three can take damage the same way. If the part needs a location in the world, such as a muzzle point or a trigger volume, use a scene component instead.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UActorComponent?application_version=5.8",
+    "related": [
+      "scene-component",
+      "actor",
+      "createdefaultsubobject",
+      "primitive-component"
+    ]
+  },
+  {
+    "id": "scene-component",
+    "term": "Scene Component",
+    "aliases": [
+      "USceneComponent",
+      "scene components"
+    ],
+    "category": "components",
+    "short": "A component that has a transform and can be attached to other scene components in a parent and child tree.",
+    "long": "A scene component adds location, rotation, and scale to the component idea. Scene components form a hierarchy: when the parent moves, the children follow. On a turret, an empty scene component called MuzzlePoint can sit at the end of the barrel so projectiles always spawn from the right place, even while the barrel rotates. You set up the tree in a constructor with SetupAttachment, or at runtime with AttachToComponent.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/USceneComponent?application_version=5.8",
+    "related": [
+      "actor-component",
+      "primitive-component",
+      "root-component",
+      "attach-to-component",
+      "ftransform"
+    ]
+  },
+  {
+    "id": "primitive-component",
+    "term": "Primitive Component",
+    "aliases": [
+      "UPrimitiveComponent",
+      "primitive components"
+    ],
+    "category": "components",
+    "short": "A scene component that has geometry, so it can be drawn, collide, or simulate physics.",
+    "long": "Primitive components are the scene components that physically matter. Meshes and collision shapes such as boxes, spheres, and capsules all derive from UPrimitiveComponent, which is where collision settings, overlap and hit events, and physics simulation live. When an overlap event fires, the engine hands you the UPrimitiveComponent that was touched, so you can tell whether a sword hit the enemy's capsule or a separate weak-point sphere.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UPrimitiveComponent?application_version=5.8",
+    "related": [
+      "scene-component",
+      "static-mesh-component",
+      "box-component",
+      "overlap-event",
+      "collision-preset",
+      "physics-simulation"
+    ]
+  },
+  {
+    "id": "static-mesh-component",
+    "term": "Static Mesh Component",
+    "aliases": [
+      "UStaticMeshComponent",
+      "static mesh",
+      "StaticMeshComponent"
+    ],
+    "category": "components",
+    "short": "A component that draws a rigid 3D model, like a crate, a sword, or a wall.",
+    "long": "A static mesh is a model that does not bend with bones. The component places one of these models in the world and can also provide collision from the mesh's simple collision shapes. A pickup actor might use a box component as its root for clean overlap detection and a static mesh component as a child to show the item spinning. Turning off collision on the mesh when a simpler shape already handles it is a common, cheap performance win.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UStaticMeshComponent?application_version=5.8",
+    "related": [
+      "primitive-component",
+      "skeletal-mesh-component",
+      "collision-preset",
+      "socket"
+    ]
+  },
+  {
+    "id": "skeletal-mesh-component",
+    "term": "Skeletal Mesh Component",
+    "aliases": [
+      "USkeletalMeshComponent",
+      "skeletal mesh",
+      "GetMesh"
+    ],
+    "category": "components",
+    "short": "A component that draws a model driven by a skeleton of bones, so it can be animated.",
+    "long": "Characters, creatures, and anything that bends use a skeletal mesh. The component plays animations through an animation blueprint, exposes bones and sockets you can attach things to, and can drive a physics asset for ragdolls. On an ACharacter you reach it with GetMesh(). If you want a sword in the hero's right hand, you attach the sword actor to a socket on this component, and the sword follows every swing of the arm.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/USkeletalMeshComponent?application_version=5.8",
+    "related": [
+      "character",
+      "anim-instance",
+      "socket",
+      "animation-blueprint",
+      "static-mesh-component"
+    ]
+  },
+  {
+    "id": "capsule-component",
+    "term": "Capsule Component",
+    "aliases": [
+      "UCapsuleComponent"
+    ],
+    "category": "collision",
+    "short": "A pill-shaped collision shape, used by characters because it slides smoothly over steps and edges.",
+    "long": "The capsule is the invisible pill that a character actually collides with. Its rounded ends let movement glide over small bumps instead of snagging the way a box would. ACharacter makes it the root component, so its size defines how tall and wide your character is for doors and corridors. Overlap checks against the capsule are much cheaper than checking against every triangle of the skeletal mesh, which is why the mesh is often set to no collision.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UCapsuleComponent?application_version=5.8",
+    "related": [
+      "character",
+      "box-component",
+      "sphere-component",
+      "collision-preset",
+      "root-component"
+    ]
+  },
+  {
+    "id": "box-component",
+    "term": "Box Component",
+    "aliases": [
+      "UBoxComponent",
+      "box collision",
+      "trigger box"
+    ],
+    "category": "collision",
+    "short": "A box-shaped collision shape, often used as a trigger zone or a simple blocker.",
+    "long": "A box component is the go-to shape for rectangular areas: a doorway trigger, a pressure plate, a kill zone under the map, or a solid crate. You set its half-size with SetBoxExtent. Set to overlap, it fires begin and end overlap events when a pawn walks in or out; set to block, it stops movement and fires hit events. Making it the root of a small actor gives clean, predictable collision regardless of what the mesh looks like.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UBoxComponent?application_version=5.8",
+    "related": [
+      "sphere-component",
+      "capsule-component",
+      "overlap-event",
+      "collision-preset",
+      "primitive-component"
+    ]
+  },
+  {
+    "id": "sphere-component",
+    "term": "Sphere Component",
+    "aliases": [
+      "USphereComponent",
+      "sphere collision"
+    ],
+    "category": "collision",
+    "short": "A ball-shaped collision shape, common for pickup radii, detection ranges, and projectiles.",
+    "long": "A sphere is the cheapest shape to test, so it is great for radius checks. A defense tower can use a large overlapping sphere as its aggro range: when the player enters, the tower starts firing, and when the player leaves, it stops. A small blocking sphere also makes a good root for a projectile because its shape looks the same from every direction. Change the size at runtime with SetSphereRadius.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/USphereComponent?application_version=5.8",
+    "related": [
+      "box-component",
+      "capsule-component",
+      "overlap-event",
+      "projectile-movement-component"
+    ]
+  },
+  {
+    "id": "camera-component",
+    "term": "Camera Component",
+    "aliases": [
+      "UCameraComponent"
+    ],
+    "category": "components",
+    "short": "A component that defines a viewpoint, so the player sees the world from where it sits.",
+    "long": "When a player controller possesses a pawn, the view usually comes from a camera component on that pawn. You set field of view and projection on it, and it is almost always attached to a spring arm so it can trail behind or hover above the character. For a top-down game, the camera hangs high on a long spring arm pitched downward; for a first-person game, it sits at eye height and uses the controller's rotation.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UCameraComponent?application_version=5.8",
+    "related": [
+      "spring-arm-component",
+      "pawn",
+      "player-controller",
+      "scene-component"
+    ]
+  },
+  {
+    "id": "spring-arm-component",
+    "term": "Spring Arm Component",
+    "aliases": [
+      "USpringArmComponent",
+      "camera boom",
+      "spring arm"
+    ],
+    "category": "components",
+    "short": "A component that holds a camera at a set distance and pulls it closer when something blocks the view.",
+    "long": "Picture a selfie stick with a spring in it. The spring arm keeps its child, usually a camera, a fixed length away from the character, and if a wall gets in the way it shortens so the camera never clips through geometry. Key settings are TargetArmLength, whether it tests collision, whether it uses the pawn's control rotation, and optional lag so the camera trails smoothly. Attach the camera to the arm's end with USpringArmComponent::SocketName.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/USpringArmComponent?application_version=5.8",
+    "related": [
+      "camera-component",
+      "scene-component",
+      "character"
+    ]
+  },
+  {
+    "id": "character-movement-component",
+    "term": "Character Movement Component",
+    "aliases": [
+      "UCharacterMovementComponent",
+      "CMC",
+      "GetCharacterMovement"
+    ],
+    "category": "components",
+    "short": "The component that moves a Character: walking, falling, jumping, swimming, and smoothing it over the network.",
+    "long": "This is one of the biggest systems in the engine, and you rarely need to rewrite it. You tune it: MaxWalkSpeed for how fast an enemy chases, JumpZVelocity for jump height, bOrientRotationToMovement so a top-down hero turns toward where it runs, and RotationRate for how fast it turns. Its Velocity tells you how fast the character is moving, which is handy for feeding a locomotion blend space. It also handles client prediction so player movement feels responsive online.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UCharacterMovementComponent?application_version=5.8",
+    "related": [
+      "character",
+      "capsule-component",
+      "blend-space",
+      "replication"
+    ]
+  },
+  {
+    "id": "projectile-movement-component",
+    "term": "Projectile Movement Component",
+    "aliases": [
+      "UProjectileMovementComponent",
+      "ProjectileMovement"
+    ],
+    "category": "components",
+    "short": "A component that flies its actor forward with speed, gravity, bouncing, or homing, without you writing movement code.",
+    "long": "Set an initial speed, a max speed, and a gravity scale, and the actor flies. Turn on bouncing for grenades, or homing for a seeking missile. It moves the root component with sweeps, so a blocking collision shape on the root will stop it and fire a hit event, which avoids fast bullets tunneling through thin walls. Writing the same motion by hand in Tick is a good exercise, but this component is the production choice for most projectiles.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UProjectileMovementComponent?application_version=5.8",
+    "related": [
+      "sphere-component",
+      "hit-event",
+      "sweep",
+      "tick",
+      "object-pool"
+    ]
+  },
+  {
+    "id": "game-mode-base",
+    "term": "Game Mode",
+    "aliases": [
+      "AGameModeBase",
+      "AGameMode",
+      "GameMode",
+      "game mode"
+    ],
+    "category": "framework",
+    "short": "The actor that owns the rules of a match and decides which pawn, controller, and state classes players get.",
+    "long": "The game mode is the referee. It picks the default pawn class, player controller class, game state class, and player state class, decides where players spawn, and holds rules such as win conditions or respawn timing. It exists only on the server in multiplayer, so clients cannot read it; anything clients must see belongs in the game state. AGameModeBase is the lean version; AGameMode adds match states like waiting to start and in progress.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/AGameModeBase?application_version=5.8",
+    "related": [
+      "game-state-base",
+      "player-controller",
+      "player-state",
+      "default-pawn-class",
+      "game-instance"
+    ]
+  },
+  {
+    "id": "game-state-base",
+    "term": "Game State",
+    "aliases": [
+      "AGameStateBase",
+      "AGameState",
+      "GameState"
+    ],
+    "category": "framework",
+    "short": "The actor that holds match-wide information every player should know, such as the clock or the team score.",
+    "long": "If the game mode is the referee, the game state is the scoreboard everyone can see. It exists on the server and on every client and replicates its marked properties, which makes it the right home for a countdown timer, the current wave number, or whether the base has fallen. Keep rules out of it and keep shared facts in it. Your game mode tells the engine to use your class through GameStateClass.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/AGameStateBase?application_version=5.8",
+    "related": [
+      "game-mode-base",
+      "player-state",
+      "replication",
+      "repnotify"
+    ]
+  },
+  {
+    "id": "player-controller",
+    "term": "Player Controller",
+    "aliases": [
+      "APlayerController",
+      "PlayerController"
+    ],
+    "category": "framework",
+    "short": "The invisible actor that represents a human player, turns their input into commands, and possesses a pawn.",
+    "long": "The player controller is the player's will in the game. It survives when the pawn dies, so it is a good place for input handling that should not reset, camera control, showing the mouse cursor, and opening menus. It possesses one pawn at a time and can switch pawns, for example when the player climbs into a vehicle. In multiplayer each client has its own controller, and the server has one for every player.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/player-controllers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "pawn",
+      "possession",
+      "ai-controller",
+      "enhanced-input",
+      "player-state"
+    ]
+  },
+  {
+    "id": "player-state",
+    "term": "Player State",
+    "aliases": [
+      "APlayerState",
+      "PlayerState"
+    ],
+    "category": "framework",
+    "short": "A replicated actor that stores one player's public info, such as name, score, or team, and survives respawns.",
+    "long": "Each player gets a player state, and every machine in a multiplayer session can see all of them, which makes it perfect for a scoreboard. Because it is not the pawn, a player's kill count does not reset when their character dies and respawns. Private or local-only data, such as unsaved settings, does not belong here. Reach it from a pawn with GetPlayerState, or from the game state's PlayerArray.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/APlayerState?application_version=5.8",
+    "related": [
+      "game-state-base",
+      "player-controller",
+      "replication",
+      "game-mode-base"
+    ]
+  },
+  {
+    "id": "game-instance",
+    "term": "Game Instance",
+    "aliases": [
+      "UGameInstance",
+      "GameInstance"
+    ],
+    "category": "framework",
+    "short": "A single object created when the game launches that survives every level change until the game closes.",
+    "long": "Levels come and go, but the game instance stays. That makes it a natural home for things that span maps: the chosen character, menu-to-match handoff, or host and join functions that open a level with the listen option. Each running copy of the game has its own instance, server included, and it is not replicated, so it is not a way to share data across the network. For organized session-wide services, prefer a game instance subsystem over piling code into this class.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UGameInstance?application_version=5.8",
+    "related": [
+      "game-instance-subsystem",
+      "game-mode-base",
+      "open-level",
+      "savegame"
+    ]
+  },
+  {
+    "id": "subsystem",
+    "term": "Subsystem",
+    "aliases": [
+      "USubsystem",
+      "subsystems",
+      "programming subsystems"
+    ],
+    "category": "framework",
+    "short": "An engine-managed singleton whose lifetime is tied to a host, such as the game instance or the world.",
+    "long": "Subsystems give you a clean place for a manager without writing singleton code. Derive from the right base, and the engine creates your object when the host starts and destroys it when the host ends, with Initialize and Deinitialize hooks. Need a quest log that survives level loads? Use a game instance subsystem. Need a per-level spawn director? Use a world subsystem. You fetch one with GetSubsystem on its host, and Blueprints can reach them too.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
+    "related": [
+      "game-instance-subsystem",
+      "world-subsystem",
+      "local-player-subsystem",
+      "engine-subsystem",
+      "editor-subsystem"
+    ]
+  },
+  {
+    "id": "game-instance-subsystem",
+    "term": "Game Instance Subsystem",
+    "aliases": [
+      "UGameInstanceSubsystem"
+    ],
+    "category": "framework",
+    "short": "A subsystem that lives as long as the game instance, so it persists across level changes.",
+    "long": "Use this for services the whole play session needs: a save manager, an achievement tracker, or a quest log. It is created right after the game instance starts and cleaned up when the game closes. Access it with GetGameInstance()->GetSubsystem<UDojoQuestSubsystem>(). Compared with putting the same code on the game instance class, subsystems keep each responsibility in its own small class, which follows the single responsibility idea.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
+    "related": [
+      "subsystem",
+      "game-instance",
+      "world-subsystem",
+      "savegame"
+    ]
+  },
+  {
+    "id": "world-subsystem",
+    "term": "World Subsystem",
+    "aliases": [
+      "UWorldSubsystem",
+      "UTickableWorldSubsystem"
+    ],
+    "category": "framework",
+    "short": "A subsystem created for each world, so it resets whenever a new level loads.",
+    "long": "A world subsystem is the right owner for things that belong to the current map: tracking every active enemy, a spawn director, or a registry of interactable objects. Because each world gets its own copy, data never leaks from one level into the next. Grab it with GetWorld()->GetSubsystem<T>(). There is also a tickable variant if the manager needs to update every frame without being an actor.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
+    "related": [
+      "subsystem",
+      "world",
+      "game-instance-subsystem"
+    ]
+  },
+  {
+    "id": "local-player-subsystem",
+    "term": "Local Player Subsystem",
+    "aliases": [
+      "ULocalPlayerSubsystem",
+      "UEnhancedInputLocalPlayerSubsystem"
+    ],
+    "category": "framework",
+    "short": "A subsystem created for each local player on this machine, used for per-player services like input mappings.",
+    "long": "In split-screen, two people share one machine, and each needs their own settings. A local player subsystem gives each of them a separate instance. The best-known example is the Enhanced Input subsystem, where you add an input mapping context for that specific player. You reach it through the local player, usually by asking the player controller for GetLocalPlayer() and then calling GetSubsystem.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
+    "related": [
+      "subsystem",
+      "enhanced-input",
+      "input-mapping-context",
+      "player-controller"
+    ]
+  },
+  {
+    "id": "engine-subsystem",
+    "term": "Engine Subsystem",
+    "aliases": [
+      "UEngineSubsystem"
+    ],
+    "category": "framework",
+    "short": "A subsystem that lives as long as the engine itself, in both the editor and the running game.",
+    "long": "Engine subsystems start before any game instance or world exists and end only when the engine shuts down. They suit low-level services that do not care which level or session is active, such as a custom analytics pipe or a hardware integration. Most gameplay code never needs one; reach for a game instance or world subsystem first. Access is through GEngine->GetEngineSubsystem<T>().",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UEngineSubsystem?application_version=5.8",
+    "related": [
+      "subsystem",
+      "gengine",
+      "editor-subsystem"
+    ]
+  },
+  {
+    "id": "editor-subsystem",
+    "term": "Editor Subsystem",
+    "aliases": [
+      "UEditorSubsystem"
+    ],
+    "category": "editor workflow",
+    "short": "A subsystem that exists only inside the Unreal Editor, for building tools rather than gameplay.",
+    "long": "If you are writing an editor tool, such as a batch renamer for assets or a level validation pass, an editor subsystem gives it a managed home. It never exists in a packaged game, so its code must live in an editor-only module or be wrapped so it does not ship. Access it with GEditor->GetEditorSubsystem<T>(). Many built-in editor features, like asset and level editing helpers, are exposed this way.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
+    "related": [
+      "subsystem",
+      "engine-subsystem",
+      "module"
+    ]
+  },
+  {
+    "id": "world",
+    "term": "World",
+    "aliases": [
+      "UWorld",
+      "GetWorld"
+    ],
+    "category": "framework",
+    "short": "The top-level object for everything currently in play: loaded levels, actors, physics, timers, and networking.",
+    "long": "When you press Play, the engine creates a world and loads levels into it. Nearly everything that touches the running game goes through the world: SpawnActor, line traces, the timer manager, and finding the game mode or game state. From any actor or component you can call GetWorld(). In the editor there may be several worlds at once, such as the editor world and one play-in-editor world per player, which is a reason never to cache a world pointer in static data.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UWorld?application_version=5.8",
+    "related": [
+      "level",
+      "spawnactor",
+      "timer-manager",
+      "line-trace",
+      "world-subsystem"
+    ]
+  },
+  {
+    "id": "level",
+    "term": "Level",
+    "aliases": [
+      "ULevel",
+      "persistent level"
+    ],
+    "category": "framework",
+    "short": "One map's collection of placed actors, saved as an asset and loaded into a world.",
+    "long": "A level is what you edit in the viewport: the terrain, lights, enemies, and triggers you placed. A world always has a persistent level and can stream other levels in and out, and large UE5 maps often use World Partition to stream cells automatically. In menus, you move between levels with OpenLevel, for example from a lobby map to a battle map. Each level can also have its own Level Blueprint for map-specific scripting.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/ULevel?application_version=5.8",
+    "related": [
+      "world",
+      "open-level",
+      "level-blueprint",
+      "packaging"
+    ]
+  },
+  {
+    "id": "uclass",
+    "term": "UCLASS",
+    "aliases": [
+      "UCLASS()",
+      "class specifiers",
+      "Blueprintable",
+      "BlueprintType"
+    ],
+    "category": "reflection",
+    "short": "The macro placed above a class to register it with the reflection system so the engine and Blueprints can see it.",
+    "long": "Writing UCLASS() above a class that derives from UObject tells the build tools to generate the hidden code that makes the class known to the engine. Specifiers inside the parentheses change how it behaves: Blueprintable lets designers make Blueprint children, BlueprintType lets it be used as a Blueprint variable type, Abstract stops it from being placed directly, and meta=(BlueprintSpawnableComponent) puts a component in the Add Component menu. The class also needs GENERATED_BODY() and the matching .generated.h include.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/gameplay-classes-in-unreal-engine?application_version=5.8",
+    "related": [
+      "reflection",
+      "generated-body",
+      "generated-h-include",
+      "ustruct",
+      "uenum",
+      "unreal-header-tool"
+    ]
+  },
+  {
+    "id": "ustruct",
+    "term": "USTRUCT",
+    "aliases": [
+      "USTRUCT()"
+    ],
+    "category": "reflection",
+    "short": "The macro that registers a plain data struct with reflection so it can be edited, saved, replicated, and used in Blueprints.",
+    "long": "A USTRUCT is a bundle of values, such as an FLootDrop with an item class, a chance, and a count. It is a value type: copying it copies the data, and it is not garbage collected on its own. Mark it USTRUCT(BlueprintType), add GENERATED_BODY(), and give its fields UPROPERTY so they show in the editor. Structs are the building block of data table rows and are a good choice whenever you need grouped data without the overhead of a full UObject.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/structs-in-unreal-engine?application_version=5.8",
+    "related": [
+      "uclass",
+      "uproperty",
+      "table-row-base",
+      "reflection",
+      "coding-standard"
+    ]
+  },
+  {
+    "id": "uenum",
+    "term": "UENUM",
+    "aliases": [
+      "UENUM()",
+      "enum class",
+      "UMETA"
+    ],
+    "category": "reflection",
+    "short": "The macro that registers an enum so it shows as a dropdown in the editor and can be used in Blueprints.",
+    "long": "An enum names a small set of choices, such as a character state of Locomotion, Attack, Hit, or Die. Unreal style is an enum class with a byte base type: UENUM(BlueprintType) enum class ECharacterState : uint8 { ... }. The uint8 keeps it small and is required for Blueprint use. UMETA(DisplayName = \"Knocked Out\") on a value changes the label designers see. Enums pair well with a switch statement and with state machines.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/UEnum?application_version=5.8",
+    "related": [
+      "uclass",
+      "ustruct",
+      "state-machine",
+      "reflection"
+    ]
+  },
+  {
+    "id": "uproperty",
+    "term": "UPROPERTY",
+    "aliases": [
+      "UPROPERTY()",
+      "property specifiers",
+      "UE property"
+    ],
+    "category": "reflection",
+    "short": "The macro above a member variable that makes the engine aware of it for editing, saving, Blueprints, networking, and garbage collection.",
+    "long": "A plain C++ member is invisible to the engine. Add UPROPERTY and it can appear in the Details panel, be read or written by Blueprints, be saved with the level, replicate, and, for UObject pointers, keep the referenced object alive during garbage collection. Specifiers control each of those: UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = \"Combat\") float Damage = 10.f; A safe rule for beginners is that every UObject pointer you store in a class member gets a UPROPERTY.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "editanywhere",
+      "visibleanywhere",
+      "blueprintreadwrite",
+      "category-specifier",
+      "meta-specifier",
+      "garbage-collection",
+      "tobjectptr"
+    ]
+  },
+  {
+    "id": "editanywhere",
+    "term": "EditAnywhere",
+    "aliases": [
+      "EditDefaultsOnly",
+      "EditInstanceOnly"
+    ],
+    "category": "reflection",
+    "short": "A property specifier that lets designers change the value in the editor, both on the class defaults and on placed instances.",
+    "long": "EditAnywhere turns a variable into a tuning knob. Put it on a tower's AttackRange and a designer can make one tower long range and another short range without touching code. Its siblings narrow where the knob appears: EditDefaultsOnly shows it only on the Blueprint class defaults, which is good for values that should be the same for every copy, and EditInstanceOnly shows it only on individual actors placed in a level.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "uproperty",
+      "visibleanywhere",
+      "category-specifier",
+      "blueprintreadwrite"
+    ]
+  },
+  {
+    "id": "visibleanywhere",
+    "term": "VisibleAnywhere",
+    "aliases": [
+      "VisibleDefaultsOnly",
+      "VisibleInstanceOnly"
+    ],
+    "category": "reflection",
+    "short": "A property specifier that shows a value in the editor but does not let anyone change the pointer or value itself.",
+    "long": "Use VisibleAnywhere for things designers should see but not replace. The classic case is a component pointer created in the constructor: the designer can select the mesh component and change its settings, but cannot swap out the component pointer. The variants VisibleDefaultsOnly and VisibleInstanceOnly limit where it shows, just like the edit specifiers. It is often paired with BlueprintReadOnly so graphs can use the component.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "uproperty",
+      "editanywhere",
+      "blueprintreadonly",
+      "createdefaultsubobject"
+    ]
+  },
+  {
+    "id": "blueprintreadwrite",
+    "term": "BlueprintReadWrite",
+    "aliases": [
+      "BlueprintReadWrite specifier"
+    ],
+    "category": "reflection",
+    "short": "A property specifier that lets Blueprint graphs both read and change the variable.",
+    "long": "With BlueprintReadWrite, a Blueprint gets both a Get node and a Set node for the variable. That is useful for values designers script against, such as an animation instance's Speed. It also means any graph can change the value without your C++ knowing, so for values with rules, like health that must stay between zero and max, prefer BlueprintReadOnly plus a BlueprintCallable setter that enforces the rule.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "blueprintreadonly",
+      "uproperty",
+      "blueprintcallable",
+      "allowprivateaccess"
+    ]
+  },
+  {
+    "id": "blueprintreadonly",
+    "term": "BlueprintReadOnly",
+    "aliases": [
+      "BlueprintReadOnly specifier"
+    ],
+    "category": "reflection",
+    "short": "A property specifier that lets Blueprint graphs read a variable but not change it.",
+    "long": "BlueprintReadOnly gives graphs a Get node and nothing else. It is the safe default for anything owned by C++ logic: current health, a cached target, or a component pointer. Designers can display the value in a health bar or branch on it, while the rules for changing it stay in one place in your code. On a private member, add meta=(AllowPrivateAccess = \"true\") so Blueprints are allowed to see it.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "blueprintreadwrite",
+      "visibleanywhere",
+      "allowprivateaccess",
+      "uproperty"
+    ]
+  },
+  {
+    "id": "category-specifier",
+    "term": "Category",
+    "aliases": [
+      "Category specifier",
+      "Category ="
+    ],
+    "category": "reflection",
+    "short": "A specifier that groups a property or function under a heading in the editor and in Blueprint menus.",
+    "long": "Category = \"Combat\" puts a variable under a Combat heading in the Details panel, and puts a function under that heading in the Blueprint action menu. A pipe makes nested groups, as in Category = \"Dojo|Combat\". It sounds cosmetic, but on a class with thirty tunable values it is the difference between a designer finding AttackRange in two seconds or scrolling forever.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "uproperty",
+      "ufunction",
+      "meta-specifier"
+    ],
+    "linkMode": "code-only"
+  },
+  {
+    "id": "meta-specifier",
+    "term": "meta specifiers",
+    "aliases": [
+      "meta=()",
+      "metadata specifiers",
+      "ClampMin",
+      "ClampMax"
+    ],
+    "category": "reflection",
+    "short": "Extra key and value hints inside UPROPERTY, UFUNCTION, or UCLASS that change how the editor and Blueprints present something.",
+    "long": "Metadata is mostly about the editor experience. meta=(ClampMin = \"0\", ClampMax = \"100\") stops a designer from typing a negative health value, DisplayName renames a label, AllowPrivateAccess exposes a private member to Blueprints, BindWidget links a C++ widget pointer to a named widget in the designer, and EditCondition greys a field out unless a checkbox is on. Metadata is for tooling; most of it does not exist in a packaged game, so do not rely on it for gameplay rules.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/metadata-specifiers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "uproperty",
+      "allowprivateaccess",
+      "displayname-meta",
+      "bindwidget",
+      "category-specifier"
+    ]
+  },
+  {
+    "id": "allowprivateaccess",
+    "term": "AllowPrivateAccess",
+    "aliases": [
+      "meta=(AllowPrivateAccess = \"true\")"
+    ],
+    "category": "reflection",
+    "short": "A metadata key that lets Blueprints see a property even though it is private in C++.",
+    "long": "Good C++ keeps members private, but Blueprints normally only see public or protected members. AllowPrivateAccess bridges that gap. A common pattern is a private component pointer marked VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = \"true\"), plus a public inline getter for other C++ code. Outside code cannot reassign it, yet designers can still use the component in graphs.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/metadata-specifiers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "meta-specifier",
+      "blueprintreadonly",
+      "visibleanywhere",
+      "forceinline"
+    ]
+  },
+  {
+    "id": "displayname-meta",
+    "term": "DisplayName",
+    "aliases": [
+      "meta=(DisplayName = ...)"
+    ],
+    "category": "reflection",
+    "short": "A metadata key that changes the label the editor shows for a property, function, class, or enum value.",
+    "long": "Code names and designer-friendly names do not always match. DisplayName lets a function called GetHealthPoints appear as Get HP in Blueprint search, or an enum value called KnockedOut appear as Knocked Out. Only the label changes; the C++ name and any saved data stay the same. Use it sparingly so the code and the editor do not drift so far apart that people cannot find one from the other.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/metadata-specifiers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "meta-specifier",
+      "uproperty",
+      "ufunction",
+      "uenum"
+    ]
+  },
+  {
+    "id": "ufunction",
+    "term": "UFUNCTION",
+    "aliases": [
+      "UFUNCTION()",
+      "function specifiers",
+      "UFunction"
+    ],
+    "category": "reflection",
+    "short": "The macro above a function declaration that registers it with the engine, for Blueprints, delegates, networking, or console use.",
+    "long": "A UFUNCTION is a function the engine can find by name at runtime. That is what lets a Blueprint call it, a dynamic delegate bind to it, a timer call it by name, or the network route it as an RPC. Even with empty parentheses it matters: a function you pass to AddDynamic for an overlap event must be a UFUNCTION or the binding silently fails. Specifiers such as BlueprintCallable, BlueprintPure, BlueprintImplementableEvent, BlueprintNativeEvent, Server, and Client set its role.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/ufunctions-in-unreal-engine?application_version=5.8",
+    "related": [
+      "blueprintcallable",
+      "blueprintpure",
+      "blueprintimplementableevent",
+      "blueprintnativeevent",
+      "server-rpc",
+      "adddynamic"
+    ]
+  },
+  {
+    "id": "blueprintcallable",
+    "term": "BlueprintCallable",
+    "aliases": [
+      "BlueprintCallable specifier"
+    ],
+    "category": "reflection",
+    "short": "A function specifier that lets Blueprint graphs call a C++ function as a node with execution pins.",
+    "long": "BlueprintCallable is how C++ hands tools to designers. Write the hard logic once, such as StartListenServer or ApplyDamageWithArmor, and mark it callable, and it appears as a node they can drop into any graph. Callable nodes have white execution pins, so they run in a specific order and are allowed to change state. If a function only reads data and changes nothing, BlueprintPure is usually the better fit.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/ufunctions-in-unreal-engine?application_version=5.8",
+    "related": [
+      "ufunction",
+      "blueprintpure",
+      "blueprint-vs-cpp",
+      "category-specifier"
+    ]
+  },
+  {
+    "id": "blueprintpure",
+    "term": "BlueprintPure",
+    "aliases": [
+      "BlueprintPure specifier",
+      "pure function"
+    ],
+    "category": "reflection",
+    "short": "A function specifier for getters that change nothing, shown in Blueprints as a node without execution pins.",
+    "long": "A pure node is like a formula cell in a spreadsheet: it has inputs and outputs but no place in the execution chain. GetHealthPercent or IsDead are good examples. One thing to know is that a pure node runs again every time something reads its output, so an expensive pure function wired to three places runs three times. Keep pure functions cheap, and mark the C++ function const as a reminder that it must not change the object.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/ufunctions-in-unreal-engine?application_version=5.8",
+    "related": [
+      "blueprintcallable",
+      "ufunction",
+      "blueprintreadonly"
+    ]
+  },
+  {
+    "id": "blueprintimplementableevent",
+    "term": "BlueprintImplementableEvent",
+    "aliases": [
+      "BlueprintImplementableEvent specifier"
+    ],
+    "category": "reflection",
+    "short": "A function specifier for a hook that C++ calls but a Blueprint fills in; you write no C++ body.",
+    "long": "This is C++ saying: something happens here, designer, you decide what it looks like. Declare UFUNCTION(BlueprintImplementableEvent) void OnLevelUp(int32 NewLevel); and call it from C++ when the player levels up. A Blueprint child adds the event and plays a sound, spawns sparkles, or shows a banner. If no Blueprint implements it, the call does nothing. You must not write a C++ definition for it; the build tools generate one.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/ufunctions-in-unreal-engine?application_version=5.8",
+    "related": [
+      "blueprintnativeevent",
+      "ufunction",
+      "blueprint-vs-cpp",
+      "blueprint-class"
+    ]
+  },
+  {
+    "id": "blueprintnativeevent",
+    "term": "BlueprintNativeEvent",
+    "aliases": [
+      "BlueprintNativeEvent specifier",
+      "_Implementation"
+    ],
+    "category": "reflection",
+    "short": "A function specifier for a hook with a default C++ body that a Blueprint may override.",
+    "long": "Use this when C++ should provide sensible default behavior but designers might want to replace it. You declare UFUNCTION(BlueprintNativeEvent) void OnHit(); and then write the body as OnHit_Implementation(). Callers still call OnHit(), and the engine routes the call to the Blueprint override if one exists, or to your _Implementation otherwise. Inside a Blueprint override, the designer can call the parent node to run your C++ version too.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/ufunctions-in-unreal-engine?application_version=5.8",
+    "related": [
+      "blueprintimplementableevent",
+      "ufunction",
+      "server-rpc",
+      "iinterface"
+    ]
+  },
+  {
+    "id": "server-rpc",
+    "term": "Server RPC",
+    "aliases": [
+      "UFUNCTION(Server)",
+      "Server specifier",
+      "server function"
+    ],
+    "category": "networking",
+    "short": "A function a client calls that actually runs on the server, used to ask the server to do something.",
+    "long": "Clients cannot change authoritative game state directly, so they ask. Declare UFUNCTION(Server, Reliable) void ServerAttack(); and implement ServerAttack_Implementation(). When the owning client calls ServerAttack, the request travels to the server, which runs the body and decides what really happens. The call only works on actors the client owns, such as its player controller or possessed pawn. Treat every server RPC as a request that might be cheating and check it.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/remote-procedure-calls-in-unreal-engine?application_version=5.8",
+    "related": [
+      "client-rpc",
+      "netmulticast-rpc",
+      "reliable-unreliable",
+      "has-authority",
+      "replication"
+    ]
+  },
+  {
+    "id": "client-rpc",
+    "term": "Client RPC",
+    "aliases": [
+      "UFUNCTION(Client)",
+      "Client specifier"
+    ],
+    "category": "networking",
+    "short": "A function the server calls that runs only on the client that owns the actor.",
+    "long": "A client RPC is a private message from the server to one player. It is perfect for things only that player should experience: a screen shake when they are hit, a personal reward popup, or a tutorial hint. Declare it with UFUNCTION(Client, Reliable) and implement the _Implementation body. If what you want is for everyone to see something, use a multicast RPC or a replicated property instead.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/remote-procedure-calls-in-unreal-engine?application_version=5.8",
+    "related": [
+      "server-rpc",
+      "netmulticast-rpc",
+      "reliable-unreliable",
+      "player-controller"
+    ]
+  },
+  {
+    "id": "netmulticast-rpc",
+    "term": "NetMulticast RPC",
+    "aliases": [
+      "UFUNCTION(NetMulticast)",
+      "multicast RPC"
+    ],
+    "category": "networking",
+    "short": "A function the server calls that runs on the server and on every connected client.",
+    "long": "Multicast is the server shouting to the whole room. It suits one-off cosmetic events that everyone should see right now, like an explosion effect or an attack animation starting. It is a poor fit for lasting state: a player who joins after the shout never hears it. For state that must stay correct, such as whether a door is open, use a replicated property with RepNotify, and keep multicasts for moments.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/remote-procedure-calls-in-unreal-engine?application_version=5.8",
+    "related": [
+      "server-rpc",
+      "client-rpc",
+      "repnotify",
+      "replication"
+    ]
+  },
+  {
+    "id": "reliable-unreliable",
+    "term": "Reliable and Unreliable",
+    "aliases": [
+      "Reliable",
+      "Unreliable"
+    ],
+    "category": "networking",
+    "short": "RPC specifiers that choose whether a message is guaranteed to arrive or may be dropped to save bandwidth.",
+    "long": "Reliable RPCs are resent until they arrive, in order, which you want for important events like using an item or confirming a purchase. Unreliable RPCs may be dropped under load, which is fine for frequent cosmetic updates where the next message replaces the last one anyway. Sending reliable RPCs every frame can clog the connection, so do not mark a Tick-rate message as reliable.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/remote-procedure-calls-in-unreal-engine?application_version=5.8",
+    "related": [
+      "server-rpc",
+      "client-rpc",
+      "netmulticast-rpc"
+    ]
+  },
+  {
+    "id": "generated-body",
+    "term": "GENERATED_BODY",
+    "aliases": [
+      "GENERATED_BODY()",
+      "GENERATED_UCLASS_BODY"
+    ],
+    "category": "reflection",
+    "short": "A macro placed at the top of every reflected class or struct body, where the build tools insert generated code.",
+    "long": "When the build runs, the header tool writes boilerplate for each reflected type: type registration, constructors it needs, and glue for Blueprints and networking. GENERATED_BODY() is the slot where that code is pasted in. Put it as the first line inside the class or struct braces. If you forget it, or the .generated.h include is missing, you get confusing compile errors that mention generated code rather than your mistake.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/reflection-system-in-unreal-engine?application_version=5.8",
+    "related": [
+      "generated-h-include",
+      "uclass",
+      "ustruct",
+      "unreal-header-tool",
+      "reflection"
+    ]
+  },
+  {
+    "id": "generated-h-include",
+    "term": ".generated.h include",
+    "aliases": [
+      "generated.h",
+      "MyClass.generated.h"
+    ],
+    "category": "reflection",
+    "short": "The header the build tools create for each reflected file, which must be the last include in that header.",
+    "long": "Every header that declares a UCLASS, USTRUCT, or UENUM must include its own generated header, named after the file, such as #include \"DojoDoor.generated.h\". It has to be the final include, after CoreMinimal and any base class headers, because the generated code depends on everything above it. Adding another include below it is one of the most common first-week compile errors.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/reflection-system-in-unreal-engine?application_version=5.8",
+    "related": [
+      "generated-body",
+      "unreal-header-tool",
+      "uclass",
+      "forward-declaration"
+    ]
+  },
+  {
+    "id": "unreal-header-tool",
+    "term": "Unreal Header Tool",
+    "aliases": [
+      "UHT",
+      "UnrealHeaderTool"
+    ],
+    "category": "build",
+    "short": "The build step that reads your reflection macros and writes the generated code that makes them work.",
+    "long": "Before the C++ compiler sees your files, the Unreal Header Tool scans headers for UCLASS, UPROPERTY, UFUNCTION, and friends, and writes the .generated.h and .gen.cpp files. That is why reflection macros must use exact syntax: the header tool parses them itself and reports errors such as an unknown specifier. Errors that start with the header file name and mention a macro usually come from this step, not from the compiler.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/reflection-system-in-unreal-engine?application_version=5.8",
+    "related": [
+      "reflection",
+      "generated-body",
+      "generated-h-include",
+      "unreal-build-tool"
+    ]
+  },
+  {
+    "id": "cdo",
+    "term": "Class Default Object",
+    "aliases": [
+      "CDO",
+      "GetDefault",
+      "class defaults",
+      "archetype"
+    ],
+    "category": "object model",
+    "short": "A hidden template instance of each class, built by running its constructor once, that new instances copy their defaults from.",
+    "long": "When the engine starts, it constructs one default object per class. Every actor you spawn or place starts as a copy of that template, then applies any edits made in the editor. This explains a key rule: the constructor runs to build the template, often before any world exists, so it should only set defaults and create components, never find other actors or start gameplay. Gameplay setup belongs in BeginPlay. You can read a class's defaults with GetDefault<T>().",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/objects-in-unreal-engine?application_version=5.8",
+    "related": [
+      "uobject",
+      "createdefaultsubobject",
+      "beginplay",
+      "constructor-helpers",
+      "blueprint-class"
+    ]
+  },
+  {
+    "id": "reflection",
+    "term": "Reflection",
+    "aliases": [
+      "reflection system",
+      "Unreal property system"
+    ],
+    "category": "reflection",
+    "short": "The engine's ability to inspect classes, properties, and functions at runtime, powered by the U macros.",
+    "long": "Standard C++ forgets type details once the code is compiled. Unreal's reflection keeps a catalog: for each reflected class it knows the property names, their types, the functions, and the metadata. That catalog powers the Details panel, Blueprint nodes, saving and loading, replication, and garbage collection tracking. You opt in with UCLASS, USTRUCT, UENUM, UPROPERTY, and UFUNCTION, and anything without a macro is invisible to all of those systems.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/reflection-system-in-unreal-engine?application_version=5.8",
+    "related": [
+      "uclass",
+      "uproperty",
+      "ufunction",
+      "unreal-header-tool",
+      "garbage-collection"
+    ]
+  },
+  {
+    "id": "garbage-collection",
+    "term": "Garbage Collection",
+    "aliases": [
+      "GC",
+      "garbage collector",
+      "ForceGarbageCollection"
+    ],
+    "category": "memory",
+    "short": "The engine system that frees UObjects automatically once nothing reachable refers to them anymore.",
+    "long": "You do not delete UObjects yourself. Every so often the collector starts from a set of roots, follows every reflected reference, and frees anything it could not reach. The catch is that it only sees references it knows about: a UObject pointer stored in a UPROPERTY, a reflected container, or a few special holders. A raw pointer without UPROPERTY does not keep the object alive and can end up pointing at freed memory. Forcing a collection by hand is expensive and rarely needed.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-object-handling-in-unreal-engine?application_version=5.8",
+    "related": [
+      "uproperty",
+      "tobjectptr",
+      "tweakobjectptr",
+      "isvalid",
+      "destroy",
+      "uobject"
+    ]
+  },
+  {
+    "id": "tobjectptr",
+    "term": "TObjectPtr",
+    "aliases": [
+      "TObjectPtr<T>",
+      "object pointer"
+    ],
+    "category": "memory",
+    "short": "The UE5 wrapper for UObject pointers stored as class members, which works like a raw pointer but adds editor tracking.",
+    "long": "In UE5, a member like UPROPERTY() TObjectPtr<UStaticMeshComponent> Mesh; replaces the older UStaticMeshComponent* Mesh;. In editor builds it can track access and support lazy loading; in a packaged game it compiles down to a plain pointer, so there is no runtime cost. It does not change garbage collection rules: the UPROPERTY is still what keeps the object alive. Use TObjectPtr for reflected members, and plain raw pointers for function parameters and local variables.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/object-pointers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "uproperty",
+      "garbage-collection",
+      "tweakobjectptr",
+      "tsoftobjectptr",
+      "coding-standard"
+    ]
+  },
+  {
+    "id": "tweakobjectptr",
+    "term": "TWeakObjectPtr",
+    "aliases": [
+      "TWeakObjectPtr<T>",
+      "weak object pointer"
+    ],
+    "category": "memory",
+    "short": "A pointer to a UObject that does not keep it alive and safely reports null once the object is gone.",
+    "long": "Sometimes you want to remember an object without claiming it. An enemy can hold a TWeakObjectPtr to its current target: if the target is destroyed, Get() returns nullptr instead of a dangling address, and the enemy does not accidentally keep a dead player in memory. Check IsValid() or Get() before every use. It is ideal for caches, observers, and references held by objects that may outlive what they point at.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TWeakObjectPtr?application_version=5.8",
+    "related": [
+      "tobjectptr",
+      "garbage-collection",
+      "isvalid",
+      "tsharedptr"
+    ]
+  },
+  {
+    "id": "tsoftobjectptr",
+    "term": "TSoftObjectPtr",
+    "aliases": [
+      "TSoftObjectPtr<T>",
+      "TSoftClassPtr",
+      "soft reference",
+      "soft object pointer"
+    ],
+    "category": "memory",
+    "short": "A reference to an asset by its path, so the asset is only loaded into memory when you ask for it.",
+    "long": "A hard reference loads the asset whenever the referencing object loads, which can drag huge textures and meshes into memory for no reason. A soft reference stores only the asset's path. A weapon catalog can list fifty weapon meshes as TSoftObjectPtr and load just the one the player equips, either right away with LoadSynchronous or in the background with the streamable manager. TSoftClassPtr does the same for Blueprint classes you plan to spawn.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/referencing-assets-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tobjectptr",
+      "tsubclassof",
+      "data-asset",
+      "primary-data-asset"
+    ]
+  },
+  {
+    "id": "tsubclassof",
+    "term": "TSubclassOf",
+    "aliases": [
+      "TSubclassOf<T>",
+      "class reference",
+      "UClass*"
+    ],
+    "category": "memory",
+    "short": "A variable that holds a class rather than an object, limited to one base class and its children.",
+    "long": "When a tower needs to know what to fire, you do not want an existing fireball; you want the fireball class so it can spawn new ones. UPROPERTY(EditAnywhere) TSubclassOf<ADojoProjectile> ProjectileClass; gives designers a dropdown that only lists projectile classes, including Blueprint children. You then pass it to SpawnActor. This is the clean replacement for hardcoding asset paths in a constructor, which breaks the moment someone renames or moves the Blueprint.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TSubclassOf?application_version=5.8",
+    "related": [
+      "spawnactor",
+      "blueprint-class",
+      "constructor-helpers",
+      "tsoftobjectptr"
+    ]
+  },
+  {
+    "id": "tsharedptr",
+    "term": "TSharedPtr",
+    "aliases": [
+      "TSharedPtr<T>",
+      "TSharedRef",
+      "MakeShared",
+      "TWeakPtr",
+      "shared pointer"
+    ],
+    "category": "memory",
+    "short": "A reference-counted smart pointer for ordinary C++ objects that are not UObjects.",
+    "long": "Garbage collection only covers UObjects. For plain C++ classes, such as a pathfinding result or a parsed save file helper, Unreal offers its own smart pointers. A TSharedPtr counts how many owners an object has and deletes it when the last one lets go. TSharedRef is the never-null version, MakeShared creates one efficiently, and TWeakPtr observes without owning. Never wrap a UObject in a TSharedPtr; the two memory systems fight.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/shared-pointers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tuniqueptr",
+      "tweakobjectptr",
+      "garbage-collection"
+    ]
+  },
+  {
+    "id": "tuniqueptr",
+    "term": "TUniquePtr",
+    "aliases": [
+      "TUniquePtr<T>",
+      "MakeUnique",
+      "unique pointer"
+    ],
+    "category": "memory",
+    "short": "A smart pointer that is the single owner of a non-UObject and deletes it automatically when it goes away.",
+    "long": "A TUniquePtr says: this object has exactly one owner. It cannot be copied, only moved, which makes ownership obvious in the code. When the owning class is destroyed, the object it holds is deleted too, with no manual delete and no leak. It suits private helpers a class fully owns, such as a custom spatial grid inside a manager. Create one with MakeUnique<T>(). Like TSharedPtr, it is not for UObjects.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/smart-pointers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tsharedptr",
+      "garbage-collection"
+    ]
+  },
+  {
+    "id": "newobject",
+    "term": "NewObject",
+    "aliases": [
+      "NewObject<T>()"
+    ],
+    "category": "object model",
+    "short": "The function that creates a new UObject at runtime that is not an actor or a constructor-made component.",
+    "long": "Use NewObject when you need a plain UObject during play, such as an inventory item instance or a runtime quest object: UDojoItem* Item = NewObject<UDojoItem>(this);. The first argument is the outer, the object that conceptually owns the new one. NewObject does not keep it alive by itself, so store the result in a UPROPERTY right away. Never use NewObject for actors, which need SpawnActor, and never use C++ new for UObjects.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/creating-objects-in-unreal-engine?application_version=5.8",
+    "related": [
+      "spawnactor",
+      "createdefaultsubobject",
+      "uobject",
+      "garbage-collection"
+    ]
+  },
+  {
+    "id": "spawnactor",
+    "term": "SpawnActor",
+    "aliases": [
+      "SpawnActor<T>()",
+      "UWorld::SpawnActor",
+      "FActorSpawnParameters"
+    ],
+    "category": "framework",
+    "short": "The world function that creates a new actor at runtime at a given location and rotation.",
+    "long": "Bullets, enemies in a wave, loot drops, and impact effects are all spawned while the game runs. Call GetWorld()->SpawnActor<ADojoProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, SpawnParams); and you get back a pointer to the new actor, or null if spawning failed, for example because of a collision rule. FActorSpawnParameters lets you set the owner, the instigator, and what to do if the spot is blocked. Spawning many actors per second has a cost, which is when an object pool helps.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/spawning-actors-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tsubclassof",
+      "world",
+      "actor",
+      "object-pool",
+      "destroy"
+    ]
+  },
+  {
+    "id": "createdefaultsubobject",
+    "term": "CreateDefaultSubobject",
+    "aliases": [
+      "CreateDefaultSubobject<T>()"
+    ],
+    "category": "object model",
+    "short": "The constructor-only function that creates an actor's built-in components, such as its mesh or collision shape.",
+    "long": "Components that every instance of a class should have are created in the constructor with CreateDefaultSubobject<UBoxComponent>(TEXT(\"TriggerBox\"));. The name must be unique within the actor and stays stable, because saved levels and Blueprint children refer to it. Since the constructor builds the class default object, these components become part of the template and appear in the Blueprint Components panel. Calling it outside a constructor is an error; at runtime use NewObject and register the component instead.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/creating-objects-in-unreal-engine?application_version=5.8",
+    "related": [
+      "cdo",
+      "actor-component",
+      "root-component",
+      "newobject",
+      "visibleanywhere"
+    ]
+  },
+  {
+    "id": "isvalid",
+    "term": "IsValid",
+    "aliases": [
+      "IsValid()",
+      "null check"
+    ],
+    "category": "memory",
+    "short": "A check that a UObject pointer is not null and that the object is not already being destroyed.",
+    "long": "A pointer can be non-null and still point at an actor that was destroyed this frame and is waiting for cleanup. IsValid(Target) catches both cases in one call, which makes it safer than comparing against nullptr. Use it before touching any pointer you did not just create, especially cached targets, overlap results, and anything another system could have destroyed. A failed check is a normal game event, so handle it quietly rather than crashing.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-object-handling-in-unreal-engine?application_version=5.8",
+    "related": [
+      "garbage-collection",
+      "tweakobjectptr",
+      "cast",
+      "check-macro",
+      "destroy"
+    ]
+  },
+  {
+    "id": "beginplay",
+    "term": "BeginPlay",
+    "aliases": [
+      "BeginPlay()",
+      "Event BeginPlay"
+    ],
+    "category": "framework",
+    "short": "The function the engine calls once on an actor or component when gameplay starts for it.",
+    "long": "BeginPlay is where runtime setup goes: caching a pointer to the game mode, binding to an overlap event, starting a timer, or copying max health into current health. By this point the actor is in a world and its components exist. Always call Super::BeginPlay() first so the parent class runs its own setup, which is also what fires the Blueprint BeginPlay event. Constructor for defaults, BeginPlay for gameplay is a rule worth memorizing.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-actor-lifecycle?application_version=5.8",
+    "related": [
+      "endplay",
+      "tick",
+      "cdo",
+      "super",
+      "on-construction"
+    ]
+  },
+  {
+    "id": "endplay",
+    "term": "EndPlay",
+    "aliases": [
+      "EndPlay()",
+      "EEndPlayReason"
+    ],
+    "category": "framework",
+    "short": "The function called when an actor leaves play, whether it was destroyed, the level unloaded, or the game quit.",
+    "long": "EndPlay is the cleanup counterpart to BeginPlay. Clear timers you started, unbind from delegates on other objects, and release anything you registered with a manager. The EEndPlayReason parameter tells you why: Destroyed, LevelTransition, EndPlayInEditor, Quit, and so on, so a quest giver might save progress only on a level transition. Call Super::EndPlay(EndPlayReason) so parent classes clean up as well.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-actor-lifecycle?application_version=5.8",
+    "related": [
+      "beginplay",
+      "destroy",
+      "unbinding-delegates",
+      "timer-manager"
+    ]
+  },
+  {
+    "id": "tick",
+    "term": "Tick",
+    "aliases": [
+      "Tick()",
+      "Event Tick",
+      "per frame update"
+    ],
+    "category": "framework",
+    "short": "The function the engine calls on an actor or component every frame, if ticking is enabled.",
+    "long": "Tick(float DeltaTime) is the per-frame update: moving a homing missile, counting down a cooldown, or smoothing a health bar. It is easy to overuse. Something that only needs to happen every half second should use a timer or a tick interval, and something that reacts to an event should use a delegate instead of checking every frame. Turn ticking off entirely for actors that do not need it, because hundreds of idle ticks add up.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/actor-ticking-in-unreal-engine?application_version=5.8",
+    "related": [
+      "deltatime",
+      "primary-actor-tick",
+      "tick-groups",
+      "timer-manager",
+      "delegate"
+    ]
+  },
+  {
+    "id": "deltatime",
+    "term": "DeltaTime",
+    "aliases": [
+      "DeltaSeconds",
+      "delta time",
+      "frame time"
+    ],
+    "category": "framework",
+    "short": "The number of seconds since the previous frame, passed into Tick so motion and timers stay frame-rate independent.",
+    "long": "At 60 frames per second DeltaTime is about 0.0167; at 30 it is about 0.033. If you move a projectile by Speed every frame, it flies twice as fast on a fast PC. Move it by Speed * DeltaTime and it covers the same distance per second everywhere. The same applies to cooldowns: subtract DeltaTime from the remaining time each tick. Forgetting DeltaTime is one of the most common causes of gameplay that feels different on different machines.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/actor-ticking-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tick",
+      "fmath",
+      "timer-manager"
+    ]
+  },
+  {
+    "id": "tick-groups",
+    "term": "Tick Groups",
+    "aliases": [
+      "ETickingGroup",
+      "TG_PrePhysics",
+      "TG_PostPhysics",
+      "tick group"
+    ],
+    "category": "framework",
+    "short": "Phases of the frame, before, during, or after physics, that decide when an actor's Tick runs.",
+    "long": "Not every update should happen at the same moment. Actors tick in the pre-physics group by default, which is right for things that push objects around. A camera that follows a physics-driven ragdoll looks smoother in the post-physics group, because by then the ragdoll has already moved this frame. You set it with PrimaryActorTick.TickGroup or SetTickGroup, and you can also declare that one actor must tick after another with a tick prerequisite.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/actor-ticking-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tick",
+      "primary-actor-tick",
+      "physics-simulation"
+    ]
+  },
+  {
+    "id": "primary-actor-tick",
+    "term": "PrimaryActorTick",
+    "aliases": [
+      "bCanEverTick",
+      "TickInterval",
+      "SetActorTickInterval",
+      "SetActorTickEnabled"
+    ],
+    "category": "framework",
+    "short": "The settings struct that controls whether and how often an actor ticks.",
+    "long": "In the constructor, PrimaryActorTick.bCanEverTick = true; says this class may tick at all; set it to false for actors that never need per-frame work. At runtime, SetActorTickEnabled(false) pauses ticking, for example on a pooled projectile waiting to be reused. SetActorTickInterval(0.5f) makes Tick run twice a second instead of every frame, which is a quick fix for a tower that was firing once per frame. Components have the matching PrimaryComponentTick.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/actor-ticking-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tick",
+      "tick-groups",
+      "timer-manager",
+      "object-pool"
+    ]
+  },
+  {
+    "id": "timer-handle",
+    "term": "FTimerHandle",
+    "aliases": [
+      "timer handle",
+      "TimerHandle"
+    ],
+    "category": "framework",
+    "short": "A small ID you keep so you can pause, check, or cancel a timer later.",
+    "long": "Starting a timer gives you nothing to hold unless you pass in a handle. Store it as a member, as in FTimerHandle ReloadTimerHandle;, and you can later ask how much time remains, pause it, or clear it when the player switches weapons. Starting a new timer with the same handle replaces the old one, which is a neat way to restart a cooldown. Clearing timers in EndPlay avoids calls into an object that is going away.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/gameplay-timers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "timer-manager",
+      "endplay",
+      "tick"
+    ]
+  },
+  {
+    "id": "timer-manager",
+    "term": "Timer Manager",
+    "aliases": [
+      "FTimerManager",
+      "GetWorldTimerManager",
+      "SetTimer",
+      "ClearTimer"
+    ],
+    "category": "framework",
+    "short": "The world service that calls a function after a delay, or repeatedly at an interval, without using Tick.",
+    "long": "Timers are the clean answer to do this in 3 seconds or do this every 0.5 seconds. GetWorldTimerManager().SetTimer(FireTimerHandle, this, &ADojoTower::Fire, 0.5f, true); fires the tower twice a second until you call ClearTimer. You can also bind a lambda or set a first delay that differs from the repeat rate. Timers respect game pause and time dilation, and they are cheaper and easier to read than countdown variables in Tick.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/gameplay-timers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "timer-handle",
+      "tick",
+      "world",
+      "delegate"
+    ]
+  },
+  {
+    "id": "delegate",
+    "term": "Delegate",
+    "aliases": [
+      "single delegate",
+      "DECLARE_DELEGATE",
+      "BindUObject",
+      "BindLambda",
+      "ExecuteIfBound"
+    ],
+    "category": "framework",
+    "short": "A type-safe holder for a function to call later, so one object can notify another without knowing its class.",
+    "long": "A delegate is like leaving your phone number with someone: when the event happens, they call it. A single-cast delegate holds exactly one binding. DECLARE_DELEGATE_OneParam(FOnAmmoChanged, int32) declares the type, BindUObject or BindLambda attaches a function, and ExecuteIfBound calls it safely. Delegates are the engine's form of the observer pattern and the main way to decouple systems, for example letting a HUD react to health changes without the health code knowing the HUD exists.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/delegates-and-lambda-functions-in-unreal-engine?application_version=5.8",
+    "related": [
+      "multicast-delegate",
+      "dynamic-delegate",
+      "dynamic-multicast-delegate",
+      "broadcast",
+      "uinterface"
+    ]
+  },
+  {
+    "id": "multicast-delegate",
+    "term": "Multicast Delegate",
+    "aliases": [
+      "DECLARE_MULTICAST_DELEGATE",
+      "AddUObject",
+      "AddLambda"
+    ],
+    "category": "framework",
+    "short": "A delegate that can hold many listeners and calls all of them when broadcast.",
+    "long": "When several systems care about one event, such as the HUD, the audio manager, and the achievement tracker all reacting to an enemy dying, a multicast delegate lets each subscribe independently. Declare it with DECLARE_MULTICAST_DELEGATE_OneParam, subscribe with AddUObject or AddLambda, which return a handle you can use to unsubscribe, and fire it with Broadcast. The non-dynamic version is fast and works only from C++; Blueprints cannot bind to it.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/multicast-delegates-in-unreal-engine?application_version=5.8",
+    "related": [
+      "delegate",
+      "dynamic-multicast-delegate",
+      "broadcast",
+      "unbinding-delegates"
+    ]
+  },
+  {
+    "id": "dynamic-delegate",
+    "term": "Dynamic Delegate",
+    "aliases": [
+      "DECLARE_DYNAMIC_DELEGATE",
+      "BindUFunction"
+    ],
+    "category": "framework",
+    "short": "A delegate that binds by function name through reflection, so it can be saved and used from Blueprints.",
+    "long": "Dynamic delegates trade a bit of speed for engine integration. Because they look up functions by name, the bound function must be a UFUNCTION, and the delegate can be stored in properties, serialized, and passed as a Blueprint parameter, for example as a callback pin on a node. The macro also needs parameter names, as in DECLARE_DYNAMIC_DELEGATE_OneParam(FOnLoaded, bool, bSuccess). Use the plain version when only C++ needs it.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/delegates-and-lambda-functions-in-unreal-engine?application_version=5.8",
+    "related": [
+      "delegate",
+      "dynamic-multicast-delegate",
+      "ufunction",
+      "reflection"
+    ]
+  },
+  {
+    "id": "dynamic-multicast-delegate",
+    "term": "Dynamic Multicast Delegate",
+    "aliases": [
+      "DECLARE_DYNAMIC_MULTICAST_DELEGATE",
+      "DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam",
+      "event dispatcher"
+    ],
+    "category": "framework",
+    "short": "A many-listener delegate that Blueprints can bind to, the C++ version of an event dispatcher.",
+    "long": "This is the delegate type behind most engine events you bind to, including OnComponentBeginOverlap and OnActorHit. Declare it outside the class, as in DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChanged, float, NewHealth);, expose an instance with UPROPERTY(BlueprintAssignable), and both C++ (with AddDynamic) and Blueprint graphs (with Bind Event or the event button) can listen. It is the standard bridge for C++ systems that announce events to UI built in Blueprint.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/delegates-and-lambda-functions-in-unreal-engine?application_version=5.8",
+    "related": [
+      "adddynamic",
+      "broadcast",
+      "blueprintassignable",
+      "overlap-event",
+      "multicast-delegate"
+    ]
+  },
+  {
+    "id": "adddynamic",
+    "term": "AddDynamic",
+    "aliases": [
+      "AddDynamic()",
+      "AddUniqueDynamic"
+    ],
+    "category": "framework",
+    "short": "The macro that subscribes a UFUNCTION to a dynamic multicast delegate, such as an overlap event.",
+    "long": "Box->OnComponentBeginOverlap.AddDynamic(this, &ADojoPlate::HandleOverlap); is the line you will write most often for collision. The handler must be a UFUNCTION with exactly the parameter list the delegate expects; if either is wrong, the binding fails at compile time or silently at runtime. Bind in BeginPlay rather than the constructor so the binding is not baked into the class defaults twice. AddUniqueDynamic avoids double binding if the code might run more than once.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/delegates-and-lambda-functions-in-unreal-engine?application_version=5.8",
+    "related": [
+      "dynamic-multicast-delegate",
+      "ufunction",
+      "unbinding-delegates",
+      "overlap-event",
+      "beginplay"
+    ]
+  },
+  {
+    "id": "broadcast",
+    "term": "Broadcast",
+    "aliases": [
+      "Broadcast()"
+    ],
+    "category": "framework",
+    "short": "The call that fires a multicast delegate, invoking every function currently bound to it.",
+    "long": "OnHealthChanged.Broadcast(CurrentHealth); tells every listener the news in one line. The broadcaster does not know or care who is listening, which is the whole point: you can add a damage number popup later without editing the health component. Broadcasting with no listeners is safe and does nothing. The call order of listeners is not something to depend on, so listeners should not rely on running before or after each other.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/multicast-delegates-in-unreal-engine?application_version=5.8",
+    "related": [
+      "multicast-delegate",
+      "dynamic-multicast-delegate",
+      "delegate"
+    ]
+  },
+  {
+    "id": "unbinding-delegates",
+    "term": "Unbinding Delegates",
+    "aliases": [
+      "RemoveDynamic",
+      "RemoveAll",
+      "Unbind",
+      "FDelegateHandle"
+    ],
+    "category": "framework",
+    "short": "Removing a listener from a delegate so it stops being called, usually when the listener goes away.",
+    "long": "Every subscription should have an exit. For dynamic delegates use RemoveDynamic with the same object and function you added; for native multicast delegates keep the FDelegateHandle from AddUObject and pass it to Remove, or call RemoveAll(this). A weapon that subscribes to the owner's fire input should unsubscribe when it is dropped, or the dropped weapon keeps firing. EndPlay is the usual place to unbind from objects that will outlive you.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/delegates-and-lambda-functions-in-unreal-engine?application_version=5.8",
+    "related": [
+      "adddynamic",
+      "endplay",
+      "multicast-delegate",
+      "delegate"
+    ]
+  },
+  {
+    "id": "blueprintassignable",
+    "term": "BlueprintAssignable",
+    "aliases": [
+      "BlueprintAssignable specifier"
+    ],
+    "category": "reflection",
+    "short": "A property specifier that lets Blueprint graphs bind events to a dynamic multicast delegate.",
+    "long": "Mark a dynamic multicast delegate member with UPROPERTY(BlueprintAssignable) and it shows up in Blueprints as an event you can bind. A game state's OnTimerChanged delegate is a typical case: the HUD widget binds a custom event to it, and whenever C++ broadcasts the new time, the widget updates its text. Without this specifier, only C++ can subscribe.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "dynamic-multicast-delegate",
+      "uproperty",
+      "broadcast",
+      "user-widget"
+    ]
+  },
+  {
+    "id": "uinterface",
+    "term": "UInterface",
+    "aliases": [
+      "UINTERFACE",
+      "Implements",
+      "Unreal interface"
+    ],
+    "category": "object model",
+    "short": "The reflected half of an Unreal interface, which lets unrelated classes promise the same set of functions.",
+    "long": "A chest, a door, and an NPC have nothing in common in their class trees, yet all can be interacted with. An interface lets each promise an Interact function without sharing a parent. Unreal interfaces come in two parts: a UINTERFACE class prefixed with U that the reflection system sees, and a matching I class that holds the functions you implement. You test for support with Implements<UInteractable>() or by casting to the I type. This keeps the player's interaction code from knowing about every interactable class.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/interfaces-in-unreal-engine?application_version=5.8",
+    "related": [
+      "iinterface",
+      "cast",
+      "delegate",
+      "blueprintnativeevent"
+    ]
+  },
+  {
+    "id": "iinterface",
+    "term": "IInterface",
+    "aliases": [
+      "Execute_",
+      "interface class"
+    ],
+    "category": "object model",
+    "short": "The C++ half of an Unreal interface, the I-prefixed class that declares the functions implementers must provide.",
+    "long": "A class opts into an interface by inheriting from the I class alongside its normal parent, as in class ADojoChest : public AActor, public IInteractable. Functions marked BlueprintNativeEvent or BlueprintImplementableEvent in the interface must be called through the generated static helper, IInteractable::Execute_Interact(Target, Instigator), so that Blueprint implementations work too. Plain C++ interface functions can be called through a cast pointer as usual.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/interfaces-in-unreal-engine?application_version=5.8",
+    "related": [
+      "uinterface",
+      "blueprintnativeevent",
+      "cast"
+    ]
+  },
+  {
+    "id": "cast",
+    "term": "Cast",
+    "aliases": [
+      "Cast<T>()",
+      "CastChecked",
+      "casting",
+      "downcast"
+    ],
+    "category": "object model",
+    "short": "A safe conversion of a UObject pointer to a more specific class, returning null if the object is not that class.",
+    "long": "Engine functions hand you general types: an overlap gives you an AActor*, GetPawn gives you an APawn*. Cast<ADojoPlayer>(OtherActor) checks the real class and returns a typed pointer, or nullptr if it is something else, so always test the result. CastChecked asserts instead of returning null, which is useful when a failure means a bug. Casting is cheap, but code full of casts to specific classes is often a sign an interface or delegate would decouple things better.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/Cast?application_version=5.8",
+    "related": [
+      "isa",
+      "isvalid",
+      "uinterface",
+      "overlap-event"
+    ],
+    "linkMode": "code-only"
+  },
+  {
+    "id": "isa",
+    "term": "IsA",
+    "aliases": [
+      "IsA()",
+      "IsA<T>()",
+      "StaticClass"
+    ],
+    "category": "object model",
+    "short": "A check that answers whether an object is a given class or a child of it, without converting the pointer.",
+    "long": "Other->IsA(ADojoEnemy::StaticClass()) or Other->IsA<ADojoEnemy>() returns true or false. Use it when you only need the yes or no answer, for example to decide which sound to play. When you also need to call functions on the result, Cast is better because it checks and converts in one step. StaticClass() returns the UClass that describes a C++ type, which is also what you pass when a function asks for a class.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/UObjectBaseUtility/IsA?application_version=5.8",
+    "related": [
+      "cast",
+      "tsubclassof",
+      "uobject"
+    ]
+  },
+  {
+    "id": "destroy",
+    "term": "Destroy",
+    "aliases": [
+      "Destroy()",
+      "K2_DestroyActor",
+      "SetLifeSpan",
+      "InitialLifeSpan"
+    ],
+    "category": "memory",
+    "short": "The actor function that removes an actor from the world; the memory is freed later by garbage collection.",
+    "long": "Calling Destroy() on a defeated enemy takes it out of play right away: EndPlay runs, it stops ticking and colliding, and other code should treat it as gone. The memory is reclaimed in a later garbage collection pass, which is why other pointers to it should be checked with IsValid. SetLifeSpan(3.f) schedules a destroy for later, handy for shell casings. Functions with a K2_ prefix are Blueprint-facing wrappers; in C++ call Destroy() directly.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-actor-lifecycle?application_version=5.8",
+    "related": [
+      "endplay",
+      "garbage-collection",
+      "isvalid",
+      "object-pool",
+      "spawnactor"
+    ],
+    "linkMode": "code-only"
+  },
+  {
+    "id": "on-construction",
+    "term": "OnConstruction",
+    "aliases": [
+      "OnConstruction()",
+      "Construction Script"
+    ],
+    "category": "framework",
+    "short": "A function that runs whenever an actor is placed or edited in the editor, and when it is spawned, so it can rebuild itself from its settings.",
+    "long": "OnConstruction is C++'s version of the Blueprint Construction Script. A fence actor can read its Length property and lay out the right number of fence post meshes, and when a designer drags the length slider the fence updates live in the viewport. Keep it fast and self-contained, because it reruns often while editing. It is not the place for gameplay logic such as finding the player; that belongs in BeginPlay.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-actor-lifecycle?application_version=5.8",
+    "related": [
+      "beginplay",
+      "cdo",
+      "editanywhere"
+    ]
+  },
+  {
+    "id": "tarray",
+    "term": "TArray",
+    "aliases": [
+      "TArray<T>"
+    ],
+    "category": "containers",
+    "short": "Unreal's resizable list, the container you will use most for ordered collections.",
+    "long": "TArray<AActor*> Enemies; holds items in order and grows as needed. Add or Emplace puts items on the end, Remove and RemoveAt take them out, Num tells you how many there are, Contains and Find search, and a range-based for loop walks through them. Marked UPROPERTY, a TArray of UObject pointers keeps those objects alive and shows in the editor. Do not add or remove items while looping over the same array; collect changes and apply them after the loop.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/array-containers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tmap",
+      "tset",
+      "tqueue",
+      "uproperty"
+    ]
+  },
+  {
+    "id": "tmap",
+    "term": "TMap",
+    "aliases": [
+      "TMap<K, V>",
+      "map container"
+    ],
+    "category": "containers",
+    "short": "A container of key and value pairs with fast lookup by key, like a dictionary.",
+    "long": "If you keep asking how many of item X the player has, a TMap<FName, int32> answers in one step instead of scanning a list. Add or Emplace inserts, Find returns a pointer to the value or nullptr if the key is missing, FindOrAdd creates a default entry when needed, Contains checks, and Remove deletes. Keys need a hash function, which common types like FName, FString, int32, and UObject pointers already have. Iteration order is not something to depend on.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/map-containers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tarray",
+      "tset",
+      "fname"
+    ]
+  },
+  {
+    "id": "tset",
+    "term": "TSet",
+    "aliases": [
+      "TSet<T>",
+      "set container"
+    ],
+    "category": "containers",
+    "short": "A container of unique values with fast checks for whether a value is present.",
+    "long": "A TSet is for questions like has this checkpoint been visited or is this actor already in the list. Adding the same value twice keeps one copy. Contains is fast no matter how big the set gets, unlike searching a TArray. A combo system might keep a TSet<FName> of enemies already hit by this swing, so one swing never damages the same enemy twice. Like TMap, the order of items is not guaranteed.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/set-containers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tarray",
+      "tmap"
+    ]
+  },
+  {
+    "id": "tqueue",
+    "term": "TQueue",
+    "aliases": [
+      "TQueue<T>",
+      "Enqueue",
+      "Dequeue"
+    ],
+    "category": "containers",
+    "short": "A first in, first out container built to be safe for passing items between threads.",
+    "long": "Items leave a TQueue in the order they arrived: Enqueue adds to the back, Dequeue takes from the front, and IsEmpty checks. It is designed for producer and consumer handoffs, including across threads. It cannot be marked UPROPERTY, so the garbage collector does not see UObject pointers inside it; holding actors that something else already keeps alive is fine, but for gameplay lists such as an object pool, a UPROPERTY TArray is often the simpler, safer pick.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TQueue?application_version=5.8",
+    "related": [
+      "tarray",
+      "object-pool",
+      "garbage-collection"
+    ]
+  },
+  {
+    "id": "fstring",
+    "term": "FString",
+    "aliases": [
+      "FString::Printf"
+    ],
+    "category": "strings",
+    "short": "Unreal's general-purpose, changeable text string, used for building and manipulating text.",
+    "long": "FString is the string you edit: join pieces, search, split, or format with FString::Printf(TEXT(\"Wave %d\"), WaveNumber). It is the right type for log messages, file paths, and player-typed input such as a server address. It is not ideal for identifiers you compare often, which is what FName is for, and not for text shown to players, which should be FText so it can be translated. Use the * operator to get a raw character pointer when an API wants one.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/fstring-in-unreal-engine?application_version=5.8",
+    "related": [
+      "fname",
+      "ftext",
+      "text-macro",
+      "ue-log"
+    ]
+  },
+  {
+    "id": "fname",
+    "term": "FName",
+    "aliases": [
+      "NAME_None"
+    ],
+    "category": "strings",
+    "short": "A lightweight, case-insensitive name used for identifiers like socket names, row names, and tags.",
+    "long": "Behind the scenes, every FName is stored once in a global table, and the FName itself is just a small index. That makes copying and comparing two FNames as fast as comparing two numbers. Socket names such as hand_r, data table row names, and map keys are typical uses. FNames are not meant to be edited or shown to players. Create one with FName(TEXT(\"hand_r\")), and remember that comparison ignores letter case.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/fname-in-unreal-engine?application_version=5.8",
+    "related": [
+      "fstring",
+      "ftext",
+      "socket",
+      "data-table",
+      "gameplay-tags"
+    ]
+  },
+  {
+    "id": "ftext",
+    "term": "FText",
+    "aliases": [
+      "LOCTEXT",
+      "NSLOCTEXT",
+      "FText::FromString",
+      "localized text"
+    ],
+    "category": "strings",
+    "short": "The string type for anything players read, built so it can be translated into other languages.",
+    "long": "Button labels, item descriptions, and dialogue should be FText. It carries the information the localization tools need to swap English for French without code changes, and it formats numbers and dates the way each region expects. Create translatable literals with LOCTEXT or NSLOCTEXT, and wrap dynamic values with FText::FromString or FText::AsNumber. UMG text widgets take FText, so health numbers on a HUD usually end up as FText::AsNumber.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/text-localization-in-unreal-engine?application_version=5.8",
+    "related": [
+      "fstring",
+      "fname",
+      "text-macro",
+      "umg"
+    ]
+  },
+  {
+    "id": "text-macro",
+    "term": "TEXT macro",
+    "aliases": [
+      "TEXT()",
+      "TCHAR"
+    ],
+    "category": "strings",
+    "short": "A macro that turns a string literal into Unreal's wide character type so it works the same on every platform.",
+    "long": "Write TEXT(\"Hello\") instead of \"Hello\" whenever an engine function expects text. The macro makes the literal use TCHAR, the character type the engine is built on, which avoids encoding mix-ups across platforms. It does not make the text translatable by itself; that is the job of FText with LOCTEXT. You will mostly see it in UE_LOG messages, component names in CreateDefaultSubobject, and FString or FName construction.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/string-handling-in-unreal-engine?application_version=5.8",
+    "related": [
+      "fstring",
+      "fname",
+      "ftext",
+      "ue-log"
+    ]
+  },
+  {
+    "id": "fvector",
+    "term": "FVector",
+    "aliases": [
+      "FVector::Dist",
+      "GetSafeNormal",
+      "ForwardVector"
+    ],
+    "category": "math",
+    "short": "A struct of three numbers, X, Y, and Z, used for positions, directions, velocities, and scale.",
+    "long": "FVector is the most common math type in the engine. GetActorLocation returns one, velocity is one, and a direction is one with length 1. Useful tools: FVector::Dist for distance, Size and Size2D for length, GetSafeNormal to get a direction, DotProduct to tell whether something is in front of you, and CrossProduct for a perpendicular. In UE5 the components are doubles, which supports very large worlds. A projectile step is Location + Direction * Speed * DeltaTime.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TVector?application_version=5.8",
+    "related": [
+      "frotator",
+      "fquat",
+      "ftransform",
+      "fmath",
+      "deltatime"
+    ]
+  },
+  {
+    "id": "frotator",
+    "term": "FRotator",
+    "aliases": [
+      "Pitch",
+      "Yaw",
+      "Roll",
+      "rotator"
+    ],
+    "category": "math",
+    "short": "A rotation expressed as Pitch, Yaw, and Roll angles in degrees.",
+    "long": "FRotator is the human-friendly rotation type. Pitch tilts up and down around the Y axis, Yaw turns left and right around the vertical Z axis, and Roll tips side to side around the X axis. Note the constructor order is Pitch, Yaw, Roll, so FRotator(0.f, 90.f, 0.f) is a quarter turn to the right. A rotator can rotate a vector with RotateVector, and turns into a forward direction with Vector(). For combining many rotations, convert to FQuat to avoid gimbal lock.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TRotator?application_version=5.8",
+    "related": [
+      "fquat",
+      "fvector",
+      "ftransform",
+      "kismet-math-library"
+    ]
+  },
+  {
+    "id": "fquat",
+    "term": "FQuat",
+    "aliases": [
+      "quaternion",
+      "FQuat::Identity"
+    ],
+    "category": "math",
+    "short": "A rotation stored as a quaternion, which combines and blends rotations without the glitches angles can have.",
+    "long": "You rarely write quaternion math by hand, but the engine uses FQuat internally because it never suffers gimbal lock, where two rotation axes line up and you lose a degree of freedom. It also interpolates smoothly between two orientations. FQuat::Identity means no rotation, which is a neat way to reset a dropped weapon to sit upright. Convert with FQuat(SomeRotator) and SomeQuat.Rotator().",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TQuat?application_version=5.8",
+    "related": [
+      "frotator",
+      "ftransform",
+      "fvector"
+    ]
+  },
+  {
+    "id": "ftransform",
+    "term": "FTransform",
+    "aliases": [
+      "GetActorTransform"
+    ],
+    "category": "math",
+    "short": "A bundle of location, rotation, and scale that describes where something is and how it is oriented and sized.",
+    "long": "Every scene component has a transform relative to its parent, and every actor has one in world space through its root. FTransform holds a translation vector, a quaternion rotation, and a scale vector. You can convert points between spaces with TransformPosition and InverseTransformPosition, for example to find where a muzzle socket is in the world. Spawning an actor at a transform is a common shortcut instead of passing location and rotation separately.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TTransform?application_version=5.8",
+    "related": [
+      "fvector",
+      "fquat",
+      "frotator",
+      "scene-component"
+    ]
+  },
+  {
+    "id": "fmath",
+    "term": "FMath",
+    "aliases": [
+      "FMath::Clamp",
+      "FMath::Lerp",
+      "FMath::FInterpTo",
+      "FMath::RandRange"
+    ],
+    "category": "math",
+    "short": "A collection of static math helpers such as clamping, interpolation, random numbers, and trigonometry.",
+    "long": "FMath is the toolbox you reach for constantly. FMath::Clamp(Health, 0.f, MaxHealth) keeps health in range, FMath::Lerp blends between two values, FMath::FInterpTo eases a value toward a target over time for smooth health bars, FMath::RandRange picks random loot, and IsNearlyEqual compares floats safely. A health bar fill is FMath::Clamp(Current / Max, 0.f, 1.f), which never overflows the bar even if damage overshoots.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/FMath?application_version=5.8",
+    "related": [
+      "fvector",
+      "kismet-math-library",
+      "deltatime"
+    ]
+  },
+  {
+    "id": "kismet-math-library",
+    "term": "Kismet Math Library",
+    "aliases": [
+      "UKismetMathLibrary",
+      "FindLookAtRotation"
+    ],
+    "category": "math",
+    "short": "A class of static math functions written for Blueprints that C++ can call too, such as FindLookAtRotation.",
+    "long": "Many Blueprint math nodes live in UKismetMathLibrary, and nothing stops C++ from calling them. The most popular is FindLookAtRotation(Start, Target), which returns the rotator that points from one location toward another, perfect for aiming a turret's fireball at the player. Kismet is the old name for Blueprint scripting, which is why the name looks odd. For hot code paths, the FMath and FVector equivalents are usually slightly leaner.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UKismetMathLibrary?application_version=5.8",
+    "related": [
+      "fmath",
+      "frotator",
+      "gameplay-statics"
+    ]
+  },
+  {
+    "id": "fhitresult",
+    "term": "FHitResult",
+    "aliases": [
+      "hit result",
+      "SweepResult",
+      "ImpactPoint",
+      "ImpactNormal"
+    ],
+    "category": "collision",
+    "short": "A struct describing a collision or trace hit: what was hit, where, and from which direction.",
+    "long": "Traces, sweeps, and hit events fill an FHitResult for you. GetActor() and GetComponent() say what you hit, ImpactPoint is the exact spot on the surface, ImpactNormal points straight out of that surface, Distance says how far along the trace, and BoneName tells you which bone of a skeletal mesh was struck. A bullet decal goes at ImpactPoint, rotated to face along ImpactNormal; a headshot check compares BoneName to the head bone.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/FHitResult?application_version=5.8",
+    "related": [
+      "line-trace",
+      "sweep",
+      "hit-event",
+      "overlap-event"
+    ]
+  },
+  {
+    "id": "collision-channel",
+    "term": "Collision Channel",
+    "aliases": [
+      "ECollisionChannel",
+      "object channel",
+      "trace channel",
+      "ECC_Pawn",
+      "ECC_Visibility",
+      "object type"
+    ],
+    "category": "collision",
+    "short": "A category that collision objects belong to or that a trace tests against, such as Pawn, WorldStatic, or Visibility.",
+    "long": "Every collidable component has an object type, like Pawn, WorldStatic, WorldDynamic, or PhysicsBody, and a response to every channel. Traces use trace channels such as Visibility and Camera. You can add your own in Project Settings under Collision, for example a Projectile object channel or an Interact trace channel, which appear in code as ECC_GameTraceChannel1 and onward. Channels let you say things like bullets hit pawns and walls but pass through trigger volumes.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/collision-settings-in-the-unreal-engine-project-settings?application_version=5.8",
+    "related": [
+      "collision-response",
+      "collision-preset",
+      "line-trace",
+      "collision-query-params"
+    ]
+  },
+  {
+    "id": "collision-response",
+    "term": "Collision Response",
+    "aliases": [
+      "ECollisionResponse",
+      "ECR_Block"
+    ],
+    "category": "collision",
+    "short": "How a component reacts to a given channel: Ignore it, Overlap it, or Block it.",
+    "long": "Each component lists a response for every channel. Block stops movement and can fire hit events, Overlap lets things pass through but can fire overlap events, and Ignore pretends the other thing does not exist. When two components meet, the weaker of their two responses wins: if a wall blocks pawns but the pawn ignores the wall, they ignore each other. That rule explains most it does not collide mysteries. Set responses in the Details panel or with SetCollisionResponseToChannel.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/collision-response-reference-in-unreal-engine?application_version=5.8",
+    "related": [
+      "collision-channel",
+      "collision-preset",
+      "overlap-event",
+      "hit-event"
+    ]
+  },
+  {
+    "id": "collision-preset",
+    "term": "Collision Preset",
+    "aliases": [
+      "collision profile",
+      "BlockAll",
+      "OverlapAll",
+      "OverlapAllDynamic",
+      "NoCollision",
+      "Pawn preset",
+      "SetCollisionProfileName"
+    ],
+    "category": "collision",
+    "short": "A named, reusable bundle of collision settings, such as BlockAll, OverlapAllDynamic, Pawn, or NoCollision.",
+    "long": "Instead of ticking dozens of response boxes per component, you pick a preset. NoCollision turns collision off, BlockAll blocks everything, OverlapAll overlaps everything, OverlapAllDynamic overlaps only moving things, Pawn is set up for character capsules, and Custom lets you set each response by hand. A pickup's trigger sphere is often OverlapAllDynamic, while a character's mesh is often NoCollision because the capsule already handles it. You can define your own presets in Project Settings.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/collision-response-reference-in-unreal-engine?application_version=5.8",
+    "related": [
+      "collision-response",
+      "collision-channel",
+      "generate-overlap-events",
+      "capsule-component"
+    ]
+  },
+  {
+    "id": "generate-overlap-events",
+    "term": "Generate Overlap Events",
+    "aliases": [
+      "bGenerateOverlapEvents",
+      "SetGenerateOverlapEvents",
+      "Simulation Generates Hit Events",
+      "bNotifyRigidBodyCollision"
+    ],
+    "category": "collision",
+    "short": "The per-component switches that must be on before overlap events, or physics hit events, will fire.",
+    "long": "Setting responses to Overlap is not enough on its own. Both components involved must also have Generate Overlap Events enabled, or nothing fires. Physics-driven hits have a similar switch, Simulation Generates Hit Events. These flags exist because events cost time, so the engine lets you turn them off for the thousands of rocks that never need them. If an overlap handler never runs, check these flags on both sides first.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/collision-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "overlap-event",
+      "hit-event",
+      "collision-preset",
+      "collision-response"
+    ]
+  },
+  {
+    "id": "overlap-event",
+    "term": "Overlap Event",
+    "aliases": [
+      "OnComponentBeginOverlap",
+      "OnComponentEndOverlap",
+      "OnActorBeginOverlap",
+      "OnActorEndOverlap",
+      "begin overlap"
+    ],
+    "category": "collision",
+    "short": "An event fired when one component starts or stops intersecting another that is set to overlap it.",
+    "long": "Overlaps are for areas you pass through: a pickup radius, a door trigger, a damage zone. Begin overlap fires on entry, end overlap on exit. Component versions, such as OnComponentBeginOverlap, tell you exactly which shape was touched, while actor versions fire for any component of the actor. The component handler has a fixed signature: the overlapped component, the other actor, the other component, the body index, a from-sweep flag, and the sweep FHitResult. Bind it with AddDynamic in BeginPlay.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/collision-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "hit-event",
+      "generate-overlap-events",
+      "adddynamic",
+      "box-component",
+      "cast"
+    ]
+  },
+  {
+    "id": "hit-event",
+    "term": "Hit Event",
+    "aliases": [
+      "OnComponentHit",
+      "OnActorHit",
+      "NotifyHit",
+      "blocking hit"
+    ],
+    "category": "collision",
+    "short": "An event fired when a moving component runs into something that blocks it.",
+    "long": "Hits are for solid contact: a projectile striking a wall, a car crashing into a barrier. OnComponentHit gives you the component that was hit, the other actor and component, the impulse, and an FHitResult with the impact point and normal. Movement done with sweeps, such as by the projectile or character movement components, produces hits automatically; physics-simulated bodies also need Simulation Generates Hit Events turned on. A pressure plate that should not block players belongs on overlaps instead.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/collision-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "overlap-event",
+      "fhitresult",
+      "generate-overlap-events",
+      "projectile-movement-component",
+      "sweep"
+    ]
+  },
+  {
+    "id": "line-trace",
+    "term": "Line Trace",
+    "aliases": [
+      "raycast",
+      "ray cast",
+      "LineTraceSingleByChannel",
+      "LineTraceSingleByObjectType",
+      "LineTraceMultiByChannel"
+    ],
+    "category": "collision",
+    "short": "Shooting an invisible ray between two points to find what it hits first, or everything it passes through.",
+    "long": "Traces answer questions like what is under the crosshair or is there a wall between the guard and the player. GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params) returns true and fills Hit if anything blocking the Visibility channel lies on the line. By-object-type versions test against object types like Pawn, and multi versions return every hit. Pair traces with DrawDebugLine while developing so you can see them. Fast projectiles often trace from last frame's position to this frame's to avoid skipping thin targets.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/traces-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "sweep",
+      "fhitresult",
+      "collision-channel",
+      "collision-query-params",
+      "world"
+    ]
+  },
+  {
+    "id": "sweep",
+    "term": "Sweep",
+    "aliases": [
+      "shape trace",
+      "SweepSingleByChannel",
+      "FCollisionShape",
+      "bSweep"
+    ],
+    "category": "collision",
+    "short": "Moving a shape, such as a sphere or box, along a path and reporting what it would hit.",
+    "long": "A sweep is a line trace with thickness. SweepSingleByChannel with FCollisionShape::MakeSphere(40.f) checks whether a sword arc of that width would connect, which is far more forgiving than a thin ray. Movement can sweep too: SetActorLocation with the sweep flag stops at the first blocking hit instead of teleporting into a wall. Melee hit detection, ledge checks, and making sure a spawn point is clear are common uses.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/traces-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "line-trace",
+      "fhitresult",
+      "hit-event",
+      "collision-channel"
+    ]
+  },
+  {
+    "id": "collision-query-params",
+    "term": "Collision Query Params",
+    "aliases": [
+      "FCollisionQueryParams",
+      "FCollisionObjectQueryParams",
+      "AddIgnoredActor"
+    ],
+    "category": "collision",
+    "short": "Option structs passed to traces and sweeps to fine-tune them, such as which actors to ignore.",
+    "long": "Without extra options, a gun's trace starting inside the player will happily hit the player. FCollisionQueryParams Params; Params.AddIgnoredActor(this); fixes that, and also lets you request complex collision or a trace tag for debugging. FCollisionObjectQueryParams says which object types a by-object trace should look for, for example only ECC_Pawn so a fireball's trace ignores scenery. Build these once per call; they are cheap.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/using-a-single-line-trace-raycast-by-object-in-unreal-engine?application_version=5.8",
+    "related": [
+      "line-trace",
+      "sweep",
+      "collision-channel"
+    ]
+  },
+  {
+    "id": "physics-simulation",
+    "term": "Physics Simulation",
+    "aliases": [
+      "SetSimulatePhysics",
+      "Simulate Physics",
+      "AddImpulse",
+      "AddForce",
+      "Chaos",
+      "ragdoll"
+    ],
+    "category": "physics",
+    "short": "Letting the physics engine move a component with gravity, forces, and collisions instead of moving it yourself.",
+    "long": "Turn on Simulate Physics for a primitive component and the Chaos physics engine takes over: crates tumble, barrels roll, ragdolls collapse. You influence simulated bodies with AddImpulse for a one-off shove, like an explosion, or AddForce for a steady push, like wind, scaled by mass. Skeletal meshes use a physics asset, a set of simple bodies per bone, to ragdoll. A simulated component detaches from its parent's movement, so mixing manual movement and simulation on the same component causes fights.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/physics-in-unreal-engine?application_version=5.8",
+    "related": [
+      "primitive-component",
+      "hit-event",
+      "generate-overlap-events",
+      "tick-groups"
+    ]
+  },
+  {
+    "id": "enhanced-input",
+    "term": "Enhanced Input",
+    "aliases": [
+      "Enhanced Input System",
+      "EnhancedInput plugin"
+    ],
+    "category": "input",
+    "short": "UE5's input system, where you define abstract actions as assets and map keys to them through mapping contexts.",
+    "long": "Instead of asking was the space bar pressed, your code asks did the Jump action trigger. Actions are assets, mapping contexts decide which keys, buttons, or sticks drive them, triggers decide when they count, and modifiers reshape the raw values. Swapping to a vehicle can be as simple as removing the on-foot context and adding the driving one. Add EnhancedInput to your module's dependencies in Build.cs before using its classes in C++. It replaced the older action and axis mappings as the default in UE 5.1.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/enhanced-input-in-unreal-engine?application_version=5.8",
+    "related": [
+      "input-action",
+      "input-mapping-context",
+      "input-trigger",
+      "input-modifier",
+      "enhanced-input-component",
+      "legacy-input"
+    ]
+  },
+  {
+    "id": "input-action",
+    "term": "Input Action",
+    "aliases": [
+      "UInputAction",
+      "IA_",
+      "input actions"
+    ],
+    "category": "input",
+    "short": "An asset that names one thing the player can do, like Jump, Move, or Interact, and the type of value it produces.",
+    "long": "An input action is a verb, not a key. IA_Move produces a 2D axis value, IA_Jump produces a simple bool, IA_Zoom might produce a 1D axis. Because the action does not know which key drives it, the same IA_Interact works on keyboard, gamepad, and touch. In C++ you hold a pointer to the asset in a UPROPERTY so a designer can assign it, then bind a handler to it through the Enhanced Input component.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/EnhancedInput/UInputAction?application_version=5.8",
+    "related": [
+      "enhanced-input",
+      "input-mapping-context",
+      "finputactionvalue",
+      "enhanced-input-component"
+    ]
+  },
+  {
+    "id": "input-mapping-context",
+    "term": "Input Mapping Context",
+    "aliases": [
+      "UInputMappingContext",
+      "IMC_",
+      "mapping context",
+      "AddMappingContext"
+    ],
+    "category": "input",
+    "short": "An asset that maps physical keys and buttons to input actions, and can be switched on and off as a set.",
+    "long": "A mapping context says W, A, S, D and the left stick drive IA_Move; Space and the bottom face button drive IA_Jump. You activate it for a local player through the Enhanced Input local player subsystem with AddMappingContext(Context, Priority), usually in BeginPlay of the player controller or pawn. Higher priority contexts win conflicts, so a menu context can temporarily claim keys that gameplay also uses, and removing it hands them back.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/EnhancedInput/UInputMappingContext?application_version=5.8",
+    "related": [
+      "enhanced-input",
+      "input-action",
+      "local-player-subsystem",
+      "input-trigger",
+      "input-modifier"
+    ]
+  },
+  {
+    "id": "input-trigger",
+    "term": "Input Trigger",
+    "aliases": [
+      "UInputTrigger",
+      "Pressed trigger",
+      "Hold trigger",
+      "Tap trigger",
+      "Chorded trigger"
+    ],
+    "category": "input",
+    "short": "A rule on a mapping or action that decides when input counts, such as on press, on release, after a hold, or on a quick tap.",
+    "long": "Triggers turn raw button state into intent. With no trigger, an action fires every frame the key is down. Pressed fires once on the way down, Released once on the way up, Hold fires after the key is held for a set time, Tap fires only for a quick press and release, and Chorded requires another action to be active, like a modifier key. A charged heavy attack might use Hold with a one-second threshold while the light attack on the same button uses Tap.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/enhanced-input-in-unreal-engine?application_version=5.8",
+    "related": [
+      "etriggerevent",
+      "input-modifier",
+      "input-mapping-context",
+      "input-action"
+    ]
+  },
+  {
+    "id": "input-modifier",
+    "term": "Input Modifier",
+    "aliases": [
+      "UInputModifier",
+      "Negate",
+      "Swizzle Input Axis Values",
+      "Dead Zone",
+      "Scalar"
+    ],
+    "category": "input",
+    "short": "A step that reshapes raw input values before they reach your code, like flipping, scaling, or ignoring small stick drift.",
+    "long": "Modifiers let one action collect input from many keys that each mean something slightly different. For IA_Move, D can pass X as is, A can use Negate so it becomes negative X, and W can use Swizzle to move its value onto the Y axis. Dead Zone ignores tiny thumbstick wobble and Scalar adjusts sensitivity. Done right, your handler just reads one clean 2D vector no matter which device the player uses.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/enhanced-input-in-unreal-engine?application_version=5.8",
+    "related": [
+      "input-trigger",
+      "input-mapping-context",
+      "finputactionvalue"
+    ]
+  },
+  {
+    "id": "etriggerevent",
+    "term": "ETriggerEvent",
+    "aliases": [
+      "ETriggerEvent::Triggered",
+      "ETriggerEvent::Started",
+      "ETriggerEvent::Completed"
+    ],
+    "category": "input",
+    "short": "The enum you bind against that picks which phase of an action calls your handler: Started, Ongoing, Triggered, Completed, or Canceled.",
+    "long": "When you bind, you choose a moment. Started fires on the first frame of input, Triggered fires when the triggers are satisfied, which may be every frame for movement, Ongoing fires while a trigger like Hold is still charging, Completed fires when it finishes, and Canceled fires when input stops before a trigger succeeds. A sprint could bind Started to speed up and Completed to slow down, while movement binds Triggered.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/enhanced-input-in-unreal-engine?application_version=5.8",
+    "related": [
+      "input-trigger",
+      "enhanced-input-component",
+      "input-action"
+    ]
+  },
+  {
+    "id": "finputactionvalue",
+    "term": "FInputActionValue",
+    "aliases": [
+      "FInputActionValue::Get",
+      "Value.Get<FVector2D>()"
+    ],
+    "category": "input",
+    "short": "The value an input action hands to your handler, read as a bool, a float, or a 2D or 3D vector.",
+    "long": "Handlers bound to Enhanced Input usually take const FInputActionValue& Value. You read it as the type the action was set up for: Value.Get<bool>() for a button, Value.Get<float>() for a trigger or wheel, Value.Get<FVector2D>() for a stick or WASD movement. Reading the wrong type returns a converted value that may not be what you expect, so match the action's value type.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/enhanced-input-in-unreal-engine?application_version=5.8",
+    "related": [
+      "input-action",
+      "enhanced-input-component",
+      "input-modifier",
+      "fvector"
+    ]
+  },
+  {
+    "id": "enhanced-input-component",
+    "term": "Enhanced Input Component",
+    "aliases": [
+      "UEnhancedInputComponent",
+      "BindAction"
+    ],
+    "category": "input",
+    "short": "The input component used with Enhanced Input, where you bind input actions to handler functions.",
+    "long": "In SetupPlayerInputComponent, cast the incoming component with CastChecked<UEnhancedInputComponent>(PlayerInputComponent), then call BindAction(MoveAction, ETriggerEvent::Triggered, this, &ADojoHero::Move);. Each binding ties one action and one trigger event to one function. If the cast fails, the project's default input component class is not set to the enhanced one, which is a quick thing to check in Project Settings under Input.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/EnhancedInput/UEnhancedInputComponent?application_version=5.8",
+    "related": [
+      "setup-player-input-component",
+      "etriggerevent",
+      "input-action",
+      "enhanced-input"
+    ]
+  },
+  {
+    "id": "legacy-input",
+    "term": "Legacy Input Mappings",
+    "aliases": [
+      "Action Mappings",
+      "Axis Mappings",
+      "BindAxis",
+      "IE_Pressed",
+      "UInputComponent::BindAction"
+    ],
+    "category": "input",
+    "short": "The older input setup with Action and Axis Mappings in Project Settings, replaced by Enhanced Input in UE5.",
+    "long": "Before Enhanced Input, you named actions like Attack in Project Settings, listed the keys for each, and bound them in code with InputComponent->BindAction(\"Attack\", IE_Pressed, this, &AMyController::OnAttack);. Many tutorials and books written for UE4 and early UE5 still use it. It is deprecated, so new UE5 projects should use Enhanced Input, but recognizing the old style helps you read older code and port it.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/input-overview-in-unreal-engine?application_version=5.8",
+    "related": [
+      "enhanced-input",
+      "setup-player-input-component",
+      "player-controller"
+    ]
+  },
+  {
+    "id": "setup-player-input-component",
+    "term": "SetupPlayerInputComponent",
+    "aliases": [
+      "SetupPlayerInputComponent()",
+      "SetupInputComponent",
+      "InputComponent"
+    ],
+    "category": "input",
+    "short": "The pawn function the engine calls when a player possesses it, where you bind input actions to handlers.",
+    "long": "Override SetupPlayerInputComponent on your pawn or character to wire input to behavior. The engine passes in the input component, you bind your actions, and from then on pressing keys calls your functions. Player controllers have a matching SetupInputComponent for input that should work no matter which pawn is controlled, such as opening the pause menu. Call the Super version first so parent bindings still apply.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/input-overview-in-unreal-engine?application_version=5.8",
+    "related": [
+      "enhanced-input-component",
+      "pawn",
+      "player-controller",
+      "super"
+    ]
+  },
+  {
+    "id": "data-asset",
+    "term": "Data Asset",
+    "aliases": [
+      "UDataAsset",
+      "DA_"
+    ],
+    "category": "framework",
+    "short": "An asset made from a C++ class whose only job is to hold configuration data designers can edit.",
+    "long": "Make a class like UDojoWeaponData : public UDataAsset with UPROPERTY fields for damage, fire rate, and mesh, and designers can create as many weapon data assets in the Content Browser as they like. Gameplay code then reads from whichever asset it is given. This separates numbers from logic, so balancing a weapon never means editing a Blueprint graph. It is the type object pattern in Unreal form.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/data-assets-in-unreal-engine?application_version=5.8",
+    "related": [
+      "primary-data-asset",
+      "data-table",
+      "tsoftobjectptr",
+      "uproperty"
+    ]
+  },
+  {
+    "id": "primary-data-asset",
+    "term": "Primary Data Asset",
+    "aliases": [
+      "UPrimaryDataAsset",
+      "Asset Manager",
+      "FPrimaryAssetId"
+    ],
+    "category": "framework",
+    "short": "A data asset the Asset Manager can find, list, and load by ID, which helps with large or streamed content.",
+    "long": "UPrimaryDataAsset adds an identity the Asset Manager understands. With that, you can ask for every item definition of type Weapon without hard-referencing all of them, load only the ones you need, and control what gets packaged. For a small project a plain data asset is fine; once you have hundreds of items or downloadable content, primary data assets plus soft references keep memory and load times under control.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UPrimaryDataAsset?application_version=5.8",
+    "related": [
+      "data-asset",
+      "tsoftobjectptr",
+      "packaging"
+    ]
+  },
+  {
+    "id": "data-table",
+    "term": "Data Table",
+    "aliases": [
+      "UDataTable",
+      "DT_",
+      "FindRow",
+      "FDataTableRowHandle"
+    ],
+    "category": "framework",
+    "short": "A spreadsheet-like asset where every row uses the same struct, often imported from CSV or JSON.",
+    "long": "Data tables shine when you have many entries with the same shape: fifty enemy types, a hundred dialogue lines, every level's XP threshold. Define a row struct, create a table from it, and fill or import rows. In code, Table->FindRow<FDojoEnemyRow>(RowName, TEXT(\"Spawner\")) returns a pointer to the row or null. Designers can edit everything in a grid, and you can round-trip it through a spreadsheet tool.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UDataTable?application_version=5.8",
+    "related": [
+      "table-row-base",
+      "data-asset",
+      "ustruct",
+      "fname",
+      "curve-float"
+    ]
+  },
+  {
+    "id": "table-row-base",
+    "term": "FTableRowBase",
+    "aliases": [
+      "table row struct",
+      "row struct"
+    ],
+    "category": "framework",
+    "short": "The base struct that a data table's row type must inherit from.",
+    "long": "To use a struct as a data table row, write USTRUCT(BlueprintType) struct FDojoEnemyRow : public FTableRowBase and give it UPROPERTY fields like MaxHealth and Speed. The base struct is what lets the editor and the import tools recognize the type as a valid row. Each row is identified by an FName row name, which is the key you pass to FindRow.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/FTableRowBase?application_version=5.8",
+    "related": [
+      "data-table",
+      "ustruct",
+      "fname"
+    ]
+  },
+  {
+    "id": "curve-float",
+    "term": "Curve Float",
+    "aliases": [
+      "UCurveFloat",
+      "float curve",
+      "GetFloatValue",
+      "Timeline",
+      "FTimeline"
+    ],
+    "category": "framework",
+    "short": "An asset holding a curve that maps one number to another, such as time to height or level to damage.",
+    "long": "Curves let designers draw behavior instead of typing formulas. A door's opening motion, a jump pad's launch strength over charge time, or XP needed per level can each be a UCurveFloat, and code reads it with Curve->GetFloatValue(X). Combined with a timeline, a curve drives smooth animated values over time without writing easing math. Changing the feel then means dragging curve keys, not recompiling.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UCurveFloat?application_version=5.8",
+    "related": [
+      "data-table",
+      "data-asset",
+      "fmath"
+    ]
+  },
+  {
+    "id": "root-component",
+    "term": "Root Component",
+    "aliases": [
+      "RootComponent",
+      "SetRootComponent",
+      "GetRootComponent"
+    ],
+    "category": "components",
+    "short": "The scene component at the top of an actor's component tree, whose transform is the actor's transform.",
+    "long": "Moving an actor really moves its root component, and every attached child follows. Choosing the root matters: for a pickup or projectile, making the collision shape the root means movement and sweeps use that clean shape. Set it in the constructor with SetRootComponent(TriggerBox) or by assigning RootComponent, then attach the other components below it with SetupAttachment. ACharacter already sets its capsule as the root.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/components-in-unreal-engine?application_version=5.8",
+    "related": [
+      "scene-component",
+      "attach-to-component",
+      "createdefaultsubobject",
+      "capsule-component"
+    ]
+  },
+  {
+    "id": "attach-to-component",
+    "term": "AttachToComponent",
+    "aliases": [
+      "SetupAttachment",
+      "AttachToActor",
+      "DetachFromActor",
+      "FAttachmentTransformRules",
+      "FDetachmentTransformRules"
+    ],
+    "category": "components",
+    "short": "Functions that connect a component or actor to a parent so it moves with it, optionally at a socket.",
+    "long": "Use SetupAttachment in a constructor to build the default tree, and AttachToComponent or AttachToActor at runtime, for example when a hero picks up a sword. The transform rules say what happens to the child's position: SnapToTargetIncludingScale moves it exactly onto the target socket, while KeepWorldTransform leaves it where it is. DetachFromActor with KeepWorldTransform drops the item in place. Passing a socket name attaches to a specific bone point.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/components-in-unreal-engine?application_version=5.8",
+    "related": [
+      "socket",
+      "scene-component",
+      "root-component",
+      "skeletal-mesh-component"
+    ]
+  },
+  {
+    "id": "socket",
+    "term": "Socket",
+    "aliases": [
+      "sockets",
+      "skeletal mesh socket",
+      "hand_r socket"
+    ],
+    "category": "animation",
+    "short": "A named attachment point on a mesh, usually on a bone, where you can attach weapons, effects, or other objects.",
+    "long": "A socket is like a hook sewn onto a costume. Add one to a skeleton's right-hand bone, nudge its offset in the editor with a preview mesh until the sword grip sits right, and name it hand_rSocket. In code, attach the sword to the character's mesh at that FName, and it follows the hand through every animation. Static meshes can have sockets too, such as a muzzle point on a gun model where projectiles spawn.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/skeletal-mesh-sockets-in-unreal-engine?application_version=5.8",
+    "related": [
+      "attach-to-component",
+      "skeletal-mesh-component",
+      "fname",
+      "static-mesh-component"
+    ]
+  },
+  {
+    "id": "anim-instance",
+    "term": "Anim Instance",
+    "aliases": [
+      "UAnimInstance",
+      "animation instance",
+      "NativeUpdateAnimation",
+      "GetAnimInstance",
+      "TryGetPawnOwner"
+    ],
+    "category": "animation",
+    "short": "The C++ class behind an animation blueprint, holding the variables that decide which animation plays.",
+    "long": "Each skeletal mesh that plays an animation blueprint runs an anim instance. A C++ parent class, such as UDojoAnimInstance with Speed and State properties, gives the blueprint clean variables to read in its state machine. The tidy way to fill them is to override NativeUpdateAnimation and pull values from the owner, found with TryGetPawnOwner, every frame. The character can also push values in, but then the character has to know about its animation class, which couples the two.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UAnimInstance?application_version=5.8",
+    "related": [
+      "animation-blueprint",
+      "state-machine",
+      "anim-montage",
+      "skeletal-mesh-component",
+      "blend-space"
+    ]
+  },
+  {
+    "id": "animation-blueprint",
+    "term": "Animation Blueprint",
+    "aliases": [
+      "Anim Blueprint",
+      "ABP_",
+      "AnimGraph",
+      "Anim Class"
+    ],
+    "category": "animation",
+    "short": "A special Blueprint that decides, every frame, what pose a skeletal mesh should be in.",
+    "long": "An animation blueprint has an Event Graph for gathering data and an AnimGraph that blends animations into a final pose. You create it for a specific skeleton and can give it a C++ anim instance as its parent class. Then you assign it on the mesh component by setting the animation mode to use an animation blueprint and choosing it as the Anim Class. Enemy and player can share one animation blueprint if they share a skeleton and a parent anim instance.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/state-machines-in-unreal-engine?application_version=5.8",
+    "related": [
+      "anim-instance",
+      "state-machine",
+      "blend-space",
+      "anim-notify",
+      "skeletal-mesh-component"
+    ]
+  },
+  {
+    "id": "state-machine",
+    "term": "Animation State Machine",
+    "aliases": [
+      "state machine",
+      "transition rule"
+    ],
+    "category": "animation",
+    "short": "A graph inside an animation blueprint made of states, like Locomotion or Attack, and rules for moving between them.",
+    "long": "A state machine breaks a character's animation into clear modes. Locomotion blends idle, walk, and run; Attack plays a swing; Hit plays a flinch; Die plays a fall. Arrows between states carry transition rules, small boolean checks such as State equals Attack. Driving the rules from one enum variable on the anim instance keeps everything readable. It is the same state pattern you would use in gameplay code, drawn as a graph.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/state-machines-in-unreal-engine?application_version=5.8",
+    "related": [
+      "animation-blueprint",
+      "anim-instance",
+      "uenum",
+      "blend-space",
+      "anim-notify"
+    ]
+  },
+  {
+    "id": "blend-space",
+    "term": "Blend Space",
+    "aliases": [
+      "Blend Space 1D",
+      "BlendSpace",
+      "BS_"
+    ],
+    "category": "animation",
+    "short": "An asset that smoothly blends between animations based on one or two input values, like speed and direction.",
+    "long": "Rather than snapping from walk to run, a blend space places animations along an axis and mixes the neighbors. A 1D blend space for locomotion might put idle at speed 0, walk at 200, and run at 500, so a character moving at 350 shows a natural mix of walk and run. A 2D version adds direction for strafing. Feed it the character's ground speed from the movement component's velocity.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/blend-spaces-in-unreal-engine?application_version=5.8",
+    "related": [
+      "state-machine",
+      "anim-instance",
+      "character-movement-component"
+    ]
+  },
+  {
+    "id": "anim-notify",
+    "term": "Anim Notify",
+    "aliases": [
+      "animation notify",
+      "UAnimNotify",
+      "AnimNotify event",
+      "notify track"
+    ],
+    "category": "animation",
+    "short": "A marker placed on an animation's timeline that fires an event when playback reaches it.",
+    "long": "Notifies sync gameplay to animation frames. Put one called AttackEnds near the end of a swing, and the animation blueprint receives an AnimNotify_AttackEnds event it can use to return to Locomotion. Others might enable a sword's damage window, play a footstep sound, or spawn dust. Notify states cover a span of frames with begin and end events. You can also write a C++ UAnimNotify subclass so the same notify is reusable across animations.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/animation-notifies-in-unreal-engine?application_version=5.8",
+    "related": [
+      "anim-montage",
+      "state-machine",
+      "animation-blueprint"
+    ]
+  },
+  {
+    "id": "anim-montage",
+    "term": "Anim Montage",
+    "aliases": [
+      "UAnimMontage",
+      "animation montage",
+      "Montage_Play",
+      "PlayAnimMontage",
+      "AM_"
+    ],
+    "category": "animation",
+    "short": "An asset for playing one-off animations like attacks or reloads on top of the normal animation flow, with sections and slots.",
+    "long": "State machines are great for steady modes; montages are great for actions. A montage wraps one or more animations, can be split into named sections such as combo steps, and plays through a slot node in the animation blueprint, often only on the upper body. Trigger it from C++ with AnimInstance->Montage_Play(AttackMontage) or ACharacter::PlayAnimMontage, and react to its end with montage delegates. Most combat systems use montages for attacks.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/animation-montage-in-unreal-engine?application_version=5.8",
+    "related": [
+      "anim-instance",
+      "anim-notify",
+      "state-machine",
+      "animation-blueprint"
+    ]
+  },
+  {
+    "id": "user-widget",
+    "term": "User Widget",
+    "aliases": [
+      "UUserWidget",
+      "Widget Blueprint",
+      "WBP_",
+      "CreateWidget",
+      "AddToViewport",
+      "NativeConstruct"
+    ],
+    "category": "UI",
+    "short": "The base class for a piece of UI built in UMG, such as a HUD, a menu, or a health bar.",
+    "long": "A user widget is a screen element you design in the Widget Designer and script in Blueprint or C++. A C++ parent class, such as UDojoHealthBar, can hold the logic and pointers to child widgets, while the Widget Blueprint handles layout. Show it with CreateWidget<UDojoHUD>(PlayerController, HUDClass) followed by AddToViewport(), and remove it with RemoveFromParent(). Override NativeConstruct for setup once the widget's children exist.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/UMG/UUserWidget?application_version=5.8",
+    "related": [
+      "umg",
+      "bindwidget",
+      "widget-component",
+      "ftext"
+    ]
+  },
+  {
+    "id": "umg",
+    "term": "UMG",
+    "aliases": [
+      "Unreal Motion Graphics",
+      "Widget Designer",
+      "Canvas Panel",
+      "UWidget"
+    ],
+    "category": "UI",
+    "short": "Unreal Motion Graphics, the editor and framework for building game UI out of widgets.",
+    "long": "UMG gives you a visual designer with panels for layout, such as Canvas, Vertical Box, and Overlay, and controls such as Button, Text, Image, Progress Bar, and Editable Text. Anchors keep elements in the right corner on any screen size. Behavior is wired up in the widget's graph or in a C++ parent class. Add UMG to your Build.cs dependencies before using widget classes from C++.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/umg-ui-designer-quick-start-guide-in-unreal-engine?application_version=5.8",
+    "related": [
+      "user-widget",
+      "bindwidget",
+      "widget-component",
+      "build-cs"
+    ]
+  },
+  {
+    "id": "bindwidget",
+    "term": "BindWidget",
+    "aliases": [
+      "meta=(BindWidget)",
+      "BindWidgetOptional"
+    ],
+    "category": "UI",
+    "short": "A metadata key that links a C++ widget pointer to a widget with the same name in the Widget Blueprint.",
+    "long": "Declare UPROPERTY(meta = (BindWidget)) TObjectPtr<UProgressBar> HealthBar; in your C++ widget class, then in the designer add a Progress Bar and name it exactly HealthBar. The engine fills the pointer for you, and the Widget Blueprint will refuse to compile if the named widget is missing, which catches typos early. BindWidgetOptional allows the widget to be absent. This keeps logic in C++ and layout in the designer.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/metadata-specifiers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "user-widget",
+      "umg",
+      "meta-specifier"
+    ]
+  },
+  {
+    "id": "widget-component",
+    "term": "Widget Component",
+    "aliases": [
+      "UWidgetComponent",
+      "world space UI",
+      "screen space widget"
+    ],
+    "category": "UI",
+    "short": "A component that shows a UMG widget attached to an actor, like a health bar floating above an enemy.",
+    "long": "Add a widget component to an enemy, choose the widget class, set its draw size, and pick a space. Screen space keeps it flat and facing the camera at a constant size, which suits name tags and health bars; world space renders it as a panel in the scene, which suits an in-world terminal. Get the live widget with GetUserWidgetObject() and cast it to your widget class to update it.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/UMG/UWidgetComponent?application_version=5.8",
+    "related": [
+      "user-widget",
+      "umg",
+      "scene-component"
+    ]
+  },
+  {
+    "id": "ai-controller",
+    "term": "AI Controller",
+    "aliases": [
+      "AAIController",
+      "AIController",
+      "MoveToActor",
+      "MoveToLocation",
+      "RunBehaviorTree"
+    ],
+    "category": "AI",
+    "short": "The controller that drives a non-player pawn, moving it with pathfinding and running its decision logic.",
+    "long": "An AI controller is the computer's version of a player controller. Assign it on the pawn with AIControllerClass and choose when it auto-possesses. It can walk its pawn along the nav mesh with MoveToActor or MoveToLocation, stop with StopMovement, and run a behavior tree with RunBehaviorTree. Simple enemies can make decisions in C++ on the controller; richer ones move that logic into a behavior tree and blackboard.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/AAIController?application_version=5.8",
+    "related": [
+      "behavior-tree",
+      "blackboard",
+      "nav-mesh",
+      "pawn-sensing",
+      "possession"
+    ]
+  },
+  {
+    "id": "behavior-tree",
+    "term": "Behavior Tree",
+    "aliases": [
+      "UBehaviorTree",
+      "BT_"
+    ],
+    "category": "AI",
+    "short": "An asset that organizes AI decisions as a tree of tasks, checked from the top down to choose what to do.",
+    "long": "A behavior tree reads like a priority list. A selector tries its children in order until one succeeds, such as attack if in range, else chase if a target is known, else patrol. A sequence runs children one after another until one fails. Decorators are conditions that gate a branch, services update data on an interval, and tasks are the leaves that actually act. It keeps AI logic visual and easy to rearrange as designs change.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/behavior-tree-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "blackboard",
+      "ai-controller",
+      "nav-mesh",
+      "pawn-sensing"
+    ]
+  },
+  {
+    "id": "blackboard",
+    "term": "Blackboard",
+    "aliases": [
+      "UBlackboardComponent",
+      "UBlackboardData",
+      "BB_",
+      "blackboard key"
+    ],
+    "category": "AI",
+    "short": "The memory a behavior tree reads and writes: named keys such as TargetActor or LastSeenLocation.",
+    "long": "A blackboard is the AI's notepad. Perception code writes TargetActor when it spots the player, a service writes DistanceToTarget, and the tree's decorators read those keys to pick a branch. Because the tree only talks to keys, you can swap how data is gathered without editing the tree. Keys have types such as Object, Vector, Bool, and Enum, and are defined in a blackboard asset linked to the tree.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/behavior-tree-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "behavior-tree",
+      "ai-controller",
+      "pawn-sensing"
+    ]
+  },
+  {
+    "id": "nav-mesh",
+    "term": "Nav Mesh",
+    "aliases": [
+      "NavMesh",
+      "navigation mesh",
+      "NavMeshBoundsVolume",
+      "RecastNavMesh",
+      "pathfinding"
+    ],
+    "category": "AI",
+    "short": "The generated map of walkable surfaces that AI uses to find paths around obstacles.",
+    "long": "Drop a Nav Mesh Bounds Volume over your level and the engine builds a nav mesh of the floors a typical agent can walk on. When an AI controller is told to move somewhere, it searches this mesh for a path, using an A star style search, and the pawn follows it. Press P in the editor viewport to see the walkable area in green. If AI refuses to move, the usual causes are no bounds volume, a target off the mesh, or an agent too large for a gap.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/navigation-system-in-unreal-engine?application_version=5.8",
+    "related": [
+      "ai-controller",
+      "behavior-tree"
+    ]
+  },
+  {
+    "id": "pawn-sensing",
+    "term": "Pawn Sensing",
+    "aliases": [
+      "UPawnSensingComponent",
+      "OnSeePawn",
+      "OnHearNoise"
+    ],
+    "category": "AI",
+    "short": "An older, simple component that lets AI see and hear pawns within a radius and fires events when it does.",
+    "long": "Pawn sensing gives an enemy a sight radius, a peripheral vision angle, and a hearing threshold, then fires OnSeePawn when a pawn comes into view. It is quick to set up for a first enemy that chases the player. For new work, the AI Perception system is more flexible: it supports more senses, remembers stimuli over time, and works with teams. Both feed the same kind of decision: set a target, then chase.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UPawnSensingComponent?application_version=5.8",
+    "related": [
+      "ai-perception",
+      "ai-controller",
+      "blackboard"
+    ]
+  },
+  {
+    "id": "ai-perception",
+    "term": "AI Perception",
+    "aliases": [
+      "UAIPerceptionComponent",
+      "AIPerception",
+      "sense config",
+      "stimuli"
+    ],
+    "category": "AI",
+    "short": "The modern sensing system for AI, with configurable senses like sight, hearing, and damage.",
+    "long": "An AI perception component on the controller listens for stimuli from configured senses. Sight has a radius and angle, hearing reacts to noise events you report, and damage tells the AI who hurt it. It fires updates when targets are sensed or lost and keeps a memory of each stimulus for a while, so a guard can search the last known location. Pair it with a blackboard so the behavior tree reacts to what the AI knows.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/ai-perception-in-unreal-engine?application_version=5.8",
+    "related": [
+      "pawn-sensing",
+      "ai-controller",
+      "blackboard",
+      "behavior-tree"
+    ]
+  },
+  {
+    "id": "replication",
+    "term": "Replication",
+    "aliases": [
+      "bReplicates",
+      "SetReplicates",
+      "Replicate Movement",
+      "network replication"
+    ],
+    "category": "networking",
+    "short": "The engine automatically copying actors and marked properties from the server to clients.",
+    "long": "In Unreal multiplayer the server is the source of truth, and replication keeps clients in sync with it. Set bReplicates = true on an actor and the server will create it on clients; turn on Replicate Movement and its position follows too. Individual properties replicate when marked Replicated. Replication only flows from server to clients; clients send their wishes back through server RPCs. Even a single-player game runs on this framework, so thinking about who owns what early saves pain later.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/networking-overview-for-unreal-engine?application_version=5.8",
+    "related": [
+      "replicated-property",
+      "repnotify",
+      "has-authority",
+      "server-rpc",
+      "net-mode"
+    ]
+  },
+  {
+    "id": "replicated-property",
+    "term": "Replicated Property",
+    "aliases": [
+      "UPROPERTY(Replicated)",
+      "DOREPLIFETIME",
+      "GetLifetimeReplicatedProps",
+      "Net/UnrealNetwork.h"
+    ],
+    "category": "networking",
+    "short": "A property that the server sends to clients whenever its value changes.",
+    "long": "Three steps make a property replicate. Mark it UPROPERTY(Replicated), override GetLifetimeReplicatedProps and register it with DOREPLIFETIME(ADojoCharacter, Health) after calling Super, and make sure the actor itself replicates. Include Net/UnrealNetwork.h for the macro. From then on, changing Health on the server updates every client. Change it only on the server; a client-side change is overwritten at the next update and never reaches anyone else.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/replicate-actor-properties-in-unreal-engine?application_version=5.8",
+    "related": [
+      "replication",
+      "repnotify",
+      "uproperty",
+      "has-authority"
+    ]
+  },
+  {
+    "id": "repnotify",
+    "term": "RepNotify",
+    "aliases": [
+      "ReplicatedUsing",
+      "OnRep_",
+      "rep notify"
+    ],
+    "category": "networking",
+    "short": "A function that runs on clients when a replicated property's new value arrives.",
+    "long": "UPROPERTY(ReplicatedUsing = OnRep_Health) float Health; tells the engine to call OnRep_Health on each client after Health changes, which is the perfect place to update a health bar or play a hurt flash. The function must be a UFUNCTION. In C++ the notify does not run on the server automatically, so a listen server host that also needs the visual update should call the same function after changing the value. RepNotify suits lasting state better than a multicast RPC does.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/replicate-actor-properties-in-unreal-engine?application_version=5.8",
+    "related": [
+      "replicated-property",
+      "replication",
+      "netmulticast-rpc",
+      "listen-server"
+    ]
+  },
+  {
+    "id": "has-authority",
+    "term": "Authority",
+    "aliases": [
+      "HasAuthority",
+      "GetLocalRole",
+      "ROLE_Authority",
+      "ROLE_AutonomousProxy",
+      "ROLE_SimulatedProxy"
+    ],
+    "category": "networking",
+    "short": "Whether this machine's copy of an actor is the official one that is allowed to change game state.",
+    "long": "For actors spawned by the server, the server's copy has authority and clients have proxies. HasAuthority() returns true on the authoritative copy, so damage, scoring, and spawning belong inside an if (HasAuthority()) check. The local role adds detail: an autonomous proxy is the client's own controlled pawn, while simulated proxies are everyone else's. Most beginner multiplayer bugs come from running authoritative logic on a client.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/networking-overview-for-unreal-engine?application_version=5.8",
+    "related": [
+      "replication",
+      "net-mode",
+      "server-rpc",
+      "replicated-property"
+    ]
+  },
+  {
+    "id": "net-mode",
+    "term": "Net Mode",
+    "aliases": [
+      "GetNetMode",
+      "ENetMode",
+      "NM_Standalone",
+      "NM_ListenServer",
+      "NM_DedicatedServer",
+      "NM_Client"
+    ],
+    "category": "networking",
+    "short": "Which networking role the whole running game has: standalone, listen server, dedicated server, or client.",
+    "long": "GetNetMode() tells you what kind of process you are in. Standalone is offline single-player, a listen server is a host who also plays, a dedicated server runs with no local player, and a client is connected to a server. It answers a different question from authority, which is per actor. A defense tower can use GetNetMode() != NM_Client to make sure only the server spawns its projectiles.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/networking-overview-for-unreal-engine?application_version=5.8",
+    "related": [
+      "listen-server",
+      "dedicated-server",
+      "has-authority",
+      "play-in-editor"
+    ]
+  },
+  {
+    "id": "listen-server",
+    "term": "Listen Server",
+    "aliases": [
+      "?listen"
+    ],
+    "category": "networking",
+    "short": "A game that acts as the server while one of the players also plays on it.",
+    "long": "With a listen server, one player hosts and others join their machine. It is cheap, needs no separate server, and suits co-op and casual games. The host has authority and no lag, which can feel unfair in competitive games. You can start one by opening a level with the listen option, for example OpenLevel with the options string ?listen, or by choosing Play As Listen Server in the editor's play settings.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/networking-overview-for-unreal-engine?application_version=5.8",
+    "related": [
+      "dedicated-server",
+      "net-mode",
+      "open-level",
+      "repnotify"
+    ]
+  },
+  {
+    "id": "dedicated-server",
+    "term": "Dedicated Server",
+    "aliases": [
+      "headless server",
+      "server target"
+    ],
+    "category": "networking",
+    "short": "A server build that runs the game with no local player, rendering, or input, only simulation.",
+    "long": "Competitive and large-scale games run dedicated servers in data centers so no player has a host advantage. A dedicated server is a separate build target with no graphics, which makes it lighter, and you test it in the editor by choosing Play As Client, which starts a hidden server behind the scenes. Code that touches UI or local players must not assume they exist on this kind of server.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/networking-overview-for-unreal-engine?application_version=5.8",
+    "related": [
+      "listen-server",
+      "net-mode",
+      "target-cs"
+    ]
+  },
+  {
+    "id": "open-level",
+    "term": "OpenLevel",
+    "aliases": [
+      "UGameplayStatics::OpenLevel",
+      "open command",
+      "level travel"
+    ],
+    "category": "framework",
+    "short": "A function that loads a different level, optionally with options such as hosting or joining a game.",
+    "long": "UGameplayStatics::OpenLevel(this, FName(\"Arena\")) unloads the current map and loads Arena, which is how a main menu starts a match. Adding the options string ?listen makes the new level a listen server, and passing an IP address as the level name joins a server at that address. Because the current world is torn down, only things like the game instance and its subsystems survive the trip.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UGameplayStatics?application_version=5.8",
+    "related": [
+      "level",
+      "listen-server",
+      "game-instance",
+      "gameplay-statics",
+      "console-command"
+    ]
+  },
+  {
+    "id": "ue-log",
+    "term": "UE_LOG",
+    "aliases": [
+      "UE_LOG()",
+      "LogTemp",
+      "Output Log",
+      "verbosity"
+    ],
+    "category": "debugging",
+    "short": "The macro that writes a message to the Output Log and log file, with a category and a severity.",
+    "long": "UE_LOG(LogTemp, Warning, TEXT(\"Health dropped to %f\"), Health); prints a yellow line in the Output Log and saves it in the project's Saved/Logs folder. The verbosity, such as Error, Warning, Display, Log, or Verbose, sets the color and lets you filter noise. The format works like printf, so FStrings need the * operator. LogTemp is fine for quick checks; real systems deserve their own log category so you can filter just that system.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/logging-in-unreal-engine?application_version=5.8",
+    "related": [
+      "log-category",
+      "on-screen-debug-message",
+      "text-macro",
+      "fstring"
+    ]
+  },
+  {
+    "id": "log-category",
+    "term": "Log Category",
+    "aliases": [
+      "DECLARE_LOG_CATEGORY_EXTERN",
+      "DEFINE_LOG_CATEGORY",
+      "DEFINE_LOG_CATEGORY_STATIC"
+    ],
+    "category": "debugging",
+    "short": "A named channel for log messages, such as LogDojoCombat, so you can filter and control one system's output.",
+    "long": "Declare a category in a header with DECLARE_LOG_CATEGORY_EXTERN(LogDojoCombat, Log, All); and define it once in a .cpp with DEFINE_LOG_CATEGORY(LogDojoCombat);. Then UE_LOG(LogDojoCombat, Verbose, ...) lines can be filtered in the Output Log or turned up and down at runtime with a console command, without touching other systems' logs. For a category used in only one file, DEFINE_LOG_CATEGORY_STATIC does both steps at once.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/logging-in-unreal-engine?application_version=5.8",
+    "related": [
+      "ue-log",
+      "console-command"
+    ]
+  },
+  {
+    "id": "on-screen-debug-message",
+    "term": "AddOnScreenDebugMessage",
+    "aliases": [
+      "GEngine->AddOnScreenDebugMessage",
+      "print string",
+      "on screen message"
+    ],
+    "category": "debugging",
+    "short": "A function that prints a temporary colored message directly on the game screen.",
+    "long": "GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, TEXT(\"Hit enemy\")); shows text over the game for two seconds, the C++ twin of Blueprint's Print String. Passing a fixed key instead of -1 replaces the previous message with that key, which is handy for a live readout like current speed. Check that GEngine is not null first, and remove these calls before shipping or wrap them in a debug flag.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UEngine/AddOnScreenDebugMessage?application_version=5.8",
+    "related": [
+      "ue-log",
+      "gengine",
+      "fstring"
+    ]
+  },
+  {
+    "id": "check-macro",
+    "term": "check",
+    "aliases": [
+      "check()",
+      "checkf"
+    ],
+    "category": "debugging",
+    "short": "An assertion that stops the program immediately if a condition you swear is always true turns out false.",
+    "long": "check(HealthComponent != nullptr); documents an assumption and enforces it: if it ever fails, the editor or game halts and points at the line, so you find the bug at its source instead of three systems later. checkf adds a formatted message. Use check only for programmer mistakes that make continuing pointless. It is compiled out of shipping builds by default, so never put needed work inside it; verify keeps the expression in shipping.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/asserts-in-unreal-engine?application_version=5.8",
+    "related": [
+      "ensure-macro",
+      "isvalid",
+      "ue-log"
+    ],
+    "linkMode": "code-only"
+  },
+  {
+    "id": "ensure-macro",
+    "term": "ensure",
+    "aliases": [
+      "ensure()",
+      "ensureMsgf",
+      "ensureAlways"
+    ],
+    "category": "debugging",
+    "short": "A soft assertion that reports a failed condition with a callstack but lets the game keep running.",
+    "long": "ensure is for things that should not happen but are survivable. if (!ensure(WeaponData)) { return; } logs a loud error with a callstack the first time it fails, breaks into the debugger if attached, then lets you bail out gracefully. That makes it friendlier than check during development of content-driven code, where a designer forgetting to assign an asset should not crash the editor. ensureMsgf adds a message, and ensureAlways reports every time instead of once.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/asserts-in-unreal-engine?application_version=5.8",
+    "related": [
+      "check-macro",
+      "isvalid",
+      "ue-log"
+    ],
+    "linkMode": "code-only"
+  },
+  {
+    "id": "live-coding",
+    "term": "Live Coding",
+    "aliases": [
+      "Live++",
+      "Hot Reload",
+      "Recompile and Reload",
+      "Ctrl+Alt+F11"
+    ],
+    "category": "editor workflow",
+    "short": "Recompiling C++ while the editor is open and patching the changes into the running editor.",
+    "long": "Press the Compile button in the editor's status bar, or Ctrl+Alt+F11, and Live Coding rebuilds your changed code and swaps it into the running editor, often in seconds. It handles changes inside function bodies very well. Changes to class layouts, such as adding a UPROPERTY, a UFUNCTION, or a new class, are riskier and may need you to close the editor and do a full build from your IDE. It replaced the older Hot Reload feature.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/using-live-coding-to-recompile-unreal-engine-applications-at-runtime?application_version=5.8",
+    "related": [
+      "unreal-build-tool",
+      "generate-project-files",
+      "build-configurations"
+    ]
+  },
+  {
+    "id": "unreal-build-tool",
+    "term": "Unreal Build Tool",
+    "aliases": [
+      "UBT",
+      "UnrealBuildTool"
+    ],
+    "category": "build",
+    "short": "The program that reads your module and target files and builds the C++ for a chosen platform and configuration.",
+    "long": "When you press Build in your IDE, the IDE actually runs the Unreal Build Tool. It reads every Build.cs and Target.cs file, runs the header tool, works out include paths and dependencies, and calls the compiler for the platform you chose. It also generates IDE project files. When a build error mentions a missing module or an unresolved external symbol, the fix is often a dependency line in Build.cs that this tool reads.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-build-tool-in-unreal-engine?application_version=5.8",
+    "related": [
+      "build-cs",
+      "target-cs",
+      "module",
+      "unreal-header-tool",
+      "generate-project-files"
+    ]
+  },
+  {
+    "id": "build-cs",
+    "term": "Build.cs",
+    "aliases": [
+      "module rules",
+      "PublicDependencyModuleNames",
+      "PrivateDependencyModuleNames",
+      "ModuleRules"
+    ],
+    "category": "build",
+    "short": "A C# file per module that tells the build tool what other modules your code depends on.",
+    "long": "Every module has a file like DojoGame.Build.cs. The most edited lines list dependencies, for example PublicDependencyModuleNames.AddRange(new string[] { \"Core\", \"CoreUObject\", \"Engine\", \"InputCore\", \"EnhancedInput\", \"UMG\" });. If you include a header from a module that is not listed, you will get include or linker errors. Public dependencies are exposed to modules that depend on yours; private ones stay internal and keep build times down.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/module-properties-in-unreal-engine?application_version=5.8",
+    "related": [
+      "module",
+      "unreal-build-tool",
+      "target-cs",
+      "uproject"
+    ]
+  },
+  {
+    "id": "module",
+    "term": "Module",
+    "aliases": [
+      "modules",
+      "game module",
+      "IMPLEMENT_PRIMARY_GAME_MODULE",
+      "plugin module"
+    ],
+    "category": "build",
+    "short": "A self-contained unit of C++ code with its own Build.cs, compiled into its own library.",
+    "long": "The engine itself is hundreds of modules, such as Core, Engine, and AIModule, and your game is at least one more. Each module has a folder under Source, a Build.cs file, and a small file that registers it, which for the main game module uses IMPLEMENT_PRIMARY_GAME_MODULE. Splitting code into modules, for example a separate editor-only tools module, keeps dependencies clean and speeds up builds when one area changes.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-modules?application_version=5.8",
+    "related": [
+      "build-cs",
+      "api-macro",
+      "uproject",
+      "unreal-build-tool"
+    ]
+  },
+  {
+    "id": "target-cs",
+    "term": "Target.cs",
+    "aliases": [
+      "TargetRules",
+      "Editor.Target.cs",
+      "build target",
+      "TargetType"
+    ],
+    "category": "build",
+    "short": "A C# file that describes one kind of executable to build, such as the game, the editor, or a server.",
+    "long": "A project usually has DojoGame.Target.cs for the packaged game and DojoGameEditor.Target.cs for the editor build, and can add Server or Client targets for multiplayer. Each sets a TargetType and lists the modules to include. You rarely edit these early on, but knowing they exist explains why your IDE offers both Development and Development Editor configurations.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-build-tool-target-reference?application_version=5.8",
+    "related": [
+      "build-cs",
+      "build-configurations",
+      "unreal-build-tool",
+      "dedicated-server"
+    ]
+  },
+  {
+    "id": "uproject",
+    "term": ".uproject file",
+    "aliases": [
+      "uproject",
+      "project file",
+      "EngineAssociation"
+    ],
+    "category": "build",
+    "short": "The small JSON file at the root of a project that names the engine version, the modules, and the enabled plugins.",
+    "long": "Double-clicking a .uproject opens the project in the editor. Inside it is readable JSON: which engine version it is associated with, which C++ modules to load and when, and which plugins are on, such as EnhancedInput or GameplayAbilities. Right-clicking it in the file explorer gives options like Generate Visual Studio project files and Switch Unreal Engine version. Keep it in source control; it is small and essential.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-directory-structure?application_version=5.8",
+    "related": [
+      "generate-project-files",
+      "module",
+      "build-cs"
+    ]
+  },
+  {
+    "id": "api-macro",
+    "term": "Module API macro",
+    "aliases": [
+      "PROJECTNAME_API",
+      "_API",
+      "MinimalAPI",
+      "dllexport"
+    ],
+    "category": "build",
+    "short": "A macro like DOJOGAME_API on a class that exports it so other modules can use it.",
+    "long": "When you create a class through the editor wizard, it writes class DOJOGAME_API ADojoDoor : public AActor. The macro marks the class for export from its module's library, which other modules need in order to link against it. Inside a single game module it is harmless to keep, and removing it only matters if another module needs the class. MinimalAPI on a UCLASS exports just enough for casting and type checks.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-modules?application_version=5.8",
+    "related": [
+      "module",
+      "uclass",
+      "build-cs"
+    ]
+  },
+  {
+    "id": "generate-project-files",
+    "term": "Generate Project Files",
+    "aliases": [
+      "Generate Visual Studio project files",
+      "Refresh Visual Studio Project",
+      "sln",
+      "Solution Explorer"
+    ],
+    "category": "editor workflow",
+    "short": "Rebuilding your IDE's solution from the source folders, needed after adding, moving, or deleting C++ files outside the editor.",
+    "long": "Your IDE solution is generated, not hand-maintained. When you add a class through the editor, it refreshes the solution for you. When you create, rename, or delete .h and .cpp files by hand, right-click the .uproject and choose Generate project files, or use the editor's refresh option, so the IDE and the build tool see the change. Stale project files cause errors that look like missing classes.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/how-to-generate-unreal-engine-project-files-for-your-ide?application_version=5.8",
+    "related": [
+      "uproject",
+      "unreal-build-tool",
+      "live-coding"
+    ]
+  },
+  {
+    "id": "build-configurations",
+    "term": "Build Configurations",
+    "aliases": [
+      "Development Editor",
+      "DebugGame",
+      "DebugGame Editor",
+      "Shipping build"
+    ],
+    "category": "build",
+    "short": "The optimization and debugging levels you can build with, from DebugGame for stepping through code to Shipping for release.",
+    "long": "Development Editor is the everyday choice: optimized engine, debuggable game code, editor included. DebugGame turns off optimization for your game code so breakpoints and variable inspection are reliable while the engine stays fast. Development is a standalone game with logs and console commands, and Shipping strips logging, asserts, and the console for the best performance. Bugs that appear only in Shipping often trace back to code inside a check that was compiled out.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/compiling-game-projects-in-unreal-engine-using-cplusplus?application_version=5.8",
+    "related": [
+      "target-cs",
+      "packaging",
+      "check-macro",
+      "ide-debugging"
+    ]
+  },
+  {
+    "id": "ide-debugging",
+    "term": "Debugging in the IDE",
+    "aliases": [
+      "breakpoints",
+      "attach to process",
+      "Start Debugging",
+      "Visual Studio debugging",
+      "Rider debugging"
+    ],
+    "category": "debugging",
+    "short": "Running the editor from your IDE so you can pause on breakpoints, step through code, and inspect variables.",
+    "long": "Launch the editor from your IDE with the debugger attached, using DebugGame Editor or Development Editor, and you can set a breakpoint in a damage function, trigger it in play, and inspect every variable at that moment. You can also attach to an editor that is already running. Close the project from the editor rather than stopping the debugger, so unsaved work and imported assets are not lost.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/setting-up-your-development-environment-for-cplusplus-in-unreal-engine?application_version=5.8",
+    "related": [
+      "build-configurations",
+      "ue-log",
+      "check-macro",
+      "live-coding"
+    ]
+  },
+  {
+    "id": "blueprint-vs-cpp",
+    "term": "Blueprint and C++ boundary",
+    "aliases": [
+      "Blueprint vs C++",
+      "C++ vs Blueprint",
+      "visual scripting"
+    ],
+    "category": "editor workflow",
+    "short": "The working split where C++ builds systems and exposes them, and Blueprints configure and script content on top.",
+    "long": "Neither side should do everything. C++ is best for core systems, performance-sensitive logic, complex algorithms, and anything many classes share; it is also easier to diff and review. Blueprints are best for content: tuning values, wiring one-off level events, cosmetic reactions, and fast iteration by designers. A healthy pattern is a C++ base class with BlueprintCallable functions, BlueprintImplementableEvent hooks, and EditAnywhere properties, plus a Blueprint child per variant that supplies meshes, sounds, and numbers.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/coding-in-unreal-engine-blueprint-vs-cplusplus?application_version=5.8",
+    "related": [
+      "blueprint-class",
+      "blueprintcallable",
+      "blueprintimplementableevent",
+      "editanywhere"
+    ]
+  },
+  {
+    "id": "blueprint-class",
+    "term": "Blueprint Class from C++",
+    "aliases": [
+      "Blueprint child",
+      "BP_",
+      "Reparent Blueprint"
+    ],
+    "category": "editor workflow",
+    "short": "A Blueprint asset that inherits from your C++ class so designers can set assets and values without code.",
+    "long": "Write ADojoTower in C++, then in the Content Browser create a Blueprint Class and pick ADojoTower as the parent, naming it BP_Tower. The Blueprint inherits all your components and properties and adds the things C++ should not hardcode: the mesh, the projectile class, the sound. You can make several variants, like BP_Tower_Fast and BP_Tower_Heavy, from one C++ class. If you later change the parent, use File and then Reparent Blueprint.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/coding-in-unreal-engine-blueprint-vs-cplusplus?application_version=5.8",
+    "related": [
+      "blueprint-vs-cpp",
+      "uclass",
+      "tsubclassof",
+      "cdo"
+    ]
+  },
+  {
+    "id": "level-blueprint",
+    "term": "Level Blueprint",
+    "aliases": [
+      "level script",
+      "Open Level Blueprint"
+    ],
+    "category": "editor workflow",
+    "short": "A Blueprint graph that belongs to one level, for scripting events specific to that map.",
+    "long": "Each level has its own Level Blueprint, handy for map-only moments like opening a gate when a boss dies or showing the lobby menu when the menu map loads. Because it lives inside the map, nothing else can reuse it, and it is hard to find later. Anything you might want in two levels, such as a HUD setup or a match timer, belongs in a reusable actor, the game mode, or the game state instead.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/gameplay-framework-in-unreal-engine?application_version=5.8",
+    "related": [
+      "level",
+      "blueprint-vs-cpp",
+      "game-mode-base"
+    ]
+  },
+  {
+    "id": "play-in-editor",
+    "term": "Play In Editor",
+    "aliases": [
+      "PIE",
+      "Number of Players",
+      "Play As Listen Server",
+      "Play As Client",
+      "Play Standalone"
+    ],
+    "category": "editor workflow",
+    "short": "Running the game inside the editor, with options for several players and different network setups.",
+    "long": "Press Play and the editor creates a separate play world from your level, so changes made while playing are thrown away when you stop. The play options let you choose the number of players and a net mode, such as Play As Listen Server, which opens extra windows as clients so you can test multiplayer on one machine. Simulate runs the world without possessing a pawn, which is useful for watching AI.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/networking-and-multiplayer-in-unreal-engine?application_version=5.8",
+    "related": [
+      "net-mode",
+      "listen-server",
+      "world"
+    ]
+  },
+  {
+    "id": "savegame",
+    "term": "Save Game",
+    "aliases": [
+      "USaveGame",
+      "SaveGameToSlot",
+      "LoadGameFromSlot",
+      "CreateSaveGameObject",
+      "save slot"
+    ],
+    "category": "framework",
+    "short": "A UObject subclass whose UPROPERTY fields get written to disk and read back to save player progress.",
+    "long": "Make UDojoSaveGame : public USaveGame with UPROPERTY fields such as unlocked levels and best times. To save, create one with UGameplayStatics::CreateSaveGameObject, fill it, and call SaveGameToSlot with a slot name and user index. To load, check DoesSaveGameExist and call LoadGameFromSlot, then cast. Async versions avoid hitches. Saving actor pointers does not work across sessions; save stable IDs, like an FName or a gameplay tag, and look things up again on load.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/saving-and-loading-your-game-in-unreal-engine?application_version=5.8",
+    "related": [
+      "game-instance-subsystem",
+      "uproperty",
+      "gameplay-statics",
+      "gameplay-tags"
+    ]
+  },
+  {
+    "id": "gameplay-tags",
+    "term": "Gameplay Tags",
+    "aliases": [
+      "FGameplayTag",
+      "FGameplayTagContainer",
+      "UE_DEFINE_GAMEPLAY_TAG"
+    ],
+    "category": "framework",
+    "short": "Hierarchical labels like Status.Stunned or Damage.Fire that you define once and attach to things to describe them.",
+    "long": "Instead of a growing pile of bools or string comparisons, gameplay tags give you a shared, typo-proof vocabulary. Tags are defined in project settings or in C++, are grouped by dots, and live in an FGameplayTagContainer on whatever needs them. HasTag answers whether something is stunned, and matching a parent tag such as Damage catches Damage.Fire and Damage.Ice too. They are central to the Gameplay Ability System but useful on their own; add the GameplayTags module to Build.cs.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/using-gameplay-tags-in-unreal-engine?application_version=5.8",
+    "related": [
+      "gas",
+      "fname",
+      "savegame",
+      "build-cs"
+    ]
+  },
+  {
+    "id": "gas",
+    "term": "Gameplay Ability System",
+    "aliases": [
+      "GAS",
+      "UAbilitySystemComponent",
+      "Gameplay Ability",
+      "Gameplay Effect",
+      "Attribute Set"
+    ],
+    "category": "framework",
+    "short": "Epic's large plugin framework for abilities, stats, buffs, cooldowns, and their networking.",
+    "long": "GAS bundles several ideas: abilities are actions like Dash or Fireball, attribute sets hold numbers like Health and Mana, gameplay effects change those numbers or apply tags, and cues play the visuals. An ability system component on an actor ties it together and handles replication and prediction. It is powerful and used in shipped games, but it has a steep learning curve, so build a small ability system by hand first and then study GAS to see the same patterns at scale.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/understanding-the-unreal-engine-gameplay-ability-system?application_version=5.8",
+    "related": [
+      "gameplay-tags",
+      "replication",
+      "actor-component"
+    ]
+  },
+  {
+    "id": "automation-test",
+    "term": "Automation Test",
+    "aliases": [
+      "IMPLEMENT_SIMPLE_AUTOMATION_TEST",
+      "IMPLEMENT_COMPLEX_AUTOMATION_TEST",
+      "Automation Spec",
+      "RunTest",
+      "TestEqual",
+      "WITH_DEV_AUTOMATION_TESTS"
+    ],
+    "category": "debugging",
+    "short": "A C++ test registered with the engine's automation framework, run from the editor or the command line.",
+    "long": "IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojoHealthDamageTest, \"Dojo.Health.TakesDamage\", flags) declares a test, and its RunTest function sets up objects, calls the code, and checks results with helpers like TestEqual and TestTrue. Wrap tests in #if WITH_DEV_AUTOMATION_TESTS so they never ship. Run them from the Session Frontend's automation tab or headless from the command line, which is how a continuous build can prove a health component still clamps at zero after every change.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/write-cplusplus-tests-in-unreal-engine?application_version=5.8",
+    "related": [
+      "check-macro",
+      "ue-log",
+      "build-configurations"
+    ]
+  },
+  {
+    "id": "gameplay-statics",
+    "term": "Gameplay Statics",
+    "aliases": [
+      "UGameplayStatics",
+      "GetPlayerController",
+      "GetPlayerCharacter",
+      "GetGameMode",
+      "PlaySoundAtLocation",
+      "ApplyDamage"
+    ],
+    "category": "framework",
+    "short": "A class full of static helper functions for common gameplay tasks, usable from C++ and Blueprints.",
+    "long": "UGameplayStatics is where you find quick answers: GetPlayerController, GetPlayerCharacter, GetGameMode, GetGameState, OpenLevel, PlaySoundAtLocation, SpawnEmitterAtLocation, ApplyDamage, and save game helpers. Most functions take a world context object as the first argument, usually this, so they know which world to act on. They are convenient, but calling GetAllActorsOfClass every frame is slow; cache results or use a registry instead.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UGameplayStatics?application_version=5.8",
+    "related": [
+      "open-level",
+      "savegame",
+      "kismet-math-library",
+      "game-mode-base"
+    ]
+  },
+  {
+    "id": "gengine",
+    "term": "GEngine",
+    "aliases": [
+      "UEngine",
+      "global engine pointer"
+    ],
+    "category": "framework",
+    "short": "A global pointer to the running engine object, used for engine-wide services such as on-screen debug messages.",
+    "long": "GEngine points at the single UEngine instance. Gameplay code mostly touches it for AddOnScreenDebugMessage and for engine subsystems, and it can be null very early in startup, so check it before use. It is a global, which makes it convenient and also easy to overuse; prefer reaching things through the world, the game instance, or a subsystem so dependencies stay visible.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UEngine?application_version=5.8",
+    "related": [
+      "on-screen-debug-message",
+      "engine-subsystem",
+      "world"
+    ]
+  },
+  {
+    "id": "constructor-helpers",
+    "term": "ConstructorHelpers",
+    "aliases": [
+      "ConstructorHelpers::FObjectFinder",
+      "ConstructorHelpers::FClassFinder",
+      "asset path"
+    ],
+    "category": "object model",
+    "short": "Constructor-only helpers that look up an asset or class by its content path.",
+    "long": "FClassFinder and FObjectFinder let a constructor grab an asset by path, for example a default pawn Blueprint for a game mode. They work, and templates use them, but the path is a hardcoded string: rename or move the asset and the lookup fails, sometimes only in a packaged build. Prefer exposing a TSubclassOf or TObjectPtr property and assigning it in a Blueprint child or the class defaults. Use the helpers only in constructors.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/ConstructorHelpers?application_version=5.8",
+    "related": [
+      "tsubclassof",
+      "cdo",
+      "blueprint-class",
+      "default-pawn-class"
+    ]
+  },
+  {
+    "id": "forceinline",
+    "term": "FORCEINLINE",
+    "aliases": [
+      "FORCEINLINE getter",
+      "inline function"
+    ],
+    "category": "cpp idiom",
+    "short": "A macro that strongly asks the compiler to paste a small function's body at each call site instead of calling it.",
+    "long": "Tiny getters that return a member, such as FORCEINLINE UCameraComponent* GetCamera() const { return Camera; }, are typical candidates. Inlining removes the cost of a function call, which matters only in very hot code, and modern compilers already inline small functions on their own. Use it for trivial one-liners in headers; putting it on large functions bloats the code. Marking such getters const is a good habit.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/epic-cplusplus-coding-standard-for-unreal-engine?application_version=5.8",
+    "related": [
+      "allowprivateaccess",
+      "coding-standard",
+      "forward-declaration"
+    ]
+  },
+  {
+    "id": "forward-declaration",
+    "term": "Forward Declaration",
+    "aliases": [
+      "class UCameraComponent;",
+      "forward declare"
+    ],
+    "category": "cpp idiom",
+    "short": "Telling the compiler a class exists without including its header, so headers stay light and builds stay fast.",
+    "long": "If your header only stores a pointer to a camera component, write class UCameraComponent; near the top instead of including its header, and include the real header in the .cpp where you actually call its functions. This cuts the chain of headers every other file must parse, which noticeably speeds up builds in big projects, and avoids circular includes between two classes that reference each other.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/epic-cplusplus-coding-standard-for-unreal-engine?application_version=5.8",
+    "related": [
+      "generated-h-include",
+      "coding-standard",
+      "forceinline"
+    ]
+  },
+  {
+    "id": "super",
+    "term": "Super",
+    "aliases": [
+      "Super::BeginPlay",
+      "Super::Tick"
+    ],
+    "category": "cpp idiom",
+    "short": "An alias for the parent class, used to call the parent's version of a function you have overridden.",
+    "long": "Unreal's reflection gives every class a Super typedef for its direct parent. When you override BeginPlay, Tick, EndPlay, or SetupPlayerInputComponent, call Super::BeginPlay() and so on so the parent's work still happens; skipping it can silently break Blueprint events, ticking, or input. Mark the override with the override keyword so the compiler catches signature typos.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-actor-lifecycle?application_version=5.8",
+    "related": [
+      "beginplay",
+      "tick",
+      "endplay",
+      "setup-player-input-component"
+    ],
+    "linkMode": "code-only"
+  },
+  {
+    "id": "object-pool",
+    "term": "Object Pool",
+    "aliases": [
+      "pooling",
+      "projectile pool",
+      "actor pool"
+    ],
+    "category": "memory",
+    "short": "Reusing a set of already spawned actors instead of spawning and destroying them over and over.",
+    "long": "A tower that fires ten fireballs a second spawns and destroys hundreds of actors a minute, which costs time and creates garbage collection work. A pool keeps inactive fireballs around: to fire, take one from the pool, reset it, and show it; when it hits or expires, hide it, turn off its collision and ticking, and put it back. Store the pool in a UPROPERTY TArray so the collector knows about it, and give pooled actors a clear Reset function.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/spawning-actors-in-unreal-engine?application_version=5.8",
+    "related": [
+      "spawnactor",
+      "destroy",
+      "primary-actor-tick",
+      "tarray",
+      "garbage-collection"
+    ]
+  },
+  {
+    "id": "console-command",
+    "term": "Console Command",
+    "aliases": [
+      "stat fps",
+      "stat unit",
+      "ConsoleCommand",
+      "CVar",
+      "console variable",
+      "r.SetRes",
+      "DumpConsoleCommands"
+    ],
+    "category": "debugging",
+    "short": "A text command typed into the in-game console, with the tilde key, to inspect or change the running game.",
+    "long": "Press the tilde key and type stat fps to see frame rate, stat unit to see where frame time goes, or r.SetRes 1280x720w to resize the window. Console variables, often called CVars, are settings you can read and change this way, and you can define your own for debug toggles. From C++, APlayerController::ConsoleCommand runs a command programmatically. Console access is stripped from Shipping builds by default.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/stat-commands-in-unreal-engine?application_version=5.8",
+    "related": [
+      "profiling",
+      "log-category",
+      "build-configurations",
+      "open-level"
+    ]
+  },
+  {
+    "id": "profiling",
+    "term": "Profiling",
+    "aliases": [
+      "Unreal Insights",
+      "stat commands",
+      "GPU Visualizer",
+      "performance profiling",
+      "view modes"
+    ],
+    "category": "debugging",
+    "short": "Measuring where frame time and memory go so you optimize the real bottleneck instead of guessing.",
+    "long": "Start broad with stat unit, which splits frame time into game thread, render thread, and GPU, so you know which side is slow. Then dig deeper: Unreal Insights records detailed timing and memory traces you can scrub through, and the GPU Visualizer breaks down rendering cost. View modes like shader complexity reveal expensive materials. Profile in a Development build rather than the editor when you can, since the editor adds its own overhead.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-insights-in-unreal-engine?application_version=5.8",
+    "related": [
+      "console-command",
+      "build-configurations",
+      "tick",
+      "object-pool"
+    ]
+  },
+  {
+    "id": "packaging",
+    "term": "Packaging",
+    "aliases": [
+      "Package Project",
+      "cooking",
+      "List of maps to include",
+      "Game Default Map"
+    ],
+    "category": "build",
+    "short": "Turning the project into a standalone game build that runs without the editor.",
+    "long": "Packaging compiles the game target, cooks content into platform-ready formats, and bundles everything into an output folder with an executable. Before packaging, set Maps and Modes, such as the default game mode and the map the game starts on, and list every map that must be included, because maps loaded only by name might otherwise be left out. Pick the configuration: Development for testing with a console, Shipping for release.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/packaging-your-project?application_version=5.8",
+    "related": [
+      "build-configurations",
+      "level",
+      "default-pawn-class",
+      "primary-data-asset"
+    ]
+  },
+  {
+    "id": "coding-standard",
+    "term": "Epic C++ Coding Standard",
+    "aliases": [
+      "naming conventions",
+      "A prefix",
+      "U prefix",
+      "F prefix",
+      "E prefix",
+      "I prefix",
+      "T prefix",
+      "b prefix"
+    ],
+    "category": "cpp idiom",
+    "short": "Epic's style rules for Unreal C++, including the type prefixes A, U, F, E, I, T, and b for booleans.",
+    "long": "The prefixes carry meaning the tools rely on: A for actors, U for other UObjects, F for structs and plain classes, E for enums, I for interfaces, T for templates, and b for bool variables such as bIsDead. Leaving off a prefix on a reflected class causes header tool errors. The standard also covers braces on their own lines, PascalCase names, and preferring engine containers. Following it makes your code read like the engine's own, which helps every reader.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/epic-cplusplus-coding-standard-for-unreal-engine?application_version=5.8",
+    "related": [
+      "uclass",
+      "ustruct",
+      "uenum",
+      "tobjectptr",
+      "forward-declaration"
+    ]
+  },
+  {
+    "id": "possession",
+    "term": "Possession",
+    "aliases": [
+      "Possess",
+      "UnPossess",
+      "OnPossess",
+      "AutoPossessPlayer",
+      "AutoPossessAI",
+      "GetPawn",
+      "GetController"
+    ],
+    "category": "framework",
+    "short": "A controller taking control of a pawn, so the controller's input or AI decisions drive that pawn.",
+    "long": "Controller->Possess(Pawn) links mind and body. Player controllers usually possess the default pawn at spawn; AI controllers possess a pawn when it is placed or spawned, depending on its AutoPossessAI setting. OnPossess is a good hook for setup that needs both, such as adding an input mapping context. GetPawn on the controller and GetController on the pawn walk the link in either direction, and you will usually cast the result to your own class.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/controllers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "player-controller",
+      "ai-controller",
+      "pawn",
+      "cast"
+    ]
+  },
+  {
+    "id": "default-pawn-class",
+    "term": "Default Pawn Class",
+    "aliases": [
+      "DefaultPawnClass",
+      "PlayerControllerClass",
+      "GameStateClass",
+      "PlayerStateClass",
+      "HUDClass",
+      "Maps and Modes"
+    ],
+    "category": "framework",
+    "short": "The game mode setting that picks which pawn class each player spawns as, alongside the other framework class choices.",
+    "long": "A game mode lists the classes the framework should create: DefaultPawnClass for the player's body, PlayerControllerClass, GameStateClass, PlayerStateClass, and HUDClass. Set them in a Blueprint child of your game mode or in the C++ constructor, and choose the game mode per project in Maps and Modes or per level in World Settings. If your new character never appears when you press Play, this is the first setting to check.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/setting-up-a-game-mode-in-unreal-engine?application_version=5.8",
+    "related": [
+      "game-mode-base",
+      "game-state-base",
+      "player-controller",
+      "constructor-helpers",
+      "packaging"
+    ]
+  }
+]

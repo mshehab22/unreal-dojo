@@ -1,0 +1,2152 @@
+[
+  {
+    "id": "game-loop",
+    "title": "Game Loop",
+    "intent": "Give the game a heartbeat of its own: every frame the engine reads input, moves the world forward by the time that really passed, and draws, so a torch flickers and a patrol walks whether or not the player touches the pad, at the same pace on every machine.",
+    "problem": "A program that waits for input before doing anything cannot animate a torch, move an enemy, or count down a timer while the player sits still. The game needs its own heartbeat, and that heartbeat has to produce the same gameplay on a fast desktop and a slow laptop.",
+    "unrealForm": "You do not write this loop in Unreal; the engine owns it. Each frame the engine ticks the world, which runs actors and components through tick groups (pre physics, during physics, post physics, post update work) while the render thread draws the previous frame. Your code receives DeltaSeconds and must scale motion by it. Fixed frame rate settings, physics substepping, and the async physics tick give fixed-step behavior when determinism matters.",
+    "whenNot": "You never skip the loop itself; you skip writing your own. Building a second hand-rolled loop inside an Unreal actor (a while loop that blocks the game thread) freezes the editor. Only write a fixed-step accumulator when gameplay must be deterministic, such as replays or lockstep networking.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "game-loop-recall-1",
+        "type": "multiple-choice",
+        "prompt": "A projectile moves 10 units every Tick with no reference to DeltaSeconds. What happens on a machine running at twice the frame rate?",
+        "choices": [
+          "It moves twice as fast",
+          "It moves at the same speed because Tick is throttled",
+          "It moves half as fast",
+          "It stops when the frame rate passes 60"
+        ],
+        "answerIndex": 0,
+        "explanation": "Movement per frame times frames per second is speed. Doubling the frames doubles the distance unless you multiply by DeltaSeconds."
+      },
+      {
+        "id": "game-loop-recall-2",
+        "type": "fill-blank",
+        "prompt": "To make a rotation speed of 90 degrees per second frame-rate independent inside Tick, multiply the speed by ___.",
+        "acceptedAnswers": [
+          "DeltaSeconds",
+          "DeltaTime",
+          "delta time",
+          "the delta time"
+        ],
+        "explanation": "DeltaSeconds is the real time the last frame took, so speed times DeltaSeconds is the distance for that frame."
+      },
+      {
+        "id": "game-loop-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, explain why a deterministic replay system usually wants a fixed time step instead of the raw frame delta.",
+        "modelAnswer": "With a fixed step every playback advances the simulation by identical increments, so the same inputs produce the same results no matter how fast each machine renders.",
+        "rubric": [
+          "Mentions identical or repeatable steps",
+          "Connects that to the same inputs giving the same outcome",
+          "Notes that frame delta varies by machine or by frame"
+        ],
+        "explanation": "Variable deltas make floating point results drift between runs; a fixed step removes that source of difference."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "game-loop-scenario-1",
+        "type": "which-pattern",
+        "prompt": "Your lockstep RTS sends only player orders over the network, and every client must simulate identical unit positions. Rendering can run at any frame rate. Which pattern decision is at the heart of this?",
+        "choices": [
+          "command",
+          "double-buffer",
+          "game-loop",
+          "update-method"
+        ],
+        "answer": "game-loop",
+        "distractorNotes": [
+          {
+            "choice": "update-method",
+            "why": "Each unit can still update itself, but that alone says nothing about how time advances; the key choice is a fixed simulation step decoupled from rendering."
+          },
+          {
+            "choice": "double-buffer",
+            "why": "Buffering state avoids reading half-updated data but does not make time steps identical across machines."
+          },
+          {
+            "choice": "command",
+            "why": "Orders as commands help send them over the wire, yet clients still diverge if their time steps differ."
+          }
+        ],
+        "explanation": "The loop's time-step policy (fixed simulation step, variable render) is what keeps clients in sync."
+      },
+      {
+        "id": "game-loop-scenario-2",
+        "type": "which-pattern",
+        "prompt": "A designer reports that the slow-motion power-up makes the door timer finish early on high-end PCs but not on consoles. You suspect how time is measured per frame. Which pattern's concerns are you debugging?",
+        "choices": [
+          "dirty-flag",
+          "game-loop",
+          "observer",
+          "state"
+        ],
+        "answer": "game-loop",
+        "distractorNotes": [
+          {
+            "choice": "dirty-flag",
+            "why": "A dirty flag caches derived values; the bug here is time accumulation per frame, not a stale cache."
+          },
+          {
+            "choice": "state",
+            "why": "The door may have states, but the timing difference comes from how elapsed time is measured, not from state transitions."
+          },
+          {
+            "choice": "observer",
+            "why": "Nothing here is about who gets notified; it is about how much time each frame represents."
+          }
+        ],
+        "explanation": "Frame-time handling (time dilation, delta accumulation) belongs to the Game Loop pattern."
+      }
+    ]
+  },
+  {
+    "id": "update-method",
+    "title": "Update Method",
+    "intent": "Let each actor carry the code for its own next moment, so the engine can walk the list of live actors every frame and ask each one to take one small step of whatever it is doing.",
+    "problem": "A world full of patrolling guards, spinning pickups, and ticking bombs cannot be written as one big function that knows about every object. Each object needs to carry its own behavior and remember where it left off between frames.",
+    "unrealForm": "AActor::Tick and UActorComponent::TickComponent are this pattern, with PrimaryActorTick.bCanEverTick to opt in, tick intervals to slow it down, tick groups and tick prerequisites to order it, and SetActorTickEnabled to put idle actors to sleep. Timers and latent actions replace many countdowns that beginners write by hand inside Tick.",
+    "whenNot": "Do not tick things that only change on events: a chest that opens when used should react to the use call, not poll every frame. Thousands of identical agents should live in one manager's array or in Mass instead of thousands of ticking actors.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "update-method-recall-1",
+        "type": "multiple-choice",
+        "prompt": "Which setting must be true in an actor's constructor for its Tick function to run at all?",
+        "choices": [
+          "bAllowTickOnDedicatedServer",
+          "PrimaryActorTick.bCanEverTick",
+          "bReplicates",
+          "bGenerateOverlapEvents"
+        ],
+        "answerIndex": 1,
+        "explanation": "PrimaryActorTick.bCanEverTick registers the tick function; without it Tick is never called."
+      },
+      {
+        "id": "update-method-recall-2",
+        "type": "spot-the-bug",
+        "prompt": "This manager ticks a list of hazards and removes any that expired. One line can crash or skip elements. Which line?",
+        "code": "void ADojoHazardManager::Tick(float DeltaSeconds)\n{\n    Super::Tick(DeltaSeconds);\n    for (int32 Index = 0; Index < Hazards.Num(); ++Index)\n    {\n        Hazards[Index]->Advance(DeltaSeconds);\n        if (Hazards[Index]->IsExpired()) { Hazards.RemoveAt(Index); }\n    }\n}",
+        "bugLine": 7,
+        "fix": "Iterate backward, or collect expired hazards and remove them after the loop, so removing an element does not skip the one that slid into its slot.",
+        "explanation": "Removing during a forward loop shifts the next element into the current index, which the increment then skips."
+      },
+      {
+        "id": "update-method-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, say why a timer from FTimerManager is often better than counting down a float inside Tick.",
+        "modelAnswer": "A timer fires once at the right moment without spending a function call every frame, and it keeps the countdown logic out of Tick.",
+        "rubric": [
+          "Mentions avoiding per-frame work",
+          "Mentions that the callback fires when time is up",
+          "Optionally mentions cleaner code"
+        ],
+        "explanation": "Ticking only to count down wastes frames; the timer manager already tracks time for you."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "update-method-scenario-1",
+        "type": "which-pattern",
+        "prompt": "A tower defense map has 40 turrets, each needing to rotate toward its target and fire on its own cooldown every frame. What is the natural pattern for giving each turret its behavior?",
+        "choices": [
+          "event-queue",
+          "observer",
+          "singleton",
+          "update-method"
+        ],
+        "answer": "update-method",
+        "distractorNotes": [
+          {
+            "choice": "observer",
+            "why": "Turrets might listen for enemies entering range, but continuous aiming and cooldowns still need a per-frame update."
+          },
+          {
+            "choice": "event-queue",
+            "why": "Queuing events defers messages; it does not give each turret a per-frame step."
+          },
+          {
+            "choice": "singleton",
+            "why": "A single global turret manager hides the behavior instead of letting each turret own it."
+          }
+        ],
+        "explanation": "Each turret advancing itself one frame at a time is the Update Method; in Unreal that is the actor or component Tick."
+      },
+      {
+        "id": "update-method-scenario-2",
+        "type": "multiple-choice",
+        "prompt": "Your village has 300 lanterns that only change when the day-night cycle flips, yet profiling shows 300 Tick calls per frame doing nothing. What should the lanterns do instead?",
+        "choices": [
+          "Keep ticking but return early when nothing changed",
+          "Raise their tick interval to half a second",
+          "Disable tick and bind to the day-night cycle's delegate, updating only when it fires",
+          "Move all 300 into one manager actor that ticks them"
+        ],
+        "answerIndex": 2,
+        "explanation": "Update Method is for things that change every frame. Event-driven objects should turn off tick and react to a delegate; an early return or a longer interval still pays for the calls."
+      }
+    ]
+  },
+  {
+    "id": "double-buffer",
+    "title": "Double Buffer",
+    "intent": "Keep two copies of a piece of state, let every reader look at the finished copy while the next one is being built, and flip the two in one move so nobody ever sees half a change.",
+    "problem": "If systems read state while another system is halfway through updating it, results depend on update order: the first cell in a simulation grid sees old neighbors and the last sees new ones, and a renderer may draw half a frame.",
+    "unrealForm": "The engine double and triple buffers the screen through the swap chain, and the render thread works on a snapshot of the previous frame through scene proxies. Physics results are read from the last completed step. In gameplay code you write it yourself for cellular or crowd simulations: two TArray buffers, read from Current, write to Next, then Swap.",
+    "whenNot": "Skip it when memory for a second copy is too costly or when sequential, in-order updates are the behavior you actually want, such as a turn-based board where units should see moves made earlier in the same turn.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "double-buffer-recall-1",
+        "type": "fill-blank",
+        "prompt": "In a double buffer, readers always use the ___ buffer while writers fill the next one.",
+        "acceptedAnswers": [
+          "current",
+          "front",
+          "current buffer",
+          "front buffer"
+        ],
+        "explanation": "Readers only ever touch the complete, current copy; writes go to the other one."
+      },
+      {
+        "id": "double-buffer-recall-2",
+        "type": "multiple-choice",
+        "prompt": "What operation ends each step of a double-buffered simulation?",
+        "choices": [
+          "Clearing both buffers",
+          "Copying next into current element by element while readers wait",
+          "Locking the current buffer for the next frame",
+          "Swapping which buffer is current and which is next"
+        ],
+        "answerIndex": 3,
+        "explanation": "A swap is cheap (two pointers or Swap on arrays) and makes the finished state visible all at once."
+      },
+      {
+        "id": "double-buffer-recall-3",
+        "type": "spot-the-bug",
+        "prompt": "This Game of Life step is meant to be order independent. Which line breaks that?",
+        "code": "void ADojoLifeGrid::Step()\n{\n    for (int32 Index = 0; Index < CellCount; ++Index)\n    {\n        const int32 Alive = CountLiveNeighbors(Current, Index);\n        Current[Index] = DecideNextState(Current[Index], Alive);\n    }\n    Swap(Current, Next);\n}",
+        "bugLine": 6,
+        "fix": "Write the result into Next[Index], not Current[Index], so later cells still read the old generation.",
+        "explanation": "Writing into the buffer you are reading from lets later cells see a mix of old and new generations."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "double-buffer-scenario-1",
+        "type": "which-pattern",
+        "prompt": "A falling-sand toy updates a 256 by 256 grid each frame. Players notice sand drifts left because cells are processed left to right. Which pattern removes the order bias?",
+        "choices": [
+          "dirty-flag",
+          "double-buffer",
+          "spatial-partition",
+          "update-method"
+        ],
+        "answer": "double-buffer",
+        "distractorNotes": [
+          {
+            "choice": "update-method",
+            "why": "Giving each cell an update function keeps the same ordering problem."
+          },
+          {
+            "choice": "spatial-partition",
+            "why": "Partitioning speeds up neighbor lookups but does not stop cells reading half-updated neighbors."
+          },
+          {
+            "choice": "dirty-flag",
+            "why": "Skipping unchanged cells saves work but cells still see partial updates."
+          }
+        ],
+        "explanation": "Reading from one generation and writing the next makes every cell see the same snapshot."
+      },
+      {
+        "id": "double-buffer-scenario-2",
+        "type": "which-pattern",
+        "prompt": "Two AI guards decide each frame whether to step into the same doorway. You want both decisions based on where everyone stood at the start of the frame, not on who ticked first. Which pattern fits?",
+        "choices": [
+          "double-buffer",
+          "event-queue",
+          "observer",
+          "state"
+        ],
+        "answer": "double-buffer",
+        "distractorNotes": [
+          {
+            "choice": "state",
+            "why": "Each guard may have states, but the problem is what world snapshot they read."
+          },
+          {
+            "choice": "event-queue",
+            "why": "Deferring messages helps decouple senders, but the guards still read positions mid-update."
+          },
+          {
+            "choice": "observer",
+            "why": "Notifying guards of moves would make results depend on notification order, the opposite of the goal."
+          }
+        ],
+        "explanation": "Decisions read from the previous frame's positions and write into the next frame's positions."
+      }
+    ]
+  },
+  {
+    "id": "observer",
+    "title": "Observer",
+    "intent": "Let a gameplay object shout \"this just happened\" into a delegate and move on, while the HUD, audio, and achievements each decide for themselves whether to listen.",
+    "problem": "When the player picks up the hundredth coin, the achievement system, the HUD, and the audio system all want to know. If the coin pickup code calls each of them directly, gameplay code ends up depending on every system that cares, and every new listener means editing the pickup.",
+    "unrealForm": "Delegates are Unreal's observer lists. DECLARE_MULTICAST_DELEGATE for C++ listeners, DECLARE_DYNAMIC_MULTICAST_DELEGATE for events Blueprints can bind. Built-in subjects include OnComponentBeginOverlap, OnTakeAnyDamage, and OnDestroyed. AddUObject and AddDynamic bind safely to UObjects, FDelegateHandle lets a listener unsubscribe, and Broadcast notifies everyone.",
+    "whenNot": "Inside one small feature where both ends live in the same class, a direct call is easier to read and debug. Avoid it when the sender needs an answer back, when the listener must run later (use Event Queue), or in tight loops where broadcasting to many listeners per element costs too much.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "observer-recall-1",
+        "type": "multiple-choice",
+        "prompt": "Which delegate type can a Blueprint bind to in the editor's event graph?",
+        "choices": [
+          "DECLARE_DYNAMIC_MULTICAST_DELEGATE with a BlueprintAssignable UPROPERTY",
+          "DECLARE_DELEGATE",
+          "DECLARE_MULTICAST_DELEGATE",
+          "TFunction"
+        ],
+        "answerIndex": 0,
+        "explanation": "Only dynamic delegates are reflected, and BlueprintAssignable exposes the multicast one to Blueprint graphs."
+      },
+      {
+        "id": "observer-recall-2",
+        "type": "spot-the-bug",
+        "prompt": "This HUD widget listens to the player's health and stops listening when it is destroyed. Exactly one line is wrong. Which one?",
+        "code": "void UDojoHealthBar::Setup(UDojoHealthComponent* Health)\n{\n    WatchedHealth = Health;\n    HealthHandle = Health->OnHealthChanged.AddUObject(this, &UDojoHealthBar::HandleHealthChanged);\n}\n\nvoid UDojoHealthBar::NativeDestruct()\n{\n    if (WatchedHealth) { WatchedHealth->OnHealthChanged.RemoveAll(WatchedHealth); }\n    Super::NativeDestruct();\n}",
+        "bugLine": 9,
+        "fix": "Call WatchedHealth->OnHealthChanged.Remove(HealthHandle), or RemoveAll(this), so the widget's own binding is the one removed.",
+        "explanation": "RemoveAll removes bindings owned by the object you pass. Passing the health component removes nothing the widget added, so the stale binding stays and stacks again on the next Setup."
+      },
+      {
+        "id": "observer-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, describe what the subject knows about its observers.",
+        "modelAnswer": "The subject only knows it holds a list of callbacks to invoke; it does not know the observers' types or what they do with the news.",
+        "rubric": [
+          "States that the subject does not know concrete listener types",
+          "Mentions a list of bound callbacks or listeners",
+          "Does not claim the subject calls specific systems by name"
+        ],
+        "explanation": "That ignorance is the whole point: the coin does not depend on the achievement system."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "observer-scenario-1",
+        "type": "which-pattern",
+        "prompt": "When a boss's health drops below half, the music should change, the arena lights should flash, and a quest objective should update. The boss class should not include any of those systems' headers. Which pattern?",
+        "choices": [
+          "command",
+          "observer",
+          "singleton",
+          "state"
+        ],
+        "answer": "observer",
+        "distractorNotes": [
+          {
+            "choice": "command",
+            "why": "Command turns actions into objects; the problem here is fanning one event out to unknown listeners."
+          },
+          {
+            "choice": "singleton",
+            "why": "A global manager the boss calls directly still couples the boss to every reaction."
+          },
+          {
+            "choice": "state",
+            "why": "The boss may enter a phase-two state, but telling other systems about it is a notification problem."
+          }
+        ],
+        "explanation": "A multicast delegate such as OnHealthBelowHalf lets each system bind without the boss knowing them."
+      },
+      {
+        "id": "observer-scenario-2",
+        "type": "which-pattern",
+        "prompt": "Your achievement listener reacts to an enemy death by spawning a reward actor, which triggers another death event, which recurses deeply in the same frame and blows the stack. Which pattern would let you defer handling to a safe point?",
+        "choices": [
+          "dirty-flag",
+          "event-queue",
+          "object-pool",
+          "observer"
+        ],
+        "answer": "event-queue",
+        "distractorNotes": [
+          {
+            "choice": "observer",
+            "why": "Observer is what you have now; synchronous callbacks are why it recurses."
+          },
+          {
+            "choice": "dirty-flag",
+            "why": "A dirty flag delays recomputing a value, not handling a stream of events."
+          },
+          {
+            "choice": "object-pool",
+            "why": "Pooling reward actors saves spawn cost but does not break the recursion."
+          }
+        ],
+        "explanation": "Queuing the events and draining them later turns deep recursion into a flat loop. This is where Observer hands off to Event Queue."
+      }
+    ]
+  },
+  {
+    "id": "command",
+    "title": "Command",
+    "intent": "Turn a player or AI action, such as move this unit to that tile, into a value you can hold, so the game can remap it, hand it to a different pawn, record it for a replay, or roll it back.",
+    "problem": "When a key press calls Jump directly, the binding is fixed, only the player can trigger it, and the action vanishes the instant it runs. Rebinding controls, letting an AI reuse the same actions, and undoing a move all need the action to exist as data.",
+    "unrealForm": "Enhanced Input already separates the key from the action through Input Actions and Input Mapping Contexts. Gameplay Abilities are large-scale commands that can be activated, replicated, and cancelled. Editor undo uses FScopedTransaction. What you still build: an undoable gameplay command history (a TArray of TUniquePtr commands plus a cursor), command queues between an AI brain and its pawn, and recorded command streams for replays. Hold actor targets as TWeakObjectPtr if the command outlives the frame.",
+    "whenNot": "If nothing about who acts, which input triggers it, or when it runs needs to change, a direct function call is clearer. Undo only works if every change goes through a command, so do not half-adopt it.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "command-recall-1",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, what is the core idea of the Command pattern?",
+        "modelAnswer": "An action becomes an object, so it can be kept, passed around, delayed, or reversed instead of running and disappearing.",
+        "rubric": [
+          "Says the action or method call becomes an object or data",
+          "Names at least one thing that enables: storing, queuing, undo, or replay"
+        ],
+        "explanation": "A method call you can hold in a variable is the whole pattern."
+      },
+      {
+        "id": "command-recall-2",
+        "type": "multiple-choice",
+        "prompt": "What must an undoable move command record before it moves the unit?",
+        "choices": [
+          "The unit's class",
+          "The unit's previous cell",
+          "The time the command was created",
+          "A full copy of the level"
+        ],
+        "answerIndex": 1,
+        "explanation": "Undo restores exactly what Execute changed, so the command saves that slice of state first."
+      },
+      {
+        "id": "command-recall-3",
+        "type": "spot-the-bug",
+        "prompt": "This history supports undo and redo, and a new command after an undo should discard the redo tail. Exactly one line is wrong. Which one?",
+        "code": "void FDojoCommandHistory::Do(TUniquePtr<IDojoCommand> Command)\n{\n    Items.SetNum(Cursor + 1);\n    Command->Execute();\n    Items.Add(MoveTemp(Command));\n    Cursor = Items.Num();\n}",
+        "bugLine": 3,
+        "fix": "Use Items.SetNum(Cursor) so everything at and past the cursor (the undone commands) is dropped.",
+        "explanation": "Cursor counts the commands still applied. Keeping Cursor + 1 entries leaves one undone command in the history, or adds an empty slot when nothing was undone."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "command-scenario-1",
+        "type": "which-pattern",
+        "prompt": "A tactics game lets the player plan a whole turn and step back through moves before pressing End Turn. Which pattern?",
+        "choices": [
+          "command",
+          "observer",
+          "prototype",
+          "state"
+        ],
+        "answer": "command",
+        "distractorNotes": [
+          {
+            "choice": "state",
+            "why": "The game may have a planning state, but stepping back through moves needs each move stored with its undo data."
+          },
+          {
+            "choice": "prototype",
+            "why": "Cloning the board each move would work but wastes memory compared to storing what each move changed."
+          },
+          {
+            "choice": "observer",
+            "why": "Notifying listeners of moves does not let you reverse them."
+          }
+        ],
+        "explanation": "Each move is a command with Execute and Undo, kept in a history with a cursor."
+      },
+      {
+        "id": "command-scenario-2",
+        "type": "which-pattern",
+        "prompt": "You want a scripted demo mode where the same character is driven by a recorded list of actions instead of the keyboard, without changing the character class. Which pattern?",
+        "choices": [
+          "command",
+          "service-locator",
+          "state",
+          "subclass-sandbox"
+        ],
+        "answer": "command",
+        "distractorNotes": [
+          {
+            "choice": "subclass-sandbox",
+            "why": "A sandbox base helps write many behaviors but does not make the input source swappable."
+          },
+          {
+            "choice": "service-locator",
+            "why": "Locating an input service hides the dependency but does not turn actions into replayable data."
+          },
+          {
+            "choice": "state",
+            "why": "State changes how the character responds to input; here the question is who produces the input."
+          }
+        ],
+        "explanation": "Commands that take the actor as a parameter can come from a keyboard, an AI, or a recording."
+      }
+    ]
+  },
+  {
+    "id": "event-queue",
+    "title": "Event Queue",
+    "intent": "Put a mailbox between the code that raises an event and the code that reacts to it, so the reaction happens at a moment the receiver picks, such as the end of the frame, instead of in the middle of the sender's call.",
+    "problem": "Observer delivers news instantly, inside the sender's call. Sometimes that is the wrong moment: a burst of explosions all ask for the same sound in one frame, a handler spawns actors while physics iterates, or work arrives on a background thread that must be handled on the game thread.",
+    "unrealForm": "Unreal gives you the containers (TQueue, TCircularQueue) and several engine-level queues: AsyncTask to the game thread, FTimerManager, and the audio engine's concurrency rules. What you build: a gameplay event queue a subsystem drains at end of tick, a ring buffer that merges duplicate requests (damage numbers, UI toasts, sound cues), and a thread-safe handoff from worker threads.",
+    "whenNot": "If listeners can safely react immediately, a delegate is simpler. If the sender needs a reply, a queue takes that away. Remember events must carry all the data they need because the world may change before they are handled, and a central queue is still global state.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "event-queue-recall-1",
+        "type": "multiple-choice",
+        "prompt": "What does an Event Queue add that a plain multicast delegate does not?",
+        "choices": [
+          "Type safety",
+          "Blueprint exposure",
+          "Decoupling in time, so handling happens later than sending",
+          "Automatic replication"
+        ],
+        "answerIndex": 2,
+        "explanation": "Observer decouples who; Event Queue also decouples when."
+      },
+      {
+        "id": "event-queue-recall-2",
+        "type": "fill-blank",
+        "prompt": "A fixed-size queue that wraps its head and tail indices around the end of an array is called a ___ buffer.",
+        "acceptedAnswers": [
+          "ring",
+          "circular",
+          "ring buffer",
+          "circular buffer"
+        ],
+        "explanation": "A ring buffer avoids shifting elements and never allocates after setup."
+      },
+      {
+        "id": "event-queue-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, explain why a queued event should carry its data instead of a pointer to look it up later.",
+        "modelAnswer": "By the time the event is handled the actor or value it refers to may have changed or been destroyed, so the event must hold the data it needs.",
+        "rubric": [
+          "Mentions the delay between send and handle",
+          "Mentions the world or source changing or being destroyed",
+          "Concludes the event should be self-contained"
+        ],
+        "explanation": "Time decoupling means the sender's context is gone when the receiver runs."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "event-queue-scenario-1",
+        "type": "which-pattern",
+        "prompt": "A grenade hits fifteen crates in one frame and each crate requests the same breaking sound, which stacks into a deafening spike. You want to merge identical requests and play at most one per frame. Which pattern?",
+        "choices": [
+          "event-queue",
+          "flyweight",
+          "observer",
+          "singleton"
+        ],
+        "answer": "event-queue",
+        "distractorNotes": [
+          {
+            "choice": "observer",
+            "why": "Delegates would fire each request immediately, which is the spike you have now."
+          },
+          {
+            "choice": "flyweight",
+            "why": "Sharing the sound asset saves memory but does not merge the play requests."
+          },
+          {
+            "choice": "singleton",
+            "why": "A global audio manager can still play every request immediately; the merge needs a buffer."
+          }
+        ],
+        "explanation": "Buffer the requests, merge duplicates, and drain once per frame."
+      },
+      {
+        "id": "event-queue-scenario-2",
+        "type": "which-pattern",
+        "prompt": "A pathfinding job on a worker thread finishes and must hand results to the AI controller, which may only be touched on the game thread. Which pattern describes the handoff?",
+        "choices": [
+          "command",
+          "double-buffer",
+          "event-queue",
+          "service-locator"
+        ],
+        "answer": "event-queue",
+        "distractorNotes": [
+          {
+            "choice": "command",
+            "why": "The result could be shaped like a command, but the essential part is the buffer between threads."
+          },
+          {
+            "choice": "double-buffer",
+            "why": "Double buffering swaps whole snapshots; here discrete results flow one way between threads."
+          },
+          {
+            "choice": "service-locator",
+            "why": "Finding the controller is not the problem; delivering on the right thread is."
+          }
+        ],
+        "explanation": "A thread-safe queue (TQueue in single-producer or multi-producer mode) drained on the game thread."
+      }
+    ]
+  },
+  {
+    "id": "state",
+    "title": "State",
+    "intent": "Organize an actor's behavior by the mode it is in right now (a door that is locked, closed, opening, or open), so each mode owns its own reactions and the actor can only move between modes along transitions you wrote down.",
+    "problem": "A character controller grows a pile of booleans (bIsJumping, bIsCrouching, bIsDashing) and every input handler checks combinations of them. Impossible combinations slip through: crouch-jumping mid-dash, or opening a door that is already opening.",
+    "unrealForm": "Movement modes on UCharacterMovementComponent are an enum state machine. Animation Blueprints have visual state machines, and State Trees and Behavior Trees handle AI. In gameplay C++ you write a UENUM for the states plus a switch, or a state object per mode with Enter, Tick, and Exit, and you keep entry and exit actions on the state so transitions stay in one place.",
+    "whenNot": "Two or three independent flags that never conflict do not need a machine. Rich AI that must weigh many goals outgrows a flat state machine; reach for Behavior Trees or State Trees.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "state-recall-1",
+        "type": "multiple-choice",
+        "prompt": "What does a finite state machine guarantee that a set of independent booleans does not?",
+        "choices": [
+          "Faster execution",
+          "Automatic replication",
+          "No need for transitions",
+          "The object is in exactly one state at a time"
+        ],
+        "answerIndex": 3,
+        "explanation": "One current state rules out impossible combinations like jumping and crouching at once."
+      },
+      {
+        "id": "state-recall-2",
+        "type": "fill-blank",
+        "prompt": "A state machine that remembers previous states on a stack so it can return to them (such as resuming a run after firing) is called a ___ automaton.",
+        "acceptedAnswers": [
+          "pushdown",
+          "push-down",
+          "push down"
+        ],
+        "explanation": "Pushing a temporary state and popping back avoids hard-coding where to return."
+      },
+      {
+        "id": "state-recall-3",
+        "type": "spot-the-bug",
+        "prompt": "This door handles the Interact input. Which line allows an illegal transition?",
+        "code": "void ADojoDoor::Interact()\n{\n    switch (State)\n    {\n    case EDojoDoorState::Closed:  BeginOpening(); State = EDojoDoorState::Opening; break;\n    case EDojoDoorState::Open:    BeginClosing(); State = EDojoDoorState::Closing; break;\n    case EDojoDoorState::Locked:  BeginOpening(); State = EDojoDoorState::Opening; break;\n    default: break;\n    }\n}",
+        "bugLine": 7,
+        "fix": "A locked door should ignore Interact (or play a rattle) until it is unlocked; it must not transition to Opening.",
+        "explanation": "Each state decides which inputs it accepts. Locked accepting Interact defeats the lock."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "state-scenario-1",
+        "type": "which-pattern",
+        "prompt": "A vending machine prop has Idle, Taking Coin, Dispensing, and Out Of Stock, and pressing the button means something different in each. Which pattern?",
+        "choices": [
+          "command",
+          "state",
+          "strategy",
+          "type-object"
+        ],
+        "answer": "state",
+        "distractorNotes": [
+          {
+            "choice": "strategy",
+            "why": "Strategy swaps an algorithm chosen from outside; here the object itself moves between modes in response to inputs."
+          },
+          {
+            "choice": "command",
+            "why": "The button press could be a command, but the varying response is about the machine's mode."
+          },
+          {
+            "choice": "type-object",
+            "why": "Type Object describes what kind of machine it is, not the mode it is currently in."
+          }
+        ],
+        "explanation": "Distinct modes with defined transitions are a state machine."
+      },
+      {
+        "id": "state-scenario-2",
+        "type": "which-pattern",
+        "prompt": "A character can run, jump, and slide, and independently aim or not aim with a weapon. Putting every combination into one enum explodes to a dozen states. What variant fixes this?",
+        "choices": [
+          "component",
+          "observer",
+          "state",
+          "subclass-sandbox"
+        ],
+        "answer": "state",
+        "distractorNotes": [
+          {
+            "choice": "component",
+            "why": "Splitting into components helps organize code, but the specific fix is running two state machines side by side."
+          },
+          {
+            "choice": "subclass-sandbox",
+            "why": "A sandbox base does not reduce the number of mode combinations."
+          },
+          {
+            "choice": "observer",
+            "why": "Notifications do not reduce the combinatorial state count."
+          }
+        ],
+        "explanation": "Concurrent state machines: one for movement, one for the weapon, each with its own small set of states."
+      }
+    ]
+  },
+  {
+    "id": "subclass-sandbox",
+    "title": "Subclass Sandbox",
+    "intent": "Give a family of subclasses (traps, abilities, card effects) one base class that hands them a toolbox of protected helpers, so each subclass writes a single override using only those tools and never reaches into engine systems on its own.",
+    "problem": "Fifty superpowers each need to play sounds, spawn effects, and move the hero. If every power reaches into the audio, VFX, and movement systems directly, the coupling spreads across fifty classes, and changing one engine system means touching all of them.",
+    "unrealForm": "UGameplayAbility is the cleanest engine example: subclasses override ActivateAbility and use provided operations such as CommitAbility and ApplyGameplayEffectToOwner. AActor itself gives subclasses GetWorld, timers, and spawn helpers around BeginPlay and Tick. You write your own shallow base classes (UDojoTrapBase with protected helpers like DamageActorsInRadius) and let designers subclass them.",
+    "whenNot": "When the variants differ only in numbers, use data (Type Object) instead of fifty classes. When the base class keeps growing helpers for every new subclass, split helpers into components or provider objects before it becomes a dumping ground.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "subclass-sandbox-recall-1",
+        "type": "multiple-choice",
+        "prompt": "In Subclass Sandbox, which methods are usually protected and non-virtual on the base?",
+        "choices": [
+          "The provided helper operations",
+          "The sandbox method subclasses override",
+          "The constructor only",
+          "Nothing; everything is public"
+        ],
+        "answerIndex": 0,
+        "explanation": "Helpers are protected so only subclasses use them, and non-virtual because they are shared tools, not extension points."
+      },
+      {
+        "id": "subclass-sandbox-recall-2",
+        "type": "fill-blank",
+        "prompt": "In UGameplayAbility, the method a subclass overrides to define what the ability does is ___.",
+        "acceptedAnswers": [
+          "ActivateAbility"
+        ],
+        "explanation": "ActivateAbility is the sandbox method; everything it needs comes from the base."
+      },
+      {
+        "id": "subclass-sandbox-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, explain how Subclass Sandbox reduces coupling.",
+        "modelAnswer": "Subclasses talk only to the base class's helpers, so the coupling to engine systems lives in one place instead of in every subclass.",
+        "rubric": [
+          "Says subclasses depend on the base instead of on many systems",
+          "Names the base as the single place coupling lives"
+        ],
+        "explanation": "Fifty subclasses with one dependency each beats fifty subclasses with five dependencies each."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "subclass-sandbox-scenario-1",
+        "type": "which-pattern",
+        "prompt": "Designers want to author dozens of trap types (spikes, fire jets, falling logs), each with custom logic but all needing damage, sound, and camera shake. Which pattern gives them a safe toolbox?",
+        "choices": [
+          "component",
+          "facade",
+          "subclass-sandbox",
+          "type-object"
+        ],
+        "answer": "subclass-sandbox",
+        "distractorNotes": [
+          {
+            "choice": "type-object",
+            "why": "Type Object fits if traps differ only in data; these need custom logic each."
+          },
+          {
+            "choice": "component",
+            "why": "Components could split capabilities, but the core need is many behavior subclasses sharing helpers."
+          },
+          {
+            "choice": "facade",
+            "why": "A facade simplifies one subsystem's API; here a base class supplies several subsystems to subclasses."
+          }
+        ],
+        "explanation": "A UDojoTrapBase with protected helpers and one overridable Trigger method."
+      },
+      {
+        "id": "subclass-sandbox-scenario-2",
+        "type": "which-pattern",
+        "prompt": "You have 40 enemy subclasses that differ only in health, speed, and mesh, and adding one means a C++ compile. Which pattern should replace the subclasses?",
+        "choices": [
+          "factory-method",
+          "prototype",
+          "subclass-sandbox",
+          "type-object"
+        ],
+        "answer": "type-object",
+        "distractorNotes": [
+          {
+            "choice": "subclass-sandbox",
+            "why": "Sandbox is for varied behavior; these enemies only vary in data."
+          },
+          {
+            "choice": "prototype",
+            "why": "Cloning a template enemy works but a data asset per kind is the cleaner Unreal form."
+          },
+          {
+            "choice": "factory-method",
+            "why": "A factory decides what to create but still needs the kinds defined somewhere."
+          }
+        ],
+        "explanation": "A data asset per enemy kind (Type Object) moves the differences into data designers edit without compiling."
+      }
+    ]
+  },
+  {
+    "id": "component",
+    "title": "Component",
+    "intent": "Assemble an actor from small, self-contained parts such as health, inventory, and interaction, so each capability lives in one reusable class and a crate and a boss can share the same health code without sharing a parent class.",
+    "problem": "A player class that handles input, physics, animation, health, inventory, and sound grows to thousands of lines, and reusing its health logic on a destructible barrel means copying code or inheriting from the player.",
+    "unrealForm": "Unreal is built on this. AActor is the container; UActorComponent holds logic and USceneComponent adds a transform. Engine components include UCharacterMovementComponent, UStaticMeshComponent, and UAbilitySystemComponent. You write UDojoHealthComponent or UDojoInventoryComponent with UCLASS(meta=(BlueprintSpawnableComponent)), find them with FindComponentByClass, and let them talk through delegates or the owner.",
+    "whenNot": "A tiny actor with one job does not need three components and wiring between them. If components constantly reach into each other, the split is in the wrong place.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "component-recall-1",
+        "type": "multiple-choice",
+        "prompt": "Which base class do you derive from for a component that needs a location and can have children attached?",
+        "choices": [
+          "UActorComponent",
+          "USceneComponent",
+          "UObject",
+          "AInfo"
+        ],
+        "answerIndex": 1,
+        "explanation": "USceneComponent adds a transform and attachment; UActorComponent is logic only."
+      },
+      {
+        "id": "component-recall-2",
+        "type": "fill-blank",
+        "prompt": "To fetch a health component from another actor at runtime you can call Other->___<UDojoHealthComponent>().",
+        "acceptedAnswers": [
+          "FindComponentByClass",
+          "GetComponentByClass"
+        ],
+        "explanation": "FindComponentByClass returns the first component of that type or nullptr."
+      },
+      {
+        "id": "component-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, explain why a health component beats putting health in a shared base class for players, enemies, and barrels.",
+        "modelAnswer": "Any actor can gain health by adding the component, without forcing unrelated classes to share an inheritance chain they do not otherwise need.",
+        "rubric": [
+          "Mentions reuse across unrelated actor types",
+          "Contrasts with inheritance",
+          "Mentions adding or removing the capability"
+        ],
+        "explanation": "Composition lets a barrel and a boss share health without sharing ancestry."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "component-scenario-1",
+        "type": "which-pattern",
+        "prompt": "A crate, a lantern, and a lever all need different mixes of breakable, interactable, and loot-dropping behavior. Which pattern avoids a class per combination?",
+        "choices": [
+          "component",
+          "prototype",
+          "subclass-sandbox",
+          "type-object"
+        ],
+        "answer": "component",
+        "distractorNotes": [
+          {
+            "choice": "subclass-sandbox",
+            "why": "A sandbox base still needs a subclass per combination."
+          },
+          {
+            "choice": "type-object",
+            "why": "Data per kind tunes numbers but does not mix capabilities."
+          },
+          {
+            "choice": "prototype",
+            "why": "Cloning templates copies a whole object; the problem is assembling capabilities."
+          }
+        ],
+        "explanation": "Each capability is a component; each object is a set of them."
+      },
+      {
+        "id": "component-scenario-2",
+        "type": "which-pattern",
+        "prompt": "Your AShooterCharacter is 4,000 lines and touches input, weapons, health, and interaction. A teammate wants weapon logic on a turret too. Which pattern guides the refactor?",
+        "choices": [
+          "component",
+          "facade",
+          "singleton",
+          "state"
+        ],
+        "answer": "component",
+        "distractorNotes": [
+          {
+            "choice": "facade",
+            "why": "A facade would hide the mess behind a smaller API but would not let a turret reuse weapon logic."
+          },
+          {
+            "choice": "singleton",
+            "why": "A global weapon manager hides the problem and couples everything to it."
+          },
+          {
+            "choice": "state",
+            "why": "States would not split domains apart."
+          }
+        ],
+        "explanation": "Pull weapons into UDojoWeaponComponent and attach it to both the character and the turret."
+      }
+    ]
+  },
+  {
+    "id": "type-object",
+    "title": "Type Object",
+    "intent": "Turn \"what kind of thing is this\" into an asset: each enemy, weapon, or potion points at a data asset describing its kind, so designers add and tune kinds in the editor without a new C++ class or a recompile.",
+    "problem": "A game with a hundred monster kinds, each a subclass with different health and attacks, needs a programmer and a compile for every new monster, and designers cannot tune kinds on their own.",
+    "unrealForm": "This is mainstream Unreal. A UPrimaryDataAsset subclass like UDojoEnemyKind holds shared data (max health, speed, mesh), and each enemy actor keeps a TObjectPtr to its kind. Data Table rows keyed by FName do the same for tabular data. The Asset Manager loads primary assets. You still write the initialization from the kind, any parent-kind inheritance, and validation that every actor has a kind.",
+    "whenNot": "If kinds mostly differ in behavior rather than numbers, data cannot express it without growing into a scripting system. With three kinds that never change, plain subclasses are simpler.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "type-object-recall-1",
+        "type": "multiple-choice",
+        "prompt": "In Unreal, which asset type is the most common way to author a Type Object for something like a weapon kind?",
+        "choices": [
+          "A Level",
+          "A Material Instance",
+          "A UPrimaryDataAsset subclass",
+          "A Blueprint Function Library"
+        ],
+        "answerIndex": 2,
+        "explanation": "Data assets hold per-kind data that many actors reference."
+      },
+      {
+        "id": "type-object-recall-2",
+        "type": "fill-blank",
+        "prompt": "Each enemy actor stores a pointer to its kind, declared in Unreal as UPROPERTY(EditAnywhere) ___<UDojoEnemyKind> Kind;",
+        "acceptedAnswers": [
+          "TObjectPtr"
+        ],
+        "explanation": "TObjectPtr is the UE5 way to hold a UObject reference in a UPROPERTY."
+      },
+      {
+        "id": "type-object-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, what is the main limitation of Type Object?",
+        "modelAnswer": "It is easy to vary data per kind but hard to vary behavior, since data alone cannot describe new logic.",
+        "rubric": [
+          "Names data as easy",
+          "Names behavior as hard",
+          "Optionally mentions scripting or Bytecode as the escape"
+        ],
+        "explanation": "When behavior must vary, you pick from predefined behaviors or reach for Bytecode."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "type-object-scenario-1",
+        "type": "which-pattern",
+        "prompt": "Designers want to add new potion kinds (heal amount, duration, color, icon) from the editor without waiting for a programmer. Which pattern?",
+        "choices": [
+          "flyweight",
+          "prototype",
+          "subclass-sandbox",
+          "type-object"
+        ],
+        "answer": "type-object",
+        "distractorNotes": [
+          {
+            "choice": "prototype",
+            "why": "Cloning a potion actor works but the kind still lives inside a live object instead of an asset."
+          },
+          {
+            "choice": "subclass-sandbox",
+            "why": "A subclass per potion needs a compile per potion."
+          },
+          {
+            "choice": "flyweight",
+            "why": "Sharing data saves memory, but the main goal here is authoring new kinds as data."
+          }
+        ],
+        "explanation": "A UDojoPotionKind data asset per potion; the potion actor references one."
+      },
+      {
+        "id": "type-object-scenario-2",
+        "type": "which-pattern",
+        "prompt": "A dungeon shows 5,000 floor tiles, each of which needs its material, walk cost, and footstep sound. Memory is the concern, not authoring. Which pattern describes sharing those fields?",
+        "choices": [
+          "data-locality",
+          "flyweight",
+          "object-pool",
+          "type-object"
+        ],
+        "answer": "flyweight",
+        "distractorNotes": [
+          {
+            "choice": "type-object",
+            "why": "Same shape, different reason: Type Object is about defining kinds, Flyweight is about memory."
+          },
+          {
+            "choice": "object-pool",
+            "why": "Pooling reuses objects over time; here many objects exist at once and share data."
+          },
+          {
+            "choice": "data-locality",
+            "why": "Packing data for cache helps speed, but the main cost here is duplicated fields."
+          }
+        ],
+        "explanation": "Thousands of tiles pointing at a few shared definitions is Flyweight."
+      }
+    ]
+  },
+  {
+    "id": "flyweight",
+    "title": "Flyweight",
+    "intent": "When a level holds thousands of near-identical things such as trees, tiles, or cards, store what they all have in common once and let each instance keep only its own small leftovers, like a transform or an owner.",
+    "problem": "A forest of 20,000 trees where every tree carries its own copy of the mesh, materials, and wind settings wastes memory and floods the GPU with redundant work. Most of that data is the same for every tree of a species.",
+    "unrealForm": "Instanced Static Mesh and Hierarchical Instanced Static Mesh components draw thousands of copies of one mesh, each instance only holding a transform. Assets in general are shared: many actors reference one UStaticMesh. In gameplay code you keep per-instance structs small (a coordinate and a pointer to a shared definition asset) and keep the shared part immutable.",
+    "whenNot": "If instances need to change the shared data per instance, sharing breaks or forces copy-on-write. With a few dozen objects the savings do not justify the indirection.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "flyweight-recall-1",
+        "type": "multiple-choice",
+        "prompt": "Which Unreal component draws many copies of one mesh while storing only a transform per copy?",
+        "choices": [
+          "UStaticMeshComponent",
+          "USkeletalMeshComponent",
+          "UDecalComponent",
+          "UInstancedStaticMeshComponent"
+        ],
+        "answerIndex": 3,
+        "explanation": "ISM (and HISM with LOD clustering) is the engine's flyweight for rendering."
+      },
+      {
+        "id": "flyweight-recall-2",
+        "type": "fill-blank",
+        "prompt": "The shared, unchanging part of a flyweight is called the ___ state; the per-instance part is the extrinsic state.",
+        "acceptedAnswers": [
+          "intrinsic"
+        ],
+        "explanation": "Intrinsic state lives in the shared object; extrinsic state lives with each instance or is passed in."
+      },
+      {
+        "id": "flyweight-recall-3",
+        "type": "spot-the-bug",
+        "prompt": "Tiles share one UDojoTileDefinition per terrain type. Which line corrupts every tile of that type?",
+        "code": "void ADojoMap::ApplyMud(FDojoTile& Tile)\n{\n    Tile.bIsMuddy = true;\n    Tile.Definition->MoveCost *= 2.0f;\n    RefreshTileVisual(Tile);\n}",
+        "bugLine": 4,
+        "fix": "Store the extra cost on the tile (for example a per-tile multiplier) and leave the shared definition untouched.",
+        "explanation": "Writing to shared intrinsic state changes every tile that points at that definition."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "flyweight-scenario-1",
+        "type": "which-pattern",
+        "prompt": "An open-world map places 80,000 rocks of six kinds. Profiling shows draw calls and memory are the bottleneck. Which pattern drives the fix?",
+        "choices": [
+          "flyweight",
+          "object-pool",
+          "prototype",
+          "spatial-partition"
+        ],
+        "answer": "flyweight",
+        "distractorNotes": [
+          {
+            "choice": "object-pool",
+            "why": "Pooling helps when objects are created and destroyed often; these rocks just exist."
+          },
+          {
+            "choice": "spatial-partition",
+            "why": "Partitioning speeds up queries, not rendering memory per rock."
+          },
+          {
+            "choice": "prototype",
+            "why": "Cloning a rock actor still gives you 80,000 actors."
+          }
+        ],
+        "explanation": "Six HISM components (one per kind) with one transform per rock."
+      },
+      {
+        "id": "flyweight-scenario-2",
+        "type": "which-pattern",
+        "prompt": "A card game has 300 copies of the same card in a draft pool. Each copy needs its own owner and face-up flag, but text, art, and cost are identical. Which pattern?",
+        "choices": [
+          "command",
+          "flyweight",
+          "singleton",
+          "state"
+        ],
+        "answer": "flyweight",
+        "distractorNotes": [
+          {
+            "choice": "singleton",
+            "why": "There is not one card; there are many copies sharing data."
+          },
+          {
+            "choice": "command",
+            "why": "Playing a card might be a command, but the question is storing copies cheaply."
+          },
+          {
+            "choice": "state",
+            "why": "Face-up is a tiny flag, not a reason for a state machine."
+          }
+        ],
+        "explanation": "Each copy holds owner and flags plus a pointer to one shared card definition."
+      }
+    ]
+  },
+  {
+    "id": "prototype",
+    "title": "Prototype",
+    "intent": "Make new objects by duplicating one that is already set up the way you want, such as a hand-tuned elite guard or a class default object, so the copy starts with that tuning instead of bare defaults.",
+    "problem": "Spawners need to make not just the right class but the right starting setup: a fast ghost, a slow armored ghost, a ghost holding a key. Writing a spawner class per variant multiplies classes, and constructors cannot easily capture tuned state.",
+    "unrealForm": "Every UClass has a Class Default Object, and NewObject and SpawnActor copy property defaults from it, so Unreal is prototype-based at its core. FActorSpawnParameters::Template spawns a copy of a specific actor including its tuned values, and DuplicateObject deep-copies a UObject. Blueprint child classes inherit and override defaults, and Material Instances inherit parent parameters.",
+    "whenNot": "When kinds are better described as data assets (Type Object) or composed from components, cloning live objects adds confusion about what gets copied. If shallow versus deep copy of subobjects is unclear, cloning will produce subtle shared-state bugs.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "prototype-recall-1",
+        "type": "fill-blank",
+        "prompt": "Unreal keeps one template instance per class that holds its default property values, called the ___.",
+        "acceptedAnswers": [
+          "CDO",
+          "Class Default Object",
+          "class default object"
+        ],
+        "explanation": "The CDO is the prototype every new instance copies from."
+      },
+      {
+        "id": "prototype-recall-2",
+        "type": "multiple-choice",
+        "prompt": "Which spawn parameter lets SpawnActor copy property values from an existing actor instead of the class defaults?",
+        "choices": [
+          "Template",
+          "Owner",
+          "Instigator",
+          "Name"
+        ],
+        "answerIndex": 0,
+        "explanation": "FActorSpawnParameters::Template is clone-from-prototype."
+      },
+      {
+        "id": "prototype-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, how does Prototype differ from a factory that calls a constructor?",
+        "modelAnswer": "Cloning copies the prototype's current state as well as its class, so one spawner can produce differently tuned variants without new code.",
+        "rubric": [
+          "Mentions copying state, not just class",
+          "Mentions variants without new classes or code"
+        ],
+        "explanation": "A constructor gives you the defaults; a clone gives you the tuning."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "prototype-scenario-1",
+        "type": "which-pattern",
+        "prompt": "A level designer hand-tunes one elite guard in the level (patrol speed, sight range, loadout) and wants a spawner to produce exact copies of that guard during an alarm. Which pattern?",
+        "choices": [
+          "factory-method",
+          "object-pool",
+          "prototype",
+          "type-object"
+        ],
+        "answer": "prototype",
+        "distractorNotes": [
+          {
+            "choice": "type-object",
+            "why": "A data asset would need the designer to move the tuning out of the placed guard first."
+          },
+          {
+            "choice": "factory-method",
+            "why": "A factory decides which class to make; here the point is copying a tuned instance."
+          },
+          {
+            "choice": "object-pool",
+            "why": "Pooling reuses existing guards; it does not copy a template's state."
+          }
+        ],
+        "explanation": "Spawn with the placed guard as the Template."
+      },
+      {
+        "id": "prototype-scenario-2",
+        "type": "which-pattern",
+        "prompt": "You need 30 enemy kinds with different stats and want designers to edit them in a spreadsheet-like view. A teammate proposes keeping 30 hidden template actors to clone. Which pattern is the better fit?",
+        "choices": [
+          "flyweight",
+          "prototype",
+          "singleton",
+          "type-object"
+        ],
+        "answer": "type-object",
+        "distractorNotes": [
+          {
+            "choice": "prototype",
+            "why": "Hidden template actors work, but live actors are heavier and harder to edit in bulk than data rows."
+          },
+          {
+            "choice": "flyweight",
+            "why": "Memory is not the stated problem; authoring kinds is."
+          },
+          {
+            "choice": "singleton",
+            "why": "A global registry does not describe the kinds themselves."
+          }
+        ],
+        "explanation": "A Data Table or data asset per kind is the cleaner Unreal form; Prototype rarely wins when kinds are pure data."
+      }
+    ]
+  },
+  {
+    "id": "bytecode",
+    "title": "Bytecode",
+    "intent": "Let designers or modders write behavior as a short list of small instructions stored in an asset, and run that list with a tiny interpreter inside the game, so new behavior ships without a C++ compile and cannot reach past what the instructions allow.",
+    "problem": "Some behavior changes too often, or comes from people who should not touch C++: spell effects, card rules, modder scripts. Compiling native code for each change is slow, and running untrusted native code is unsafe.",
+    "unrealForm": "Blueprint is a bytecode virtual machine: the Blueprint compiler turns graphs into instructions the engine interprets. Niagara compiles module graphs to its own VM, and materials compile to shaders. You would write your own only for a narrow domain such as card effects or item formulas, often as a TArray of instruction structs authored in a data asset, with a stack-based interpreter and hard limits on stack size and instruction count.",
+    "whenNot": "Hot engine paths where interpretation is too slow, and any project without time to build authoring and debugging tools, since you lose the C++ debugger inside the VM. If Blueprint already serves designers, a custom VM is rarely worth it.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "bytecode-recall-1",
+        "type": "multiple-choice",
+        "prompt": "Which Unreal feature is itself an example of the Bytecode pattern?",
+        "choices": [
+          "Gameplay Tags",
+          "Blueprint visual scripting",
+          "Asset Manager",
+          "Level Streaming"
+        ],
+        "answerIndex": 1,
+        "explanation": "Blueprint graphs compile to bytecode the engine interprets at runtime."
+      },
+      {
+        "id": "bytecode-recall-2",
+        "type": "fill-blank",
+        "prompt": "Most simple game VMs pass values between instructions on a ___, pushing operands and popping results.",
+        "acceptedAnswers": [
+          "stack"
+        ],
+        "explanation": "A stack machine keeps instructions small because operands are implicit."
+      },
+      {
+        "id": "bytecode-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, why is a bytecode VM safer than letting mods load native DLLs?",
+        "modelAnswer": "The VM only exposes the instructions you define, so scripts cannot touch memory or call engine functions you did not allow.",
+        "rubric": [
+          "Mentions a limited instruction set",
+          "Mentions sandboxing or restricted access",
+          "Contrasts with full native access"
+        ],
+        "explanation": "The instruction set is the security boundary."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "bytecode-scenario-1",
+        "type": "which-pattern",
+        "prompt": "Your card game has hundreds of cards whose effects combine small steps (deal damage, draw, if-then). Designers want to write new cards without recompiling, and players will share custom cards online. Which pattern?",
+        "choices": [
+          "bytecode",
+          "command",
+          "subclass-sandbox",
+          "type-object"
+        ],
+        "answer": "bytecode",
+        "distractorNotes": [
+          {
+            "choice": "type-object",
+            "why": "Data per card handles numbers, but card effects are combinations of logic that plain fields cannot express."
+          },
+          {
+            "choice": "command",
+            "why": "Each effect step could be a command, but you need a safe way to describe and run whole programs of steps."
+          },
+          {
+            "choice": "subclass-sandbox",
+            "why": "A C++ subclass per card needs a compile and cannot be shared safely by players."
+          }
+        ],
+        "explanation": "A small instruction set with a sandboxed interpreter."
+      },
+      {
+        "id": "bytecode-scenario-2",
+        "type": "which-pattern",
+        "prompt": "Weapon kinds differ only in damage, fire rate, and ammo type, and designers want to add new ones without a compile. Which pattern is enough here?",
+        "choices": [
+          "bytecode",
+          "prototype",
+          "strategy",
+          "type-object"
+        ],
+        "answer": "type-object",
+        "distractorNotes": [
+          {
+            "choice": "bytecode",
+            "why": "A VM is far more machinery than needed when only numbers vary."
+          },
+          {
+            "choice": "prototype",
+            "why": "Cloning a configured weapon works but a data asset per kind is simpler to author."
+          },
+          {
+            "choice": "strategy",
+            "why": "Strategy swaps algorithms; these weapons do not differ in algorithm."
+          }
+        ],
+        "explanation": "Reach for Bytecode only when behavior, not data, must be authored."
+      }
+    ]
+  },
+  {
+    "id": "singleton",
+    "title": "Singleton",
+    "intent": "Make a class responsible for there only ever being one of it, and let any code fetch that one object through the class itself. In Unreal you mostly learn it to spot it and swap it for a subsystem with a real owner.",
+    "problem": "Some things feel naturally single (the audio device, the save system), so a static GetInstance looks convenient. The trouble is that global access lets any code reach in from anywhere, hides dependencies, makes order of initialization fragile, and makes tests share state.",
+    "unrealForm": "Gameplay code should rarely write a classic singleton. Unreal gives scoped, engine-managed single instances instead: UGameInstanceSubsystem lives as long as the game, UWorldSubsystem per world, ULocalPlayerSubsystem per local player, and UEngineSubsystem for the engine. Reach them with GetSubsystem<T>() from the right owner. Existing roots like the Game Mode, Game State, and Game Instance already hold per-game objects.",
+    "whenNot": "Almost always skip the full pattern. If the real need is convenient access, pass the object in or use a subsystem with a defined lifetime. A static pointer to a UObject outside UPROPERTY can be garbage collected and leave a dangling pointer.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "singleton-recall-1",
+        "type": "multiple-choice",
+        "prompt": "Which Unreal type gives you one engine-managed instance per running game, created and destroyed for you?",
+        "choices": [
+          "AActor with a static pointer",
+          "UBlueprintFunctionLibrary",
+          "UGameInstanceSubsystem",
+          "FTickableGameObject"
+        ],
+        "answerIndex": 2,
+        "explanation": "A Game Instance Subsystem has one instance per game instance with a lifetime the engine controls."
+      },
+      {
+        "id": "singleton-recall-2",
+        "type": "spot-the-bug",
+        "prompt": "This score manager is a hand-rolled singleton. Which line risks a crash after garbage collection or between play sessions?",
+        "code": "UDojoScoreManager* UDojoScoreManager::Get()\n{\n    static UDojoScoreManager* Instance = nullptr;\n    if (!Instance) { Instance = NewObject<UDojoScoreManager>(); }\n    return Instance;\n}",
+        "bugLine": 3,
+        "fix": "Use a UGameInstanceSubsystem and GetSubsystem<UDojoScoreManager>() so the engine owns the lifetime.",
+        "explanation": "A raw static UObject pointer is not a UPROPERTY and is not rooted, so the garbage collector can destroy it while the static still points at it, and it survives across Play In Editor sessions."
+      },
+      {
+        "id": "singleton-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, what is the main cost of global access in a singleton?",
+        "modelAnswer": "Any code anywhere can depend on it without that dependency showing in any signature, so coupling grows silently and the code becomes hard to test and reason about.",
+        "rubric": [
+          "Mentions hidden or invisible dependencies",
+          "Mentions coupling, testing, or reasoning difficulty"
+        ],
+        "explanation": "The single instance is rarely the problem; the global access is."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "singleton-scenario-1",
+        "type": "which-pattern",
+        "prompt": "Your quest tracker needs to live across level loads and be reachable from any widget or actor. A teammate writes a static GetInstance. Which Unreal form should replace it?",
+        "choices": [
+          "facade",
+          "observer",
+          "service-locator",
+          "singleton"
+        ],
+        "answer": "service-locator",
+        "distractorNotes": [
+          {
+            "choice": "singleton",
+            "why": "The hand-rolled singleton is what you are replacing; it fights garbage collection and PIE sessions."
+          },
+          {
+            "choice": "observer",
+            "why": "Widgets may listen to the tracker, but they still need a way to find it."
+          },
+          {
+            "choice": "facade",
+            "why": "A facade simplifies an API; the issue is lifetime and lookup."
+          }
+        ],
+        "explanation": "A UGameInstanceSubsystem found by type through GetSubsystem is effectively an engine-managed service locator with a defined scope."
+      },
+      {
+        "id": "singleton-scenario-2",
+        "type": "which-pattern",
+        "prompt": "A class named UDojoEnemyManager has grown functions for moving, damaging, and animating every enemy, and every enemy calls it. Which pattern smell is this, and which pattern points to the fix?",
+        "choices": [
+          "component",
+          "flyweight",
+          "service-locator",
+          "singleton"
+        ],
+        "answer": "component",
+        "distractorNotes": [
+          {
+            "choice": "singleton",
+            "why": "The manager is the smell, not the cure; adding global access makes it worse."
+          },
+          {
+            "choice": "service-locator",
+            "why": "Locating the manager more cleanly keeps logic in the wrong place."
+          },
+          {
+            "choice": "flyweight",
+            "why": "Sharing data does not move behavior back onto the enemies."
+          }
+        ],
+        "explanation": "Move the behavior onto the enemies through components; a manager that only exists to operate on other objects is a singleton smell."
+      }
+    ]
+  },
+  {
+    "id": "service-locator",
+    "title": "Service Locator",
+    "intent": "Let code ask a central registry for \"the audio service\" or \"the analytics service\" by interface and get back whichever implementation was registered (real, silent, or a test double), without knowing which class that is.",
+    "problem": "Audio, analytics, and haptics are needed from all over the codebase. Passing them through every function is tedious, and a singleton welds callers to one concrete class, which blocks swapping in a silent or logging version for tests or a different platform.",
+    "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem can hold a provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's literal locator for plugin features. Always provide a null provider so callers never check for nullptr.",
+    "whenNot": "If the dependency can be passed in through a constructor or function parameter, do that; it stays visible. Do not use a locator for something that should only be reachable in one context or phase, because a global lookup cannot enforce that.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "service-locator-recall-1",
+        "type": "multiple-choice",
+        "prompt": "What does a null service provide?",
+        "choices": [
+          "A crash when used, to catch bugs",
+          "A cached copy of the last service",
+          "A network fallback",
+          "A do-nothing implementation so callers never have to check for a missing service"
+        ],
+        "answerIndex": 3,
+        "explanation": "The null object keeps code working when no real provider is registered, such as in tests or a dedicated server."
+      },
+      {
+        "id": "service-locator-recall-2",
+        "type": "fill-blank",
+        "prompt": "In Unreal, a game-instance-scoped service is usually reached with GetGameInstance()->___<UDojoAnalyticsSubsystem>().",
+        "acceptedAnswers": [
+          "GetSubsystem"
+        ],
+        "explanation": "GetSubsystem locates the instance by type."
+      },
+      {
+        "id": "service-locator-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, how does Service Locator improve on Singleton?",
+        "modelAnswer": "Callers depend on an interface and the provider can be swapped at runtime (real, null, logging, or mock), while a singleton ties callers to one concrete class.",
+        "rubric": [
+          "Mentions interface or abstraction",
+          "Mentions swapping the provider",
+          "Contrasts with a single concrete class"
+        ],
+        "explanation": "Same global reach, but the concrete class is no longer baked in."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "service-locator-scenario-1",
+        "type": "which-pattern",
+        "prompt": "Gameplay code fires controller rumble from many places. On PC without a gamepad, and in automated tests, rumble should silently do nothing. Which pattern?",
+        "choices": [
+          "facade",
+          "observer",
+          "service-locator",
+          "singleton"
+        ],
+        "answer": "service-locator",
+        "distractorNotes": [
+          {
+            "choice": "singleton",
+            "why": "A singleton gives one concrete rumble class; you need to swap in a do-nothing one."
+          },
+          {
+            "choice": "observer",
+            "why": "Broadcasting a rumble event works, but the core need is a swappable provider found from anywhere."
+          },
+          {
+            "choice": "facade",
+            "why": "A facade simplifies a messy API but does not choose between implementations."
+          }
+        ],
+        "explanation": "A haptics subsystem holding an interface, with a null provider when no gamepad is present."
+      },
+      {
+        "id": "service-locator-scenario-2",
+        "type": "multiple-choice",
+        "prompt": "A trap is spawned by a spawner that already holds a reference to the audio subsystem. The trap needs audio. What is the better choice than having the trap look the service up globally?",
+        "choices": [
+          "Have the spawner pass the audio interface to the trap when it spawns it",
+          "Make the audio subsystem a static singleton",
+          "Broadcast a delegate asking someone to play the sound",
+          "Queue the sound request for the next frame"
+        ],
+        "answerIndex": 0,
+        "explanation": "When a caller already has the dependency, passing it in keeps it visible in the trap's interface. A locator is the fallback when passing in is impractical, not the default."
+      }
+    ]
+  },
+  {
+    "id": "object-pool",
+    "title": "Object Pool",
+    "intent": "Spawn a batch of projectiles, effects, or enemies up front, then lend them out and take them back as play needs them, so the busiest moments of a fight never pay the cost of spawning and destroying actors.",
+    "problem": "A minigun fires 20 bullets per second. Spawning an actor for each runs construction, component registration, and BeginPlay, then destroying it feeds the garbage collector. The hitches show up exactly when the action is most intense.",
+    "unrealForm": "Actor spawning is expensive, so pooling actors is a standard optimization. Niagara already pools its components. You write a pool as a UWorldSubsystem or a manager actor holding a TArray of inactive actors per class, with an explicit reset protocol: hide with SetActorHiddenInGame, disable collision and tick, clear timers and delegates, then fully reinitialize on acquire.",
+    "whenNot": "If objects are created rarely, or vary wildly in size and type, the pool wastes memory and adds a reset burden. Measure spawn cost before pooling. Forgetting to reset a field gives bugs that look almost right.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "object-pool-recall-1",
+        "type": "multiple-choice",
+        "prompt": "Why is pooling actors more valuable in Unreal than pooling small structs?",
+        "choices": [
+          "Structs cannot be stored in arrays",
+          "Spawning an actor runs construction, registration, and BeginPlay, which is costly",
+          "Actors are never garbage collected",
+          "Pooled actors replicate for free"
+        ],
+        "answerIndex": 1,
+        "explanation": "The cost being saved is the actor spawn and destroy pipeline, not raw memory allocation."
+      },
+      {
+        "id": "object-pool-recall-2",
+        "type": "spot-the-bug",
+        "prompt": "This pool hands a projectile back out for its next shot. Exactly one line is wrong. Which one?",
+        "code": "ADojoProjectile* UDojoProjectilePool::Acquire(const FTransform& Muzzle)\n{\n    if (Inactive.IsEmpty()) { return SpawnFreshProjectile(Muzzle); }\n    ADojoProjectile* Projectile = Inactive.Pop();\n    Projectile->SetActorTransform(Muzzle);\n    Projectile->ResetForPool();\n    Projectile->SetActorHiddenInGame(false);\n    Projectile->SetActorEnableCollision(false);\n    Projectile->SetActorTickEnabled(true);\n    return Projectile;\n}",
+        "bugLine": 8,
+        "fix": "Turn collision back on with SetActorEnableCollision(true); release turned it off, so acquire must undo it.",
+        "explanation": "Acquire must reverse every step of release. Leaving collision off makes every reused projectile pass straight through its target."
+      },
+      {
+        "id": "object-pool-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, what should a pool do when every object is in use and another is requested?",
+        "modelAnswer": "It must follow a chosen overflow policy, such as refusing the request, recycling the oldest live object, or growing the pool, and that choice should be deliberate.",
+        "rubric": [
+          "Names at least one overflow policy",
+          "Says the policy is a deliberate design choice"
+        ],
+        "explanation": "There is no free answer; each policy has a visible gameplay cost."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "object-pool-scenario-1",
+        "type": "which-pattern",
+        "prompt": "Hit effects (decal plus sound plus spark actor) spawn dozens of times per second in a firefight, and Unreal Insights shows spawn cost spikes. Which pattern?",
+        "choices": [
+          "dirty-flag",
+          "event-queue",
+          "flyweight",
+          "object-pool"
+        ],
+        "answer": "object-pool",
+        "distractorNotes": [
+          {
+            "choice": "flyweight",
+            "why": "Sharing data reduces memory per effect but not the spawn and destroy churn."
+          },
+          {
+            "choice": "event-queue",
+            "why": "Merging requests may help, but each surviving effect still spawns a fresh actor."
+          },
+          {
+            "choice": "dirty-flag",
+            "why": "Caching derived values does not avoid spawning."
+          }
+        ],
+        "explanation": "Keep a pool of effect actors and reactivate them."
+      },
+      {
+        "id": "object-pool-scenario-2",
+        "type": "multiple-choice",
+        "prompt": "A dungeon spawns its single boss once per level, and a teammate proposes pooling it. What is the best response?",
+        "choices": [
+          "Pool it, since pooling is always faster",
+          "Pool it with a capacity of ten to be safe",
+          "Skip pooling; one spawn per level costs little and pooling adds a reset burden for no gain",
+          "Make the boss a singleton instead"
+        ],
+        "answerIndex": 2,
+        "explanation": "Pool things created and destroyed often. A once-per-level spawn does not justify reset logic and a pool's memory."
+      }
+    ]
+  },
+  {
+    "id": "dirty-flag",
+    "title": "Dirty Flag",
+    "intent": "When an expensive result (final stats, a total weight, a world transform) depends on inputs that change often, just raise a flag on each change and do the real recompute once, the next time someone asks for the result.",
+    "problem": "A character's final stats depend on base stats, ten equipment slots, and active buffs. Recomputing every time any input changes wastes work when several changes land in one frame, while recomputing every Tick wastes work when nothing changed.",
+    "unrealForm": "The engine uses dirty flags everywhere: scene components cache world transforms and mark them stale when local transforms change, MarkRenderStateDirty tells the render thread what to resend, packages track unsaved changes, and push-model replication marks properties dirty. In gameplay code you keep a bStatsDirty bool, set it in every setter, and recompute inside the getter when it is set.",
+    "whenNot": "When a running total is simpler (adding and subtracting one value), keep the total. When deferring could lose work or cause a hitch at a bad moment, compute eagerly. The risk is missing a mutation path, so route every change through a small set of functions.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "dirty-flag-recall-1",
+        "type": "fill-blank",
+        "prompt": "In a dirty flag setup, the flag is set when ___ data changes and cleared when derived data is recomputed.",
+        "acceptedAnswers": [
+          "primary",
+          "source",
+          "input"
+        ],
+        "explanation": "Primary data is what you edit; derived data is what you compute from it."
+      },
+      {
+        "id": "dirty-flag-recall-2",
+        "type": "spot-the-bug",
+        "prompt": "Stats are cached behind a dirty flag. Exactly one line is wrong. Which one?",
+        "code": "void UDojoStatsComponent::EquipItem(const UDojoItemKind* Item)\n{\n    Equipped.Add(Item);\n    bStatsDirty = true;\n}\n\nvoid UDojoStatsComponent::AddBuff(const FDojoBuff& Buff)\n{\n    ActiveBuffs.Add(Buff);\n    bStatsDirty = false;\n}",
+        "bugLine": 10,
+        "fix": "Set bStatsDirty = true after adding the buff; only the recompute should clear the flag.",
+        "explanation": "Clearing the flag on a change tells the getter the cached stats are current, so the new buff never shows up in them."
+      },
+      {
+        "id": "dirty-flag-recall-3",
+        "type": "multiple-choice",
+        "prompt": "When is a dirty flag the wrong tool?",
+        "choices": [
+          "When derived data is expensive and read rarely",
+          "When several changes land in one frame",
+          "When derived data is cached",
+          "When a simple running total can be updated in constant time per change"
+        ],
+        "answerIndex": 3,
+        "explanation": "If you can update the result incrementally for free, a flag only adds a branch and a chance to forget."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "dirty-flag-scenario-1",
+        "type": "which-pattern",
+        "prompt": "An inventory UI shows total weight. Items move between slots many times per frame during a drag, but the label is drawn once per frame. Which pattern?",
+        "choices": [
+          "dirty-flag",
+          "double-buffer",
+          "event-queue",
+          "observer"
+        ],
+        "answer": "dirty-flag",
+        "distractorNotes": [
+          {
+            "choice": "observer",
+            "why": "Notifying the label of every move would recompute many times per frame."
+          },
+          {
+            "choice": "double-buffer",
+            "why": "There is no reader-writer race to solve."
+          },
+          {
+            "choice": "event-queue",
+            "why": "Queuing every move still processes each one."
+          }
+        ],
+        "explanation": "Mark weight dirty on change; recompute once when the label reads it."
+      },
+      {
+        "id": "dirty-flag-scenario-2",
+        "type": "which-pattern",
+        "prompt": "A skill tree computes unlocked abilities by walking 200 nodes. It changes only when the player spends a point, but the HUD queries it every frame. Which pattern?",
+        "choices": [
+          "dirty-flag",
+          "flyweight",
+          "singleton",
+          "update-method"
+        ],
+        "answer": "dirty-flag",
+        "distractorNotes": [
+          {
+            "choice": "update-method",
+            "why": "Recomputing in Tick is the waste you want to avoid."
+          },
+          {
+            "choice": "flyweight",
+            "why": "Sharing node definitions saves memory, not the repeated walk."
+          },
+          {
+            "choice": "singleton",
+            "why": "Where the tree lives is unrelated to when to recompute."
+          }
+        ],
+        "explanation": "Cache the result and invalidate it when a point is spent."
+      }
+    ]
+  },
+  {
+    "id": "spatial-partition",
+    "title": "Spatial Partition",
+    "intent": "Bucket objects by where they are in the world, like cells on a grid, so a question such as \"which guards are within 15 meters\" only looks in the nearby buckets instead of at every guard in the level.",
+    "problem": "Each of 2,000 boids needs its neighbors within 5 meters. Checking every pair is four million distance tests per frame, almost all between boids that are nowhere near each other.",
+    "unrealForm": "The engine partitions space for you in most places: the physics broadphase answers overlaps, sweeps, and traces (OverlapMultiByChannel, SweepSingleByChannel), World Partition streams by grid cell, the renderer culls through an octree, and TOctree2 is a reusable template. You write your own for gameplay data physics does not know about: a uniform grid keyed by FIntPoint in a TMap for flocking neighbors, influence maps, or tile logic, and you re-file objects when they move between cells.",
+    "whenNot": "With a few dozen objects, a plain loop is simpler and fast enough. If physics already tracks the objects, an overlap query is usually better than a second structure you must keep in sync.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "spatial-partition-recall-1",
+        "type": "multiple-choice",
+        "prompt": "What must happen when an object in a uniform grid moves across a cell boundary?",
+        "choices": [
+          "It must be removed from its old cell and added to its new one",
+          "Nothing; the grid recalculates each query",
+          "The whole grid must be rebuilt",
+          "The cell size must change"
+        ],
+        "answerIndex": 0,
+        "explanation": "A grid is like a hash table whose keys change as objects move, so moves must re-file entries."
+      },
+      {
+        "id": "spatial-partition-recall-2",
+        "type": "fill-blank",
+        "prompt": "For a neighbor search with radius R in a uniform grid, a common choice is a cell size of about ___ so a query touches only the current cell and its immediate neighbors.",
+        "acceptedAnswers": [
+          "R",
+          "the radius",
+          "radius",
+          "the query radius"
+        ],
+        "explanation": "Cells the size of the interaction range keep each query to a 3 by 3 block in 2D."
+      },
+      {
+        "id": "spatial-partition-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, explain the trade Spatial Partition makes.",
+        "modelAnswer": "It spends extra memory and update work on a position-based structure so that location queries only check nearby objects instead of all of them.",
+        "rubric": [
+          "Mentions memory or bookkeeping cost",
+          "Mentions faster nearby queries",
+          "Mentions avoiding a check against every object"
+        ],
+        "explanation": "Memory and re-filing in exchange for fast queries."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "spatial-partition-scenario-1",
+        "type": "which-pattern",
+        "prompt": "A stealth game scores cover positions by counting guards within 15 meters of each of 4,000 points every second. Guards are not physics bodies you want to trace against. Which pattern?",
+        "choices": [
+          "dirty-flag",
+          "flyweight",
+          "object-pool",
+          "spatial-partition"
+        ],
+        "answer": "spatial-partition",
+        "distractorNotes": [
+          {
+            "choice": "flyweight",
+            "why": "Sharing data does not speed up distance queries."
+          },
+          {
+            "choice": "object-pool",
+            "why": "Pooling guards does not reduce the number of comparisons."
+          },
+          {
+            "choice": "dirty-flag",
+            "why": "Caching scores helps, but each recompute still compares every point with every guard."
+          }
+        ],
+        "explanation": "A grid of guard positions so each cover point checks only nearby cells."
+      },
+      {
+        "id": "spatial-partition-scenario-2",
+        "type": "multiple-choice",
+        "prompt": "A puzzle room has 12 pressure plates and needs to know which plate the player stands on. A teammate proposes building an octree. What is the better approach?",
+        "choices": [
+          "Build the octree; it scales better",
+          "Let each plate's box component report overlaps, since the physics broadphase already partitions space",
+          "Loop over all actors in the level each frame",
+          "Use a uniform grid with 1 centimeter cells"
+        ],
+        "answerIndex": 1,
+        "explanation": "With a dozen objects the engine's own overlap events already do the spatial work. A custom partition pays off only for many objects physics does not track."
+      }
+    ]
+  },
+  {
+    "id": "data-locality",
+    "title": "Data Locality",
+    "intent": "Lay out the data a hot loop touches as tightly packed arrays it can walk front to back, so the CPU finds the next element already sitting in cache instead of stalling on pointer after pointer.",
+    "problem": "Updating 10,000 particles that each live in their own heap object means following 10,000 pointers to scattered memory. The CPU spends most of the frame waiting on cache misses, not doing math.",
+    "unrealForm": "Mass Entity is Unreal's data-oriented framework: fragments are plain structs stored in chunks per archetype, and processors iterate them in bulk. Niagara and instanced meshes keep packed buffers. In gameplay code you replace thousands of actors with one manager that holds a TArray of small structs, keeps active elements packed at the front, and splits rarely used fields into a separate array. Unreal Insights confirms whether it helped.",
+    "whenNot": "Code that runs rarely, or only for a handful of objects, gains nothing and loses readability, interfaces, and inheritance. Always profile first; this is an optimization with real design cost.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "data-locality-recall-1",
+        "type": "multiple-choice",
+        "prompt": "Why is iterating a TArray<FDojoParticle> usually faster than iterating a TArray<UDojoParticle*>?",
+        "choices": [
+          "Structs are smaller than pointers",
+          "Pointers cannot be iterated in a range-based for",
+          "The struct array is contiguous, so the CPU reads neighbors from cache instead of chasing pointers",
+          "UObjects are always slower to read than structs"
+        ],
+        "answerIndex": 2,
+        "explanation": "Contiguous memory lets cache lines and prefetching do their job."
+      },
+      {
+        "id": "data-locality-recall-2",
+        "type": "fill-blank",
+        "prompt": "Splitting rarely used fields (like a debug name) out of a frequently processed struct into a separate array is called a hot and ___ split.",
+        "acceptedAnswers": [
+          "cold"
+        ],
+        "explanation": "Hot data stays packed for the tight loop; cold data lives elsewhere."
+      },
+      {
+        "id": "data-locality-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, why should you profile before applying Data Locality?",
+        "modelAnswer": "It trades abstraction and readability for speed, so you only pay that cost where a profiler shows cache misses are the real bottleneck.",
+        "rubric": [
+          "Mentions the cost to abstraction or readability",
+          "Mentions confirming the bottleneck with measurement"
+        ],
+        "explanation": "Measure, then reorganize."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "data-locality-scenario-1",
+        "type": "which-pattern",
+        "prompt": "A survival game simulates 20,000 fish as individual actors and the game thread is 40 milliseconds per frame, mostly spent in Tick overhead and cache misses. Which pattern guides the rewrite?",
+        "choices": [
+          "data-locality",
+          "flyweight",
+          "object-pool",
+          "update-method"
+        ],
+        "answer": "data-locality",
+        "distractorNotes": [
+          {
+            "choice": "object-pool",
+            "why": "Pooling helps spawn churn but the fish are not being spawned repeatedly."
+          },
+          {
+            "choice": "flyweight",
+            "why": "Sharing meshes helps rendering, but the cost here is the per-fish update loop."
+          },
+          {
+            "choice": "update-method",
+            "why": "Per-actor Tick is part of the problem, not the fix."
+          }
+        ],
+        "explanation": "One manager with packed arrays of fish data, or Mass, updated in one tight loop."
+      },
+      {
+        "id": "data-locality-scenario-2",
+        "type": "multiple-choice",
+        "prompt": "A menu with 30 buttons feels sluggish, and a teammate proposes rewriting the buttons as packed struct arrays for cache efficiency. What should come first?",
+        "choices": [
+          "Do the rewrite; cache misses are always the cause",
+          "Convert the buttons to Mass entities",
+          "Pool the buttons",
+          "Profile with Unreal Insights, because 30 buttons cannot plausibly cause a cache bottleneck"
+        ],
+        "answerIndex": 3,
+        "explanation": "Data Locality is for large, hot loops confirmed by a profiler. Thirty widgets are almost certainly slow for another reason."
+      }
+    ]
+  },
+  {
+    "id": "strategy",
+    "title": "Strategy",
+    "intent": "Hand an object a pluggable rule object, such as how a turret picks its target, so different actors run different rules (picked by a designer in the Details panel) while the class that uses the rule stays exactly the same.",
+    "problem": "An AI targeting component picks a target by nearest, lowest health, or highest threat depending on the enemy. A growing switch statement inside the component mixes every rule together, and adding a rule means editing a class many enemies depend on.",
+    "unrealForm": "Write an abstract UObject base marked UCLASS(Abstract, EditInlineNew), for example UDojoTargetingRule with a virtual ChooseTarget, and give the component a UPROPERTY(EditAnywhere, Instanced) TObjectPtr<UDojoTargetingRule>. Designers then pick and tune a rule per enemy in the Details panel. The Instanced property must point at that abstract UObject base, not at a UINTERFACE, because the editor can only create inline subobjects of a UObject class. Environment Query tests and Behavior Tree decorators are engine examples of pluggable rules. A TFunction member is the lightweight form for one-off cases.",
+    "whenNot": "If there are two fixed variants that never change, an if statement is clearer. If the object changes its own behavior based on its mode, that is State, not Strategy. Strategies that need lots of the owner's private data are a sign the split is wrong.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "strategy-recall-1",
+        "type": "multiple-choice",
+        "prompt": "What separates Strategy from State?",
+        "choices": [
+          "A strategy is usually chosen from outside and stays put, while states switch themselves in response to events",
+          "Strategy uses interfaces and State does not",
+          "State is only for AI",
+          "They are the same pattern"
+        ],
+        "answerIndex": 0,
+        "explanation": "Same shape, different intent: who chooses the delegate and how often it changes."
+      },
+      {
+        "id": "strategy-recall-2",
+        "type": "fill-blank",
+        "prompt": "To let designers pick and tune a strategy object per actor in the Details panel, mark the UPROPERTY with the ___ specifier.",
+        "acceptedAnswers": [
+          "Instanced"
+        ],
+        "explanation": "Instanced (with EditAnywhere and an EditInlineNew class) creates and edits a subobject inline."
+      },
+      {
+        "id": "strategy-recall-3",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, what does Strategy let you change without touching the class that uses it?",
+        "modelAnswer": "It lets you swap the algorithm, such as a targeting or scoring rule, by handing the user a different implementation of the same interface.",
+        "rubric": [
+          "Mentions swapping an algorithm or rule",
+          "Mentions an interface or common base",
+          "Says the using class stays unchanged"
+        ],
+        "explanation": "The host depends on the interface; new rules arrive as new classes."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "strategy-scenario-1",
+        "type": "which-pattern",
+        "prompt": "Turrets should choose targets differently: snipers pick the farthest, flamethrowers pick the closest, and support turrets pick the most wounded ally. Designers want to set this per turret Blueprint. Which pattern?",
+        "choices": [
+          "state",
+          "strategy",
+          "subclass-sandbox",
+          "type-object"
+        ],
+        "answer": "strategy",
+        "distractorNotes": [
+          {
+            "choice": "state",
+            "why": "The turret is not moving between modes; each turret has one fixed rule."
+          },
+          {
+            "choice": "subclass-sandbox",
+            "why": "A turret subclass per rule duplicates the rest of the turret."
+          },
+          {
+            "choice": "type-object",
+            "why": "Data per kind tunes numbers; the rule itself is behavior."
+          }
+        ],
+        "explanation": "A targeting rule interface with three implementations, chosen per turret."
+      },
+      {
+        "id": "strategy-scenario-2",
+        "type": "which-pattern",
+        "prompt": "A loot generator needs to switch between a pure random roll and a pity-timer roll depending on the game mode. Which pattern?",
+        "choices": [
+          "command",
+          "factory-method",
+          "observer",
+          "strategy"
+        ],
+        "answer": "strategy",
+        "distractorNotes": [
+          {
+            "choice": "factory-method",
+            "why": "A factory might create the loot, but the varying part is how the roll is decided."
+          },
+          {
+            "choice": "command",
+            "why": "The roll is not an action you queue or undo."
+          },
+          {
+            "choice": "observer",
+            "why": "Nobody needs notifying; the algorithm needs swapping."
+          }
+        ],
+        "explanation": "The game mode hands the generator a roll strategy."
+      }
+    ]
+  },
+  {
+    "id": "factory-method",
+    "title": "Factory Method",
+    "intent": "Route \"make me a projectile\" through one creation function that decides which class to spawn and sets it up, so call sites ask for a result and never hard-code a concrete class.",
+    "problem": "Spawning code across the project names concrete classes directly, so changing which projectile a weapon fires, or routing creation through a pool, means editing every spawn site.",
+    "unrealForm": "In Unreal the class choice is usually data: a TSubclassOf<ADojoProjectile> UPROPERTY that a designer sets, passed to SpawnActor. A factory function (UDojoWeaponKind::SpawnProjectile, or a static Create helper) centralizes deferred spawning with SpawnActorDeferred and FinishSpawning so initialization happens before BeginPlay, and is the natural place to add pooling later.",
+    "whenNot": "If there is one class and one call site, a direct SpawnActor is clearer. Do not build abstract factory hierarchies when a TSubclassOf property already lets designers choose the class.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "factory-method-recall-1",
+        "type": "multiple-choice",
+        "prompt": "Which Unreal type lets a designer choose which class a factory spawns, while restricting the choice to subclasses of a base?",
+        "choices": [
+          "TObjectPtr",
+          "TSubclassOf",
+          "TWeakObjectPtr",
+          "TSoftObjectPtr"
+        ],
+        "answerIndex": 1,
+        "explanation": "TSubclassOf<ABase> shows a class picker filtered to ABase and its children."
+      },
+      {
+        "id": "factory-method-recall-2",
+        "type": "fill-blank",
+        "prompt": "To set properties on an actor before its BeginPlay runs, spawn it with SpawnActorDeferred and then call ___.",
+        "acceptedAnswers": [
+          "FinishSpawning",
+          "FinishSpawning()"
+        ],
+        "explanation": "Deferred spawning gives a window between construction and BeginPlay for initialization."
+      },
+      {
+        "id": "factory-method-recall-3",
+        "type": "spot-the-bug",
+        "prompt": "This factory should spawn the configured projectile class. Which line ignores the designer's choice?",
+        "code": "ADojoProjectile* UDojoWeaponKind::SpawnProjectile(UWorld* World, const FTransform& Muzzle) const\n{\n    FActorSpawnParameters Params;\n    Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;\n    return World->SpawnActor<ADojoProjectile>(ADojoProjectile::StaticClass(), Muzzle, Params);\n}",
+        "bugLine": 5,
+        "fix": "Pass the ProjectileClass UPROPERTY (a TSubclassOf<ADojoProjectile>) instead of ADojoProjectile::StaticClass().",
+        "explanation": "Hard-coding StaticClass always spawns the base class, so the designer's subclass is never used."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "factory-method-scenario-1",
+        "type": "which-pattern",
+        "prompt": "Ten weapons spawn projectiles from different call sites, and you now want every projectile to come from a pool. Which pattern would have made this a one-line change?",
+        "choices": [
+          "factory-method",
+          "object-pool",
+          "prototype",
+          "singleton"
+        ],
+        "answer": "factory-method",
+        "distractorNotes": [
+          {
+            "choice": "object-pool",
+            "why": "The pool is what you are adding; the problem is that creation is scattered."
+          },
+          {
+            "choice": "singleton",
+            "why": "A global projectile manager is the heavy-handed version of a creation function."
+          },
+          {
+            "choice": "prototype",
+            "why": "Cloning does not centralize where creation happens."
+          }
+        ],
+        "explanation": "One SpawnProjectile function every weapon calls; swapping its body to use a pool fixes all ten."
+      },
+      {
+        "id": "factory-method-scenario-2",
+        "type": "which-pattern",
+        "prompt": "An enemy wave spawner needs to create the right enemy class and fully configure its kind data before BeginPlay runs. Which pattern describes the function you write?",
+        "choices": [
+          "factory-method",
+          "observer",
+          "state",
+          "type-object"
+        ],
+        "answer": "factory-method",
+        "distractorNotes": [
+          {
+            "choice": "type-object",
+            "why": "The kind data is a type object, but the creating function is the factory."
+          },
+          {
+            "choice": "observer",
+            "why": "Notifying listeners after spawn is too late for BeginPlay."
+          },
+          {
+            "choice": "state",
+            "why": "States are unrelated to construction."
+          }
+        ],
+        "explanation": "A factory using SpawnActorDeferred, applying the kind, then FinishSpawning."
+      }
+    ]
+  },
+  {
+    "id": "facade",
+    "title": "Facade",
+    "intent": "Put a short list of plain, task-named functions such as SaveCheckpoint and LoadLatest in front of a tangled system, so the rest of the game uses those few calls and never has to learn the system's internals.",
+    "problem": "Saving the game touches USaveGame objects, slot names, user indices, async callbacks, and version migration. If every menu and checkpoint actor talks to all of that directly, the details leak everywhere and a change in the save format touches dozens of files.",
+    "unrealForm": "UGameplayStatics is a facade over many engine services (spawning, saving, sound, level loading). You build your own as a subsystem with a few intention-revealing functions, for example UDojoSaveSubsystem with SaveCheckpoint and LoadLatest that hides SaveGameToSlot, AsyncSaveGameToSlot, and slot naming. Blueprint function libraries are a lightweight facade for designers.",
+    "whenNot": "If callers truly need the subsystem's full power, a thin facade becomes a bottleneck that keeps growing pass-through functions. Do not wrap a simple API just to wrap it.",
+    "useCaseQuestIds": [],
+    "recall": [
+      {
+        "id": "facade-recall-1",
+        "type": "multiple-choice",
+        "prompt": "Which engine class is a broad facade over many engine services such as spawning, sound, and saving?",
+        "choices": [
+          "UCharacterMovementComponent",
+          "FVector",
+          "UGameplayStatics",
+          "UInputAction"
+        ],
+        "answerIndex": 2,
+        "explanation": "UGameplayStatics exposes many unrelated services through simple static functions."
+      },
+      {
+        "id": "facade-recall-2",
+        "type": "explain-in-one-sentence",
+        "prompt": "In one sentence, how is Facade different from Service Locator?",
+        "modelAnswer": "A facade simplifies how you use a complicated subsystem, while a service locator is about how you find a service and swap its implementation.",
+        "rubric": [
+          "Facade is about simplifying an interface",
+          "Service Locator is about finding or swapping a provider"
+        ],
+        "explanation": "One reduces surface area; the other decouples lookup."
+      },
+      {
+        "id": "facade-recall-3",
+        "type": "fill-blank",
+        "prompt": "A facade reduces the number of classes and functions callers must know about, which lowers ___ between callers and the subsystem.",
+        "acceptedAnswers": [
+          "coupling"
+        ],
+        "explanation": "Callers couple to a few facade functions instead of the whole subsystem."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "facade-scenario-1",
+        "type": "which-pattern",
+        "prompt": "Menus, checkpoints, and the pause screen all save and load, each juggling slot names and async callbacks slightly differently, and bugs differ per screen. Which pattern?",
+        "choices": [
+          "command",
+          "facade",
+          "observer",
+          "singleton"
+        ],
+        "answer": "facade",
+        "distractorNotes": [
+          {
+            "choice": "singleton",
+            "why": "Making the save code global does not simplify the API the screens use."
+          },
+          {
+            "choice": "command",
+            "why": "Saving is not something you queue or undo."
+          },
+          {
+            "choice": "observer",
+            "why": "Notifying screens of saves does not hide the save details."
+          }
+        ],
+        "explanation": "A save subsystem with SaveCheckpoint and LoadLatest that every screen calls."
+      },
+      {
+        "id": "facade-scenario-2",
+        "type": "which-pattern",
+        "prompt": "Designers keep breaking dialogue by calling six low-level functions in the wrong order (load table, find row, build widget, bind events, pause input, show). Which pattern?",
+        "choices": [
+          "event-queue",
+          "facade",
+          "state",
+          "subclass-sandbox"
+        ],
+        "answer": "facade",
+        "distractorNotes": [
+          {
+            "choice": "subclass-sandbox",
+            "why": "Designers are not writing subclasses; they need one safe call."
+          },
+          {
+            "choice": "event-queue",
+            "why": "Deferring the calls does not fix their order or number."
+          },
+          {
+            "choice": "state",
+            "why": "A state machine might live inside the dialogue system, but callers still need one simple entry point."
+          }
+        ],
+        "explanation": "One StartDialogue(ConversationId) function that performs the six steps in order."
+      }
+    ]
+  }
+]
