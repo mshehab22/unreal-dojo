@@ -25,14 +25,14 @@ Reviewers are spawned fresh per task; they do not own systems.
 
 ### M0 Foundations (everything else depends on this)
 - [x] M0.1 app-shell: scaffold on the chosen stack (Electron 44, electron-vite 6, React 19, TS strict, Tailwind v4, shadcn, Motion, Monaco, Zustand, vitest, Playwright, electron-builder). Scripts in CLAUDE.md work. Empty window opens. Proof: `npm run typecheck`, `npm test`, screenshot of the window.
-- [ ] M0.2 app-shell: typed IPC contract (`src/shared/ipc.ts`) covering every method in the system specs, preload bridge, progress event channel. Proof: unit test that every channel has a handler.
-- [ ] M0.3 ui-core: design tokens, app frame, navigation, dark theme, two accent sets, typography. Proof: Storybook-free gallery route `/dev/tokens` screenshot.
-- [ ] M0.4 content-engine: shared types for every quest kind, glossary, packs; parser with malformed-file errors naming file and problem; `tools/verify-content.ts` parse-only mode. Proof: unit tests, verifier runs on an empty content folder.
-- [ ] M0.5 content-foundations: `content/glossary.json` from `research/glossary-seed.json` (write the seed first if missing), `content/patterns.json` from `research/patterns-inventory.md`. Proof: verifier passes glossary checks.
-- [ ] M0.6 qa: GitHub Actions matrix (windows-latest, macos-latest) running typecheck, unit tests, verifier, Playwright smoke. Proof: green run link.
+- [x] M0.2 app-shell: typed IPC contract (`src/shared/ipc.ts`) covering every method in the system specs, preload bridge, progress event channel. Proof: unit test that every channel has a handler.
+- [x] M0.3 ui-core: design tokens, app frame, navigation, dark theme, two accent sets, typography. Proof: Storybook-free gallery route `/dev/tokens` screenshot.
+- [x] M0.4 content-engine: shared types for every quest kind, glossary, packs; parser with malformed-file errors naming file and problem; `tools/verify-content.ts` parse-only mode. Proof: unit tests, verifier runs on an empty content folder.
+- [x] M0.5 content-foundations: `content/glossary.json` from `research/glossary-seed.json` (write the seed first if missing), `content/patterns.json` from `research/patterns-inventory.md`. Proof: verifier passes glossary checks.
+- [x] M0.6 qa (merged; the green Actions run waits for a private repo, A05): GitHub Actions matrix (windows-latest, macos-latest) running typecheck, unit tests, verifier, Playwright smoke. Proof: green run link.
 
 ### M1 Engine and rules (parallel across systems)
-- [ ] M1.1 unreal-pipeline: PlatformPaths for Windows and macOS with fake-fs unit tests; EngineLocator (default paths, Windows registry, manual pick, vswhere and Xcode checks). Proof: unit tests on both platform objects.
+- [x] M1.1 unreal-pipeline: PlatformPaths for Windows and macOS with fake-fs unit tests; EngineLocator (default paths, Windows registry, manual pick, vswhere and Xcode checks). Proof: unit tests on both platform objects.
 - [ ] M1.2 unreal-pipeline: sandbox template in `resources/sandbox-template/` and SandboxProjectService (copy, EngineAssociation, first full build with streamed progress). Proof: the template builds on the Windows desktop; timings recorded in `systems/unreal-pipeline.md`.
 - [ ] M1.3 unreal-pipeline: headless loop (UnrealBuilder, AutomationTestRunner, ReportParser, LogFilter) with the hand-written sample quest (Health component + one automation test). Proof: integration test passes on the Windows desktop; timings recorded.
 - [ ] M1.4 unreal-pipeline: fast loop (McpEditorClient, LiveEditorRunner: CompileLiveCoding then RunTests, header-change detection that falls back to UBT). Proof: same sample quest round-trips in seconds with the editor open; timings recorded.
@@ -69,16 +69,19 @@ Reviewers are spawned fresh per task; they do not own systems.
 
 | Task | System | Owner | Worktree | Stage | Notes |
 | --- | --- | --- | --- | --- | --- |
-| M0.1 Scaffold the app | app-shell | builder-shell (agent) | merged | merged | Review round 1 fixed 5 issues; re-review PASS. On main: typecheck, test, verifier, build, e2e green. Parked duplicate branch claude/m0-1-scaffold-de80f2 not merged. |
-| M0.5 Glossary and pattern cards | content-foundations | author-foundations (session) | claude/m0-5-glossary-50e7f9 @ 811ac94 | re-review | 117 of 125 links verified, 0 broken. Round 1: four intents echo the book (D13), four spot-the-bug items ambiguous, one when-not rule break, answers clustered at index 1 (A61), generic aliases (A62), Strategy card detail. Rebasing onto main. |
-| M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | claude/m1-2a-sandbox-template-d9043b @ aa8112f | re-review | Reviewer reproduced build 20 s and test pass. Round 1: DOJO_API on quest class, forward declarations, Mac stale-editor runner rule, EndPlay on 5.4 to 5.7, verified test command in spec, problems tidy, map renamed L_Sandbox (A46). Rebasing onto main. |
-| M0.2 Typed IPC contract | app-shell | shell-ipc (session) | claude/m0-2-ipc-834665 @ 7998492 | re-review | Review round 1: stale BuildProgressEvent in unreal-pipeline spec, four unlogged renderer features, AttemptRecord has no review, AppError passthrough, preload test |
-| M0.3 Design tokens and frame | ui-core | ui-core (session) | claude/m0-3-tokens-a00ed1 @ b3b190a | re-review | Review round 1: font licenses not shipped, faint text 4.16:1 on overlay, motion rule (Lead allowed short feedback transitions, A98) |
-| M0.4 Content types, parser, verifier | content-engine | content-engine (session) | claude/m0-4-content-parser-89f0d1 @ 1c7ee2d | re-review | Review round 1: duplicates still loaded, --quest misses duplicate, blank-build example test cannot pass, pattern question ids, two example wording errors, align schema with M0.5 rules. M0.5 files parse unchanged. |
-| M0.6 CI matrix | qa | tester (session) | claude/m0-6-ci-1eed5d @ 1a91596 | re-review | Review round 1: Windows 1024x768 runner vs 1100x700 minimum, empty failure screenshot, docs one commit late (squash at merge). Green Actions run waits for a private repo (A05) |
-| M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | claude/m1-6-rules-b3c2e0 @ 30216a8 | review | Rebases onto main after M0.2 merges |
-| M1.7 AI review providers and graders | ai-review | builder-review (session) | claude/m1-7-ai-review-5c9ef2 @ 2f0521d | review | Rebases onto main after M0.2 merges |
-| M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | claude/m1-1-engine-locator-016bb6 @ 873abea | review | Real Mac run against UE 5.8.3; Windows via fakes only |
+| M0.1 Scaffold the app | app-shell | builder-shell (agent) | merged | merged | 1 fix round |
+| M0.2 Typed IPC contract | app-shell | shell-ipc (session) | merged 7c395b2 | merged | 1 fix round; content methods deferred to M0.2b (A89) |
+| M0.3 Design tokens and frame | ui-core | ui-core (session) | merged e7b57df | merged | 1 fix round; A98 motion rule |
+| M0.4 Content types, parser, verifier | content-engine | content-engine (session) | merged edb5279 | merged | 1 fix round; minor items queued for M1.8 (below) |
+| M0.5 Glossary and pattern cards | content-foundations | author-foundations (session) | merged 08aa030 | merged | 1 fix round; 126 of 126 docs links live |
+| M0.6 CI matrix | qa | tester (session) | merged 0deefe6 (squashed) | merged | Green Actions run waits for a private repo (A05); Windows steps unverified |
+| M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | merged 329a995 | merged | 1 fix round; build about 20 s, headless test about 18 s on UE 5.8.3 Mac |
+| M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | merged 267739b | merged | Passed first review; Windows unverified (problems.md) |
+| M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | claude/m1-6-rules-b3c2e0 @ 30216a8 | review | Rebase onto main after review |
+| M1.7 AI review providers and graders | ai-review | builder-review (session) | claude/m1-7-ai-review-5c9ef2 @ 2f0521d | review | Rebase onto main after review |
+
+Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
+Note for M2.1 (from the M1.1 review): `supportsFastLoop` is true for 5.8 on the Mac, but the Mac has no Live Coding (A45); first-run and Title must not promise the fast loop on the Mac.
 
 Stages: waiting, building, review, fixes, testing, merged. Only the Lead edits this board (A06).
 
