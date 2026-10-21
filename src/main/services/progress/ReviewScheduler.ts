@@ -13,8 +13,11 @@ export interface ScheduledReview
 	/** When the item is due next (ISO 8601). */
 	dueAt: string;
 
-	/** True when the review counted as a successful recall. */
+	/** True when the answer was a successful recall (quality 3 or more). */
 	successful: boolean;
+
+	/** False for a successful review before the item was due: it is logged, but repetitions, interval, ease, and mastery stay, so only spaced recalls count. */
+	counted: boolean;
 }
 
 /** Schedules the next review of an item from its state and the quality of this review. */

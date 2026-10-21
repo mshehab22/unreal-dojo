@@ -1,8 +1,10 @@
 // A JSON file written crash-safely: write a temp file, flush it, keep the old file as a backup, then rename over the original.
 import type { FileSystem } from "./FileSystem";
+import { errorCode } from "./retryWhileLocked";
 
 /** What reading one of the three files found. */
-export type JsonReadResult = { kind: "missing" } | { kind: "unreadable"; reason: string } | { kind: "read"; value: unknown };
+/** "unreadable" is a file whose text is not JSON; "io-error" is a file the disk refused to read (locked, no permission). */
+export type JsonReadResult = { kind: "missing" } | { kind: "unreadable"; reason: string } | { kind: "io-error"; reason: string; code?: string } | { kind: "read"; value: unknown };
 
 /** One JSON file with a `.tmp` sibling for writes and a `.bak` sibling holding the previous good version. Writes are serialized. */
 export class AtomicJsonFile
@@ -82,9 +84,12 @@ export class AtomicJsonFile
 		}
 		catch (error)
 		{
-			if (isMissingFileError(error)) return { kind: "missing" };
+			const code = errorCode(error);
+			if (code === "ENOENT") return { kind: "missing" };
 
-			return { kind: "unreadable", reason: error instanceof Error ? error.message : String(error) };
+			const reason = error instanceof Error ? error.message : String(error);
+
+			return code === undefined ? { kind: "io-error", reason } : { kind: "io-error", reason, code };
 		}
 
 		try
@@ -96,10 +101,4 @@ export class AtomicJsonFile
 			return { kind: "unreadable", reason: error instanceof Error ? error.message : String(error) };
 		}
 	}
-}
-
-/** True for a "file does not exist" error from node:fs. */
-function isMissingFileError(error: unknown): boolean
-{
-	return typeof error === "object" && error !== null && "code" in error && (error as { code: unknown }).code === "ENOENT";
 }

@@ -373,6 +373,9 @@ export interface AttemptOutcome
 	/** Chest earned, if any. */
 	chest?: ChestReward;
 
+	/** Month badge (YYYY-MM) earned by finishing the month's last daily quest, if any. */
+	monthBadge?: string;
+
 	/** Quest ids newly available because of this attempt. */
 	unlockedQuestIds: string[];
 
@@ -549,6 +552,9 @@ export interface DrillOutcome
 
 	/** Chest earned when this drill finished the chosen daily offer. */
 	chest?: ChestReward;
+
+	/** Month badge (YYYY-MM) earned by finishing the month's last daily quest, if any. */
+	monthBadge?: string;
 }
 
 /** Due drill counts for the Studio home. */
@@ -645,4 +651,16 @@ export interface RulesSnapshot
 
 	/** XP potion bonus share (0.5) and how long it lasts in minutes. */
 	xpPotion: { share: number; minutes: number };
+
+	/** Recalls in a row for familiar and proficient, and the interval in days for mastered. */
+	masteryThresholds: { familiarRecalls: number; proficientRecalls: number; masteredIntervalDays: number };
+
+	/** Hovers on an unpassed term that push it into the next drill. */
+	hoverInjectionThreshold: number;
+
+	/** Share of base XP a failed but compiled build, refactor, or boss attempt pays, once per quest. */
+	effortShare: number;
+
+	/** Studio cosmetic ids a chest can hold, in the order they are given. */
+	studioCosmetics: string[];
 }

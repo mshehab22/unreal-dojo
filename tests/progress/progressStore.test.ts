@@ -131,6 +131,22 @@ describe("ProgressStore", () =>
 		await expect(store.load(now)).rejects.toMatchObject({ appError: { code: "save-failed" } });
 	});
 
+	for (const code of ["EBUSY", "EPERM", "EACCES"])
+	{
+		it(`refuses with save-failed and quarantines nothing when the disk answers ${code}`, async () =>
+		{
+			const { store, fileSystem } = memoryStore();
+			await store.save(namedSave("Kept", 1));
+			fileSystem.readErrorCode = code;
+
+			await expect(store.load(now)).rejects.toMatchObject({ appError: { code: "save-failed" } });
+
+			fileSystem.readErrorCode = null;
+			expect([...fileSystem.files.keys()].sort()).toEqual([savePath]);
+			expect((await store.load(now)).progress.playerName).toBe("Kept");
+		});
+	}
+
 	it("fills lists added after the first save version when loading an older shape", async () =>
 	{
 		const { store, fileSystem } = memoryStore();

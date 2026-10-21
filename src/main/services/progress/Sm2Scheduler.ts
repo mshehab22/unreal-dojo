@@ -1,7 +1,7 @@
 // SM-2 spaced repetition: ease 2.5 at the start (never below 1.3), intervals 1, 3, then interval times ease.
 import type { ItemMemory } from "@shared/types/progress";
 
-import { addDays } from "./calendarDays";
+import { addDays, calendarDaysBetween } from "./calendarDays";
 import { MasteryRules } from "./MasteryRules";
 import type { ReviewScheduler, ScheduledReview } from "./ReviewScheduler";
 import { ANSWER_QUALITY, PASS_SCORE, QUALITY_FROM_SCORE, SM2, SUCCESSFUL_QUALITY } from "./rules";
@@ -37,12 +37,32 @@ export class Sm2Scheduler implements ReviewScheduler
 		return Math.max(SM2.minimumEase, Math.round(next * 100) / 100);
 	}
 
-	/** Reviews one item. A success (quality 3+) moves to the next interval; a miss restarts at 1 day. Ease changes on every review. */
+	/** When an item with this state is due: its last review plus its interval. */
+	dueAt(memory: ItemMemory): Date
+	{
+		return addDays(new Date(memory.lastReviewedAt), memory.intervalDays);
+	}
+
+	/**
+	 * Reviews one item. A success (quality 3+) moves to the next interval; a miss restarts at 1 day. Ease changes on every counted review.
+	 * A success on a calendar day before the item is due is logged but changes nothing else (an unspaced recall is not evidence of memory).
+	 */
 	review(itemId: string, memory: ItemMemory | undefined, quality: number, at: Date): ScheduledReview
 	{
 		const ease = memory?.ease ?? SM2.startEase;
 		const previousInterval = memory?.intervalDays ?? 0;
 		const successful = quality >= SUCCESSFUL_QUALITY;
+
+		if (memory && successful && calendarDaysBetween(at, this.dueAt(memory)) > 0)
+		{
+			return {
+				memory: { ...memory },
+				logEntry: { itemId, at: at.toISOString(), quality, intervalDays: memory.intervalDays, ease: memory.ease },
+				dueAt: this.dueAt(memory).toISOString(),
+				successful,
+				counted: false,
+			};
+		}
 
 		const repetitions = successful ? (memory?.repetitions ?? 0) + 1 : 0;
 		const intervalDays = successful ? this.successInterval(repetitions, previousInterval, ease) : SM2.firstIntervalDays;
@@ -57,6 +77,7 @@ export class Sm2Scheduler implements ReviewScheduler
 			logEntry: { itemId, at: at.toISOString(), quality, intervalDays, ease: nextEase },
 			dueAt,
 			successful,
+			counted: true,
 		};
 	}
 

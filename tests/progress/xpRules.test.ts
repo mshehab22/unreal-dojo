@@ -12,6 +12,7 @@ function input(fields: Partial<QuestXpInput> = {}): QuestXpInput
 		baseXp: 100,
 		difficulty: 1,
 		level: 1,
+		kind: "build",
 		result: "passed",
 		previouslyPassed: false,
 		isRematch: false,
@@ -105,6 +106,14 @@ describe("XpRules pricing", () =>
 		expect(rules.questXp(input({ result: "failed-compiled" })).effort).toBe(5);
 		expect(rules.questXp(input({ result: "failed-compiled", effortAlreadyGranted: true })).total).toBe(0);
 		expect(rules.questXp(input({ result: "failed" })).total).toBe(0);
+	});
+
+	it("pays effort XP only for build, refactor, and boss attempts; concept and breakdown fails pay nothing (A139)", () =>
+	{
+		expect(rules.questXp(input({ result: "failed-compiled", kind: "refactor" })).effort).toBe(5);
+		expect(rules.questXp(input({ result: "failed-compiled", kind: "boss" })).effort).toBe(5);
+		expect(rules.questXp(input({ result: "failed-compiled", kind: "concept" })).total).toBe(0);
+		expect(rules.questXp(input({ result: "failed-compiled", kind: "breakdown" })).total).toBe(0);
 	});
 
 	it("adds +5% on the passing submit while the spree is 5 or more", () =>

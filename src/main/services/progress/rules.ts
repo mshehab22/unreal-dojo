@@ -1,6 +1,8 @@
 // Every rule constant of progress-and-rules in one place. The UI reads them through `getRules`, never duplicates them. See docs/systems/progress-and-rules.md.
 import type { MasteryLevel, PatternCardTier, RulesSnapshot, XpBandRule } from "@shared/types/progress";
 
+import type { QuestKind } from "./contentFacts";
+
 /** Save file schema version. Raise it with a migration in ProgressStore when the save shape changes. */
 export const SAVE_VERSION = 1;
 
@@ -37,8 +39,11 @@ export const HINTS_PER_QUEST = 3;
 /** Share of first-pass XP a rematch pass pays. */
 export const REMATCH_SHARE = 0.5;
 
-/** Share of base XP a failed but compiled attempt pays, once per quest. */
+/** Share of base XP a failed but compiled attempt pays, once per quest. Build, refactor, and boss only (A139). */
 export const EFFORT_SHARE = 0.05;
+
+/** Quest kinds whose failed but compiled attempts pay effort XP (A139). */
+export const EFFORT_QUEST_KINDS: QuestKind[] = ["build", "refactor", "boss"];
 
 /** Flat XP per completed drill. */
 export const DRILL_XP = 10;
@@ -155,5 +160,9 @@ export function createRulesSnapshot(): RulesSnapshot
 		hintsPerQuest: HINTS_PER_QUEST,
 		rematchAfterDays: REMATCH_AFTER_DAYS,
 		xpPotion: { ...XP_POTION },
+		masteryThresholds: { ...MASTERY_THRESHOLDS },
+		hoverInjectionThreshold: HOVER_INJECTION_THRESHOLD,
+		effortShare: EFFORT_SHARE,
+		studioCosmetics: [...STUDIO_COSMETICS],
 	};
 }

@@ -5,7 +5,7 @@ import { ChestRules } from "../../src/main/services/progress/ChestRules";
 import { createNewProgress } from "../../src/main/services/progress/createNewProgress";
 import { DailyQuestService } from "../../src/main/services/progress/DailyQuestService";
 import { STUDIO_COSMETICS } from "../../src/main/services/progress/rules";
-import { localMoment } from "../support/progressFixtures";
+import { localMoment, makeQuest } from "../support/progressFixtures";
 import { SequenceRandom } from "../support/SequenceRandom";
 
 const daily = new DailyQuestService();
@@ -65,6 +65,25 @@ describe("DailyQuestService", () =>
 		const result = daily.complete(missedOne, lastDay, "drill");
 		expect(result.monthBadge).toBeUndefined();
 		expect(result.completedNow).toBe(true);
+	});
+});
+
+describe("DailyQuestService short builds", () =>
+{
+	it("offers only build quests with scaffold worked that add no new class", () =>
+	{
+		const open = { status: "available" as const, dueForRematch: false, skippable: false };
+		const quests = [
+			makeQuest({ id: "short", kind: "build", scaffold: "worked", addsNewClass: false }),
+			makeQuest({ id: "new-class", kind: "build", scaffold: "worked", addsNewClass: true }),
+			makeQuest({ id: "faded", kind: "build", scaffold: "faded" }),
+			makeQuest({ id: "refactor", kind: "refactor", scaffold: "worked" }),
+			makeQuest({ id: "concept", kind: "concept" }),
+			makeQuest({ id: "locked-concept", kind: "concept" }),
+		];
+		const availability = Object.fromEntries(quests.map((quest) => [quest.id, quest.id === "locked-concept" ? { ...open, status: "locked" as const } : open]));
+
+		expect(daily.candidatesFrom(quests, availability)).toEqual({ conceptQuestIds: ["concept"], shortBuildQuestIds: ["short"] });
 	});
 });
 

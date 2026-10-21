@@ -4,6 +4,7 @@ import type { XpBandRule, XpBreakdown } from "@shared/types/progress";
 import {
 	DIFFICULTY_RANGE,
 	DRILL_XP,
+	EFFORT_QUEST_KINDS,
 	EFFORT_SHARE,
 	LEVELS_PER_BAND,
 	REMATCH_SHARE,
@@ -11,6 +12,7 @@ import {
 	XP_BANDS,
 	XP_POTION,
 } from "./rules";
+import type { QuestKind } from "./contentFacts";
 import { HintSpellRules } from "./HintSpellRules";
 
 /** How an attempt ended, as far as XP cares. */
@@ -27,6 +29,9 @@ export interface QuestXpInput
 
 	/** The learner's level before the attempt. */
 	level: number;
+
+	/** The quest kind (effort XP is paid only for build, refactor, and boss). */
+	kind: QuestKind;
 
 	/** How the attempt ended. */
 	result: AttemptResultKind;
@@ -102,7 +107,7 @@ export class XpRules
 			const earned = breakdown.firstPass + breakdown.hintCost;
 			breakdown.spreeBonus = earned > 0 && input.spreeAfter >= SPREE_BONUS.threshold ? Math.round(SPREE_BONUS.share * earned) : 0;
 		}
-		else if (input.result === "failed-compiled" && !input.effortAlreadyGranted && !input.previouslyPassed)
+		else if (input.result === "failed-compiled" && EFFORT_QUEST_KINDS.includes(input.kind) && !input.effortAlreadyGranted && !input.previouslyPassed)
 		{
 			breakdown.effort = Math.round(EFFORT_SHARE * input.baseXp);
 		}

@@ -9,6 +9,9 @@ import { TestOutRules } from "./TestOutRules";
 /** The learner state the graph reads. */
 export interface UnlockState
 {
+	/** The moment availability is judged at (a rematch counts once its due time has come). */
+	now: Date;
+
 	/** Quest progress by quest id. */
 	quests: PlayerProgress["quests"];
 
@@ -77,7 +80,9 @@ export class UnlockGraph
 	{
 		const stored = state.quests[quest.id]?.status;
 		const testedOut = state.testedOutWorldIds.includes(quest.worldId);
-		const base = { dueForRematch: quest.id in state.rematches, skippable: testedOut && this.testOut.isSkippable(quest) };
+		const rematchDueAt = state.rematches[quest.id];
+		const dueForRematch = rematchDueAt !== undefined && new Date(rematchDueAt).getTime() <= state.now.getTime();
+		const base = { dueForRematch, skippable: testedOut && this.testOut.isSkippable(quest) };
 
 		if (stored === "passed") return { status: "passed", ...base };
 

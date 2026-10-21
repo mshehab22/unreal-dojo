@@ -13,9 +13,14 @@ export class MemoryFileSystem implements FileSystem
 	/** Where the next write crashes. Resets to "none" after one crash. */
 	crashAt: CrashPoint = "none";
 
+	/** When set, every read fails with this node:fs code (for example EBUSY), like a file held by another program. */
+	readErrorCode: string | null = null;
+
 	/** Reads a file or rejects with ENOENT. */
 	async readText(path: string): Promise<string>
 	{
+		if (this.readErrorCode) throw Object.assign(new Error(`${this.readErrorCode}: ${path}`), { code: this.readErrorCode });
+
 		const text = this.files.get(path);
 		if (text === undefined) throw Object.assign(new Error(`ENOENT: ${path}`), { code: "ENOENT" });
 

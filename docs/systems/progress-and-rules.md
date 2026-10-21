@@ -58,7 +58,7 @@ Last updated by M1.6 (rules, scheduler, save file).
 ### Layers
 - Pure rule classes (no I/O, time and randomness passed in): `PassRules`, `XpRules`, `HintSpellRules`, `LevelRules`, `PatternCardRules`, `SkillRules`, `MasteryRules`, `SpreeRules`, `StreakRules`, `SeerStoneRules`, `ChestRules`, `TestOutRules`, `RematchSelector`, `UnlockGraph`, `DrillScheduler`, `DailyQuestService`, and the scheduler `Sm2Scheduler` behind the `ReviewScheduler` interface (FSRS replaces it by implementing the same interface; the review log already holds every review).
 - Every constant lives in `rules.ts` with a comment; `createRulesSnapshot()` is what `getRules` answers.
-- `ProgressService` is the only stateful piece: it holds the loaded save, applies the rules to attempts, reviews, drills, hints, solution views, and the daily quest, and saves after every change (memory never runs ahead of the disk). It takes a `Clock` and a `RandomSource` (`SystemClock` and `MathRandomSource` in the app; fixed ones in tests).
+- `ProgressService` is the only stateful piece: it holds the loaded save, applies the rules to attempts, reviews, drills, hints, solution views, and the daily quest, and saves after every change (memory never runs ahead of the disk). Every public method that changes the save runs as one queued step (read, compute, commit) after the previous one finishes, so overlapping IPC calls never lose an update; a failed step does not block the queue. A save that cannot be opened gives a refused service (`openOrRefuse`) whose every progress call answers the `save-failed` error and which never writes. It takes a `Clock` and a `RandomSource` (`SystemClock` and `MathRandomSource` in the app; fixed ones in tests).
 - `ProgressStore` loads and saves `<userData>/progress.json` through `AtomicJsonFile` on a `FileSystem` (`NodeFileSystem` in the app, `tests/support/MemoryFileSystem.ts` in tests, which can crash mid-write or before the rename).
 
 ### Files (`src/main/services/progress/`)
@@ -70,18 +70,20 @@ Last updated by M1.6 (rules, scheduler, save file).
 
 ### Save file
 - Write: the JSON goes to `progress.json.tmp` and is flushed (fsync), the current `progress.json` is copied to `progress.json.bak`, then the temp file is renamed over `progress.json`. A crash at any step leaves the old or the new file whole. Writes are serialized.
-- Load: missing file gives a fresh save (or the backup if only the backup exists). A file that is not JSON or fails the zod schema is moved to `progress.json.corrupt-<time>` and the backup is used; if the backup is bad too, a fresh save starts. A save whose `version` is newer than the app is refused with `save-failed`, never overwritten. Fields added after version 1 default to empty.
+- Load: missing file gives a fresh save (or the backup if only the backup exists). A file that is not JSON or fails the zod schema is moved to `progress.json.corrupt-<time>` and the backup is used; if the backup is bad too, a fresh save starts. A save whose `version` is newer than the app, and a file the disk will not read (locked, no permission), are refused with `save-failed`, never quarantined or overwritten; the app still opens (A133).
+- Disk: on Windows, reads, renames, and copies retry EPERM, EACCES, and EBUSY with backoff of about 1.5 seconds (`retryWhileLocked.ts`); on macOS and Linux the folder is flushed after the rename. Fields added after version 1 default to empty.
 - Loot items: chests open the moment they are earned (no unopened chests are stored); the outcome carries `chest`. The active potion is `xpPotionUntil`, held cosmetics are `studio.cosmetics`, freezes `streak.freezes`, armor `spree.armor`, stones `seerStones` (A138).
 - The save shape is `PlayerProgress` in `src/shared/types/progress.ts`. M1.6 added `memory` (SM-2 state and mastery per item), `drillQueue`, `rematches`, `testedOutWorldIds`, `xpPotionUntil`, `studio.cosmetics`, `daily.completedDates`, and on `QuestProgress` `seerStoneSpent` and `effortXpGranted` (A120).
 
 ### Flows
 - Attempt (`recordAttempt`): price XP (band, first pass, repeat, rematch, hints, effort, spree, potion), update the quest, cards (any pass), skills (first pass or rematch), spree (first Submit of a never-passed build or refactor), streak (on a pass), boss rewards (freeze, armor, studio module), daily completion and chest, level and role, the attempt record, newly unlocked quests, next due dates.
-- Review (`reviewItem`): SM-2 review, append to the review log, update the schedule and item memory, remove the item from the Drill me queue, recompute the item's skill mastery (the weakest item of the skill) and report the change.
+- Review (`reviewItem`): SM-2 review (a success before the due day is logged but does not count), append to the review log, update the schedule and item memory, remove the item from the Drill me queue, recompute the item's skill mastery (the weakest item of the skill) and report the change.
 - Drill (`finishDrill`): flat drill XP, streak, daily completion and chest, and any world whose terms are all proficient becomes tested out.
-- World Map (`getQuestAvailability`): today's due items surface as rematches of passed quests in other worlds, then the unlock graph answers.
+- World Map (`getQuestAvailability`): today's due items surface as rematches of passed quests in other worlds, then the unlock graph answers (a rematch is flagged once its due time has come). Passing a rematch reviews the due items the quest uses, so it cannot be farmed.
+- Daily candidates: `DailyQuestService.candidatesFrom(quests, availability)` gives open concept quests and short builds (`scaffold: worked`, `addsNewClass` false).
 
 ### IPC wired in M1.6
-`getProgress`, `getRules`, `setPlayerName`, `saveQuestDraft`, `resetQuest`, `recordTermHover`, `queueDrillItem`, `chooseDailyOffer`, `resetProgress`, `getDrillSummary`. The others in the progress and drill groups need loaded content (quest facts, hints, drill items) and are wired after M0.4 and M0.2b merge (A135). `src/main/index.ts` opens the service before registering handlers.
+`getProgress`, `getRules`, `setPlayerName`, `saveQuestDraft`, `resetQuest`, `recordTermHover`, `queueDrillItem`, `chooseDailyOffer`, `resetProgress`, `getDrillSummary`. The others (including `getTestOutStatus`, added by the M0.2 fix round) in the progress and drill groups need loaded content (quest facts, hints, drill items) and are wired after M0.4 and M0.2b merge (A135). `src/main/index.ts` opens the service before registering handlers.
 
 ### Tests
 `tests/progress/*.test.ts`, one file per rule area, plus `progressStore.test.ts` (round trip, two simulated crashes, corrupt recovery, real disk) and `progressService.test.ts` (end to end on an in-memory disk). Shared builders in `tests/support/`.

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { PlayerProgress } from "@shared/types/progress";
 
 import { AppErrorException } from "../../errors/AppErrorException";
-import { AtomicJsonFile } from "./AtomicJsonFile";
+import { AtomicJsonFile, type JsonReadResult } from "./AtomicJsonFile";
 import { createNewProgress } from "./createNewProgress";
 import type { FileSystem } from "./FileSystem";
 import { playerProgressSchema } from "./progressSchema";
@@ -38,10 +38,14 @@ export class ProgressStore
 		this.file = new AtomicJsonFile(fileSystem, folder, join(folder, SAVE_FILE_NAME));
 	}
 
-	/** Loads the save. Missing: a fresh save. Corrupt or invalid: the bad file is quarantined and the backup is used, else a fresh save. A save from a newer app version is refused, never overwritten. */
+	/**
+	 * Loads the save. Missing: a fresh save. Not JSON or not a save: the bad file is quarantined and the backup is used, else a fresh save.
+	 * A file the disk will not read (locked, no permission) and a save from a newer app version are refused with `save-failed`, never quarantined or overwritten.
+	 */
 	async load(now: Date): Promise<LoadedProgress>
 	{
 		const main = await this.file.read();
+		this.refuseIoError(main);
 		if (main.kind === "missing") return this.loadBackupOrFresh(now, "none");
 
 		const parsed = main.kind === "read" ? this.parse(main.value) : null;
@@ -70,11 +74,22 @@ export class ProgressStore
 	private async loadBackupOrFresh(now: Date, recoveryIfBackup: "none" | "backup"): Promise<LoadedProgress>
 	{
 		const backup = await this.file.readBackup();
+		this.refuseIoError(backup);
 		const parsed = backup.kind === "read" ? this.parse(backup.value) : null;
 
 		if (parsed) return { progress: parsed, recovery: "backup" };
 
 		return { progress: createNewProgress(now), recovery: recoveryIfBackup === "none" && backup.kind === "missing" ? "none" : "fresh" };
+	}
+
+	/** Throws `save-failed` for a file the disk refused to read, so a locked save is never mistaken for a corrupt one. */
+	private refuseIoError(result: JsonReadResult): void
+	{
+		if (result.kind !== "io-error") return;
+
+		const detail = result.code ? `${result.code}: ${result.reason}` : result.reason;
+
+		throw new AppErrorException("save-failed", "Your progress file could not be read right now.", "Close any program that may be using it (a backup or sync tool), then restart Unreal Dojo.", detail);
 	}
 
 	/** Validates a parsed save, or returns null when it does not match the schema. Throws for a save from a newer app. */

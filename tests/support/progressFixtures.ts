@@ -1,4 +1,6 @@
 // Shared builders for progress tests: local dates, quests, and a service on an in-memory disk.
+import type { PlayerProgress } from "@shared/types/progress";
+
 import { createNewProgress } from "../../src/main/services/progress/createNewProgress";
 import { ProgressService } from "../../src/main/services/progress/ProgressService";
 import { ProgressStore } from "../../src/main/services/progress/ProgressStore";
@@ -30,17 +32,20 @@ export function makeQuest(fields: Partial<RuleQuest> & { id: string }): RuleQues
 		terms: [],
 		patterns: [],
 		skills: [],
+		addsNewClass: false,
 		...fields,
 	};
 }
 
-/** A progress service on an in-memory disk with a fixed clock and fixed randomness. */
-export function createTestProgressService(start: Date = localMoment(2026, 10, 21), random: number[] = [0]): { service: ProgressService; clock: FixedClock; fileSystem: MemoryFileSystem; store: ProgressStore }
+/** A progress service on an in-memory disk with a fixed clock and fixed randomness. `prepare` may change the starting save. */
+export function createTestProgressService(start: Date = localMoment(2026, 10, 21), random: number[] = [0], prepare?: (progress: PlayerProgress) => void): { service: ProgressService; clock: FixedClock; fileSystem: MemoryFileSystem; store: ProgressStore }
 {
 	const clock = new FixedClock(start);
 	const fileSystem = new MemoryFileSystem();
 	const store = new ProgressStore(fileSystem, "/user-data");
-	const service = new ProgressService(createNewProgress(start), store, clock, new SequenceRandom(random));
+	const progress = createNewProgress(start);
+	prepare?.(progress);
+	const service = new ProgressService(progress, store, clock, new SequenceRandom(random));
 
 	return { service, clock, fileSystem, store };
 }

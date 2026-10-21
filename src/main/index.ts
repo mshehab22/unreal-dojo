@@ -20,7 +20,11 @@ async function start(): Promise<void>
 	let engineLocator: EngineLocator | null = null;
 	const getEngineLocator = (): EngineLocator => (engineLocator ??= createEngineLocator());
 	const progressStore = new ProgressStore(new NodeFileSystem(), app.getPath("userData"));
-	const progressService = await ProgressService.open(progressStore, new SystemClock(), new MathRandomSource());
+	const progressService = await ProgressService.openOrRefuse(progressStore, new SystemClock(), new MathRandomSource());
+	const refusal = progressService.getRefusal();
+
+	// A refused save still lets the app open; every progress call answers the save-failed error so the renderer can show it.
+	if (refusal) console.error(`Progress refused: ${refusal.message} ${refusal.detail ?? ""}`);
 
 	registerHandlers(ipcMain, createHandlers({ getAppVersion: () => app.getVersion(), getEngineLocator, progressService }));
 	createMainWindow();
@@ -36,4 +40,7 @@ app.on("window-all-closed", () =>
 	if (process.platform !== "darwin") app.quit();
 });
 
-void start();
+start().catch((error: unknown) =>
+{
+	console.error("Unreal Dojo failed to start", error);
+});

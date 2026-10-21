@@ -33,6 +33,9 @@ export interface RuleQuest
 	/** Scaffold level for build and refactor quests. */
 	scaffold?: ScaffoldLevel;
 
+	/** True when the quest adds a new class (or a new reflected declaration), which Live Coding cannot load, so it needs a full engine build. */
+	addsNewClass: boolean;
+
 	/** Quest ids that must be passed first. */
 	prerequisites: string[];
 

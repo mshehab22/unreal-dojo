@@ -19,6 +19,7 @@ function passed(): QuestProgress
 function state(passedIds: string[] = [], mastery: Record<string, MasteryLevel> = {}, testedOutWorldIds: string[] = []): UnlockState
 {
 	return {
+		now: new Date("2026-10-21T12:00:00.000Z"),
 		quests: Object.fromEntries(passedIds.map((questId) => [questId, passed()])),
 		masteryOf: (itemId) => mastery[itemId],
 		testedOutWorldIds,
@@ -91,6 +92,18 @@ describe("UnlockGraph", () =>
 		const graph = new UnlockGraph([first, second, third]);
 
 		expect(graph.newlyUnlocked(state([], { "term.component": "familiar" }), state(["first"], { "term.component": "familiar" }))).toEqual(["second"]);
+	});
+
+	it("flags a rematch only once its due time has come", () =>
+	{
+		const graph = new UnlockGraph([first]);
+		const progressState = state(["first"]);
+
+		progressState.rematches = { first: "2026-10-22T12:00:00.000Z" };
+		expect(graph.availability(progressState)["first"]?.dueForRematch).toBe(false);
+
+		progressState.now = new Date("2026-10-22T12:00:00.000Z");
+		expect(graph.availability(progressState)["first"]?.dueForRematch).toBe(true);
 	});
 
 	it("keeps an in-progress status once the quest is open, and passed always wins", () =>

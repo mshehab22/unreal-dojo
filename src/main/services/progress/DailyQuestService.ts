@@ -1,8 +1,9 @@
 // The daily quest: three offers per calendar day, one chosen, a chest when done, a badge for a full month. Missing days costs nothing.
-import type { DailyOffer, DailyOfferKind, DailyQuestState } from "@shared/types/progress";
+import type { DailyOffer, DailyOfferKind, DailyQuestState, QuestAvailability } from "@shared/types/progress";
 
 import { daysOfLocalMonth, localDayKey, localMonthKey } from "./calendarDays";
 import type { RandomSource } from "./RandomSource";
+import type { RuleQuest } from "./RuleQuest";
 
 /** Quests the daily quest may offer today. */
 export interface DailyCandidates
@@ -30,6 +31,23 @@ export interface DailyCompletion
 /** Daily quest service. Pure: time and randomness come in as arguments. */
 export class DailyQuestService
 {
+	/** A short build the daily quest may offer: a build quest with `scaffold: worked` that adds no new class, so the fast loop applies. */
+	isShortBuild(quest: RuleQuest): boolean
+	{
+		return quest.kind === "build" && quest.scaffold === "worked" && !quest.addsNewClass;
+	}
+
+	/** Today's candidates from the open quests: available or in-progress concept quests and short builds. */
+	candidatesFrom(quests: RuleQuest[], availability: Record<string, QuestAvailability>): DailyCandidates
+	{
+		const open = quests.filter((quest) => availability[quest.id]?.status === "available" || availability[quest.id]?.status === "in_progress");
+
+		return {
+			conceptQuestIds: open.filter((quest) => quest.kind === "concept").map((quest) => quest.id),
+			shortBuildQuestIds: open.filter((quest) => this.isShortBuild(quest)).map((quest) => quest.id),
+		};
+	}
+
 	/** The state for `now`: unchanged on the same day, otherwise three fresh offers (drill, concept, short build; an offer with no candidate is left out). */
 	refresh(state: DailyQuestState, now: Date, candidates: DailyCandidates, random: RandomSource): DailyQuestState
 	{

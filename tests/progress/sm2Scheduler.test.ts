@@ -45,10 +45,10 @@ describe("Sm2Scheduler intervals", () =>
 		expect(first.memory.intervalDays).toBe(1);
 		expect(first.dueAt).toBe(new Date(at.getTime() + 1 * 86_400_000).toISOString());
 
-		const second = scheduler.review("term.uobject", first.memory, 4, at);
+		const second = scheduler.review("term.uobject", first.memory, 4, new Date(first.dueAt));
 		expect(second.memory.intervalDays).toBe(3);
 
-		const third = scheduler.review("term.uobject", second.memory, 4, at);
+		const third = scheduler.review("term.uobject", second.memory, 4, new Date(second.dueAt));
 		expect(third.memory.intervalDays).toBe(Math.round(3 * 2.5));
 	});
 
@@ -71,6 +71,37 @@ describe("Sm2Scheduler intervals", () =>
 		expect(learned.memory.repetitions).toBe(0);
 		expect(learned.memory.mastery).toBe("familiar");
 		expect(learned.successful).toBe(false);
+	});
+
+	it("logs a success before the due day but does not advance repetitions, interval, ease, or mastery", () =>
+	{
+		const first = scheduler.review("term.uobject", undefined, 5, at);
+		const early = scheduler.review("term.uobject", first.memory, 5, at);
+		const sameInstantAgain = scheduler.review("term.uobject", early.memory, 5, at);
+
+		expect(sameInstantAgain.memory).toEqual(first.memory);
+		expect(sameInstantAgain.counted).toBe(false);
+		expect(sameInstantAgain.dueAt).toBe(first.dueAt);
+		expect(sameInstantAgain.logEntry.quality).toBe(5);
+		expect(sameInstantAgain.memory.mastery).toBe("familiar");
+	});
+
+	it("counts a success later on the due day", () =>
+	{
+		const first = scheduler.review("term.uobject", undefined, 4, localMoment(2026, 10, 21, 20));
+		const nextMorning = scheduler.review("term.uobject", first.memory, 4, localMoment(2026, 10, 22, 7));
+
+		expect(nextMorning.counted).toBe(true);
+		expect(nextMorning.memory.repetitions).toBe(2);
+	});
+
+	it("still counts a miss before the due day (a miss is real evidence)", () =>
+	{
+		const first = scheduler.review("term.uobject", undefined, 4, at);
+		const miss = scheduler.review("term.uobject", first.memory, 1, at);
+
+		expect(miss.counted).toBe(true);
+		expect(miss.memory.repetitions).toBe(0);
 	});
 
 	it("returns a review log entry for every review (so FSRS can replay the history later)", () =>
