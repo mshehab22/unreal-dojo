@@ -6,7 +6,7 @@ import type { BuildQuest, ContentProblem, RefactorQuest } from "../../../src/sha
 import type { QuestRecord } from "../ContentCheck";
 import { errorAt } from "../checks/checkHelpers";
 
-import { EngineSandbox, type EngineTarget, type SandboxFile } from "./EngineSandbox";
+import { EngineSandbox, type EngineTarget, type SandboxFile, type SandboxTestRun } from "./EngineSandbox";
 import type { ProcessResult } from "./runProcess";
 import { testNamesIn } from "./testNamesIn";
 
@@ -38,6 +38,17 @@ export interface EngineReport
 	keptSandbox?: string;
 }
 
+/** The sandbox operations the verifier uses; `EngineSandbox` is the real one, tests pass a fake. */
+export interface VerifierSandbox
+{
+	readonly folder: string;
+	writeQuestFiles(questId: string, files: readonly SandboxFile[]): Promise<void>;
+	writeQuestTests(questId: string, source: string): Promise<void>;
+	build(): Promise<ProcessResult>;
+	runTests(testNames: readonly string[]): Promise<SandboxTestRun>;
+	remove(): Promise<void>;
+}
+
 /** Where the verifier reads from and how it talks. */
 export interface EngineVerifierOptions
 {
@@ -47,6 +58,9 @@ export interface EngineVerifierOptions
 
 	/** Progress lines (the CLI prints them to stderr). */
 	log: (line: string) => void;
+
+	/** Makes the sandbox; defaults to a real copy of the template. */
+	createSandbox?: (templateFolder: string, target: EngineTarget) => Promise<VerifierSandbox>;
 }
 
 /** Build output lines worth showing: compiler errors and the failure summary. */
@@ -133,7 +147,8 @@ export class EngineVerifier
 
 		if (judged.length === 0) return { problems, questsChecked: 0, timings };
 
-		const sandbox = await EngineSandbox.create(this.options.templateFolder, this.options.target);
+		const createSandbox = this.options.createSandbox ?? ((templateFolder, target) => EngineSandbox.create(templateFolder, target));
+		const sandbox = await createSandbox(this.options.templateFolder, this.options.target);
 
 		log(`engine: sandbox copy at ${sandbox.folder}`);
 
@@ -208,7 +223,7 @@ export class EngineVerifier
 	}
 
 	/** Swaps in the starter, builds, runs the quest's tests, reports a starter that already passes, and restores the solution. */
-	private async checkStarter(sandbox: EngineSandbox, entry: EngineQuest): Promise<ContentProblem[]>
+	private async checkStarter(sandbox: VerifierSandbox, entry: EngineQuest): Promise<ContentProblem[]>
 	{
 		const { log } = this.options;
 		const problems: ContentProblem[] = [];

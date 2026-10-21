@@ -1,5 +1,5 @@
 // A throwaway copy of the sandbox template that the verifier writes quest code into, builds, and tests headless.
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -61,7 +61,9 @@ export class EngineSandbox
 	/** Copies `templateFolder` to a new temp folder and points its `.uproject` at the engine version, as SandboxProjectService does. */
 	static async create(templateFolder: string, target: EngineTarget): Promise<EngineSandbox>
 	{
-		const folder = await mkdtemp(join(tmpdir(), "dojo-verify-"));
+		// The real path matters on macOS: the temp folder is reached through the /var -> /private/var link, and Unreal's
+		// build accelerator refuses to write outputs when the two spellings of one folder disagree.
+		const folder = await realpath(await mkdtemp(join(tmpdir(), "dojo-verify-")));
 
 		await cp(templateFolder, folder, { recursive: true });
 
@@ -95,13 +97,16 @@ export class EngineSandbox
 		await writeFile(join(this.folder, "Source", "Dojo", "Tests", `${questId}.Test.cpp`), `// Quest test: ${questId} (written by the content verifier).\n${source}\n`, "utf8");
 	}
 
-	/** Runs the editor target build (`Build.sh` or `Build.bat`), the exact command from the unreal-pipeline spec. */
-	build(onLine?: (line: string) => void): Promise<ProcessResult>
+	/** Runs the editor target build (`Build.sh` or `Build.bat`), the exact command from the unreal-pipeline spec. The output is saved under `Saved/VerifierLogs/`. */
+	async build(onLine?: (line: string) => void): Promise<ProcessResult>
 	{
 		const { paths, root } = this.target;
 		const editorTarget = "DojoEditor";
+		const result = await runProcess(paths.buildScript(root), [editorTarget, paths.buildPlatform, "Development", `-Project=${this.projectFile()}`, "-WaitMutex", "-Progress"], BUILD_TIMEOUT_MILLISECONDS, onLine);
 
-		return runProcess(paths.buildScript(root), [editorTarget, paths.buildPlatform, "Development", `-Project=${this.projectFile()}`, "-WaitMutex", "-Progress"], BUILD_TIMEOUT_MILLISECONDS, onLine);
+		await this.saveLog(`build-${++this.runNumber}.log`, result);
+
+		return result;
 	}
 
 	/** Runs the named tests headless with UnrealEditor-Cmd and reads the report. Names are joined with `+`, which RunTests accepts. */
@@ -127,6 +132,8 @@ export class EngineSandbox
 		];
 		const process = await runProcess(paths.editorCmdBinary(root), args, TEST_TIMEOUT_MILLISECONDS, onLine);
 
+		await this.saveLog(`tests-${this.runNumber}.log`, process);
+
 		return { process, outcomes: await readAutomationReport(reportFolder) };
 	}
 
@@ -134,6 +141,15 @@ export class EngineSandbox
 	async remove(): Promise<void>
 	{
 		await rm(this.folder, { recursive: true, force: true });
+	}
+
+	/** Writes a process's output to `Saved/VerifierLogs/<name>` for anyone inspecting a kept sandbox. */
+	private async saveLog(name: string, result: ProcessResult): Promise<void>
+	{
+		const folder = join(this.folder, "Saved", "VerifierLogs");
+
+		await mkdir(folder, { recursive: true });
+		await writeFile(join(folder, name), `${result.lines.join("\n")}\nexit code: ${String(result.exitCode)}${result.timedOut ? " (timed out)" : ""}\n`, "utf8");
 	}
 
 	/** The copy's `.uproject`. */

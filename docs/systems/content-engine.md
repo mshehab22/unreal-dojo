@@ -1,6 +1,6 @@
 # System: content-engine
 
-Owner: builder-content-engine. Folder: `src/main/services/content/`, `src/shared/types/content.ts`, `tools/verify-content.ts`, `tools/verifier/`. Research: `research/gamedevtv-exercise-design.md` section 7 (author rules), `research/gamified-learning-platforms.md` section 3 (item types).
+Owner: builder-content-engine. Folder: `src/main/services/content/`, `src/shared/content/` (term matching shared by main and the renderer), `src/shared/types/content.ts`, `tools/verify-content.ts`, `tools/verifier/`, `tools/solutions/example-*` (the format examples' reference solutions). Research: `research/gamedevtv-exercise-design.md` section 7 (author rules), `research/gamified-learning-platforms.md` section 3 (item types).
 
 ## Purpose
 
@@ -71,25 +71,54 @@ Errors name the file (relative to `content/`), and the section and line when kno
 
 ## Term linking
 
-`TermLinker` is a remark plugin: it finds glossary terms and aliases in text nodes (longest match first, case sensitive for identifiers such as `AActor`, case insensitive for plain words such as "actor"), skips code blocks and headings, and emits a `glossaryTerm` node with the entry id. An entry with `linkMode: "code-only"` (terms that are also ordinary English words, such as `check` and `ensure`) links only inside inline code, never in plain text; an entry without `linkMode` links normally. The renderer maps that node to a `HoverCard`. The same alias table feeds Monaco's hover and completion providers (exposed through IPC as a flat list).
+Built in M1.8. Three pieces, all in `src/shared/content/` so the main process and the renderer use the same code (A202):
+
+- `buildAliasTable(entries)` makes the flat alias list (`GlossaryAlias[]`: `text`, `entryId`, `term`, `short`, `caseSensitive`, `codeOnly`), one row per spelling (the term, then each alias). This is the list Monaco's hover and completion providers read, sent to the renderer through IPC.
+- `GlossaryMatcher` compiles the list once. `findInProse(text)` returns non-overlapping matches left to right; where matches overlap, the earliest start wins, then the longest, then the case-sensitive one ("Actor Component" beats "Actor"). A term never matches inside a longer word (`reactor`). `matchInlineCode(code)` returns the entry when the whole code span, trimmed and with a trailing `()` ignored, is one spelling.
+- `termLinker` is the remark plugin. It replaces matched text with `glossaryTerm` nodes (`entryId`, the matched text or inline code as the child, and `data.hName: "glossary-term"` with `hProperties.entryId`, so react-markdown renders a `<glossary-term>` element that the renderer maps to a `HoverCard` through its `components` prop). It never touches headings, code blocks, links, link references, raw HTML, or terms already linked.
+
+Case rule (A201): a spelling is an identifier, matched case sensitively, when it has an uppercase letter after its first character (`AActor`, `BeginPlay`, `UPROPERTY`) or a character words never have (`_ : ( ) < > # .` or a digit, as in `TObjectPtr<>` or `UE_LOG`). Anything else is a plain word, matched in any case (`Actor`, `actor`, `ACTOR`; `garbage collection`).
+
+Inline code (A200): normal terms link inside inline code too, but only when the whole span is one spelling, so `` `AActor` `` and `` `BeginPlay()` `` link while `` `AActor* Owner` `` does not. Code-only terms (`linkMode: "code-only"`, A62: `check`, `ensure`, `cast`, `destroy`, `category`, `super`) link only that way and never in prose.
+
+`GlossaryService` (`src/main/services/content/GlossaryService.ts`) holds a loaded glossary: `entries()`, `entry(id)`, `aliasTable()`, and one shared `matcher()`. Wiring it to IPC is app-shell's (the `DojoApi` method that returns the alias table).
 
 ## Verifier (`tools/verify-content.ts`)
 
-Parse-only mode (M0.4, built): parses every pack, the glossary, the patterns, and `content/examples/`, prints `ok` or `FAIL` per file with each problem under it, then a summary line, and exits 1 on any problem (2 for a bad command line). `--content <folder>` points it at another folder (tests and fixtures). Later checks plug in as `ContentCheck` objects (`tools/verifier/ContentCheck.ts`) passed to `runVerifier`; `PARSE_ONLY_CHECKS` is empty until M1.8 adds them. `--engine` is refused with exit 2 until M1.8 builds it. Measured: 300 quests plus the real glossary and patterns parse in about 46 ms, 0.28 s for the whole command on the MacBook Air.
+Usage: `npx tsx tools/verify-content.ts [--pack <id>] [--quest <id>] [--content <folder>] [--solutions <folder>] [--engine <path>] [--release]`. It prints `ok`, `warn`, or `FAIL` per file with each problem under it (warnings marked), then a summary. Exit 0 when there are no errors (warnings allowed), 1 on any error, 2 on a bad command line.
 
-Checks, all with file names in the output (the ones beyond parsing arrive in M1.8):
-- every quest parses; required sections per kind present; hints are 3; rubric sizes; concepts non-empty; `terms[]` ids exist in the glossary; `patterns[]` ids exist in patterns.json; prerequisites exist; the prerequisite graph has no cycles and every quest is reachable from a pack's first quest
-- every glossary term appears in at least one concept quest and one build quest (warning until the curriculum is complete, error at release)
-- each world's build quests fade: first is worked or faded, last is stub or blank, never a step backward
-- from world 3 of each pack on, each world has at least one quest whose brief names an earlier pattern or term (checked through `patterns[]` or `terms[]` overlap with earlier worlds)
-- every pattern has at least three build quests listing it across packs (warning until complete)
-- breakdown quests have at least two reference plans and every required piece appears in each plan
-- multiple-choice and which-pattern questions have 3 or more distinct choices
-- which-pattern choices and answer are pattern ids in patterns.json, with one distractor note per wrong choice
-- glossary `related` ids resolve to glossary entries
-- glossary `unrealDocsUrl` links are pinned to `?application_version=5.8`
-- `--engine <path>`: copies the sandbox template to a temp folder, writes every build quest's reference solution and tests, builds once, runs all `Dojo.*` tests headless, and reports per quest; also checks that a build quest's starter does not already pass its tests (starter compile may fail; that is fine)
-- `--pack <id>` and `--quest <id>` filters
+Every pack is always read, so cross-pack references and duplicate ids are checked; `--pack` and `--quest` only narrow what is reported, and for `--engine` which quests are judged (A206). Code: `tools/verifier/runVerifier.ts` runs `CONTENT_CHECKS` (one `ContentCheck` per file in `tools/verifier/checks/`), then `--engine` runs `tools/verifier/engine/`.
+
+Checks, all with file names in the output. Errors unless marked as warnings:
+- parsing (M0.4): every quest, manifest, glossary entry, and pattern card parses; required sections per kind; 3 hints; ids unique
+- quest shape: 5 to 6 rubric bullets on build, refactor, and breakdown quests, 8 integration rubric bullets on bosses; `concepts` not empty
+- references: `terms[]` are glossary ids, `patterns[]` are pattern ids, `prerequisites[]` are quest ids (a pack quest may only require pack quests; an example may require examples or pack quests; never itself), boss `pieces` are build quests, pattern `useCaseQuestIds` are quests that list that pattern, glossary `firstQuestId` is a quest
+- unlock graph (A203): no prerequisite cycles (reported with the path, `a -> b -> a`); every quest can unlock; inside a pack only the first quest of the first world has no prerequisites, so every other quest is reached from it
+- fade ladder (A204): in each world, build quests never step back (worked, faded, stub, blank); with two or more build quests the first is worked or faded and the last is stub or blank; refactor quests are not on the ladder
+- repetition: from world 3 of each pack on, some quest in each world lists a pattern or term an earlier world of that pack used (reported on the world's `world.json`)
+- plan coverage: breakdowns and bosses have at least two reference plans, and each plan covers every required piece
+- questions: multiple-choice and which-pattern questions have 3 or more distinct choices (the schema needs at least 2); which-pattern choices and answer are pattern ids, with exactly one distractor note per wrong choice; checked in concept quests and in pattern card recall and scenario questions
+- glossary: `related` ids resolve and are not the entry itself; `unrealDocsUrl` carries `?application_version=5.8`; no spelling belongs to two entries (the TermLinker could not choose, A209)
+- coverage, warning until release (A205): every glossary term is in some concept quest's and some build quest's `terms[]`; every pattern is listed by at least 3 build quests. Without `--release` each rule prints one summary warning with the first ids; with `--release` every missing id is its own error. Format examples do not count.
+- reference solutions (A210): every build and refactor quest, examples included, has `tools/solutions/<quest-id>/` with exactly its file names
+- `--engine <path>` (A208): see below
+
+### `--engine <path>`
+
+`<path>` is an engine root or its `Engine` folder (`~/Applications/UE_5.8` on the Mac), checked with the EngineLocator. Steps:
+
+1. Copy `resources/sandbox-template/` to a temp folder (its real path; on macOS the `/var` link confuses Unreal's build accelerator), set `EngineAssociation`, and drop the 5.8-only plugins for older engines (A41).
+2. Write every build and refactor quest's reference solution to `Source/Dojo/Quests/<quest-id>/` and its tests to `Source/Dojo/Tests/<quest-id>.Test.cpp`. Every solution is always written, because quests may use each other's classes; tests include quest headers as `Quests/<quest-id>/<File>.h`.
+3. Build once with the platform build script (the exact command in `docs/systems/unreal-pipeline.md`). A failed build is reported on every judged quest, quoting the error lines that point into that quest's files.
+4. Run every judged quest's tests in one headless `UnrealEditor-Cmd` run (names joined with `+`) and read `index.json`. Each test named in a quest's `IMPLEMENT_*_AUTOMATION_TEST` macros must run and report `Success`.
+5. Starter check, one quest at a time: write the starter files in place of the solution, build, and run that quest's tests. A starter that does not compile is fine; a starter whose tests all pass is an error; a starter that builds but whose tests do not run is a warning. Then put the solution back.
+6. Remove the sandbox when everything passed. Otherwise keep it and print its path; build and test logs are in `Saved/VerifierLogs/`.
+
+Measured on the MacBook Air, UE 5.8.3, 5 example quests: see "Measured timings" below.
+
+## Measured timings
+
+(Filled in by M1.8, below.)
 
 ## Done criteria
 
