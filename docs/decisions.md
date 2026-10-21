@@ -4,6 +4,11 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+
+
+### A680 2026-10-21 Pack 1 term coverage under A72 (author-foundations)
+Main's verifier now warns when a quest uses a term no earlier concept quest teaches. Options per term: teach it in an earlier concept card where it fits, or drop it from a quest where it is incidental. Chosen: UE_LOG and CreateDefaultSubobject are taught in World 1's UObject and actor card; TArray in World 1's Cast and IsA card (its example already walks an array); RegisterComponent in World 2's creating objects card (its text already explained it); PrimaryActorTick in World 4's components card; the Character Movement Component and LaunchCharacter in World 4's pawns and controllers card. FMath is dropped from World 3's score board, where it was incidental. Left as they are: the World 1 dash breakdown's terms (character, movement, input, timers, delegates), which the brief places in World 1 on purpose and which only link there, and object-pool, left to the patterns pack's Object Pool world. Glossary first-quest links for ue-log, the movement component, LaunchCharacter, and RegisterComponent now point to those concept quests. Reverse cost: low.
+
 ### A612 2026-10-21 Engine integration test files run one at a time (builder-unreal, M1.4c)
 Each engine test file creates its own sandbox, builds it, and may open an editor; vitest runs test files in parallel by default, so running the folder at once builds several sandboxes together and the runs fail or time out. Options: force serial runs in `vitest.config.ts` (slows every unit test run); an npm script with the flag (needs a `package.json` change); document it. Chosen: document it in `docs/systems/unreal-pipeline.md` (one file at a time, or `--no-file-parallelism`, under the engine lock) and correct the M1.4b entry's wording. There is no npm script for these checks, so none needed changing. Reverse cost: none.
 
@@ -12,6 +17,7 @@ After the engine in Settings changes, an editor still open on the same sandbox r
 
 ### A610 2026-10-21 A reset never fails because the Unreal side is unavailable (builder-unreal, M1.4c)
 A534 caught errors from removing the sandbox files, but building the quest run service can itself throw (an unsupported platform) before that catch applied, so a reset whose progress was already reset answered an error. Chosen: the whole sandbox step is inside one try and only logs a warning. Reverse cost: none.
+
 
 ### A620 2026-10-21 The course setup keeper rides on the player's pawn (Lead, Pack 1 World 4 fix round 1)
 From the World 4 review: the keeper is a plain carrier actor and nothing moved it, so the boss could not be played; the tests hid this by teleporting it. Decided by the Lead: in BeginPlay the director (and the level Blueprint in plan 2) attaches the keeper to the player's pawn with AttachToActor, snapped on, so it walks with the default pawn and reuses the world's attach lesson with no piece addition. The director also takes an optional Follow Target, which the tests use because the test world has no player controller; the tests now move an ADefaultPawn instead of the keeper. Reverse cost: low.

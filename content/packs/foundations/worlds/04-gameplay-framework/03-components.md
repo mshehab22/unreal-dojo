@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: []
 skills: [framework, components]
-terms: [actor-component, scene-component, primitive-component, root-component, attach-to-component]
+terms: [actor-component, scene-component, primitive-component, root-component, attach-to-component, primary-actor-tick]
 prerequisites: [f4-game-mode-and-state]
 xp: 25
 estimatedMinutes: 7
@@ -44,6 +44,8 @@ Every actor with a place in the world has a **root component**, a scene componen
 Attachment builds that tree. In the constructor, use `Child->SetupAttachment(Parent)`. At run time, use `AttachToComponent(Parent, Rules)` on a component or an actor, where the rules say what happens to the child's current transform: `KeepRelative`, `KeepWorld`, or `SnapToTarget` (jump onto the parent). `DetachFromActor` or `DetachFromComponent` breaks it, again with a rule for where the child ends up.
 
 Ask an actor for a component with `FindComponentByClass<T>()`, and a component for its actor with `GetOwner()`.
+
+Actors and components tick separately. An actor's per-frame settings live in `PrimaryActorTick` and a component's in `PrimaryComponentTick`; setting `bCanEverTick = false` in the constructor keeps the engine from calling Tick at all, which is right for anything that only reacts to calls or events.
 
 # Example
 
