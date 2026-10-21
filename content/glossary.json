@@ -3519,7 +3519,8 @@
       "gameplay-tags",
       "replication",
       "actor-component"
-    ]
+    ],
+    "firstQuestId": "p5-command-card"
   },
   {
     "id": "automation-test",
@@ -3811,5 +3812,22 @@
       "constructor-helpers",
       "packaging"
     ]
+  },
+  {
+    "id": "scoped-transaction",
+    "term": "FScopedTransaction",
+    "aliases": [
+      "Scoped Transaction",
+      "editor transaction",
+      "Modify()"
+    ],
+    "category": "editor workflow",
+    "short": "An editor helper that groups object changes into one undoable step for the editor's undo history.",
+    "long": "Editor tools and Details panel edits become undoable by opening an FScopedTransaction for the duration of the change and calling Modify() on each object before changing it. Modify records the object's state, so undo can restore it, and everything changed inside one transaction undoes as one step. It works on whole object states, much like a snapshot, and only in the editor; it is not a gameplay undo system.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Editor/UnrealEd/FScopedTransaction?application_version=5.8",
+    "related": [
+      "uobject"
+    ],
+    "firstQuestId": "p5-command-card"
   }
 ]

@@ -112,6 +112,30 @@ Bosses pass through their integration build (A317), whose rubric is `integration
 ### A460 2026-10-21 Breakdowns and explain items are graded by the review service (M1.7c, replaces A318)
 The tests-only stand-in for `ProgressContentService` is replaced by graders that call the review service built from the settings service. The service picks Claude Code, the API, or tests-only per call and falls back on its own (A154, A300, A301), so a missing reviewer still never blocks a breakdown or a drill. Explain items self-checked by tests-only are still not scheduled, as A318 set. `createTestsOnlyGraders` stays for tests. Reverse cost: one line.
 
+### A557 2026-10-21 Decision numbers A550 to A559 for Pack 2 World 5 (author-patterns, M4.P2.5)
+A540 to A547 are World 4's; nothing on main or any branch uses A550 or above. Reverse cost: none.
+
+### A556 2026-10-21 Glossary for Command: one new entry, one existing entry reused (author-patterns, M4.P2.5)
+Added `scoped-transaction` (`FScopedTransaction`, category editor workflow, Epic's 5.8 API page checked live, header confirmed at `Editor/UnrealEd/Public/ScopedTransaction.h`). A new Gameplay Ability System entry was drafted and dropped: the glossary already has `gas` with the same aliases, so the quests use `gas` and its `firstQuestId` is set to `p5-command-card`. The command card lists `p5-drill-orders` and `p5-course-planner` as use cases and gains `command-recall-4` (hold a waiting order's target weakly, check it when it runs) and `command-scenario-3` (when-not, multiple-choice). Reverse cost: low.
+
+### A555 2026-10-21 World 5's deliberate failure: a new edit after an undo must end the old future (author-patterns, M4.P2.5)
+Options: an order whose dummy is gone (the worked quest's marked lines already teach the weak-pointer check, so not a surprise); a waiting order that crashes on a null target (would stop the test run); the planner's redo tail. Chosen: the redo tail. The obvious Perform appends without cutting the history back, so redo can resurrect an abandoned edit and the second undo takes back the wrong one. To keep the surprise, the card quest (before the planner) describes undo and redo but not the cut; the when-not quest states it afterwards. Checked on 5.8.3 with the cut removed (see M4.P2.5 in iterations). Reverse cost: low.
+
+### A554 2026-10-21 Commands are value structs here; the class form is shown, not built (author-patterns, M4.P2.5)
+The project rule is one class per file, and a solution must have exactly the starter's files, so a quest with a command base class and several command subclasses would need eight or more files. Options: many-file quests; value commands (a `USTRUCT` naming the move or edit, with an enum where needed). Chosen: values for all three quests (`FDojoP5DrillOrder`, `FDojoP5CourseEdit`, `FDojoP5ScoreAdjustment`), which are easy to queue, store, and inspect, and the card's example shows the `UObject` subclass form with the performer handed in. A later combo world can build the class form. Reverse cost: medium.
+
+### A553 2026-10-21 Command arc, built away from the source's examples (author-patterns, M4.P2.5)
+Not used: gamepad buttons mapped to jump and fire, an actor handed to button handlers, units moving on a strategy board with undo, or the chapter's sentences and numbers. Arc: `p5-actions-as-values` (concept, no pattern name; Enhanced Input Actions as the engine's half), `p5-drill-orders` (worked: orders queued as values naming move and dummy, carried out one per beat on a timer, weak targets checked when they run), `p5-command-card`, `p5-course-planner` (stub: course edits with before and after, a history with an applied count, undo and redo), `p5-referee-refactor` (snapshot undo replaced by recorded score adjustments, so goals scored in between survive an undo), `p5-command-when-not` (nothing varies, undo is all or nothing, the redo tail, snapshots have their place, Gameplay Abilities and Input Actions already exist, no command per frame for held input). Unreal facts checked: `ke` imports enum parameters by name through `ImportEnumFromBuffer` (5.8 `EnumProperty.cpp`), so `ke * Place 0 EO_Hurdle` works. Reverse cost: medium.
+
+### A552 2026-10-21 The referee refactor fixes a bug through the refactor (author-patterns, M4.P2.5)
+As in Worlds 2 and 3, the refactor keeps the public behavior for the cases that worked (quiet corrections undo newest first; `QuietCorrectionsUndo` passes on the starter) and fixes the case the old shape could not handle (goals between corrections). Reverse cost: low.
+
+### A551 2026-10-21 Pack 2 World 5 has no boss yet; any boss will follow A67 (author-patterns, M4.P2.5)
+Reverse cost: none.
+
+### A550 2026-10-21 Pack 2 World 5 ids (author-patterns, M4.P2.5)
+Folder `05-command`, world id `command`, quest ids `p5-<slug>`, classes `ADojoP5<Name>`, structs `FDojoP5<Name>`, enums `EDojoP5DrillMove` (`EDM_`) and `EDojoP5Obstacle` (`EO_`), tests `Dojo.P5.<Quest>.<Case>`. Reverse cost: medium once learners have progress saved.
+
 ### A547 2026-10-21 Decision numbers A540 to A549 for Pack 2 World 4 (author-patterns, M4.P2.4)
 Main uses A500 to A503, A510, A511, and A520; no branch uses A530 or above. Chosen: A540 to A549, leaving A530 to A539 free as a gap. Reverse cost: none.
 

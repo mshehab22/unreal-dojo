@@ -512,7 +512,10 @@
     "problem": "When a key press calls Jump directly, the binding is fixed, only the player can trigger it, and the action vanishes the instant it runs. Rebinding controls, letting an AI reuse the same actions, and undoing a move all need the action to exist as data.",
     "unrealForm": "Enhanced Input already separates the key from the action through Input Actions and Input Mapping Contexts. Gameplay Abilities are large-scale commands that can be activated, replicated, and cancelled. Editor undo uses FScopedTransaction. What you still build: an undoable gameplay command history (a TArray of TUniquePtr commands plus a cursor), command queues between an AI brain and its pawn, and recorded command streams for replays. Hold actor targets as TWeakObjectPtr if the command outlives the frame.",
     "whenNot": "If nothing about who acts, which input triggers it, or when it runs needs to change, a direct function call is clearer. Undo only works if every change goes through a command, so do not half-adopt it.",
-    "useCaseQuestIds": [],
+    "useCaseQuestIds": [
+      "p5-drill-orders",
+      "p5-course-planner"
+    ],
     "recall": [
       {
         "id": "command-recall-1",
@@ -546,6 +549,19 @@
         "bugLine": 3,
         "fix": "Use Items.SetNum(Cursor) so everything at and past the cursor (the undone commands) is dropped.",
         "explanation": "Cursor counts the commands still applied. Keeping Cursor + 1 entries leaves one undone command in the history, or adds an empty slot when nothing was undone."
+      },
+      {
+        "id": "command-recall-4",
+        "type": "multiple-choice",
+        "prompt": "An order waits in a queue for several beats before it runs, and it targets an actor that may be destroyed meanwhile. How should the order hold and check its target?",
+        "choices": [
+          "A raw pointer, checked when the order is queued",
+          "A TWeakObjectPtr, checked when the order runs",
+          "A copy of the actor",
+          "A TObjectPtr, which keeps the actor alive until the order runs"
+        ],
+        "answerIndex": 1,
+        "explanation": "A weak pointer does not keep the actor alive and reads as empty once it is gone; checking when the order runs is what catches a target destroyed while it waited."
       }
     ],
     "scenarios": [
@@ -602,6 +618,19 @@
           }
         ],
         "explanation": "Commands that take the actor as a parameter can come from a keyboard, an AI, or a recording."
+      },
+      {
+        "id": "command-scenario-3",
+        "type": "multiple-choice",
+        "prompt": "A torch in the arena lights when its own brazier is lit, nothing else lights it, and nobody will ever undo, delay, or record it. A teammate wants a LightTorch command object and a queue. What is the better call?",
+        "choices": [
+          "Use the command and queue; every action should be one",
+          "A direct call from the brazier to its torch",
+          "An undo history for torches",
+          "A replicated command so clients can replay it"
+        ],
+        "answerIndex": 1,
+        "explanation": "Nothing about what, who, or when varies, so a command only adds a type and a delay. A direct call says it plainly."
       }
     ]
   },

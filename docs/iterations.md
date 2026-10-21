@@ -1015,3 +1015,24 @@ total                                       39.2  PASSED
 - Checks: `npm run typecheck` passes; `npm test` 66 files, 792 passed (2 new: a reset when the run service cannot be built, and the restart on a changed engine); `npm run build` passes; `npm run test:e2e` 27 passed.
 - Decisions made: A610 to A612.
 - Not done or left for later: M1.3's own entry above still shows the folder-wide command without the flag; the spec and A612 now give the safe form.
+
+## M4.P2.5 Pack 2 World 5, Command (content-patterns, author-patterns)
+- What changed: a fifth Patterns world, "Orders you can hold", with the full mini-arc for Command (six quests), set in the arena. A request becomes a value that holds what to do and for whom, so it can wait in a queue, drive any target, and be taken back. Built away from the source chapter's examples from the start (A553). The commands are value structs; the card shows the class form (A554).
+- The quests and their observables:
+  - An action you can put in a drawer (concept): what a direct call fixes (what, to whom, when), requests as values, weak targets checked when they run, and Enhanced Input Actions as the engine's half.
+  - Orders that wait for the beat (build, worked): `ke * QueueRoutine` puts five orders in the sergeant's queue, and the dummy steps left, blocks, steps right twice, and blocks, one move per beat, while the label counts the waiting orders down. Orders for a dummy that was destroyed are dropped without wasting a beat.
+  - The request as a thing (concept): the Command card and recognize items.
+  - A course planner that can step back and forward (build, stub): `ke * Place 0 EO_Hurdle`, `ke * Undo`, `ke * Redo` edit the course shown as `H_W_____`. Its deliberate failure: a new edit after an undo must end the old future (A555).
+  - Corrections that take back only themselves (refactor): a correction, a goal, then an undo leaves the label at 0 : 3, where the snapshot starter erased the goal and showed 0 : 0.
+  - When a plain call should stay a call (concept): nothing varies, undo is all or nothing, the redo tail, snapshots have their place, Gameplay Abilities and Input Actions already exist, and no command object per frame for held input.
+- Also: a new `scoped-transaction` glossary entry, the existing `gas` entry linked to the card, and the command card's two use cases and two new items (A556).
+- Proof, UE 5.8.3 on the MacBook Air, fresh copies of the sandbox template, commands from the unreal-pipeline spec, under the shared engine lock:
+  - Reference solutions for all five patterns worlds: build succeeded, 45 of 45 tests passed (9 new), no warnings.
+  - Starters: all compile; 38 of 45 fail. On the World 5 side, only the referee desk's quiet-corrections test (working starter) passes, by design.
+  - The obvious planner (append without cutting the history back): fails only `NewEditEndsTheOldFuture` ("history 3, expected 2"; the second undo takes back the wrong edit).
+  - Content verifier `--pack patterns`: no problems. One expected warning: the Pack 4 gate names the Component world, which does not exist yet.
+- Not done: no boss for this world yet (A551). No screenshots (editor runs with `-NullRHI` on this Mac). Windows unverified. Decisions A550 to A557.
+
+### Fix round 1
+- Originality (D13): the course planner no longer puts undo in a designer's level-editing tool. It is now the player's build phase before an obstacle run: the runner sets up their own eight-slot course and can take placements back until the run starts. Mechanics, the redo-tail cut (A555), and the class and quest names are unchanged. The planner's brief, its class comment (starter and reference solution), the world summary, the actions-as-values card line, the card's which-pattern item (now a defense round's build phase), the card's spot-the-bug prompt, and the when-not quest's two "designer" mentions are reworded to match.
+- Only a header comment changed in the code. Rebuilt from fresh sandboxes on UE 5.8.3 under the engine lock: reference solutions 45 of 45 pass, including the three planner tests; starters compile and 38 of 45 fail, the same split as before. Verifier `--pack patterns`: no problems, plus the expected Pack 4 gate warning.
