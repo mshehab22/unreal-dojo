@@ -1,0 +1,15 @@
+node_modules/
+out/
+dist/
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+*.log
+.env
+.env.*
+# Unreal build products inside sandbox copies
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
