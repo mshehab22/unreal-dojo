@@ -67,7 +67,7 @@ void ADojoArenaLever::Pull()
   type: multiple-choice
   prompt: "Which of these needs Command least?"
   choices:
-    - A level editor tool where every edit must be undoable
+    - A build phase where the player can take back every placement before the wave starts
     - A replay system that re-runs a match from recorded inputs
     - A gate that always opens when its own pressure plate is stepped on, and nothing else ever opens it
     - An AI and the player driving the same set of moves
