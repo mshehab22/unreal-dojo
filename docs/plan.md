@@ -96,14 +96,15 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | merged 2e29c7c | merged | 4 rounds; World 1 boss reference integration (A67) |
 | M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | merged 2e29c7c | merged | 2 rounds plus boss round; 24 of 24 on UE 5.8.3; main --engine clean |
 | M4.P1.3 Pack 1 World 3 "Containers and strings" | content-foundations | author-foundations (session "M0.5 Glossary...") | merged | merged | 1 fix round; 35 of 35; all mutations caught |
-| M4.P1.4 Pack 1 World 4 "The gameplay framework" | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-world4 @ 6a22cfa | fixes | Engine results reproduced. Round 1: boss keeper cannot move (Lead: attach it to the pawn), T range untested, Component named early, widget fact, missing-line bug item |
+| M4.P1.4 Pack 1 World 4 "The gameplay framework" | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-world4 @ ae65b61 | re-review | Keeper rides the pawn; range tested; mutations caught |
 | M1.8c Missing boss integration is an error | content-engine | content-engine (session "M0.4 Content types...") | merged | merged | Lead checked the small diff; --engine 18 of 18 by the builder; example boss stays a warning (A520) |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | merged 07794f5 | merged | 4 fix rounds; at 1100x700 the revision note starts below the fold (accepted) |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
 | M4.P2.2 Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | merged 0e7060c | merged | 1 fix round |
 | M4.P2.3 Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | merged 0e7060c | merged | 1 fix round; moved to the arena (D13) |
 | M4.P2.4 Pack 2 World 4 (Double Buffer) | content-patterns | author-patterns (session) | merged | merged | Text fix round checked by the Lead; new game-thread glossary entry |
-| M4.P2.5 Pack 2 World 5 (Command) | content-patterns | author-patterns (session) | m4-p2-world5 @ ffdb7cb | re-review | Planner moved into play |
+| M4.P2.5 Pack 2 World 5 (Command) | content-patterns | author-patterns (session) | merged 235f773 | merged | 2 rounds; planner moved into play (D13) |
+| M4.P2.6 Pack 2 World 6 | content-patterns | author-patterns (session) | m4-p2-world6 | building | Decisions A650-A659 |
 | M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged 2b31811 | merged | 2 fix rounds; fast re-run 65 ms to 2.4 s on the Mac |
 | M1.4b Fast loop wiring | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged | merged | Passed; real app open-editor and quit verified with Playwright |
 | M1.4c Reset and editor-engine follow-ups | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged | merged | Passed first review |
