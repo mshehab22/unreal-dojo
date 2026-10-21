@@ -1,10 +1,11 @@
 // What the app knows about the learner's Unreal install, toolchain, and sandbox, for first-run setup and the Title screen chips.
 
+import type { AppError } from "./errors";
 import type { ReviewProviderStatus } from "./review";
 import type { LoopModeSetting } from "./settings";
 
-/** Where an engine install was found. */
-export type EngineSource = "default-folder" | "registry" | "manual";
+/** Where an engine install was found: the Epic launcher's install list, a default install folder, the Windows registry, or the learner's own pick. */
+export type EngineSource = "launcher" | "default-folder" | "registry" | "manual";
 
 /** One Unreal Engine install found on this machine. */
 export interface EngineInstall
@@ -22,10 +23,20 @@ export interface EngineInstall
 	supportsFastLoop: boolean;
 }
 
+/** One missing or broken piece of the build toolchain, explained as an AppError (code `toolchain-missing`). */
+export interface ToolchainProblem
+{
+	/** What is wrong and what to do about it. */
+	error: AppError;
+
+	/** True when Unreal cannot build at all until this is fixed. False when builds work but something else does not (the editor window, for example). */
+	blocksBuild: boolean;
+}
+
 /** Result of checking the platform build toolchain (vswhere on Windows, xcode-select on macOS). */
 export interface ToolchainCheck
 {
-	/** True when the toolchain Unreal needs is installed and selected. */
+	/** True when nothing blocks a build. Non-blocking problems can still be listed. */
 	ok: boolean;
 
 	/** Which tool was asked. */
@@ -34,7 +45,13 @@ export interface ToolchainCheck
 	/** Plain-English summary, for example "Xcode 27.1 is selected." */
 	message: string;
 
-	/** What to do when `ok` is false. */
+	/** Version of Visual Studio or Xcode that was found, for example `27.1`. Absent when none was found. */
+	toolVersion?: string;
+
+	/** Every problem found, blocking ones first. Empty when everything is in place. */
+	problems: ToolchainProblem[];
+
+	/** What to do about the first problem when there is one. */
 	suggestedAction?: string;
 }
 

@@ -39,3 +39,23 @@ Template:
 - Change after the Lead's note: the door checks were first written by hand; the Lead added the zod library in the M0.1 fix round and asked for it, so every check is now a zod schema tied to the shared type it checks, which means a check that disagrees with its type no longer compiles (A83).
 - Decisions made: A80 to A89 in `docs/decisions.md` (how errors travel, run ids, payload checks, progress event fields, file layout, the two-step breakdown submit, settings flags, the reference-solution question, and what waits for M0.2b).
 - Not done or left for later: content methods (packs, worlds, quests, glossary, the term list for the code editor, pattern cards) and starting a drill wait for the content types from M0.4 (M0.2b, A89). Viewing a reference solution is left out until the specs agree on where solutions live (A88). Every real answer arrives with its system's task.
+
+## M1.1 Engine locator and platform paths (unreal-pipeline, builder-unreal)
+- What changed: the app can now find Unreal Engine on its own. It reads the Epic launcher's list of installed engines (on Windows and on the Mac), the Windows registry, and the usual install folders, reads each engine's exact version, and lists every engine from 5.4 up, newest first. A learner can also point at a folder by hand; a wrong folder or a too-old engine gets a plain explanation. It also checks the compiler setup: Visual Studio with the C++ game workload on Windows; on the Mac, that full Xcode is selected, answers, and has its license accepted, and whether the Metal toolchain is installed. Every missing piece comes back as a plain-English message with the exact fix. All the Windows and Mac path differences now live in two small objects chosen by one factory.
+- What was tried and what was solved: the launcher's list on this Mac holds three entries for the same folder (the engine plus the Quixel Bridge and Fab plugins), so only entries named like `UE_5.8` count as engines. The engine is in `~/Applications`, not the launcher's documented default `/Users/Shared/Epic Games`, so both are scanned (A163). The missing Metal toolchain (found in M1.2a) is reported but does not count as "build blocked", because builds and headless tests work without it; the summary still names the Xcode version (A161). On the first real run the summary only mentioned Metal, so it was changed to "Xcode 27.1 is selected ... The Metal toolchain is not installed ...".
+- How to see it: `npx tsx tools/locate-engine.ts --pick ~/Applications/UE_5.8/Engine` prints what the app finds on this machine. In the app, the `detectEngines` and `checkToolchain` requests now answer for real. Nothing visible changed on screen (the first-run screen is a later task), so there is no screenshot.
+- Proof, the real run on this Mac (MacBook Air M5, UE 5.8.3, Xcode 27.1), trimmed:
+
+```
+engines:   /Users/mshehab22/Applications/UE_5.8   version 5.8.3   source launcher   supportsFastLoop true
+toolchain: ok true, tool xcode-select, toolVersion 27.1
+           "Xcode 27.1 is selected (/Applications/Xcode.app/Contents/Developer). The Metal toolchain is not installed.
+            Builds and tests work, but the Unreal editor window will not open."
+           problem: toolchain-missing, blocksBuild false, fix "Run once in Terminal: xcodebuild -downloadComponent MetalToolchain"
+manual pick of ~/Applications/UE_5.8/Engine: /Users/mshehab22/Applications/UE_5.8, 5.8.3, source manual
+exit code 0
+```
+
+- Checks: `npm run typecheck` passes; `npm test` 5 files, 70 tests passed (43 new: both path objects, the platform factory, every locator source on both platforms, duplicates, ordering, old and broken engines, manual pick, the registry reader, every Windows and Mac toolchain failure and the healthy cases); `npm run build` passes; `npm run test:e2e` 1 passed.
+- Decisions made: A160 to A167 in `docs/decisions.md`.
+- Not done or left for later: the Windows side is unit tested with fakes only and is unverified on a real Windows machine (registry output, vswhere output, the Program Files and ProgramData folders). `pickEngineFolder` still needs the folder dialog (A167). `getEnvironmentStatus` waits for the settings service. No Xcode minimum-version check yet (A165).

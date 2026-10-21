@@ -3,6 +3,8 @@ import { app, BrowserWindow, ipcMain } from "electron";
 
 import { createHandlers } from "./ipc/createHandlers";
 import { registerHandlers } from "./ipc/registerHandlers";
+import { createEngineLocator } from "./services/unreal/createEngineLocator";
+import type { EngineLocator } from "./services/unreal/EngineLocator";
 import { createMainWindow } from "./window/createMainWindow";
 
 /** Starts the app once Electron is ready and reopens the window when the macOS dock icon is clicked. */
@@ -10,7 +12,10 @@ async function start(): Promise<void>
 {
 	await app.whenReady();
 
-	registerHandlers(ipcMain, createHandlers({ getAppVersion: () => app.getVersion() }));
+	let engineLocator: EngineLocator | null = null;
+	const getEngineLocator = (): EngineLocator => (engineLocator ??= createEngineLocator());
+
+	registerHandlers(ipcMain, createHandlers({ getAppVersion: () => app.getVersion(), getEngineLocator }));
 	createMainWindow();
 
 	app.on("activate", () =>
