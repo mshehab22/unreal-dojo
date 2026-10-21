@@ -566,7 +566,7 @@ export class FakeDojoApi implements DojoClient
 				{
 					if (!isFresh)
 					{
-						result[stage.id] = { status: stage.status, dueForRematch: stage.dueForRematch ?? false, ...(stage.lockedReason ? { lockedReason: stage.lockedReason } : {}) };
+						result[stage.id] = { status: stage.status, dueForRematch: stage.dueForRematch ?? false, skippable: false, ...(stage.lockedReason ? { lockedReason: stage.lockedReason } : {}) };
 						return;
 					}
 
@@ -574,7 +574,7 @@ export class FakeDojoApi implements DojoClient
 					const previous = world.stages[stageIndex - 1];
 					const lockedReason = previous ? `Pass ${previous.title} first.` : stage.lockedReason ?? `Finish ${pack.worlds[worldIndex - 1]?.title ?? "the world before"} first.`;
 
-					result[stage.id] = opensFirst ? { status: "available", dueForRematch: false } : { status: "locked", lockedReason, dueForRematch: false };
+					result[stage.id] = opensFirst ? { status: "available", dueForRematch: false, skippable: false } : { status: "locked", lockedReason, dueForRematch: false, skippable: false };
 				});
 			});
 		}

@@ -41,5 +41,13 @@ export function rulesFixture(): RulesSnapshot
 		drillSize: { min: 6, max: 10 },
 		dailyDueCap: 20,
 		failedSubmitsBeforeOffers: 2,
+		maxArmor: 2,
+		hintsPerQuest: 3,
+		rematchAfterDays: 3,
+		xpPotion: { share: 0.5, minutes: 30 },
+		masteryThresholds: { familiarRecalls: 1, proficientRecalls: 3, masteredIntervalDays: 30 },
+		hoverInjectionThreshold: 3,
+		effortShare: 0.05,
+		studioCosmetics: ["neon-sign", "arcade-cabinet", "whiteboard-wall", "plant-corner", "trophy-shelf", "server-rack-lights", "coffee-bar", "poster-wall"],
 	};
 }

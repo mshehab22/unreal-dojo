@@ -316,7 +316,7 @@ test("a cancelled first build is calm, and starting again works", async () =>
 	await expect(window.getByTestId("build-succeeded")).toBeVisible({ timeout: 15_000 });
 });
 
-test("against the real bridge, unbuilt services show the AppError view and the title still works", async ({}, testInfo) =>
+test("against the real bridge, the title works and the Studio shows real data or the AppError view", async ({}, testInfo) =>
 {
 	await useDataSource("bridge");
 	await setViewport(1100, 700);
@@ -325,7 +325,10 @@ test("against the real bridge, unbuilt services show the AppError view and the t
 	await expect(window.getByTestId("app-version")).not.toBeEmpty();
 	await expect(window.getByTestId("fake-data-badge")).toHaveCount(0);
 
-	await goTo("#/studio", "screen-studio");
-	await expect(window.getByTestId("app-error").first()).toHaveAttribute("data-error-code", "not-implemented");
-	await saveScreenshot(testInfo, "studio-bridge-error-1100x700");
+	// Services land one by one (progress and rules are real since M1.6), so the Studio shows either its panels or the plain-English
+	// error view for whatever is still missing, never a blank or crashed screen.
+	await window.evaluate(`location.hash = "#/studio"`);
+	await expect(window.getByTestId("screen-studio")).toBeVisible();
+	await expect(window.getByTestId("app-error").or(window.getByTestId("studio-lead")).first()).toBeVisible();
+	await saveScreenshot(testInfo, "studio-bridge-1100x700");
 });

@@ -21,6 +21,8 @@ function questProgressFor(stage: StageFixture, index: number): QuestProgress
 		attempts: stage.status === "passed" ? 1 + (index % 3 === 0 ? 1 : 0) : 0,
 		hintsRevealed: index % 4 === 1 ? 1 : 0,
 		solutionViewed: false,
+		seerStoneSpent: false,
+		effortXpGranted: stage.id === "foundations.objects.flicker",
 		savedFiles: {},
 		lastAttemptAt: touched ? daysFromNow(-30 + index) : null,
 	};
@@ -54,6 +56,7 @@ function dailyFixture(): DailyQuestState
 		offered: [{ kind: "drill" }, { kind: "concept", questId: "mechanics.input.actions" }, { kind: "build", questId: "foundations.memory.soft-mesh" }],
 		done: false,
 		monthBadges: ["2026-09"],
+		completedDates: [daysFromNow(-2), daysFromNow(-1)].map((iso) => iso.slice(0, 10)),
 	};
 }
 
@@ -71,7 +74,7 @@ export function returningProgressFixture(): PlayerProgress
 	return {
 		version: 1,
 		playerName: "Mohammad",
-		studio: { name: "Night Owl Studio", modules: ["night-market-lighting"] },
+		studio: { name: "Night Owl Studio", modules: ["night-market-lighting"], cosmetics: ["neon-sign"] },
 		xp: 1240,
 		role: "Scripter",
 		streak: { count: 9, lastActivityAt: daysFromNow(-1), freezes: 1, milestones: [7] },
@@ -106,6 +109,16 @@ export function returningProgressFixture(): PlayerProgress
 			tweakobjectptr: daysFromNow(2),
 			"garbage-collection": daysFromNow(4),
 		},
+		memory: {
+			uproperty: { ease: 2.6, intervalDays: 30, repetitions: 4, mastery: "mastered", skillId: "ue.objects.uproperty", lastReviewedAt: daysFromNow(-18) },
+			uclass: { ease: 2.5, intervalDays: 6, repetitions: 3, mastery: "proficient", skillId: "ue.objects.uclass", lastReviewedAt: daysFromNow(-6) },
+			"timer-manager": { ease: 2.3, intervalDays: 3, repetitions: 2, mastery: "familiar", skillId: "ue.objects.actors", lastReviewedAt: daysFromNow(-3) },
+			tobjectptr: { ease: 2.5, intervalDays: 3, repetitions: 2, mastery: "familiar", skillId: "ue.memory.gc", lastReviewedAt: daysFromNow(-2) },
+		},
+		drillQueue: [],
+		rematches: { "foundations.objects.flicker": daysFromNow(0, -2) },
+		testedOutWorldIds: [],
+		xpPotionUntil: null,
 		hoverCounts: { tsoftobjectptr: 2, "garbage-collection": 4 },
 		daily: dailyFixture(),
 		createdAt: daysFromNow(-32),
@@ -119,7 +132,7 @@ export function freshProgressFixture(): PlayerProgress
 	return {
 		version: 1,
 		playerName: "",
-		studio: { name: "Your studio", modules: [] },
+		studio: { name: "Your studio", modules: [], cosmetics: [] },
 		xp: 0,
 		role: "Apprentice",
 		streak: { count: 0, lastActivityAt: null, freezes: 0, milestones: [] },
@@ -131,8 +144,13 @@ export function freshProgressFixture(): PlayerProgress
 		attempts: [],
 		reviewLog: [],
 		schedule: {},
+		memory: {},
+		drillQueue: [],
+		rematches: {},
+		testedOutWorldIds: [],
+		xpPotionUntil: null,
 		hoverCounts: {},
-		daily: { date: todayLocal(), offered: [{ kind: "drill" }, { kind: "concept", questId: "foundations.objects.uproperty" }, { kind: "concept", questId: "patterns.lens.decoupling" }], done: false, monthBadges: [] },
+		daily: { date: todayLocal(), offered: [{ kind: "drill" }, { kind: "concept", questId: "foundations.objects.uproperty" }, { kind: "concept", questId: "patterns.lens.decoupling" }], done: false, monthBadges: [], completedDates: [] },
 		createdAt: daysFromNow(0),
 		updatedAt: daysFromNow(0),
 	};
