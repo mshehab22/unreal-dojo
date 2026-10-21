@@ -67,6 +67,9 @@ Options: an app flag or environment variable that calls `app.setPath("userData",
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A660 2026-10-21 How A72's course-order term gate is built (M1.6e, builder-rules)
+Per A72 a term gates a quest only when a concept quest teaching it comes earlier in course order. Built in `taughtTerms.ts`: course order compares pack order, then world order, then quest order; each term's teacher is its earliest concept quest, so a term taught in World 1 and taught again later still gates from World 1 on; a concept quest is still never gated by its own terms (A312). Test-out uses the same idea per world: a world's test-out terms are its terms taught in that world or an earlier one, so a term World 2 teaches never blocks World 1's test-out (A322). Checked on the real content: passing World 1's quests in course order opens every one of them with no drill, including f1-training-dummy, f1-score-keeper, and the dash breakdown. Reverse cost: none.
+
 ### A604 2026-10-21 Reviews are pruned with files: only a quest's last five Submits keep them (M1.7c fix round 1, Lead direction)
 Directed by the Lead: stored code reviews follow the same limit as stored files (A467). `AttemptFileRules.pruneOlderDetails` counts a quest's attempts that hold a review or files, newest first, and removes both from all but the latest five; score, pass, and XP stay on every attempt. "Why is this a finding?" on an older attempt answers `attempt-not-found` ("That attempt has no code review."). Reverse cost: none.
 

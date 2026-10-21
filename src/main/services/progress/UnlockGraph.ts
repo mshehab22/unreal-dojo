@@ -4,7 +4,7 @@ import type { MasteryLevel, PlayerProgress, QuestAvailability } from "@shared/ty
 import { MasteryRules } from "./MasteryRules";
 import type { RuleQuest } from "./RuleQuest";
 import { PACK_GATES } from "./rules";
-import { taughtTermsOf } from "./taughtTerms";
+import { firstTeachersOf, gatingTermsOf } from "./taughtTerms";
 import { TestOutRules } from "./TestOutRules";
 
 /** The learner state the graph reads. */
@@ -44,8 +44,8 @@ export class UnlockGraph
 	/** What each gated pack (by id) waits for: boss quest ids, and labels of gate worlds that have no boss yet (which keep it closed). */
 	private readonly packGates: Map<string, { bossIds: string[]; missing: string[] }>;
 
-	/** Terms some concept quest teaches. Only these can gate a quest: a term nothing teaches could never reach familiar (A312). */
-	private readonly taughtTerms: Set<string>;
+	/** The earliest concept quest teaching each term. A term gates a quest only when its teacher comes earlier in course order (A312, A72, A660). */
+	private readonly teachers: Map<string, RuleQuest>;
 
 	/** Builds the graph from every loaded quest. */
 	constructor(private readonly quests: RuleQuest[])
@@ -53,7 +53,7 @@ export class UnlockGraph
 		this.questsById = new Map(quests.map((quest) => [quest.id, quest]));
 		this.alwaysAvailableIds = this.findAlwaysAvailable();
 		this.packGates = this.findPackGates();
-		this.taughtTerms = taughtTermsOf(quests);
+		this.teachers = firstTeachersOf(quests);
 	}
 
 	/** Availability of every quest. */
@@ -112,8 +112,8 @@ export class UnlockGraph
 
 		if (testedOut) return null;
 
-		// A concept quest is where its terms are learned, so its own terms never lock it.
-		const gatingTerms = quest.kind === "concept" ? [] : quest.terms.filter((termId) => this.taughtTerms.has(termId));
+		// Only terms an earlier concept quest teaches; a concept quest's own terms, and terms taught later, never lock it.
+		const gatingTerms = gatingTermsOf(quest, this.teachers);
 		const weakTerms = gatingTerms.filter((termId) => !this.mastery.isAtLeast(state.masteryOf(termId), "familiar"));
 		if (weakTerms.length > 0) return `Get ${this.joinList(weakTerms)} to Familiar in a drill first.`;
 
