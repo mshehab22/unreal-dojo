@@ -8,7 +8,7 @@ difficulty: 2
 patterns: []
 skills: [memory, spawning]
 terms: [tsubclassof, spawnactor, tobjectptr, garbage-collection, createdefaultsubobject]
-prerequisites: [f2-tsubclassof-and-spawning]
+prerequisites: [f2-tsubclassof-and-spawning, f1-training-dummy]
 xp: 50
 estimatedMinutes: 12
 concepts:

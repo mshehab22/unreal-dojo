@@ -8,7 +8,7 @@ difficulty: 3
 patterns: [object-pool]
 skills: [memory, spawning]
 terms: [tsubclassof, spawnactor, tobjectptr, destroy, endplay, isvalid]
-prerequisites: [f2-spotter, f2-smart-pointers, f1-boss-training-yard]
+prerequisites: [f2-spotter, f2-smart-pointers, f1-boss-training-yard, f1-popup-target]
 xp: 120
 estimatedMinutes: 30
 concepts:
