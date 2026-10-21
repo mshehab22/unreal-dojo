@@ -1,12 +1,11 @@
 // M1.7 fix round 1: provider failover, prompt injection guard, Windows tree kill, safe cleanup, label matching, line numbers, abortable 429 wait, and the stripped CLI environment.
 import { EventEmitter } from "node:events";
-import { chmodSync, mkdtempSync, readdirSync } from "node:fs";
+import { chmodSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { PassThrough } from "node:stream";
 
 import Anthropic from "@anthropic-ai/sdk";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import type { ReviewProviderSetting } from "@shared/types/settings";
 
@@ -24,7 +23,9 @@ import { labelMatches, TestsOnlyProvider } from "../../src/main/services/review/
 import { ProviderSelector, UNAVAILABLE_MARK_MS } from "../../src/main/services/review/ProviderSelector";
 import { cancelledError, invalidOutputError, refusedError, unavailableError } from "../../src/main/services/review/reviewErrors";
 import { ReviewService } from "../../src/main/services/review/ReviewService";
-import { expectAppError, fixedSettings, planWithLabels, recorded, sampleBreakdownInput, sampleCodeInput, sampleRun, ScriptedProvider } from "./reviewTestKit";
+import { expectAppError, fixedSettings, makeTestFolder, planWithLabels, recorded, removeTestFolders, sampleBreakdownInput, sampleCodeInput, sampleRun, ScriptedProvider } from "./reviewTestKit";
+
+afterEach(removeTestFolders);
 
 /** The error a signed-out Claude Code throws. */
 function signedOutError(): Error
@@ -199,7 +200,7 @@ describe("fix 3: Windows stops the whole tree, and cleanup never hides the resul
 
 	it("a temp folder that cannot be removed does not replace the review's answer", async () =>
 	{
-		const temporaryRoot = mkdtempSync(join(tmpdir(), "dojo-cleanup-test-"));
+		const temporaryRoot = makeTestFolder("dojo-cleanup-test-");
 
 		// The runner locks the parent folder while the review runs, so removing the review folder afterwards fails.
 		const runner: IProcessRunner = {
@@ -230,11 +231,11 @@ describe("fix 4: tests-only label matching", () =>
 {
 	it("never lets a one-letter or short label cover every piece", () =>
 	{
-		expect(labelMatches("a", "healthcomponent")).toBe(false);
-		expect(labelMatches("ui", "uiwidget")).toBe(false);
-		expect(labelMatches("door", "dooractor")).toBe(true);
-		expect(labelMatches("playerhealthcomponent", "healthcomponent")).toBe(true);
-		expect(labelMatches("", "x")).toBe(false);
+		expect(labelMatches("A", "HealthComponent")).toBe(false);
+		expect(labelMatches("UI", "UIWidget")).toBe(false);
+		expect(labelMatches("Door", "DoorActor")).toBe(true);
+		expect(labelMatches("PlayerHealthComponent", "HealthComponent")).toBe(true);
+		expect(labelMatches("", "X")).toBe(false);
 	});
 
 	it("a plan of single letters covers nothing", () =>
@@ -318,7 +319,7 @@ describe("fix 7: claude -p never sees an API key from the environment", () =>
 		};
 
 		const locator = new ClaudeCodeLocator({ platform: "darwin", env: { PATH: "/fake/bin" }, homeFolder: "/Users/learner", isExecutable: (filePath) => filePath === "/fake/bin/claude" });
-		const provider = new ClaudeCodeProvider(locator, runner, { temporaryRoot: mkdtempSync(join(tmpdir(), "dojo-env-test-")), environment: { PATH: "/bin", ANTHROPIC_API_KEY: "sk-ant-terminal" } });
+		const provider = new ClaudeCodeProvider(locator, runner, { temporaryRoot: makeTestFolder("dojo-env-test-"), environment: { PATH: "/bin", ANTHROPIC_API_KEY: "sk-ant-terminal" } });
 
 		await provider.complete({ systemPrompt: "s", userMessage: "u", jsonSchema: {} });
 

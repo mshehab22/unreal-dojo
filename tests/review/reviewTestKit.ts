@@ -1,5 +1,6 @@
 // Shared pieces for the review tests: recorded replies, sample quest inputs, a scripted provider, and an AppError matcher.
-import { readFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { expect } from "vitest";
@@ -14,6 +15,36 @@ import type { IReviewProvider, ReviewCompletionRequest } from "../../src/main/se
 import type { BreakdownGradeInput, CodeReviewInput, ExplainGradeInput } from "../../src/main/services/review/ReviewInputs";
 import type { IReviewSettings } from "../../src/main/services/review/settings/IReviewSettings";
 import type { ReviewProviderSetting } from "@shared/types/settings";
+
+/** Temp folders made by the current test, removed by `removeTestFolders` in afterEach. */
+const createdTestFolders: string[] = [];
+
+/** Makes a fresh folder in the system temp folder and remembers it for cleanup. Every test that needs a temp folder uses this. */
+export function makeTestFolder(prefix: string): string
+{
+	const folder = mkdtempSync(join(tmpdir(), prefix));
+	createdTestFolders.push(folder);
+
+	return folder;
+}
+
+/** Removes every folder `makeTestFolder` made, even after a failed test. A folder a test made read-only is made writable first. */
+export function removeTestFolders(): void
+{
+	for (const folder of createdTestFolders.splice(0))
+	{
+		try
+		{
+			chmodSync(folder, 0o755);
+		}
+		catch
+		{
+			// Already gone.
+		}
+
+		rmSync(folder, { recursive: true, force: true });
+	}
+}
 
 /** Folder of recorded model replies. */
 const RECORDED_FOLDER = join(import.meta.dirname, "recorded");

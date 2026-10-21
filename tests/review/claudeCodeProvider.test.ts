@@ -1,15 +1,14 @@
 // The Claude Code provider with the process spawn mocked: D11's exact flags, a clean cwd, recorded envelopes, timeouts, cancel, and the text-mode fallback.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { ClaudeCodeLocator } from "../../src/main/services/review/providers/ClaudeCodeLocator";
 import { buildClaudeCodeArguments, ClaudeCodeProvider, compareVersions } from "../../src/main/services/review/providers/ClaudeCodeProvider";
 import type { IProcessRunner, ProcessRunOptions, ProcessRunResult } from "../../src/main/services/review/providers/IProcessRunner";
-import { expectAppError, recorded } from "./reviewTestKit";
+import { expectAppError, makeTestFolder, recorded, removeTestFolders } from "./reviewTestKit";
+
+afterEach(removeTestFolders);
 
 /** One recorded spawn: what was run, and what the cwd held while it ran. */
 interface SpawnRecord
@@ -62,7 +61,7 @@ function locatorFindingClaude(): ClaudeCodeLocator
 /** A provider over a fake runner, with its temp folders in a fresh test folder. */
 function providerWith(runner: FakeProcessRunner, locator = locatorFindingClaude()): { provider: ClaudeCodeProvider; temporaryRoot: string }
 {
-	const temporaryRoot = mkdtempSync(join(tmpdir(), "dojo-claude-code-test-"));
+	const temporaryRoot = makeTestFolder("dojo-claude-code-test-");
 
 	return { provider: new ClaudeCodeProvider(locator, runner, { temporaryRoot, timeoutMs: 1000 }), temporaryRoot };
 }
@@ -154,7 +153,7 @@ describe("ClaudeCodeProvider", () =>
 		const runner = new FakeProcessRunner("2.1.304", [{ exitCode: null, timedOut: true }, { exitCode: null, cancelled: true }]);
 		const { provider } = providerWith(runner);
 
-		const timeout = await expectAppError(provider.complete(REQUEST), "review-unavailable");
+		const timeout = await expectAppError(provider.complete(REQUEST), "review-timeout");
 		expect(timeout.appError.message).toMatch(/longer than 1 seconds/);
 
 		await expectAppError(provider.complete(REQUEST), "run-cancelled");
