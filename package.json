@@ -1,0 +1,128 @@
+{
+	"name": "unreal-dojo",
+	"productName": "Unreal Dojo",
+	"version": "0.1.0",
+	"description": "Learn Unreal Engine C++ by practicing: concept cards, recall drills, breakdown and build quests, and bosses.",
+	"author": "Mohammad Shehab",
+	"license": "UNLICENSED",
+	"private": true,
+	"type": "module",
+	"main": "./out/main/index.js",
+	"engines": {
+		"node": ">=22.12.0"
+	},
+	"scripts": {
+		"dev": "electron-vite dev",
+		"typecheck": "npm run typecheck:node && npm run typecheck:web",
+		"typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+		"typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:e2e": "playwright test",
+		"build": "electron-vite build",
+		"preview": "electron-vite preview",
+		"package": "electron-vite build && electron-builder --publish never",
+		"verify-content": "tsx tools/verify-content.ts"
+	},
+	"build": {
+		"appId": "dev.mshehab.unrealdojo",
+		"productName": "Unreal Dojo",
+		"directories": {
+			"output": "dist",
+			"buildResources": "build"
+		},
+		"files": [
+			"out/**/*",
+			"package.json"
+		],
+		"extraResources": [
+			{
+				"from": "content",
+				"to": "content",
+				"filter": [
+					"**/*"
+				]
+			},
+			{
+				"from": "resources",
+				"to": "resources",
+				"filter": [
+					"**/*"
+				]
+			}
+		],
+		"asar": true,
+		"mac": {
+			"target": [
+				{
+					"target": "dmg",
+					"arch": [
+						"arm64",
+						"x64"
+					]
+				}
+			],
+			"category": "public.app-category.education",
+			"identity": null
+		},
+		"dmg": {
+			"sign": false
+		},
+		"win": {
+			"target": [
+				{
+					"target": "nsis",
+					"arch": [
+						"x64"
+					]
+				}
+			]
+		},
+		"nsis": {
+			"oneClick": false,
+			"allowToChangeInstallationDirectory": true
+		},
+		"publish": null
+	},
+	"dependencies": {
+		"@anthropic-ai/sdk": "0.131.0",
+		"@modelcontextprotocol/sdk": "1.32.1",
+		"electron-store": "11.0.2",
+		"fast-xml-parser": "5.11.2",
+		"gray-matter": "4.0.3",
+		"remark-gfm": "4.0.1",
+		"remark-parse": "11.0.0",
+		"unified": "11.0.5",
+		"unist-util-visit": "5.1.0",
+		"zod": "4.6.5"
+	},
+	"devDependencies": {
+		"@monaco-editor/react": "4.7.0",
+		"@playwright/test": "1.63.0",
+		"@tailwindcss/vite": "4.3.3",
+		"@types/node": "24.19.1",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"@vitejs/plugin-react": "6.1.2",
+		"@xyflow/react": "12.12.0",
+		"class-variance-authority": "0.7.1",
+		"clsx": "2.1.1",
+		"electron": "44.7.0",
+		"electron-builder": "26.17.0",
+		"electron-vite": "6.0.0",
+		"lucide-react": "1.52.0",
+		"monaco-editor": "0.57.0",
+		"motion": "14.0.0",
+		"radix-ui": "1.7.0",
+		"react": "19.3.0",
+		"react-dom": "19.3.0",
+		"react-markdown": "10.1.0",
+		"tailwind-merge": "3.7.0",
+		"tailwindcss": "4.3.3",
+		"tsx": "4.23.15",
+		"typescript": "5.9.3",
+		"vite": "8.3.3",
+		"vitest": "5.0.3",
+		"zustand": "5.0.15"
+	}
+}

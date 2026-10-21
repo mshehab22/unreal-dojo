@@ -27,3 +27,7 @@ Read CLAUDE.md, then docs/plan.md, docs/decisions.md, docs/problems.md, docs/pro
 - `docs/problems.md`, `docs/iterations.md`: open problems; builder entries.
 - `docs/systems/`: one spec per system.
 - `research/`: the studies this plan rests on (GameDev.tv exercise design, Nystrom's patterns, gamified learning platforms, tooling and stack, Unreal concepts inventory, glossary seed).
+
+## Opening the unsigned Mac build
+
+Builds are not signed or notarized yet, so macOS Gatekeeper blocks the app the first time. Right-click Unreal Dojo in Applications and choose Open, then Open again. On Windows, SmartScreen shows "unknown publisher"; choose More info, then Run anyway.

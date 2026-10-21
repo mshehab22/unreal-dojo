@@ -1,0 +1,55 @@
+/* Tailwind entry and the base color variables shadcn/ui components read. ui-core (M0.3) replaces these with the real design tokens. */
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+	--background: #0b0d12;
+	--foreground: #e7e9ee;
+	--muted: #1a1d25;
+	--muted-foreground: #8b90a0;
+	--border: #262a35;
+	--ring: #5b8def;
+	--radius: 0.5rem;
+}
+
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-border: var(--border);
+	--color-ring: var(--ring);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+
+	html,
+	body,
+	#root {
+		height: 100%;
+	}
+
+	body {
+		@apply bg-background text-foreground antialiased;
+		font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+	}
+}
+
+/* Lets the user move the window by dragging this area; interactive children inside it stay clickable. */
+.app-drag-region {
+	-webkit-app-region: drag;
+	app-region: drag;
+}
+
+.app-drag-region :is(button, a, input, select, textarea, [role="button"]) {
+	-webkit-app-region: no-drag;
+	app-region: no-drag;
+}
