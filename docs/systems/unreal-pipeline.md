@@ -103,7 +103,9 @@ IPC: `createSandbox`, `cancelRun`, and `pickSandboxFolder` answer (A189); `runQu
 
 Real engine check: `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/integration/runQuest.test.ts` creates a sandbox through the `createSandbox` handler, runs `f1-score-keeper` with its reference solution through the `runQuest` handler (its two prerequisites filled from their reference solutions), and runs two snippet checks.
 
-Real engine check: `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/integration` creates a sandbox in a temp folder, builds it, writes the sample quest through `QuestFileWriter`, and runs it passing, with a failed assertion, with a compile error, and cancelled mid-build and mid-test (A187).
+Running the real engine checks: take the shared engine lock, then run one file at a time, or several with `--no-file-parallelism`, for example `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/integration --no-file-parallelism`. Without that flag vitest runs the files in parallel: several sandboxes build at once and editors compete for ports and the machine, and the runs fail or time out (A612). There is no npm script for these checks.
+
+Real engine check: `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/integration/headlessLoop.test.ts` creates a sandbox in a temp folder, builds it, writes the sample quest through `QuestFileWriter`, and runs it passing, with a failed assertion, with a compile error, and cancelled mid-build and mid-test (A187).
 
 ### Fast loop (M1.4)
 

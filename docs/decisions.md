@@ -4,6 +4,15 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A612 2026-10-21 Engine integration test files run one at a time (builder-unreal, M1.4c)
+Each engine test file creates its own sandbox, builds it, and may open an editor; vitest runs test files in parallel by default, so running the folder at once builds several sandboxes together and the runs fail or time out. Options: force serial runs in `vitest.config.ts` (slows every unit test run); an npm script with the flag (needs a `package.json` change); document it. Chosen: document it in `docs/systems/unreal-pipeline.md` (one file at a time, or `--no-file-parallelism`, under the engine lock) and correct the M1.4b entry's wording. There is no npm script for these checks, so none needed changing. Reverse cost: none.
+
+### A611 2026-10-21 `openEditor` restarts an editor that is on another engine (builder-unreal, M1.4c)
+After the engine in Settings changes, an editor still open on the same sandbox runs the old engine, and the fast loop would test with it. Chosen: the open editor is reused only when its engine folder, its project, and the build record all match (paths compared with the platform's `pathKey`); otherwise `openEditor` restarts it on the engine in Settings. Reverse cost: none.
+
+### A610 2026-10-21 A reset never fails because the Unreal side is unavailable (builder-unreal, M1.4c)
+A534 caught errors from removing the sandbox files, but building the quest run service can itself throw (an unsupported platform) before that catch applied, so a reset whose progress was already reset answered an error. Chosen: the whole sandbox step is inside one try and only logs a warning. Reverse cost: none.
+
 ### A506 2026-10-21 League night boss: the director feeds the sentry, and two Clear additions (author-foundations, Pack 1 World 3)
 The sentry aims at whatever is in its Targets list, but the rack keeps its pool private. Options: give the rack a getter for its pool; have the director add each target to the sentry's list when it is lent and remove it when it goes back. Chosen: the director does it, so the sentry never aims at a resting target and the rack needs no change. The roster and the score board each gain `Clear` so R can start a new league clean, and (fix round 1, the Lead's decision) the sentry gains BlueprintCallable `AddTarget` and `RemoveTarget`, because its Targets list is only EditAnywhere and the Blueprint plan could not otherwise feed it; extended copies of all three ship in the boss's solution folder (A340), and the sentry build quest's own interface is unchanged. Reference game: the bowling in Wii Sports. Reverse cost: low.
 

@@ -327,6 +327,17 @@ describe("payload validation", () =>
 		expect(editorOpens).toEqual(["open", "open"]);
 	});
 
+	it("still answers a reset when the quest run service cannot even be built, as on an unsupported platform (M1.4c)", async () =>
+	{
+		const { registrar, handlersByChannel } = createFakeRegistrar();
+		registerHandlers(registrar, createHandlers({ ...FAKE_DEPENDENCIES, getQuestRunService: () => { throw new AppErrorException("toolchain-missing", "Unreal Dojo works with Unreal on Windows and macOS only.", "Run Unreal Dojo on a Windows PC or a Mac."); } }));
+
+		const handler = handlersByChannel.get(IPC_CHANNELS.resetQuest);
+		if (!handler) throw new Error("no resetQuest handler");
+
+		expect((await handler({} as Parameters<WrappedHandler>[0], "f1-training-dummy")).ok).toBe(true);
+	});
+
 	it("removes a reset quest's sandbox files after resetting its progress (M1.4b)", async () =>
 	{
 		const invoke = createInvoker();

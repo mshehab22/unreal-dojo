@@ -24,7 +24,7 @@ export interface EditorServiceDependencies
 	checkToolchain: () => Promise<ToolchainCheck>;
 }
 
-/** Keeps one editor open on the sandbox in settings: reuses it when it is current and answering, restarts it when it is stale or on another sandbox. */
+/** Keeps one editor open on the sandbox in settings: reuses it when it is current and answering, restarts it when it is stale, on another sandbox, or on another engine. */
 export class EditorService
 {
 	private readonly dependencies: EditorServiceDependencies;
@@ -48,7 +48,8 @@ export class EditorService
 		const projectFile = paths.join(sandboxFolder, PROJECT_FILE_NAME);
 		const current = editorLauncher.current();
 		const lastBuildAt = ledger.lastFullBuildAt();
-		const currentIsFresh = current !== null && paths.pathKey(current.projectFile) === paths.pathKey(projectFile) && (lastBuildAt === null || lastBuildAt <= current.launchedAt);
+		// The open editor counts only on this engine and sandbox and with no full build since it opened; otherwise it is restarted (A611).
+		const currentIsFresh = current !== null && paths.pathKey(current.engineRoot) === paths.pathKey(engineRoot) && paths.pathKey(current.projectFile) === paths.pathKey(projectFile) && (lastBuildAt === null || lastBuildAt <= current.launchedAt);
 
 		if (currentIsFresh && (!engine.supportsFastLoop || (await current.client.isAnswering()))) return;
 

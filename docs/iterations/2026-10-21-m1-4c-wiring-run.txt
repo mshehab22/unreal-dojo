@@ -1,0 +1,27 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - import "./tools/fake/fakeWorldPlugin" without a file extension (vitest.config.ts:6:34). Add the file extension
+  - import "./readFakeWorldFixture" without a file extension (tools/fake/fakeWorldPlugin.ts:4:42). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.3 /Users/mshehab22/Projects/unreal-dojo/.claude/worktrees/m1-1-engine-locator-016bb6
+
+ ✓ tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > creates the sandbox through createSandbox 34406ms
+stdout | tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > runs the quest headless while no editor is open
+firstRunHeadless: loop=headless ok=true 2/2 in 39313 ms; Full build: the editor is not open (open it from Unreal Dojo for the fast loop).
+
+ ✓ tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > runs the quest headless while no editor is open 39314ms
+ ✓ tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > opens the editor through openEditor on the MCP port from settings, and it reports connected 12730ms
+stdout | tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > runs the same quest again through runQuest in the fast loop
+secondRunFast: loop=fast ok=true 2/2 in 4388 ms; Fast loop: the code is unchanged since the editor loaded it, so only the tests run again.
+
+ ✓ tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > runs the same quest again through runQuest in the fast loop 4388ms
+ ✓ tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8 > quits through the app's quit sequence: the quit is held, the editor closes, and nothing is left on the sandbox 2988ms
+stdout | tests/integration/fastLoopWiring.test.ts > fast loop wiring against /Users/mshehab22/Applications/UE_5.8
+Timings (ms): {"createAndColdBuild":34400,"firstRunHeadless":39313,"openEditorUntilAnswering":12704,"secondRunFast":4388,"quit":2971}
+
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  18:04:15
+   Duration  94.20s (tests 100%)
+

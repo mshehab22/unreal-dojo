@@ -264,7 +264,15 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 				const progress = await progressService.resetQuest(questId);
 
 				// The save is reset either way; a sandbox that cannot be reached (no engine, another platform) only keeps the old files, which the next run replaces (A534).
-				await dependencies.getQuestRunService().removeQuestFiles(questId).catch((error: unknown) => console.warn(`Reset ${questId}: sandbox files not removed: ${(error as Error).message}`));
+				// Getting the service can throw too (an unsupported platform), so the whole call is guarded (A610).
+				try
+				{
+					await dependencies.getQuestRunService().removeQuestFiles(questId);
+				}
+				catch (error)
+				{
+					console.warn(`Reset ${questId}: sandbox files not removed: ${(error as Error).message}`);
+				}
 
 				return progress;
 			},
