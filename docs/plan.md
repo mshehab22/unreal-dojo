@@ -78,15 +78,17 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | merged 329a995 | merged | 1 fix round; build about 20 s, headless test about 18 s on UE 5.8.3 Mac |
 | M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | merged 267739b | merged | Passed first review; Windows unverified (problems.md) |
 | M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | merged | merged | 2 fix rounds; rematch farming closed, proven with randomized sequences |
-| M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | m1-6b-progress-wiring @ 9af55f9 | fixes | Round 1 held except the cap: overflow items still reviewed as filler. Round 2 in progress |
+| M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | m1-6b-progress-wiring @ 4a952cb | re-review | Round 2: filler skips every item due today |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
-| M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop @ 5cdd7fd | re-review | All four items fixed; 7 of 7 real runs; rebased on main |
+| M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop @ 5cdd7fd | fixes | Re-review PASS. Merge taken back: an unhandled run-cancelled rejection in a cancelAll test fails npm test on main |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | m1-8-verifier @ 5ac6787 | fixes | Reviewer confirmed 3 of 5 and the timer diagnosis (5 of 5 with the M1.3 fix). Round 1: starter check edge cases, report layout, tests, comments. Round 2 after M1.3 merges: reuse M1.3 runners (A63), rerun --engine |
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
 | M2.3b World 1 follow-ups, then Pack 1 World 2 | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 | building | Boss miss penalty (Lead decision), A66 in patterns.json; then World 2 |
+| M2.2 Quest screens | ui-quests | builder-ui-quests (session) | m2-2-quest-screens | building | Concept, Drill, Breakdown, Build, Loot on the M2.1 data layer and fake |
+| M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | m3-1-patterns-observer | building | Engine runs under the shared lock |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 8b6e368 | fixes | Round 1: cleanup and test order now; after M1.3 merges the smoke reuses M1.3 runners (A63) |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
