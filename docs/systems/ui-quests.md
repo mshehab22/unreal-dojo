@@ -21,3 +21,5 @@ Boss: breakdown first, then a piece picker (the learner chooses the order), each
 - Playwright flow with the sample content through concept, drill, breakdown, build (fail with a hint, then pass), loot, next quest.
 - The editor stays responsive during a build (all process work is in main).
 - Every reward moment has one motion; nothing else animates.
+
+Choice order: multiple-choice and which-pattern choices are shuffled each time an item is shown; the stored `answerIndex` refers to the authored order (A61).

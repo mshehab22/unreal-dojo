@@ -45,6 +45,15 @@ Options: caret ranges; exact pins. Chosen: exact pins (`--save-exact`) so every 
 ### A07 2026-10-21 electron-vite 6.0.0 pinned although it is only 7 days old (M0.1, builder-shell)
 D01 requires electron-vite 6 with Vite 8, and 6.0.0 (2026-10-14) is the only release that supports Vite 8; 5.0.0 supports Vite 5 to 7 only. Options: electron-vite 5 with Vite 7 (breaks D01 and the Vite 8 pin); 6.0.0 now. Chosen: 6.0.0, the one exception to the two-week rule. typecheck, test, build, e2e, and package all pass with it. Reverse cost: low; drop to 5.0.0 plus Vite 7 if a 6.0.0 bug appears.
 
+### A62 2026-10-21 Ordinary-word glossary terms link only inside inline code
+From the M0.5 review: terms such as `check` and `ensure` are also everyday words ("check the flags"), and the TermLinker matches plain words case-insensitively, so prose would fill with wrong hover links. Options: drop those terms from linking; link them only in code spans; keep them linked everywhere. Chosen: an optional `linkMode: "code-only"` field on GlossaryEntry, honored by the M1.8 TermLinker; generic aliases (override, virtual, verify, assert, meta, Remove, dictionary) are removed. Reverse cost: low.
+
+### A61 2026-10-21 The drill runner shuffles multiple-choice and which-pattern choices
+From the M0.5 review: 23 of 26 authored answers sat at index 1, so position gave the answer away. Options: rely on authors spreading answers; shuffle at runtime; both. Chosen: both. Authors spread `answerIndex`, and the drill and concept screens shuffle choice order per presentation (the stored answer index refers to the authored order). Recorded in `docs/systems/ui-quests.md`. Reverse cost: none.
+
+### A60 2026-10-21 The M0.1 scaffold from the background agent was merged; the duplicate session run is parked
+When the repository was not yet trusted, M0.1, M0.5, and M1.2a ran as background agents; after trust, the original sessions also ran. For M0.1 the agent's branch was already reviewed and merged; the session branch `claude/m0-1-scaffold-de80f2` is kept unmerged for reference. For M0.5 and M1.2a the agents were stopped and the sessions kept. Reverse cost: none.
+
 ### A06 2026-10-21 The Lead owns the board; builders own their iterations entry and spec
 Options: every session edits `docs/plan.md`; only the Lead edits it. Chosen: only the Lead edits `docs/plan.md`. Builders append their own entry to `docs/iterations.md` and update their own `docs/systems/<system>.md` on their branch. Why: several worktrees editing one board table conflict on every merge. Reverse cost: none.
 
