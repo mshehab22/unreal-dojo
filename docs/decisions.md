@@ -4,13 +4,17 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
-### A286 2026-10-21 Engine smoke builds the cmd.exe command line by hand for Build.bat (QA harness fix round 1, tester)
+### A286 2026-10-21 Engine smoke builds the cmd.exe command line by hand for Build.bat (QA harness fix round 1, tester) (superseded by A63)
+Superseded 2026-10-21: after M1.3 merged, the smoke calls `SandboxProjectService`, `UnrealBuilder`, and `AutomationTestRunner`; `tools/qa/windowsCommandLine.ts`, its test, and the hand-written tree kill were deleted. The text below is kept as history.
+
 Found in review: passing `Build.bat` and its arguments to `cmd.exe /d /s /c` as separate arguments lets Node quote each one for a normal program, which cmd.exe then splits again at the first space, so the default `C:\Program Files\Epic Games\...` path breaks. Options: `shell: true` with pre-quoted arguments (what `NodeProcessRunner` does); build the line ourselves. Chosen: build it ourselves with the same quoting (each part in double quotes, inner quotes doubled, the whole line in one more pair) and spawn `cmd.exe` with `windowsVerbatimArguments: true`, which is exactly what Node's shell mode does, without importing app code into `tools/qa`. A timeout kills the tree with `taskkill /T /F`. Unit tested; unverified on a real Windows machine. Superseded by the Lead's rule that only `src/main/services/unreal/` spawns Unreal: this code stays until M1.3 merges, then the smoke switches to `SandboxProjectService`, `UnrealBuilder`, and `AutomationTestRunner` and `tools/qa/windowsCommandLine.ts` and its test are removed. Reverse cost: low.
 
 ### A285 2026-10-21 Engine smoke passes on the report, and requires the sample test by name (QA harness, tester)
 Options: trust the editor's exit code; read `index.json` and require no failures; also require `Dojo.Sample.Health.TakesDamage` to be present and passed. Chosen: the last. The pipeline spec already says the report decides (exit code 3 on a failed assertion, and a filter that matches nothing can still exit 0 with an empty report). "Succeeded with warnings" counts as passed, as in the spec. Reverse cost: one condition.
 
-### A284 2026-10-21 Engine smoke prepares the sandbox the way SandboxProjectService will, without importing it (QA harness, tester)
+### A284 2026-10-21 Engine smoke prepares the sandbox the way SandboxProjectService will, without importing it (QA harness, tester) (superseded by A63)
+Superseded 2026-10-21: the smoke now calls `SandboxProjectService.create` itself, so the sandbox is prepared by the app's own code.
+
 SandboxProjectService is not on main yet. Options: wait for it; copy the template and write `EngineAssociation` and the plugin list in the script. Chosen: the script does it, following A41: `EngineAssociation` is the engine's major.minor (for example `5.8`), and the three 5.8 plugins are removed for older engines. It reuses `EngineLocator`, `createUnrealPlatform`, and `PlatformPaths` from `src/main/services/unreal/` read-only, so the paths match the app's. When SandboxProjectService lands, the script should call it instead. Reverse cost: low.
 
 ### A283 2026-10-21 Dialog stubs replace methods on Electron's `dialog` object from the test (QA harness, tester)

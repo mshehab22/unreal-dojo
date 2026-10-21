@@ -1,10 +1,10 @@
 // ui-core M0.3: the frame navigates between every screen against the real bridge, Cmd/Ctrl+K and Esc work, and the token gallery renders.
 // Page scripts are passed as strings because e2e is typechecked without the DOM library.
-// Saves screenshots of each screen at 1100x700 and 1440x900 to test-results/; SAVE_PROOF=1 also copies them to docs/iterations/m0-3-*.png.
-import { copyFileSync } from "node:fs";
-import { resolve } from "node:path";
+// Saves screenshots of each screen at 1100x700 and 1440x900 to test-results/; with SAVE_PROOF=1 a passing test also copies them to docs/iterations/m0-3-*.png.
+import type { Page } from "@playwright/test";
 
-import { _electron as electron, expect, test, type ElectronApplication, type Page, type TestInfo } from "@playwright/test";
+import { expect, test } from "./support/dojoTest";
+import type { ProofCamera } from "./support/ProofCamera";
 
 /** The two sizes every screen must work at (docs/systems/ui-core.md). */
 const SIZES = [
@@ -25,21 +25,14 @@ const SCREENS = [
 
 const SHORTCUT_MODIFIER = process.platform === "darwin" ? "Meta" : "Control";
 
-let electronApp: ElectronApplication;
-let window: Page;
-
-/** Screenshots the page into test-results/, and into docs/iterations/ as proof when SAVE_PROOF=1. */
-async function saveScreenshot(testInfo: TestInfo, name: string): Promise<void>
+/** Screenshots the page into test-results/, and into docs/iterations/ as proof when the test passes with SAVE_PROOF=1. */
+async function saveScreenshot(camera: ProofCamera, window: Page, name: string): Promise<void>
 {
-	const path = testInfo.outputPath(`m0-3-${name}.png`);
-
-	await window.screenshot({ path });
-
-	if (process.env["SAVE_PROOF"] === "1") copyFileSync(path, resolve(`docs/iterations/m0-3-${name}.png`));
+	await camera.capture(window, `m0-3-${name}.png`);
 }
 
 /** Forces the page to render at an exact size, independent of how large the OS lets the window be. */
-async function setViewport(width: number, height: number): Promise<void>
+async function setViewport(window: Page, width: number, height: number): Promise<void>
 {
 	const session = await window.context().newCDPSession(window);
 
@@ -47,52 +40,47 @@ async function setViewport(width: number, height: number): Promise<void>
 }
 
 /** Moves the app to a route hash and waits for its screen and fonts. */
-async function goTo(hash: string, testId: string): Promise<void>
+async function goTo(window: Page, hash: string, testId: string): Promise<void>
 {
 	await window.evaluate(`location.hash = ${JSON.stringify(hash)}`);
 	await expect(window.getByTestId(testId)).toBeVisible();
 	await window.evaluate("document.fonts.ready.then(() => true)");
 }
 
-test.beforeAll(async () =>
+test.beforeEach(async ({ dojo }) =>
 {
-	electronApp = await electron.launch({ args: [resolve(".")] });
-	window = await electronApp.firstWindow();
-	await window.waitForLoadState("domcontentloaded");
-
 	// Reduced motion zeroes every duration token, so screenshots never catch a transition halfway.
-	await window.emulateMedia({ reducedMotion: "reduce" });
+	await dojo.window.emulateMedia({ reducedMotion: "reduce" });
 });
 
-test.afterAll(async () =>
+test("every screen and the token gallery render at both sizes against the real bridge", async ({ dojo, camera }) =>
 {
-	await electronApp.close();
-});
+	const { window } = dojo;
 
-test("every screen and the token gallery render at both sizes against the real bridge", async ({}, testInfo) =>
-{
 	for (const size of SIZES)
 	{
-		await setViewport(size.width, size.height);
+		await setViewport(window, size.width, size.height);
 
 		for (const screen of SCREENS)
 		{
-			await goTo(screen.hash, screen.testId);
+			await goTo(window, screen.hash, screen.testId);
 			await expect(window.getByRole("heading", { level: 1, name: screen.heading, exact: true })).toBeVisible();
 
 			// Nothing may scroll sideways at either size.
 			const overflowsSideways = await window.evaluate<boolean>("(() => { const stage = document.querySelector('main'); return stage ? stage.scrollWidth > stage.clientWidth : true; })()");
 			expect(overflowsSideways, `${screen.file} at ${size.width}x${size.height}`).toBe(false);
 
-			await saveScreenshot(testInfo, `${screen.file}-${size.width}x${size.height}`);
+			await saveScreenshot(camera, window, `${screen.file}-${size.width}x${size.height}`);
 		}
 	}
 });
 
-test("the token gallery shows every pack accent and reads tokens live", async ({}, testInfo) =>
+test("the token gallery shows every pack accent and reads tokens live", async ({ dojo, camera }) =>
 {
-	await setViewport(1440, 900);
-	await goTo("#/dev/tokens", "screen-devTokens");
+	const { window } = dojo;
+
+	await setViewport(window, 1440, 900);
+	await goTo(window, "#/dev/tokens", "screen-devTokens");
 
 	for (const pack of ["foundations", "patterns", "mechanics", "systems"])
 	{
@@ -103,15 +91,17 @@ test("the token gallery shows every pack accent and reads tokens live", async ({
 
 	// The stage scrolls inside the frame, so grow the viewport to the content's height for one full-length picture.
 	const contentHeight = await window.evaluate<number>("(document.querySelector('main')?.scrollHeight ?? 0) + 48");
-	await setViewport(1440, contentHeight);
-	await saveScreenshot(testInfo, "dev-tokens-full-1440");
-	await setViewport(1440, 900);
+	await setViewport(window, 1440, contentHeight);
+	await saveScreenshot(camera, window, "dev-tokens-full-1440");
+	await setViewport(window, 1440, 900);
 });
 
-test("the rail navigates, Cmd/Ctrl+K opens Codex search, and Esc closes it", async ({}, testInfo) =>
+test("the rail navigates, Cmd/Ctrl+K opens Codex search, and Esc closes it", async ({ dojo, camera }) =>
 {
-	await setViewport(1100, 700);
-	await goTo("#/", "screen-title");
+	const { window } = dojo;
+
+	await setViewport(window, 1100, 700);
+	await goTo(window, "#/", "screen-title");
 
 	await window.getByRole("navigation", { name: "Main" }).getByRole("link", { name: /World Map/ }).click();
 	await expect(window.getByTestId("screen-worldMap")).toBeVisible();
@@ -120,7 +110,7 @@ test("the rail navigates, Cmd/Ctrl+K opens Codex search, and Esc closes it", asy
 	await window.keyboard.press(`${SHORTCUT_MODIFIER}+K`);
 	await expect(window.getByTestId("codex-search")).toBeVisible();
 	await expect(window.getByRole("textbox", { name: "Search the Codex" })).toBeFocused();
-	await saveScreenshot(testInfo, "codex-search-1100x700");
+	await saveScreenshot(camera, window, "codex-search-1100x700");
 
 	await window.keyboard.press("Escape");
 	await expect(window.getByTestId("codex-search")).toBeHidden();

@@ -531,7 +531,7 @@ report: 1 passed (0 with warnings), 0 failed, 0 not run, engine-reported test ti
 
   An earlier run the same hour (before a small cleanup of the report reader) also passed: build 22.5 s, headless run 34.7 s, total 57.2 s, while other sessions were busy on the machine. Both match the cold-build and headless timings in `docs/systems/unreal-pipeline.md`.
 - Decisions made: A280 to A285 in `docs/decisions.md`.
-- Not done or left for later: save dialogs are not stubbed yet (no screen uses one). I ran the engine check only against the passing template; the reviewer later exercised its failure path (see Fix round 1). Unverified on Windows: the `--user-data-dir` switch, the dialog stubs, and the engine check's `Build.bat` call through `cmd.exe`. When SandboxProjectService lands, the engine check should use it instead of preparing the sandbox itself (A284).
+- Not done or left for later: save dialogs are not stubbed yet (no screen uses one). I ran the engine check only against the passing template; the reviewer later exercised its failure path (see Fix round 1). Unverified on Windows: the `--user-data-dir` switch, the dialog stubs, and the engine check's `Build.bat` call through `cmd.exe`. The engine check now uses SandboxProjectService (see "Moved onto M1.3" below).
 
 
 ### Fix round 1
@@ -540,3 +540,19 @@ report: 1 passed (0 with warnings), 0 failed, 0 not run, engine-reported test ti
 - Proof: typecheck passes; unit tests 12 files, 134 tests passed (2 new, for the Windows command line); content verifier exit 0; build passes; end-to-end 8 passed, and the folder-isolation check also passed run alone; no harness temp folders were left behind. Engine check rerun on the Mac, UE 5.8.3: build 22.2 s, headless run 36 s, total 58.2 s, PASSED, `Dojo.Sample.Health.TakesDamage` Success.
 - Not verified here: the Windows command line and the tree kill on a real Windows machine; the "print the temp folder on an error" path and the failed-launch cleanup were not forced to happen.
 - Follow-up decided by the Lead after this round: only the app's Unreal services may start Unreal, so the Windows command line and tree kill written here are temporary. When M1.3 merges, the engine check moves onto those services, reruns under the engine lock, and this code is removed.
+
+### Moved onto M1.3
+- What changed: after M1.3 merged, the engine check stopped starting Unreal itself. It now asks the app's own sandbox service to copy and build the sandbox and the app's own test runner to run the sample test, so the Windows command line, timeouts, and stopping a stuck build are handled in one place for the whole project (A63). The Windows quoting code and its test from fix round 1 are deleted (A286 and A284 marked superseded). The branch was rebased onto `main`, and the newer ui-core tokens test from `main` was moved onto the harness again.
+- Proof: typecheck passes; unit tests 47 files passed and 1 skipped, 522 tests passed and 7 skipped; content verifier: 24 files (1 pack, 1 world, 12 quests), no problems; build passes; end-to-end 18 passed. Engine check on the MacBook Air M5, UE 5.8.3, run under the shared engine lock:
+
+```
+step                                     seconds  result
+create and build sandbox                    20.0  ok
+headless Dojo.Sample.Health.TakesDamage     19.2  exit 0
+total                                       39.2  PASSED
+
+  passed  Dojo.Sample.Health.TakesDamage (0.012 s in the engine)
+```
+
+  An earlier run under the lock, before the table's column width was fixed, also passed: 27.5 s, 28.5 s, 56.0 s total.
+- Not done or left for later: `e2e/ui-core-screens.spec.ts` arrived on `main` after the harness and still launches the app its own way; ui-core is changing it right now, so moving it onto the harness is left as a follow-up. The engine check's failure path was not rerun after the switch. Unverified on Windows.
