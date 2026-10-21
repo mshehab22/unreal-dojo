@@ -1,0 +1,5 @@
+{
+	"id": "event-queue",
+	"title": "Not now, at the end of the frame",
+	"summary": "The arena's herald announces knockouts after the fallen fighter has left, its ticket gates report from worker threads, and its powder kegs keep blowing each other up. Learn to put a mailbox between sending and handling, so the handling happens at a moment the receiver chooses."
+}

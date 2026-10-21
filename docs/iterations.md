@@ -1036,3 +1036,20 @@ total                                       39.2  PASSED
 ### Fix round 1
 - Originality (D13): the course planner no longer puts undo in a designer's level-editing tool. It is now the player's build phase before an obstacle run: the runner sets up their own eight-slot course and can take placements back until the run starts. Mechanics, the redo-tail cut (A555), and the class and quest names are unchanged. The planner's brief, its class comment (starter and reference solution), the world summary, the actions-as-values card line, the card's which-pattern item (now a defense round's build phase), the card's spot-the-bug prompt, and the when-not quest's two "designer" mentions are reworded to match.
 - Only a header comment changed in the code. Rebuilt from fresh sandboxes on UE 5.8.3 under the engine lock: reference solutions 45 of 45 pass, including the three planner tests; starters compile and 38 of 45 fail, the same split as before. Verifier `--pack patterns`: no problems, plus the expected Pack 4 gate warning.
+
+## M4.P2.6 Pack 2 World 6, Event Queue (content-patterns, author-patterns)
+- What changed: a sixth Patterns world, "Not now, at the end of the frame", with the full mini-arc for Event Queue (six quests), set in the arena. Senders post events or requests into a mailbox and return at once, and the receiver handles them later, at a moment it chooses. Built away from the source chapter's examples from the start, including every answer choice and distractor (A655). Two older items on the event-queue card that leaned on the chapter were reworded (A657).
+- The quests and their observables:
+  - Not now, but soon (concept): a delegate runs listeners at the sender's moment, and when that moment is wrong (mid-change, another thread, a burst). News that waits carries copies.
+  - A herald who announces after the fall (build, worked): `ke * KnockOut` removes both fighters at once, and at the end of that frame the herald's label announces their knockouts from the copies they posted. A listener that posts while hearing waits for the next announcement.
+  - A mailbox between sending and handling (concept): the Event Queue card and recognize items, including `TQueue` modes.
+  - Gate reports from worker threads, a few per tick (build, stub): `ke * SimulateGates` sends forty reports from worker threads through a multi-producer `TQueue`, and the board's label climbs to Attendance: 79 over ten frames, four reports a frame. Its deliberate failure: a burst must not land in one frame (A656).
+  - Kegs that wait their turn to blow (refactor): `ke * Detonate 5` spreads the stars out a keg each way per frame, and a row of 200 kegs never has one explosion running inside another, where the starter went 200 calls deep in one frame.
+  - When now is the right moment (concept): react now when safe, a sender that needs an answer, a shared queue is a global, quiet loops, bound the queue, and the engine already queues.
+- Also: a new `parallel-for` glossary entry, and the event-queue card's two use cases and two new items (A657).
+- Proof, UE 5.8.3 on the MacBook Air, fresh copies of the sandbox template, commands from the unreal-pipeline spec, under the shared engine lock:
+  - Reference solutions for all six patterns worlds: build succeeded, 54 of 54 tests passed (9 new), no warnings. This includes 200 reports submitted from `ParallelFor` worker threads.
+  - Starters: all compile; 46 of 54 fail. On the World 6 side, only the kegs' every-keg-once test (working starter) passes, by design.
+  - The obvious attendance board (dequeue until empty): fails only `AFewReportsPerTick` ("taken 10, expected 4") and `ReportsFromManyThreads` (one tick instead of fifty).
+  - Content verifier `--pack patterns`: no problems. One expected warning: the Pack 4 gate names the Component world, which does not exist yet.
+- Not done: no boss for this world yet (A652). No screenshots (editor runs with `-NullRHI` on this Mac). Windows unverified. Decisions A650 to A657.

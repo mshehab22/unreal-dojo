@@ -3829,5 +3829,22 @@
       "uobject"
     ],
     "firstQuestId": "p5-command-card"
+  },
+  {
+    "id": "parallel-for",
+    "term": "ParallelFor",
+    "aliases": [
+      "ParallelFor()",
+      "Async/ParallelFor.h"
+    ],
+    "category": "framework",
+    "short": "A helper that runs the same small function for a range of indices spread across the engine's worker threads, and returns when all are done.",
+    "long": "ParallelFor(Count, Body) calls Body once for each index from 0 to Count minus 1, sharing the calls across worker threads, and waits until every call has finished. It suits independent work such as filling an array or counting per item. The body runs off the game thread, so it must not touch actors or UObjects; it writes only its own slot of an array or hands results to a thread-safe queue such as a TQueue in multi-producer mode.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/ParallelFor?application_version=5.8",
+    "related": [
+      "tqueue",
+      "game-thread"
+    ],
+    "firstQuestId": "p6-gate-tallies"
   }
 ]
