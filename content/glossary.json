@@ -1399,6 +1399,26 @@
     "firstQuestId": "p3-per-frame-behavior"
   },
   {
+    "id": "render-thread",
+    "term": "Render Thread",
+    "aliases": [
+      "rendering thread",
+      "game thread",
+      "FSceneProxy",
+      "scene proxy",
+      "scene proxies"
+    ],
+    "category": "framework",
+    "short": "The thread that turns a frame into draw commands while the game thread works on the next frame, using its own copies of what each component looks like.",
+    "long": "Gameplay code runs on the game thread. Drawing is prepared on a separate render thread, which can run up to a frame behind. So that the two never fight over the same data, each visible component gives the renderer its own render-side copy, a scene proxy, and sends it updates when something changes. The game thread is then free to move actors for the next frame while the renderer draws the last one from its copies. Game code never touches render-thread data directly; it sends changes across, for example with ENQUEUE_RENDER_COMMAND.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/threaded-rendering-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tick",
+      "tick-groups"
+    ],
+    "firstQuestId": "p4-read-while-writing"
+  },
+  {
     "id": "primary-actor-tick",
     "term": "PrimaryActorTick",
     "aliases": [

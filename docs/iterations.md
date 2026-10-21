@@ -900,3 +900,20 @@ total                                       39.2  PASSED
 - The drone brief now says its five-second update is a direct Tick call in the tests, since real frames reach Tick capped at 0.4 seconds by default. Its editor step uses Speed 900 under `t.MaxFPS 2` so each frame really carries it most of a corridor.
 - `docs/product.md` lists Pack 2's worlds as one ordered list, and A370 carries a dated note that A491 supersedes it in part. A491 now records that the Lead's A68 re-pointed the Pack 4 gate.
 - Engine, UE 5.8.3 on the Mac, fresh sandboxes under the engine lock: reference solutions 27 of 27 pass across the three patterns worlds; starters compile and 22 of 27 fail, the same split as before. The obvious swarm walk still fails only `NewSparksWaitAStep` and `LaunchBurstsToTheEnd`.
+
+## M4.P2.4 Pack 2 World 4, Double Buffer (content-patterns, author-patterns)
+- What changed: a fourth Patterns world, "Finished copies only", with the full mini-arc for Double Buffer (six quests), all set in the arena. When state changes piece by piece, readers use a finished copy while the next one is built in a second copy, and one swap hands it over. Nobody then sees half a change, and nothing depends on which entry the loop visits first. Built away from the source chapter's examples from the start (A543).
+- The quests and their observables:
+  - Reading a page someone is still writing (concept): half-done changes, steps that read their own half-finished work, and how Unreal's renderer draws from its own copies.
+  - Straw that burns the same whichever way you look (build, worked): `ke * Ignite 6 4` sets the straw floor alight, and a diamond of orange squares grows one ring every half second, identical with Walk Backward on or off. In the tests, a one-row strip burns exactly one square per step in both directions, and two fires leave identical floors either way.
+  - Two copies and one handover (concept): the Double Buffer card and recognize items.
+  - A drum pad that scores one finished frame at a time (build, stub): hits from `ke * Hit 0` jump the score by 10 each on the next frame and never count again. Its deliberate failure: the swapped-back copy must be emptied before it collects again (A545).
+  - Standings that do not depend on who is scored first (refactor): with scores 20, 10, 4 and hits 0, 6, 1, the label reads 20 | 22 | 6 whichever way the teams are walked, where before it read 20 | 22 | 11 walking forward.
+  - When one copy is enough (concept): independent updates, chains meant to sweep in one pass, readers who need a write at once, stale back copies, and memory cost.
+- Also: a new `render-thread` glossary entry, and the double-buffer card's two use cases and two new items (A546).
+- Proof, UE 5.8.3 on the MacBook Air, fresh copies of the sandbox template, commands from the unreal-pipeline spec, under the shared engine lock:
+  - Reference solutions for all four patterns worlds: build succeeded, 36 of 36 tests passed (9 new). One World 2 test logged a warning that is not about the quest: the engine tried to launch its Intel-only iOS device probe (`idevice_id`, "Bad CPU type") while that test happened to be running.
+  - Starters: all compile; 30 of 36 fail. On the World 4 side, only the standings' plain-rounds test (working starter) passes, by design.
+  - The obvious drum pad (swap without emptying): fails only `OldHitsNeverReturn` ("expected 1, was 4") and `EachHitScoresOnce` ("expected 20, was 40").
+  - Content verifier `--pack patterns`: no problems. One expected warning: the Pack 4 gate names the Component world, which does not exist yet.
+- Not done: no boss for this world yet (A541). No screenshots (editor runs with `-NullRHI` on this Mac). Windows unverified. Decisions A540 to A547.

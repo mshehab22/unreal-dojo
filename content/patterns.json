@@ -255,7 +255,10 @@
     "problem": "If systems read state while another system is halfway through updating it, results depend on update order: the first cell in a simulation grid sees old neighbors and the last sees new ones, and a renderer may draw half a frame.",
     "unrealForm": "The engine double and triple buffers the screen through the swap chain, and the render thread works on a snapshot of the previous frame through scene proxies. Physics results are read from the last completed step. In gameplay code you write it yourself for cellular or crowd simulations: two TArray buffers, read from Current, write to Next, then Swap.",
     "whenNot": "Skip it when memory for a second copy is too costly or when sequential, in-order updates are the behavior you actually want, such as a turn-based board where units should see moves made earlier in the same turn.",
-    "useCaseQuestIds": [],
+    "useCaseQuestIds": [
+      "p4-straw-fire",
+      "p4-drum-pad"
+    ],
     "recall": [
       {
         "id": "double-buffer-recall-1",
@@ -290,6 +293,19 @@
         "bugLine": 6,
         "fix": "Write the result into Next[Index], not Current[Index], so later cells still read the old generation.",
         "explanation": "Writing into the buffer you are reading from lets later cells see a mix of old and new generations."
+      },
+      {
+        "id": "double-buffer-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A drum pad collects hits in a back copy and swaps it to the front at the start of each frame. Right after the swap, what does the back copy hold?",
+        "choices": [
+          "Nothing; a swap empties it",
+          "The hits that were scored last frame, which must be cleared before new hits land",
+          "The same hits as the front copy",
+          "The hits for the frame after next"
+        ],
+        "answerIndex": 1,
+        "explanation": "A swap trades which array is which. The array that was being scored becomes the collecting one, still full, so anything that adds to its entries must empty it first."
       }
     ],
     "scenarios": [
@@ -346,6 +362,19 @@
           }
         ],
         "explanation": "Decisions read from the previous frame's positions and write into the next frame's positions."
+      },
+      {
+        "id": "double-buffer-scenario-3",
+        "type": "multiple-choice",
+        "prompt": "A row of arena braziers is meant to light all at once, like a fuse, when the first is lit. A teammate wants to double buffer the brazier states so the update is order independent. What is the better call?",
+        "choices": [
+          "Double buffer it; every grid should be",
+          "Keep the in-place pass, because each brazier is meant to see its neighbor's change in the same pass",
+          "Double buffer it and swap after every brazier",
+          "Use a timer per brazier instead"
+        ],
+        "answerIndex": 1,
+        "explanation": "Here the order is the rule: the fuse should sweep through in one pass. A finished copy would make it crawl one brazier per step."
       }
     ]
   },
