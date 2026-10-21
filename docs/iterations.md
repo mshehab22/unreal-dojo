@@ -347,3 +347,12 @@ exit code 0
 - Proof: the real-engine run on UE 5.8.3, after both rebases and under the shared engine lock, passed 7 of 7 in 105 s. In the new-quest case a second quest with a failing test named `Dojo.Probe.Value.SevenOther` sat in the sandbox, and the probe quest's verdict held only its own passing test. Trimmed output: `docs/iterations/m1-3-integration-run.txt`. Unit and IPC tests cover overlapping names, argv0 quoting, `cancelAll` (all runs end, and a stuck run stops the wait at its limit), and the setup warning.
 - Still open: everything Windows (problems.md), including the quoted program path and the two-ended anchors.
 
+## M2.1c World Map overflow with the real World 1 (ui-core, builder-ui-core)
+- What changed: with the real first world (12 quests) on the map, its path was wider than the screen at 1100x700 and the World Map scrolled sideways; the stand-in's shorter worlds never showed it. A world's path now wraps into even rows that fit the card: at 1100 wide the 12 stages sit in two rows of six, at 1440 they fit in one. Each row keeps its own connecting line and the boss stays last (A390). The stand-in's first world is now shaped like the real one, with its 12 stages and real titles, so the screen tests would catch this again.
+- How it was checked: the failure was reproduced in a throwaway copy of main with the progress wiring task (M1.6b) merged in: the M0.3 frame test failed with "world-map at 1100x700". With this fix copied in, that test and the smoke test passed; with it removed again, the test failed again. The throwaway copy was deleted; nothing from M1.6b is in this branch.
+- Checks: `npm run typecheck` passes; `npm test` 462 passed (new: rows per width and balanced splitting); `npx tsx tools/verify-content.ts` no problems; `npm run build` passes; `npm run test:e2e` 14 passed (the screen test now also checks the 12-stage world wraps at 1100 and never scrolls sideways). The `m2-1-*.jpg` proofs were saved again because the stand-in's first world changed.
+
+![[m2-1-world-map-1100x700.jpg|800]]
+*The 12-stage first world at the minimum size: two rows of six, no sideways scroll.*
+
+- Decisions made: A390 in `docs/decisions.md`.
