@@ -1,0 +1,7 @@
+Here is my review of the submission.
+
+```json
+{"score":82,"summary":"You kept health inside its own component and broadcast changes instead of calling the HUD. Two rubric lines need another look.","rubric":[{"line":"Health lives in a UActorComponent","met":true,"note":"UDojoHealthComponent owns CurrentHealth."},{"line":"Damage is clamped at zero","met":true,"note":"FMath::Max keeps it from going negative."},{"line":"Changes are broadcast through a delegate","met":false,"note":"OnHealthChanged is declared but never broadcast in TakeDamage."}],"findings":[{"severity":"problem","title":"OnHealthChanged never fires","detail":"Rubric line 3: TakeDamage changes CurrentHealth but never broadcasts, so a health bar listening to it would never update.","file":"DojoHealthComponent.cpp","line":14},{"severity":"suggestion","title":"Owner pointer is not a UPROPERTY","detail":"Unreal convention: a raw UObject pointer member is invisible to the garbage collector and can dangle. Mark it UPROPERTY and use TObjectPtr.","file":"DojoHealthComponent.h","line":40},{"severity":"praise","title":"Clean clamp","detail":"Clamping in one place keeps every caller safe.","file":"DojoHealthComponent.cpp","line":12}],"reflectionQuestion":"Why does the component broadcast a delegate instead of calling the HUD directly?","alternativeHint":"Some projects put health in an attribute set, which costs more setup but gives replication and modifiers for free."}
+```
+
+Let me know if you want more detail.

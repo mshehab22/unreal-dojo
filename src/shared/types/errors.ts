@@ -19,6 +19,8 @@ export type AppErrorCode =
 	| "run-already-exists"
 	| "run-cancelled"
 	| "review-unavailable"
+	| "review-invalid-output"
+	| "review-refused"
 	| "content-invalid"
 	| "quest-not-found"
 	| "quest-locked"

@@ -1,0 +1,1 @@
+{"score":78,"summary":"Your plan keeps health and the door separate and connects them with an event. The revision added the missing trigger.","requiredPiecesCovered":[{"label":"HealthComponent","covered":true,"matchedTo":"Health"},{"label":"OnDeath event","covered":true,"matchedTo":"Died"},{"label":

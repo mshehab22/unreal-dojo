@@ -1,0 +1,4 @@
+My grade:
+```
+{"score":88,"verdict":"correct","note":"You named both jobs: reflection and garbage collection. Adding that it also exposes the member to the editor would make it complete."}
+```

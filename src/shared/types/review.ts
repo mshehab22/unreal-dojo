@@ -77,6 +77,9 @@ export interface CodeReview
 
 	/** Which provider produced this review. */
 	provider: ReviewProviderId;
+
+	/** Why an AI reviewer was not used, when `provider` is `tests-only` because the chosen or every AI provider was unavailable. */
+	fallbackReason?: string;
 }
 
 /** Whether one required breakdown piece showed up in the learner's plan. */
@@ -118,6 +121,9 @@ export interface BreakdownGrade
 
 	/** Which provider produced this grade. */
 	provider: ReviewProviderId;
+
+	/** Why an AI reviewer was not used, when `provider` is `tests-only` because the chosen or every AI provider was unavailable. */
+	fallbackReason?: string;
 }
 
 /** The explain grader's verdict on one learner sentence. */
@@ -137,6 +143,9 @@ export interface ExplainGrade
 
 	/** Which provider produced this grade. Tests only means "self-check against the model answer". */
 	provider: ReviewProviderId;
+
+	/** Why an AI reviewer was not used, when `provider` is `tests-only` because the chosen or every AI provider was unavailable. */
+	fallbackReason?: string;
 }
 
 /** What the renderer sends to ask "why is this a finding?". Free, cached per finding. */
