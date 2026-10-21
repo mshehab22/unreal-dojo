@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import type { ReviewProviderStatus } from "@shared/types/review";
 
-import { cancelledError, refusedError, trimForDetail, unavailableError } from "../reviewErrors";
+import { cancelledError, refusedError, timeoutError, trimForDetail, unavailableError } from "../reviewErrors";
 import type { ClaudeCodeLocator } from "./ClaudeCodeLocator";
 import type { IProcessRunner, ProcessRunResult } from "./IProcessRunner";
 import type { IReviewProvider, ReviewCompletionRequest } from "./IReviewProvider";
@@ -211,10 +211,7 @@ export class ClaudeCodeProvider implements IReviewProvider
 	{
 		if (result.cancelled) throw cancelledError();
 
-		if (result.timedOut)
-		{
-			throw unavailableError(`Claude Code took longer than ${Math.round(this.options.timeoutMs / 1000)} seconds and was stopped.`, "Submit again. If it keeps happening, switch the review provider in Settings.");
-		}
+		if (result.timedOut) throw timeoutError(`Claude Code took longer than ${Math.round(this.options.timeoutMs / 1000)} seconds and was stopped.`);
 
 		if (this.textMode)
 		{

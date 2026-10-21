@@ -154,7 +154,7 @@ describe("ClaudeCodeProvider", () =>
 		const runner = new FakeProcessRunner("2.1.304", [{ exitCode: null, timedOut: true }, { exitCode: null, cancelled: true }]);
 		const { provider } = providerWith(runner);
 
-		const timeout = await expectAppError(provider.complete(REQUEST), "review-unavailable");
+		const timeout = await expectAppError(provider.complete(REQUEST), "review-timeout");
 		expect(timeout.appError.message).toMatch(/longer than 1 seconds/);
 
 		await expectAppError(provider.complete(REQUEST), "run-cancelled");

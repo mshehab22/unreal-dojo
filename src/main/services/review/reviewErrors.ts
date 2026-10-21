@@ -40,6 +40,12 @@ export function unavailableError(message: string, suggestedAction: string, detai
 	return new AppErrorException("review-unavailable", message, suggestedAction, detail === undefined ? undefined : trimForDetail(detail));
 }
 
+/** The provider took too long. Kept apart from review-unavailable so a slow Claude Code never moves a review to the paid API on its own (A300). */
+export function timeoutError(message: string): AppErrorException
+{
+	return new AppErrorException("review-timeout", message, "Press Retry review to ask again, or submit again later. Your tests still count.");
+}
+
 /** The learner cancelled while the review was running. */
 export function cancelledError(): AppErrorException
 {

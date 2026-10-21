@@ -21,6 +21,7 @@ export type AppErrorCode =
 	| "review-unavailable"
 	| "review-invalid-output"
 	| "review-refused"
+	| "review-timeout"
 	| "content-invalid"
 	| "quest-not-found"
 	| "quest-locked"

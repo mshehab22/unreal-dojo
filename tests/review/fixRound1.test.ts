@@ -230,11 +230,11 @@ describe("fix 4: tests-only label matching", () =>
 {
 	it("never lets a one-letter or short label cover every piece", () =>
 	{
-		expect(labelMatches("a", "healthcomponent")).toBe(false);
-		expect(labelMatches("ui", "uiwidget")).toBe(false);
-		expect(labelMatches("door", "dooractor")).toBe(true);
-		expect(labelMatches("playerhealthcomponent", "healthcomponent")).toBe(true);
-		expect(labelMatches("", "x")).toBe(false);
+		expect(labelMatches("A", "HealthComponent")).toBe(false);
+		expect(labelMatches("UI", "UIWidget")).toBe(false);
+		expect(labelMatches("Door", "DoorActor")).toBe(true);
+		expect(labelMatches("PlayerHealthComponent", "HealthComponent")).toBe(true);
+		expect(labelMatches("", "X")).toBe(false);
 	});
 
 	it("a plan of single letters covers nothing", () =>

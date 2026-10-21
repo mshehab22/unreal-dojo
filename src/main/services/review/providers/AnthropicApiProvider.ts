@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 import type { ReviewProviderStatus } from "@shared/types/review";
 
-import { cancelledError, invalidOutputError, refusedError, unavailableError } from "../reviewErrors";
+import { cancelledError, invalidOutputError, refusedError, timeoutError, unavailableError } from "../reviewErrors";
 import type { IReviewSettings } from "../settings/IReviewSettings";
 import type { IReviewProvider, ReviewCompletionRequest } from "./IReviewProvider";
 
@@ -186,6 +186,7 @@ export class AnthropicApiProvider implements IReviewProvider
 		if (error instanceof Anthropic.PermissionDeniedError) return unavailableError("This API key cannot use the chosen model.", "Pick another model in Settings, or check the key's workspace.", error.message);
 		if (error instanceof Anthropic.NotFoundError) return unavailableError(`The model "${this.settings.modelId()}" was not found.`, "Pick another model in Settings.", error.message);
 		if (error instanceof Anthropic.RateLimitError) return unavailableError("The Anthropic API is rate limiting this key, or its spend limit was reached.", "Wait a minute and submit again, or check the key's limits in the Claude Console.", error.message);
+		if (error instanceof Anthropic.APIConnectionTimeoutError) return timeoutError(`The Anthropic API took longer than ${REQUEST_TIMEOUT_MS / 1000} seconds to answer.`);
 		if (error instanceof Anthropic.APIConnectionError) return unavailableError("The app could not reach the Anthropic API.", "Check your internet connection and submit again.", error.message);
 		if (error instanceof Anthropic.APIError) return unavailableError("The Anthropic API returned an error.", "Submit again in a moment.", error.message);
 		if (error instanceof Error) return error;

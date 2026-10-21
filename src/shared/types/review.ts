@@ -80,6 +80,9 @@ export interface CodeReview
 
 	/** Why an AI reviewer was not used, when `provider` is `tests-only` because the chosen or every AI provider was unavailable. */
 	fallbackReason?: string;
+
+	/** True when tests-only answered because the reviewer timed out, so the screen can offer "Retry review". */
+	retryReviewSuggested?: boolean;
 }
 
 /** Whether one required breakdown piece showed up in the learner's plan. */
@@ -124,6 +127,9 @@ export interface BreakdownGrade
 
 	/** Why an AI reviewer was not used, when `provider` is `tests-only` because the chosen or every AI provider was unavailable. */
 	fallbackReason?: string;
+
+	/** True when tests-only answered because the reviewer timed out, so the screen can offer "Retry review". */
+	retryReviewSuggested?: boolean;
 }
 
 /** The explain grader's verdict on one learner sentence. */
@@ -146,6 +152,9 @@ export interface ExplainGrade
 
 	/** Why an AI reviewer was not used, when `provider` is `tests-only` because the chosen or every AI provider was unavailable. */
 	fallbackReason?: string;
+
+	/** True when tests-only answered because the reviewer timed out, so the screen can offer "Retry review". */
+	retryReviewSuggested?: boolean;
 }
 
 /** What the renderer sends to ask "why is this a finding?". Free, cached per finding. */
