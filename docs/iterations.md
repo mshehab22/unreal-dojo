@@ -502,4 +502,4 @@ exit code 0
 - A lone per-update decay is now taught as frame-rate independent with a power of DeltaSeconds. Fixed steps are kept for rules that interact within an update and for results that must repeat; the blade brief, the card, and the when-not quest say the same.
 - Originality (D13): the when-not quest's runaway-bank question now uses this world's own numbers (a 1/32 second step that costs 40 milliseconds).
 - Replay ghost: the brief's first line now starts at Step 0 / 64. The brief and the rubric agree that a negative playback rate is treated as 0 (the reference already clamps), and the playback test now checks it.
-- Engine run: see the next line once the shared engine lock frees.
+- Engine, UE 5.8.3 on the Mac, fresh sandboxes under the engine lock: reference solutions 18 of 18 pass (World 1 and World 2); starters compile and 15 of 18 fail, the same split as before (the boulder's 60 frames per second test passes on its working starter by design).
