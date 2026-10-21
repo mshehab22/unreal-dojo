@@ -94,13 +94,13 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
 | M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (round 4 @ 787192d) | passed; merges with World 2 | Hits mutation caught; 10 of 10; A67 layout documented |
 | M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (head bcc8937, rebased) | review (boss) | Boss integration 3e7db85, 22 of 22 with both bosses; A343 fixed four spec gaps found by building |
-| M2.2 Quest screens | ui-quests | builder-ui-quests (session) | claude/m2-2-quest-screens-a21151 @ 214f85c | fixes | Core rules hold. Round 1: merge with main breaks the fake quest flow (A390 vs A351), editor test flake, sideways scroll in build column, breakdown board too narrow at 1100, Parsons marking, switch to the real TermLinker, fake grader, retry label, polish |
+| M2.2 Quest screens | ui-quests | builder-ui-quests (session) | claude/m2-2-quest-screens-a21151 @ c14b36d | re-review | Round 1 fixed, main merged in; 651 unit, 21 e2e x3 |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
 | M4.x Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | claude/m3-patterns-world2-game-loop @ 92381be | review | 18 of 18 solutions on UE 5.8.3 |
-| M4.x Pack 2 World 3 | content-patterns | author-patterns (session) | from the World 2 branch | building | Next pattern in Part 3 order |
+| M4.x Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | claude/m4-patterns-world3-update-method @ 0edd88f | review (after World 2) | 27 of 27 solutions across three worlds |
 | M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop | building | McpEditorClient, EditorLauncher, LiveEditorRunner; Live Coding Windows only (A45) |
-| M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | m1-6c-revealed-hints | building | Hints survive restart, no second charge |
-| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ fedd91d | fixes (round 4) | Stable but too loose: bound to the work area within 12 points; rebase and move main's new palette and map checks onto the harness |
+| M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | m1-6c-revealed-hints @ dfe4dbb | review | Save migration; no second charge |
+| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 4d6c079 | re-review | 12 point slack; forced wrong sizes fail; rebased |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
 Queued for unreal-pipeline (from the M0.2c review, A426): `docs/systems/unreal-pipeline.md` lines 29 and 84 still name `ElectronStoreSandboxPathStore`; the class is unused once settings land.
