@@ -1722,7 +1722,8 @@
       "tset",
       "tqueue",
       "uproperty"
-    ]
+    ],
+    "firstQuestId": "f3-tarray"
   },
   {
     "id": "tmap",
@@ -1739,7 +1740,8 @@
       "tarray",
       "tset",
       "fname"
-    ]
+    ],
+    "firstQuestId": "f3-tmap-tset-tqueue"
   },
   {
     "id": "tset",
@@ -1755,7 +1757,8 @@
     "related": [
       "tarray",
       "tmap"
-    ]
+    ],
+    "firstQuestId": "f3-tmap-tset-tqueue"
   },
   {
     "id": "tqueue",
@@ -1773,7 +1776,8 @@
       "tarray",
       "object-pool",
       "garbage-collection"
-    ]
+    ],
+    "firstQuestId": "f3-tmap-tset-tqueue"
   },
   {
     "id": "fstring",
@@ -1790,7 +1794,8 @@
       "ftext",
       "text-macro",
       "ue-log"
-    ]
+    ],
+    "firstQuestId": "f3-strings"
   },
   {
     "id": "fname",
@@ -1808,7 +1813,8 @@
       "socket",
       "data-table",
       "gameplay-tags"
-    ]
+    ],
+    "firstQuestId": "f3-strings"
   },
   {
     "id": "ftext",
@@ -1828,7 +1834,8 @@
       "fname",
       "text-macro",
       "umg"
-    ]
+    ],
+    "firstQuestId": "f3-strings"
   },
   {
     "id": "text-macro",
@@ -1846,7 +1853,8 @@
       "fname",
       "ftext",
       "ue-log"
-    ]
+    ],
+    "firstQuestId": "f3-strings"
   },
   {
     "id": "fvector",
@@ -1866,7 +1874,8 @@
       "ftransform",
       "fmath",
       "deltatime"
-    ]
+    ],
+    "firstQuestId": "f3-vectors-and-fmath"
   },
   {
     "id": "frotator",
@@ -1886,7 +1895,8 @@
       "fvector",
       "ftransform",
       "kismet-math-library"
-    ]
+    ],
+    "firstQuestId": "f3-rotations"
   },
   {
     "id": "fquat",
@@ -1903,7 +1913,8 @@
       "frotator",
       "ftransform",
       "fvector"
-    ]
+    ],
+    "firstQuestId": "f3-rotations"
   },
   {
     "id": "ftransform",
@@ -1920,7 +1931,8 @@
       "fquat",
       "frotator",
       "scene-component"
-    ]
+    ],
+    "firstQuestId": "f3-transforms"
   },
   {
     "id": "fmath",
@@ -1939,7 +1951,8 @@
       "fvector",
       "kismet-math-library",
       "deltatime"
-    ]
+    ],
+    "firstQuestId": "f3-vectors-and-fmath"
   },
   {
     "id": "kismet-math-library",
@@ -1956,7 +1969,8 @@
       "fmath",
       "frotator",
       "gameplay-statics"
-    ]
+    ],
+    "firstQuestId": "f3-vectors-and-fmath"
   },
   {
     "id": "fhitresult",
