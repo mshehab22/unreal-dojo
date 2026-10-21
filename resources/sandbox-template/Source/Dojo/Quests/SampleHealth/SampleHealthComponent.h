@@ -5,11 +5,15 @@
 #include "Components/ActorComponent.h"
 #include "SampleHealthComponent.generated.h"
 
+class AController;
+class UDamageType;
+
+/** Broadcast after health changes, with the new health and the signed change. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSampleHealthChanged, float, NewHealth, float, Delta);
 
 /** Tracks an actor's health and listens to the owner's damage events. Component pattern; broadcasts changes (Observer) so UI never gets called directly. */
 UCLASS(ClassGroup = (Dojo), meta = (BlueprintSpawnableComponent))
-class DOJO_API USampleHealthComponent : public UActorComponent
+class USampleHealthComponent : public UActorComponent
 {
 	GENERATED_BODY()
 

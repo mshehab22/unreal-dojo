@@ -1,5 +1,6 @@
 #include "Support/DojoTestWorld.h"
 #include "Engine/Engine.h"
+#include "EngineUtils.h"
 #include "UObject/Package.h"
 
 FDojoTestWorld::FDojoTestWorld()
@@ -22,8 +23,13 @@ FDojoTestWorld::~FDojoTestWorld()
 {
 	if (!World) return;
 
-	// Routes EndPlay to every actor and clears the begun-play flag, so destroying the world raises no warning.
-	World->EndPlay(EEndPlayReason::LevelTransition);
+	// Ends play by hand instead of UWorld::EndPlay, which older engines may lack. Clearing begun-play stops CleanupWorld from warning.
+	for (AActor* Actor : FActorRange(World))
+	{
+		if (IsValid(Actor)) Actor->RouteEndPlay(EEndPlayReason::LevelTransition);
+	}
+
+	World->SetBegunPlay(false);
 
 	GEngine->ShutdownWorldNetDriver(World);
 	World->DestroyWorld(true);

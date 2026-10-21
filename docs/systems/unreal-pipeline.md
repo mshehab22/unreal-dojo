@@ -18,7 +18,7 @@ interface RunResult { ok: boolean; compiled: boolean; compilerOutput: string; te
 interface TestCaseResult { name: string; passed: boolean; message?: string; durationMs?: number }
 ```
 
-`RunnerFactory.forQuest(quest)` returns `HeadlessRunner` on macOS for any run that changes code, because Live Coding is not available on the Mac (A45). Otherwise it returns `LiveEditorRunner` when the engine is 5.8+, the editor is open with the sandbox project, the MCP server answers, and the diff since the last successful full build touches no header of a reflected type; otherwise `HeadlessRunner`. The choice and the reason go into the progress stream so the UI can say "fast loop" or "full build".
+`RunnerFactory.forQuest(quest)` on macOS: Live Coding is not available there, and the open editor keeps the code it loaded at launch. So on the Mac `LiveEditorRunner` is used only when no build has finished since that editor launched and the run needs no build; otherwise `HeadlessRunner`, and the open editor is marked stale with a "restart the editor" offer (A45). On Windows it returns `LiveEditorRunner` when the engine is 5.8+, the editor is open with the sandbox project, the MCP server answers, and the diff since the last successful full build touches no header of a reflected type; otherwise `HeadlessRunner`. The choice and the reason go into the progress stream so the UI can say "fast loop" or "full build".
 
 ## Components
 
@@ -26,7 +26,8 @@ interface TestCaseResult { name: string; passed: boolean; message?: string; dura
 - `EngineLocator.ts`: default install folders, the Windows registry key `HKLM\SOFTWARE\EpicGames\Unreal Engine\<ver>\InstalledDirectory` (read through `reg query`), manual pick, version read from `Engine/Build/Build.version`.
 - `SandboxProjectService.ts`: copies `resources/sandbox-template/` to the chosen folder, writes `EngineAssociation`, enables plugins per engine version, runs the first full build with streamed progress, launches the editor once, remembers the sandbox path in settings. Warns when the path exceeds 100 characters on Windows.
 - `UnrealBuilder.ts`: runs the platform build script with `DojoEditor <Win64|Mac> Development -Project="<uproject>" -WaitMutex` (Windows) and the Mac equivalent; stdin ignored (`stdio: ['ignore','pipe','pipe']`); streams lines; `LogFilter` keeps errors, warnings, and lines mentioning `Quests/` or `Tests/`; 15 minute timeout; cancel kills the process tree.
-- `AutomationTestRunner.ts` (headless): `UnrealEditor-Cmd "<uproject>" -ExecCmds="Automation RunTests Dojo.<world>.<quest>" -Unattended -NullRHI -NoSplash -NoSound -NoPause -TestExit="Automation Test Queue Empty" -ReportExportPath="<tmp>/report" -Log -Log=<tmp>/run.log`; waits for exit; the `; Quit` form in "Exact commands" below is the one verified on 5.8.3 (A44); `ReportParser` reads `index.json` (tests array with state, errors, warnings, duration). Timeout 10 minutes.
+- `AutomationTestRunner.ts` (headless): `UnrealEditor-Cmd "<uproject>" -ExecCmds="Automation RunTests Dojo.<world>.<quest>; Quit" -Unattended -NoPause -NullRHI -NoSplash -NoSound -stdout -FullStdOutLogOutput -ReportExportPath="<tmp>/report" -log` (verified on 5.8.3, A44); waits for exit; `ReportParser` reads `index.json` (tests array with state, errors, warnings, duration). Exit codes seen: 0 all passed, 3 a failed assertion; the report decides, not the exit code. Timeout 10 minutes.
+- All runners resolve on the process exit event, not on stdout closing: a child daemon (likely the zen storage server) can outlive the editor and hold the pipe open.
 - `McpEditorClient.ts`: MCP client over Streamable HTTP to `http://127.0.0.1:<port>/mcp` using `@modelcontextprotocol/sdk`. The port is a setting (default 8000) because another editor can already hold 8000 (A44). Calls the meta-tool `call_tool` with `{ toolset_name: "LiveCodingToolset.LiveCodingToolset", tool_name: "CompileLiveCoding", arguments: {} }` and `{ toolset_name: "AutomationTestToolset.AutomationTestToolset", tool_name: "RunTests", arguments: { TestNames: [...] } }` (names verified on 5.8.3, A44). `DiscoverTests` must run once per editor session first. `RunTests` returns the finished summary directly; `GetTestStatus` and `GetTestResults` are for polling and re-reading. One call in flight at a time (the server runs tools serially on the game thread). Health check: `list_toolsets`.
 - `LiveEditorRunner.ts`: write files, `CompileLiveCoding`, parse its captured log for errors, `RunTests`, map results to `RunResult`. Falls back to `HeadlessRunner` with a logged reason when the compile reports that a full build is needed.
 - `HeadlessRunner.ts`: write files, `UnrealBuilder`, `AutomationTestRunner`, `ReportParser`.
@@ -52,18 +53,18 @@ Source/Dojo/Support/DojoTestWorld.h/.cpp FDojoTestWorld: RAII test world (create
 Source/Dojo/Support/DojoTestActor.h/.cpp ADojoTestActor: bare actor with a scene root, a host or dummy for tests
 Source/Dojo/Quests/SampleHealth/   sample quest USampleHealthComponent (A40)
 Source/Dojo/Tests/SampleHealth.Test.cpp  Dojo.Sample.Health.TakesDamage, the sandbox smoke test
-Content/Dojo/Maps/DojoSandbox.umap empty level, 6.4 KB, committed; editor startup map and game default map
-Tools/CreateSandboxMap.py          the editor Python script that made DojoSandbox.umap
+Content/Dojo/Maps/L_Sandbox.umap   empty level, 6.4 KB, committed; editor startup map and game default map (A46)
+Tools/CreateSandboxMap.py          the editor Python script that made L_Sandbox.umap
 Config/DefaultEngine.ini           startup and default map, Metal SM6 on Mac, DX12 on Windows
 Config/DefaultGame.ini, DefaultInput.ini   project name; Enhanced Input classes
 ```
 
-How the binary asset was made: `DojoSandbox.umap` is the only binary file. It was created on UE 5.8.3 by running `Tools/CreateSandboxMap.py` through the Python commandlet (command below) on a built copy of the template, then copied back into the template. It is an empty level (no actors added by us). To recreate it, delete it and run the same command. An engine older than 5.8 can load a 5.8 map only if the package version allows it; this is unverified (see `docs/problems.md`).
+How the binary asset was made: `L_Sandbox.umap` is the only binary file. It was created on UE 5.8.3 by running `Tools/CreateSandboxMap.py` through the Python commandlet (command below) on a built copy of the template, then copied back into the template. It is an empty level (no actors added by us). To recreate it, delete it and run the same command. An engine older than 5.8 can load a 5.8 map only if the package version allows it; this is unverified (see `docs/problems.md`).
 
 ### FDojoTestWorld (the test-world helper)
 
 - Route used: `UWorld::CreateWorld(EWorldType::Game, ...)` plus `GEngine->CreateNewWorldContext`, then `InitializeActorsForPlay`, `BeginPlay`, and `SetBegunPlay(true)`. There is no game mode, so `UWorld::BeginPlay` alone would not start actors; setting begun-play makes every actor spawned afterwards, and every component registered afterwards, get `BeginPlay` immediately (A43).
-- Teardown: `World->EndPlay(LevelTransition)` (routes `EndPlay` to actors and clears begun-play), `ShutdownWorldNetDriver`, `DestroyWorld`, `DestroyWorldContext`. Without `EndPlay` the report carries a `LogWorld` warning and the test shows as "succeeded with warnings".
+- Teardown: `RouteEndPlay(LevelTransition)` on every actor, `SetBegunPlay(false)`, `ShutdownWorldNetDriver`, `DestroyWorld`, `DestroyWorldContext`. This is done by hand instead of `UWorld::EndPlay`, which 5.8 has but older engines may not, so 5.8 runs the same path older engines will. If begun-play is still set when the world is destroyed, the report carries a `LogWorld` warning and the test shows as "succeeded with warnings". The C++ APIs used are verified on 5.8.3 only (see `docs/problems.md`).
 - The other route, `FAutomationEditorCommonUtils::CreateNewMap()` (needs `UnrealEd`), is documented in the header comment as the fallback for quests that need an editor map. CQTest's `FActorTestSpawner` uses the same route as ours.
 
 ### Exact commands (verified on the Mac, UE 5.8.3)

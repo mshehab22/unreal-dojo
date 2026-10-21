@@ -42,3 +42,9 @@ Template:
 - Things found along the way: the windowed editor quits on this Mac because Xcode 27's Metal toolchain is not installed (`docs/problems.md`), so the MCP proof used `-NullRHI`. Another session's editor held port 8000, so the proof used port 8010 (A44). The spec's MCP argument names were wrong and are corrected (A44). Mac cannot hot-compile, so the Mac uses the headless loop for code changes (A45). Restoring a file with an older timestamp made UBT skip the rebuild; the spec now tells `QuestFileWriter` to always write fresh files.
 - Decisions: A40 to A45 in `docs/decisions.md`.
 - Not done: Windows run; SandboxProjectService and the runners themselves (rest of M1.2 and later tasks); the windowed editor on the Mac until the Metal toolchain is installed; checking the 5.8 map on older engines.
+
+### Fix round 1
+- What the reviewer and the Lead asked for: rebase onto main; make the sample quest look like real quest code (no module export macro, forward declarations, a comment on the delegate); a test-world teardown that does not rely on a 5.8-only engine call; a Mac runner rule that accounts for the editor keeping old code; the verified headless command and exit codes in the spec; tidier problems; and the map renamed to `L_Sandbox`.
+- What changed: all of the above. The teardown now ends play on each actor by hand, so 5.8 runs the same path older engines will. The map was regenerated with the same Python script under its new name. Decisions A43 and A45 are updated and A46 records the naming call.
+- Proof (fresh copy of the template, UE 5.8.3, stdin from `/dev/null`): full editor build `Result: Succeeded` in 19 s; headless test with the per-quest filter `Dojo.Sample.Health` found 1 test, `Result={Success}`, `TEST COMPLETE. EXIT CODE: 0`, 18 s for the whole run, the editor loaded `L_Sandbox`; report: 1 succeeded, 0 warnings, 0 failed.
+- Still open: Windows, and the C++ APIs and map on UE 5.4 to 5.7 (logged in `docs/problems.md`).
