@@ -64,3 +64,5 @@ Pack 4, Systems Lab: the 8 systems specced in the GameDev.tv research section 6,
 ## Done criteria per world
 
 Verifier green with `--engine` on the Windows desktop (or logged as unverified on the Mac); a fresh reviewer agent spot-check for copied wording, solution leaks, UE API accuracy, and the fade ladder; an `iterations.md` entry listing the quests and their observables.
+
+Bosses (A67): every boss ships a C++ reference integration of one of its reference plans in `tools/solutions/<boss-id>/`, with automation tests that drive simulated time through two full rounds and assert the observables named in the spec. The verifier builds and runs it with `--engine`.
