@@ -96,13 +96,13 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | merged 2e29c7c | merged | 2 rounds plus boss round; 24 of 24 on UE 5.8.3; main --engine clean |
 | M4.P1.3 Pack 1 World 3 | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-world3 | building | Same process incl. A67 boss integration |
 | M1.8c Missing boss integration is an error | content-engine | content-engine (session "M0.4 Content types...") | m1-8c-boss-integration-error | building | Flip A215 now both bosses are on main |
-| M2.2 Quest screens | ui-quests | builder-ui-quests (session) | claude/m2-2-quest-screens-a21151 @ c14b36d | fixes (round 2) | Round 1 all fixed. Round 2: breakdown compare step unreadable below 1300 (Lead: list reference pieces as text and lay boards out wide) |
+| M2.2 Quest screens | ui-quests | builder-ui-quests (session) | claude/m2-2-quest-screens-a21151 @ c62b6e6 | re-review | Rounds 2 and 3: compare step readable, revealed hints by index; 26 of 26 e2e x3 |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
 | M4.P2.2 Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | claude/m3-patterns-world2-game-loop @ 92381be | fixes | 9 of 9; DeltaSeconds clamp, Pow decay, D13 numbers, ghost brief and rubric |
 | M4.P2.3 Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | claude/m4-patterns-world3-update-method @ 0edd88f | fixes | 9 of 9; D13: mirrors the book's crypt example, move to the arena; product.md world list |
 | M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop @ 7fa6c10 | fixes | Timings reproduced (4.2 s, 32 ms). Round 1: port ownership, close waits on queued call, quit closes editor, sandbox-write mark against false passes with the filler, rebase on M1.3b |
 | M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | merged | merged | 1 fix round; refused save safe; migration verified |
-| M1.6d Pack 4 gate by world id (A68) | progress-and-rules | builder-rules (session) | m1-6d-pack-gate-by-id | building | Gate names the Component world by id |
+| M1.6d Pack 4 gate by world id (A68) | progress-and-rules | builder-rules (session) | m1-6d-pack-gate-by-id @ 0aeef53 | review | foundations/communication and patterns/component; verifier warns on missing worlds |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
