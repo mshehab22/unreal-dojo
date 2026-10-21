@@ -1,5 +1,7 @@
 // One import point for every shared type used by main, preload, and renderer.
+export * from "./catalog";
 export * from "./content";
+export * from "./drill";
 export * from "./engine";
 export * from "./errors";
 export * from "./progress";

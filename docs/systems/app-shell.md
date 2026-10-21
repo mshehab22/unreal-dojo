@@ -1,6 +1,6 @@
 # System: app-shell
 
-Owner: builder-shell. Folders: `src/main/index.ts`, `src/main/window/`, `src/main/ipc/`, `src/main/services/settings/`, `src/preload/`, `electron.vite.config.ts`, `package.json`. Research: `research/tooling-and-stack.md` sections 1, 6, 8, setup commands, pitfalls.
+Owner: builder-shell. Folders: `src/main/index.ts`, `src/main/window/`, `src/main/ipc/`, `src/main/content/`, `src/main/errors/`, `src/main/services/settings/`, `src/preload/`, `electron.vite.config.ts`, `package.json`. Research: `research/tooling-and-stack.md` sections 1, 6, 8, setup commands, pitfalls.
 
 ## Stack (pinned by `docs/decisions.md` D01 to D08)
 
@@ -10,12 +10,13 @@ Electron ^44, electron-vite ^6 (use `build.externalizeDeps`, not the deprecated 
 
 ```
 src/
-  shared/types/        content.ts, engine.ts, errors.ts, progress.ts, run.ts, review.ts, settings.ts, index.ts
+  shared/types/        catalog.ts, content.ts, drill.ts, engine.ts, errors.ts, progress.ts, run.ts, review.ts, settings.ts, index.ts
   shared/ipc.ts        DojoApi interface, IPC_CHANNELS map, progress event channel
   main/index.ts        app lifecycle, window, composition root
   main/window/createMainWindow.ts   the BrowserWindow and its security rules
   main/ipc/            registerHandlers.ts (wrapper), createHandlers.ts (handler table), payload checks
   main/errors/         AppErrorException
+  main/content/        ContentCatalog (content loaded once at startup), content root, renderer views, glossary alias table
   main/services/<system>/...
   preload/index.ts     contextBridge exposing window.dojo and an onBuildProgress subscription
   renderer/src/        React app (see ui-core and ui-quests)
@@ -43,17 +44,18 @@ content/, resources/, research/, docs/
 
 ## Architecture (keep current)
 
-Last updated by M0.2 (typed IPC contract).
+Last updated by M0.2b (content IPC).
 
 ### Processes and files
 - `src/main/index.ts`: composition root. Waits for `app.whenReady()`, calls `registerHandlers()`, opens the window, reopens it from the macOS dock, quits when all windows close on Windows.
 - `src/main/window/createMainWindow.ts`: the one `BrowserWindow`. 1440x900 (the OS caps it to the screen's work area), minimum 1100x700, background `#0b0d12`, `hiddenInset` title bar on macOS, `contextIsolation` on, `nodeIntegration` off, `sandbox` on. Shown on `ready-to-show`. New windows are denied and outside links (`http`, `https`) go to the system browser; in-page navigation away from the app is blocked the same way. Loads `ELECTRON_RENDERER_URL` in dev, `out/renderer/index.html` when built.
 - `src/main/ipc/`: the IPC boundary (see "IPC surface" below). `createHandlers.ts` builds the table with one `HandlerDefinition` per method (a zod schema per argument plus the answering function); `registerHandlers.ts` wraps each one and registers it on its channel; `requestSchemas.ts` holds the zod schemas, each typed against its shared type (A83); `notImplemented.ts` builds the stub error; `sendBuildProgress.ts` pushes progress events to every window.
 - `src/main/errors/AppErrorException.ts`: what services throw to send a specific `AppError` to the renderer (A84).
+- `src/main/content/`: the content the renderer reads (A220). `resolveContentRoot.ts` picks `<appPath>/content` in dev and `<process.resourcesPath>/content` when packaged (A13). `ContentCatalog.ts` loads the folder once through the content-engine's `ContentLoader`, starting in the background at startup, and answers every content request from memory; `createContentCatalog.ts` wires it to the real loader and file system. `contentViews.ts` makes the World Map outlines and the learner quests (hint texts left out, A222). `buildGlossaryAliases.ts` makes the flat alias table (A223).
 - `src/main/services/settings/`: empty; SettingsService arrives with the settings task.
 - `src/preload/index.ts`: exposes `window.dojo` (a `DojoApi`) through `contextBridge`. It builds one forwarding function per method from `IPC_CHANNELS`, so adding a method never needs a preload edit, and adds `onBuildProgress`. Built as CommonJS (`out/preload/index.cjs`) because sandboxed preloads cannot be ES modules. `src/preload/index.d.ts` types `window.dojo` for the renderer.
 - `src/shared/ipc.ts`: `DojoInvokeApi` (request methods), `DojoApi` (those plus `onBuildProgress`), `IPC_CHANNELS`, `DOJO_METHODS`, `BUILD_PROGRESS_CHANNEL`, `IpcResponse`.
-- `src/shared/types/`: `errors.ts` (`AppError`, `AppErrorCode`, `isAppError`), `settings.ts`, `engine.ts` (engine installs, toolchain, sandbox folder, environment status), `run.ts` (`BuildProgressEvent`, `RunResult`, `RunRequest`, `SandboxSetupRequest`), `review.ts` (the three grader results, provider status), `progress.ts` (save file, attempt outcomes, drills, daily quest, `RulesSnapshot`). `content.ts` belongs to content-engine (M0.4).
+- `src/shared/types/`: `errors.ts` (`AppError`, `AppErrorCode`, `isAppError`), `settings.ts`, `engine.ts` (engine installs, toolchain, sandbox folder, environment status), `run.ts` (`BuildProgressEvent`, `RunResult`, `RunRequest`, `SandboxSetupRequest`), `review.ts` (the three grader results, provider status), `progress.ts` (save file, attempt outcomes, drills, daily quest, `RulesSnapshot`), `catalog.ts` (`PackOutline`, `WorldOutline`, `QuestOutline`, `LearnerQuest`, `LearnerWorld`, `GlossaryAlias`, `ContentStatus`), `drill.ts` (`DrillRequest`, `DrillSession`). `content.ts` belongs to content-engine (M0.4).
 - `src/renderer/`: `index.html` (with the CSP), `src/main.tsx` (mounts React and loads the Fast Refresh preamble as a module), `src/App.tsx` (placeholder title screen until M0.3), `src/components/TitleBarDragRegion.tsx` (the 36px window drag strip), `src/lib/utils.ts` (`cn`), `src/styles/global.css` (Tailwind v4 entry and base color variables). `components.json` configures shadcn/ui with the `@/` alias.
 
 ### IPC surface
@@ -73,7 +75,7 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Settings | `updateSettings(patch)` | `Settings` | settings task |
 | Settings | `setApiKey(apiKey)`, `clearApiKey()` | nothing; key kept in safeStorage | settings task |
 | First run | `detectEngines()` | `EngineInstall[]` | done (M1.1), through `EngineLocator` |
-| First run | `pickEngineFolder()` | `EngineInstall` or null when cancelled | M1.1 follow-up: needs the folder dialog; `EngineLocator.inspectFolder` is ready |
+| First run | `pickEngineFolder()` | `EngineInstall` or null when cancelled | done (M0.2b): native folder dialog, then `EngineLocator.inspectFolder` |
 | First run | `checkToolchain()` | `ToolchainCheck` (vswhere or xcode-select) | done (M1.1), through `EngineLocator` |
 | First run | `getEnvironmentStatus()` | `EnvironmentStatus` for the Title chips | M1.1 with settings |
 | First run | `completeFirstRun()` | `Settings` with `firstRunCompletedAt` | settings task |
@@ -96,6 +98,14 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Progress | `reviseBreakdown(revision)` | `BreakdownOutcome` (grade and loot) | M1.6, M1.7 |
 | Progress | `recordTermHover(termId)`, `queueDrillItem(itemId)` | nothing | M1.6 |
 | Progress | `getDailyQuest()`, `chooseDailyOffer(index)` | `DailyQuestState` | M1.6 |
+| Content | `getContentStatus()` | `ContentStatus` (root, counts, every problem) | done (M0.2b) |
+| Content | `listPacks()` | `PackOutline[]`: packs, worlds, quest outlines, in order | done (M0.2b) |
+| Content | `getWorld(worldId)` | `LearnerWorld` with full quests, or `world-not-found` | done (M0.2b) |
+| Content | `getQuest(questId)` | `LearnerQuest` (hint texts replaced by `hintCount`), or `quest-not-found` | done (M0.2b) |
+| Content | `getGlossary()` | `GlossaryEntry[]` | done (M0.2b) |
+| Content | `getGlossaryAliases()` | `GlossaryAlias[]`, longest text first, for Monaco and the TermLinker | done (M0.2b) |
+| Content | `getPatternCards()` | `PatternCard[]` | done (M0.2b) |
+| Drills | `startDrill(request)` | `DrillSession`; request is `{ kind: "due" }`, `{ kind: "test-out", worldId }`, or `{ kind: "parsons-fallback", questId }` | M1.6 |
 | Drills | `getDrillSummary()` | `DrillSummary` | M1.6 |
 | Drills | `answerDrillItem(answer)` | `DrillItemResult` | M1.6, M1.7 |
 | Drills | `finishDrill(sessionId)` | `DrillOutcome` | M1.6 |
@@ -103,7 +113,9 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Review | `explainFinding(request)` | plain-English text | M1.7 |
 | Review | `answerReflection(request)` | `ExplainGrade` | M1.7 |
 
-Every method except `getAppVersion` is a stub today that checks its payload and answers `not-implemented`, naming the task that builds it. Content methods (packs, worlds, quests, glossary, the flat term list for Monaco, pattern cards) and `startDrill` (due drills, a world's test-out, and the Parsons fallback after two failed submits) wait for the content types from M0.4 and arrive in M0.2b. The Parsons fallback offer and the self-explanation gate are renderer-only (A89).
+Methods marked done answer for real; every other method checks its payload and answers `not-implemented`, naming the task that builds it. The Parsons fallback offer and the self-explanation gate are renderer-only (A89).
+
+Content is read once at startup (A220). A file with problems is left out and listed in `getContentStatus().problems`; the rest still loads. Only a missing content folder or a load that throws makes the content methods reject, with `content-invalid` ("Unreal Dojo could not find its lessons."), and the next call tries the load again. Main never crashes on bad content.
 
 `explainFinding` and `answerReflection` find the review by attempt id: `AttemptRecord.review` holds the `CodeReview` of every build, refactor, or boss Submit that compiled.
 

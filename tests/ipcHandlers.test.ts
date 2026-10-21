@@ -5,7 +5,7 @@ import { DOJO_METHODS, IPC_CHANNELS, type IpcResponse } from "@shared/ipc";
 import { isAppError } from "@shared/types/errors";
 
 import { AppErrorException } from "../src/main/errors/AppErrorException";
-import { createHandlers, type HandlerDependencies } from "../src/main/ipc/createHandlers";
+import { createHandlers, type ContentCatalogService, type HandlerDependencies } from "../src/main/ipc/createHandlers";
 import type { HandlerDefinition } from "../src/main/ipc/HandlerDefinition";
 import { idSchema, playerNameSchema } from "../src/main/ipc/requestSchemas";
 import { registerHandlers, wrapHandler, type IpcHandleRegistrar, type WrappedHandler } from "../src/main/ipc/registerHandlers";
@@ -13,13 +13,34 @@ import { registerHandlers, wrapHandler, type IpcHandleRegistrar, type WrappedHan
 /** A fake toolchain answer the engine handlers pass through. */
 const FAKE_TOOLCHAIN = { ok: true, tool: "xcode-select", message: "Xcode 27.1 is selected.", toolVersion: "27.1", problems: [] } as const;
 
+/** A fake content catalog: one empty pack, one world, and a quest lookup that knows a single id. */
+const FAKE_CONTENT_CATALOG: ContentCatalogService = {
+	getStatus: async () => ({ root: "/content", packCount: 1, questCount: 0, glossaryCount: 0, patternCount: 0, problems: [] }),
+	listPacks: async () => [{ id: "foundations", title: "Foundations", summary: "", order: 1, worlds: [] }],
+	getWorld: async (worldId) =>
+	{
+		if (worldId !== "objects") throw new AppErrorException("world-not-found", "That world is not in the loaded lessons.", "Go back.", worldId);
+		return { id: "objects", title: "Objects", summary: "", order: 1, quests: [] };
+	},
+	getQuest: async (questId) =>
+	{
+		throw new AppErrorException("quest-not-found", "That quest is not in the loaded lessons.", "Go back.", questId);
+	},
+	getGlossary: async () => [],
+	getGlossaryAliases: async () => [{ text: "AActor", entryId: "actor", caseSensitive: true, codeOnly: false, short: "A thing in a level." }],
+	getPatternCards: async () => [],
+};
+
 /** Handler dependencies with a fixed version and a fake engine locator that finds one engine. */
 const FAKE_DEPENDENCIES: HandlerDependencies = {
 	getAppVersion: () => "9.9.9",
 	getEngineLocator: () => ({
 		findEngines: async () => [{ path: "/Engines/UE_5.8", version: "5.8.3", source: "launcher", supportsFastLoop: true }],
 		checkToolchain: async () => ({ ...FAKE_TOOLCHAIN, problems: [] }),
+		inspectFolder: async (folder) => ({ path: folder, version: "5.8.3", source: "manual", supportsFastLoop: true }),
 	}),
+	getContentCatalog: () => FAKE_CONTENT_CATALOG,
+	pickFolder: async () => "/Picked/UE_5.8",
 };
 
 /** A stand-in for ipcMain that records each registered channel. */
@@ -121,6 +142,41 @@ describe("registerHandlers", () =>
 		expect(error.suggestedAction).toBe("Run Unreal Dojo on a Windows PC or a Mac.");
 	});
 
+	it("answers pickEngineFolder by inspecting the picked folder, and null when the picker is cancelled", async () =>
+	{
+		const invoke = createInvoker();
+
+		expect(await invoke(IPC_CHANNELS.pickEngineFolder)).toEqual({ ok: true, value: { path: "/Picked/UE_5.8", version: "5.8.3", source: "manual", supportsFastLoop: true } });
+
+		const { registrar, handlersByChannel } = createFakeRegistrar();
+		registerHandlers(registrar, createHandlers({ ...FAKE_DEPENDENCIES, pickFolder: async () => null }));
+
+		const cancelled = await handlersByChannel.get(IPC_CHANNELS.pickEngineFolder)?.({} as Parameters<WrappedHandler>[0]);
+		expect(cancelled).toEqual({ ok: true, value: null });
+	});
+
+	it("answers the content channels from the content catalog", async () =>
+	{
+		const invoke = createInvoker();
+
+		expect(await invoke(IPC_CHANNELS.listPacks)).toMatchObject({ ok: true, value: [{ id: "foundations" }] });
+		expect(await invoke(IPC_CHANNELS.getWorld, "objects")).toMatchObject({ ok: true, value: { id: "objects" } });
+		expect(await invoke(IPC_CHANNELS.getGlossaryAliases)).toMatchObject({ ok: true, value: [{ text: "AActor" }] });
+		expect(await invoke(IPC_CHANNELS.getContentStatus)).toMatchObject({ ok: true, value: { packCount: 1 } });
+
+		expectError(await invoke(IPC_CHANNELS.getWorld, "missing-world"), "world-not-found");
+		expectError(await invoke(IPC_CHANNELS.getQuest, "missing-quest"), "quest-not-found");
+	});
+
+	it("checks startDrill's request and then answers not-implemented until progress-and-rules builds it", async () =>
+	{
+		const invoke = createInvoker();
+
+		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "test-out", worldId: "objects" }), "not-implemented");
+		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "parsons-fallback", questId: "w1-health" }), "not-implemented");
+		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "due" }), "not-implemented");
+	});
+
 	it("answers a stub with a not-implemented AppError that names when it arrives", async () =>
 	{
 		const invoke = createInvoker();
@@ -157,6 +213,11 @@ describe("payload validation", () =>
 		["saveQuestDraft", [{ questId: "q", breakdownPlan: { pieces: [{ id: "a", kind: "god-class", label: "x", purpose: "y" }], edges: [] } }], /breakdownPlan\.pieces\.0\.kind/],
 		["submitConcept", [{ questId: "q", prediction: null, answers: [{ kind: "guess" }] }], /answers\.0/],
 		["getProgress", ["unexpected extra"], /at most 0 arguments/],
+		["getWorld", ["../packs"], /argument 1: may only hold/],
+		["getQuest", [7], /expected string/],
+		["startDrill", [{ kind: "test-out" }], /worldId/],
+		["startDrill", [{ kind: "due", worldId: "objects" }], /Unrecognized key/],
+		["startDrill", [{ kind: "cram" }], /kind|Invalid input/],
 		["openEditor", [undefined], /expected string/],
 	];
 

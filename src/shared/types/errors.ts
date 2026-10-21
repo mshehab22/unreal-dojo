@@ -23,6 +23,7 @@ export type AppErrorCode =
 	| "review-refused"
 	| "content-invalid"
 	| "quest-not-found"
+	| "world-not-found"
 	| "quest-locked"
 	| "save-failed";
 

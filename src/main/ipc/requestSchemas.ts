@@ -10,6 +10,7 @@ import type {
 	ItemResponse,
 	QuestDraft,
 } from "@shared/types/progress";
+import type { DrillRequest } from "@shared/types/drill";
 import type { FindingExplanationRequest, ReflectionAnswerRequest } from "@shared/types/review";
 import type { RunRequest, SandboxSetupRequest, SyntaxCheckRequest } from "@shared/types/run";
 import type { SettingsPatch } from "@shared/types/settings";
@@ -177,6 +178,13 @@ export const breakdownRevisionSchema: z.ZodType<BreakdownRevision> = z.strictObj
 	revisedPlan: breakdownPlanSchema,
 	revisionNote: textSchema.trim().min(1),
 });
+
+/** `DrillRequest`: today's due items, a world's test-out, or the Parsons fallback for a quest. */
+export const drillRequestSchema: z.ZodType<DrillRequest> = z.discriminatedUnion("kind", [
+	z.strictObject({ kind: z.literal("due") }),
+	z.strictObject({ kind: z.literal("test-out"), worldId: idSchema }),
+	z.strictObject({ kind: z.literal("parsons-fallback"), questId: idSchema }),
+]);
 
 /** `DrillAnswer`: session id, item id, response. */
 export const drillAnswerSchema: z.ZodType<DrillAnswer> = z.strictObject({
