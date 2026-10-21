@@ -1,5 +1,6 @@
 // App lifecycle and composition root: builds services, registers IPC, and opens the window.
 import { randomUUID } from "node:crypto";
+import { renameSync } from "node:fs";
 import { access } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -24,6 +25,7 @@ import { createReviewService, type ReviewService } from "./services/review/Revie
 import { SafeStorageReviewSettings } from "./services/review/settings/SafeStorageReviewSettings";
 import { ElectronSettingsStore } from "./services/settings/ElectronSettingsStore";
 import { EnvironmentStatusReader } from "./services/settings/EnvironmentStatusReader";
+import { openSettingsStore } from "./services/settings/openSettingsStore";
 import { SettingsService } from "./services/settings/SettingsService";
 import { RunRegistry } from "./services/unreal/RunRegistry";
 import { createMainWindow } from "./window/createMainWindow";
@@ -57,10 +59,21 @@ async function start(): Promise<void>
 {
 	await app.whenReady();
 
-	const settingsService = new SettingsService(new ElectronSettingsStore(), safeStorage);
-
 	let engineLocator: EngineLocator | null = null;
 	const getEngineLocator = (): EngineLocator => (engineLocator ??= createEngineLocator());
+
+	// A corrupt config.json is set aside instead of stopping the app (A429).
+	const settingsStore = openSettingsStore({
+		open: () => new ElectronSettingsStore(),
+		configPath: join(app.getPath("userData"), "config.json"),
+		renameFile: renameSync,
+		now: () => new Date(),
+		warn: (message) => console.warn(message),
+	});
+	const settingsService = new SettingsService(settingsStore, safeStorage, {
+		inspectEngine: (folder) => getEngineLocator().inspectFolder(folder),
+		isSandboxProject: (folder) => pathExists(join(folder, "Dojo.uproject")),
+	});
 	const progressStore = new ProgressStore(new NodeFileSystem(), app.getPath("userData"));
 	const progressService = await ProgressService.openOrRefuse(progressStore, new SystemClock(), new MathRandomSource());
 	const refusal = progressService.getRefusal();

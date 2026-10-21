@@ -92,7 +92,7 @@ export const mcpPortSchema = z.int().min(1024).max(65535);
 /** `SettingsPatch`: every field optional, `hasApiKey` and `firstRunCompletedAt` not allowed. */
 export const settingsPatchSchema: z.ZodType<SettingsPatch> = z.strictObject({
 	enginePath: folderPathSchema.nullable().optional(),
-	sandboxPath: folderPathSchema.nullable().optional(),
+	sandboxPath: z.null().optional(),
 	loopMode: z.enum(["auto", "fast", "headless"]).optional(),
 	reviewProvider: z.enum(["auto", "claude-code", "anthropic-api", "tests-only"]).optional(),
 	modelId: z.string().min(1).max(MAXIMUM_ID_LENGTH).optional(),

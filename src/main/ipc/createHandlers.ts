@@ -76,8 +76,8 @@ export interface SettingsHandlerService
 	/** The current settings, without the key. */
 	current(): Settings;
 
-	/** Applies a validated patch. */
-	update(patch: SettingsPatch): Settings;
+	/** Applies a validated patch; throws the engine locator's error for a folder that is not a supported engine. */
+	update(patch: SettingsPatch): Promise<Settings>;
 
 	/** Encrypts and stores the key; throws `secure-storage-unavailable`. */
 	setApiKey(apiKey: string): void;
@@ -85,8 +85,8 @@ export interface SettingsHandlerService
 	/** Deletes the stored key. */
 	clearApiKey(): void;
 
-	/** Marks first run finished; throws `settings-invalid` while the engine or sandbox is missing. */
-	completeFirstRun(): Settings;
+	/** Marks first run finished; throws `settings-invalid`, the locator's error, or `sandbox-not-ready` while setup is not really done. */
+	completeFirstRun(): Promise<Settings>;
 }
 
 /** The part of SandboxProjectService the handlers use, so tests can pass a fake. */

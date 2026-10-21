@@ -17,7 +17,7 @@ import { createTestProgressContent } from "./support/contentFixture";
 import { createTestProgressService } from "./support/progressFixtures";
 import { SettingsService } from "../src/main/services/settings/SettingsService";
 import { RunRegistry } from "../src/main/services/unreal/RunRegistry";
-import { FakeSecretEncryptor, MemorySettingsStore } from "./settings/settingsFakes";
+import { FakeSecretEncryptor, FakeSettingsChecks, MemorySettingsStore } from "./settings/settingsFakes";
 import { createContentFixture, readExamples, retagQuest, writePack, writeWorld, type ContentFixture } from "./content/contentFixture";
 
 /** A glossary entry with the given id, term, and aliases. */
@@ -197,7 +197,7 @@ describe("ContentCatalog load failures", () =>
 				runRegistry: new RunRegistry(),
 				sendProgress: () => undefined,
 				progressContentService: createTestProgressContent().content,
-				settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor()),
+				settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
 				readEnvironmentStatus: () => { throw new Error("not used"); },
 			}),
 		);

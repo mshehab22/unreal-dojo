@@ -1,37 +1,11 @@
 // Test stand-ins for the settings file and safeStorage.
+import type { EngineInstall } from "@shared/types/engine";
+
+import { AppErrorException } from "../../src/main/errors/AppErrorException";
 import type { SecretEncryptor } from "../../src/main/services/settings/SecretEncryptor";
-import type { SettingsStore } from "../../src/main/services/settings/SettingsStore";
+import type { SettingsChecks } from "../../src/main/services/settings/SettingsChecks";
 
-/** A settings file kept in memory, with a copy of what is "on disk" for assertions. */
-export class MemorySettingsStore implements SettingsStore
-{
-	/** What a real file would hold. */
-	readonly values: Record<string, unknown>;
-
-	/** Starts with the given stored values. */
-	constructor(initialValues: Record<string, unknown> = {})
-	{
-		this.values = { ...initialValues };
-	}
-
-	/** Every stored value. */
-	readAll(): Record<string, unknown>
-	{
-		return { ...this.values };
-	}
-
-	/** Writes the given values. */
-	write(values: Record<string, unknown>): void
-	{
-		Object.assign(this.values, values);
-	}
-
-	/** Removes one value. */
-	remove(key: string): void
-	{
-		delete this.values[key];
-	}
-}
+export { MemorySettingsStore } from "../../src/main/services/settings/MemorySettingsStore";
 
 /** A safeStorage stand-in that "encrypts" by reversing the text, and can be switched off like a locked keychain. */
 export class FakeSecretEncryptor implements SecretEncryptor
@@ -60,5 +34,26 @@ export class FakeSecretEncryptor implements SecretEncryptor
 	decryptString(encrypted: Buffer): string
 	{
 		return [...encrypted.toString("utf8")].reverse().join("");
+	}
+}
+
+/** Folder checks where `/Engines/...` folders are 5.8 engines (an `Engine` subfolder resolves to its parent) and listed folders are sandboxes. */
+export class FakeSettingsChecks implements SettingsChecks
+{
+	/** Folders that hold `Dojo.uproject`. */
+	readonly sandboxFolders = new Set<string>(["/Sandboxes/DojoSandbox"]);
+
+	/** Answers an engine for `/Engines/...` and the locator's `engine-not-found` for anything else. */
+	async inspectEngine(folder: string): Promise<EngineInstall>
+	{
+		if (!folder.startsWith("/Engines/")) throw new AppErrorException("engine-not-found", "That folder is not an Unreal Engine install.", "Pick the folder that contains Engine.", folder);
+
+		return { path: folder.replace(/\/Engine$/, ""), version: "5.8.3", source: "manual", supportsFastLoop: true };
+	}
+
+	/** True for the listed sandbox folders. */
+	async isSandboxProject(folder: string): Promise<boolean>
+	{
+		return this.sandboxFolders.has(folder);
 	}
 }

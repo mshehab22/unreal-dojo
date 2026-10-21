@@ -13,7 +13,7 @@ import { createTestProgressContent } from "./support/contentFixture";
 import { createTestProgressService } from "./support/progressFixtures";
 import { SettingsService } from "../src/main/services/settings/SettingsService";
 import { RunRegistry } from "../src/main/services/unreal/RunRegistry";
-import { FakeSecretEncryptor, MemorySettingsStore } from "./settings/settingsFakes";
+import { FakeSecretEncryptor, FakeSettingsChecks, MemorySettingsStore } from "./settings/settingsFakes";
 
 /** A fake toolchain answer the engine handlers pass through. */
 const FAKE_TOOLCHAIN = { ok: true, tool: "xcode-select", message: "Xcode 27.1 is selected.", toolVersion: "27.1", problems: [] } as const;
@@ -59,7 +59,7 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 	runRegistry: new RunRegistry(),
 	sendProgress: () => undefined,
 	progressContentService: createTestProgressContent().content,
-	settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor()),
+	settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
 	readEnvironmentStatus: async () => ({ engine: null, sandbox: { path: null, ready: false }, reviewProvider: null, loopMode: "auto", editorConnected: false }),
 };
 
@@ -202,7 +202,7 @@ describe("registerHandlers", () =>
 	{
 		const encryptor = new FakeSecretEncryptor();
 		const { registrar, handlersByChannel } = createFakeRegistrar();
-		registerHandlers(registrar, createHandlers({ ...FAKE_DEPENDENCIES, settingsService: new SettingsService(new MemorySettingsStore(), encryptor) }));
+		registerHandlers(registrar, createHandlers({ ...FAKE_DEPENDENCIES, settingsService: new SettingsService(new MemorySettingsStore(), encryptor, new FakeSettingsChecks()) }));
 
 		const call = (channel: string, ...methodArguments: unknown[]) => handlersByChannel.get(channel)?.({} as Parameters<WrappedHandler>[0], ...methodArguments) as Promise<IpcResponse<unknown>>;
 		const apiKey = "sk-ant-test-abcdef0123456789";
@@ -216,6 +216,9 @@ describe("registerHandlers", () =>
 		expect(await call(IPC_CHANNELS.updateSettings, { mcpPort: 8123 })).toMatchObject({ ok: true, value: { mcpPort: 8123, hasApiKey: true } });
 		expectError(await call(IPC_CHANNELS.updateSettings, { mcpPort: 80 }), "invalid-payload");
 		expectError(await call(IPC_CHANNELS.updateSettings, { hasApiKey: false }), "invalid-payload");
+		expectError(await call(IPC_CHANNELS.updateSettings, { sandboxPath: "/definitely/not/a/sandbox" }), "invalid-payload");
+		expectError(await call(IPC_CHANNELS.updateSettings, { enginePath: "/tmp" }), "engine-not-found");
+		expect(await call(IPC_CHANNELS.updateSettings, { enginePath: "/Engines/UE_5.8/Engine", sandboxPath: null })).toMatchObject({ ok: true, value: { enginePath: "/Engines/UE_5.8", sandboxPath: null } });
 
 		expect(await call(IPC_CHANNELS.clearApiKey)).toEqual({ ok: true, value: undefined });
 		expect(await call(IPC_CHANNELS.getSettings)).toMatchObject({ ok: true, value: { hasApiKey: false } });

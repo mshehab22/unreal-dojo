@@ -11,7 +11,7 @@ import { toRuleQuests } from "../../src/main/services/progress/toRuleQuests";
 import { toLearnerWorld, toPackOutlines } from "../../src/main/content/contentViews";
 import { SettingsService } from "../../src/main/services/settings/SettingsService";
 import { RunRegistry } from "../../src/main/services/unreal/RunRegistry";
-import { FakeSecretEncryptor, MemorySettingsStore } from "../settings/settingsFakes";
+import { FakeSecretEncryptor, FakeSettingsChecks, MemorySettingsStore } from "../settings/settingsFakes";
 import { buildQuest, conceptQuest, createTestProgressContent, fakeGraders, fixtureContent, observerCard } from "../support/contentFixture";
 
 /** The handler table on a fresh fixture stack. */
@@ -28,7 +28,7 @@ function setup(options: Parameters<typeof createTestProgressContent>[0] = {})
 		getSandboxService: () => { throw new Error("not used"); },
 		runRegistry: new RunRegistry(),
 		sendProgress: () => undefined,
-		settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor()),
+		settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
 		readEnvironmentStatus: () => { throw new Error("not used"); },
 	};
 

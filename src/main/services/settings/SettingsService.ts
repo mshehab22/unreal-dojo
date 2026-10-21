@@ -3,6 +3,7 @@ import type { Settings, SettingsPatch } from "@shared/types/settings";
 
 import { AppErrorException } from "../../errors/AppErrorException";
 import type { SecretEncryptor } from "./SecretEncryptor";
+import type { SettingsChecks } from "./SettingsChecks";
 import type { SettingsStore } from "./SettingsStore";
 import { hasStoredApiKey, readStoredSettings, STORED_KEYS } from "./storedSettings";
 
@@ -17,17 +18,24 @@ function secureStorageUnavailable(detail?: string): AppErrorException
 	);
 }
 
+/** Builds the error for a sandbox folder that no longer holds the Dojo project. */
+function sandboxNotReady(sandboxPath: string): AppErrorException
+{
+	return new AppErrorException("sandbox-not-ready", "The sandbox folder does not hold the Dojo project.", "Create the sandbox again in setup, or pick the folder it was created in.", `no Dojo.uproject in ${sandboxPath}`);
+}
+
 /**
  * Owns the settings file. `current()` is synchronous, so services read settings through a closure
  * (`() => settingsService.current()`) and see a change at once, with no restart. Implements the sandbox
- * service's path store, so the sandbox folder lands in the same settings.
+ * service's path store, so the sandbox folder lands in the same settings. Paths are never trusted blindly:
+ * an engine path must pass the engine locator, and only the sandbox service sets the sandbox path (A427).
  */
 export class SettingsService
 {
 	private settings: Settings;
 
 	/** Reads the settings file once. Missing or invalid values fall back to their defaults one by one. */
-	constructor(private readonly store: SettingsStore, private readonly encryptor: SecretEncryptor, private readonly now: () => Date = () => new Date())
+	constructor(private readonly store: SettingsStore, private readonly encryptor: SecretEncryptor, private readonly checks: SettingsChecks, private readonly now: () => Date = () => new Date())
 	{
 		this.settings = this.readFromStore();
 	}
@@ -38,15 +46,18 @@ export class SettingsService
 		return this.settings;
 	}
 
-	/** Applies a patch the IPC boundary already validated, writes it, and returns the new settings. */
-	update(patch: SettingsPatch): Settings
+	/**
+	 * Applies a patch the IPC boundary already validated, writes it, and returns the new settings. A non-null
+	 * `enginePath` is read through the engine locator first and stored as the engine root it found; a folder that is
+	 * not a supported engine throws the locator's error and nothing is written.
+	 */
+	async update(patch: SettingsPatch): Promise<Settings>
 	{
-		const values = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));
+		const values: Record<string, unknown> = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));
 
-		this.store.write(values);
-		this.settings = { ...this.settings, ...values };
+		if (typeof patch.enginePath === "string") values.enginePath = (await this.checks.inspectEngine(patch.enginePath)).path;
 
-		return this.settings;
+		return this.write(values);
 	}
 
 	/** Encrypts and stores the API key. Throws `secure-storage-unavailable` when safeStorage cannot encrypt; the key is never logged or kept in plain text. */
@@ -85,28 +96,42 @@ export class SettingsService
 		return typeof stored === "string" && stored.length > 0 ? Buffer.from(stored, "base64") : null;
 	}
 
-	/** Marks first-run setup finished. Throws `settings-invalid` while the engine or the sandbox is still missing. Keeps the first finish time. */
-	completeFirstRun(): Settings
+	/**
+	 * Marks first-run setup finished, keeping the first finish time. Throws `settings-invalid` while the engine or the
+	 * sandbox is unset, the engine locator's error when the engine folder is no longer a supported engine, and
+	 * `sandbox-not-ready` when the sandbox folder does not hold `Dojo.uproject`.
+	 */
+	async completeFirstRun(): Promise<Settings>
 	{
-		if (this.settings.enginePath === null || this.settings.sandboxPath === null)
+		const { enginePath, sandboxPath } = this.settings;
+
+		if (enginePath === null || sandboxPath === null)
 		{
-			throw new AppErrorException("settings-invalid", "Setup is not finished yet.", "Pick an engine and create the sandbox first, then finish setup.", `enginePath ${this.settings.enginePath === null ? "missing" : "set"}, sandboxPath ${this.settings.sandboxPath === null ? "missing" : "set"}`);
+			throw new AppErrorException("settings-invalid", "Setup is not finished yet.", "Pick an engine and create the sandbox first, then finish setup.", `enginePath ${enginePath === null ? "missing" : "set"}, sandboxPath ${sandboxPath === null ? "missing" : "set"}`);
 		}
+
+		await this.checks.inspectEngine(enginePath);
+
+		if (!(await this.checks.isSandboxProject(sandboxPath))) throw sandboxNotReady(sandboxPath);
 
 		if (this.settings.firstRunCompletedAt !== null) return this.settings;
 
-		const firstRunCompletedAt = this.now().toISOString();
-
-		this.store.write({ [STORED_KEYS.firstRunCompletedAt]: firstRunCompletedAt });
-		this.settings = { ...this.settings, firstRunCompletedAt };
-
-		return this.settings;
+		return this.write({ [STORED_KEYS.firstRunCompletedAt]: this.now().toISOString() });
 	}
 
-	/** Records the sandbox folder (the sandbox service's `SandboxPathStore`). */
+	/** Records the sandbox folder (the sandbox service's `SandboxPathStore`). The sandbox service created it and resolved its real path (A190). */
 	setSandboxPath(sandboxPath: string): void
 	{
-		this.update({ sandboxPath });
+		this.write({ [STORED_KEYS.sandboxPath]: sandboxPath });
+	}
+
+	/** Writes values to the store and into the in-memory settings. */
+	private write(values: Record<string, unknown>): Settings
+	{
+		this.store.write(values);
+		this.settings = { ...this.settings, ...values };
+
+		return this.settings;
 	}
 
 	/** Reads every setting from the store. */

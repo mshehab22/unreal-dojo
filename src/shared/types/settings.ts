@@ -40,5 +40,8 @@ export interface Settings
 	firstRunCompletedAt: string | null;
 }
 
-/** The fields the renderer may change in one `updateSettings` call. `hasApiKey` changes only through `setApiKey` and `clearApiKey`. */
-export type SettingsPatch = Partial<Pick<Settings, "enginePath" | "sandboxPath" | "loopMode" | "reviewProvider" | "modelId" | "theme" | "mcpPort">>;
+/**
+ * The fields the renderer may change in one `updateSettings` call. `hasApiKey` changes only through `setApiKey` and `clearApiKey`.
+ * A non-null `enginePath` must be a supported engine folder. `sandboxPath` can only be reset to null: only the sandbox service sets a folder, after creating it (A427).
+ */
+export type SettingsPatch = Partial<Pick<Settings, "enginePath" | "loopMode" | "reviewProvider" | "modelId" | "theme" | "mcpPort">> & { sandboxPath?: null };
