@@ -5,6 +5,7 @@ import type { CodeReview } from "@shared/types/review";
 import type { RunRequest, RunResult } from "@shared/types/run";
 
 import { AppErrorException } from "../../errors/AppErrorException";
+import { AttemptFileRules } from "../progress/AttemptFileRules";
 import type { ProgressListener } from "../unreal/ProgressUpdate";
 import { codeReviewInputFrom, isReviewedCodeQuest } from "./codeReviewInputFrom";
 import type { CodeReviewInput } from "./ReviewInputs";
@@ -47,13 +48,19 @@ export interface QuestSubmitDependencies
 /** Runs a Submit end to end. A cancel stops it between steps; nothing is recorded for a cancelled Submit. */
 export class QuestSubmitService
 {
+	/** Caps the files the reviewer reads and the attempt stores. */
+	private readonly fileRules = new AttemptFileRules();
+
 	/** Keeps the dependencies. */
 	constructor(private readonly dependencies: QuestSubmitDependencies)
 	{
 	}
 
-	/** Runs, reviews, and records one Submit. Streams progress through `onProgress`, with a `reviewing` step before the review. */
-	async submit(request: RunRequest, onProgress: ProgressListener, signal: AbortSignal): Promise<SubmitOutcome>
+	/**
+	 * Runs, reviews, and records one Submit. Streams progress through `onProgress`, with a `reviewing` step before the review.
+	 * `onRecording` is called once recording starts: from then on the Submit is finished and a cancel no longer applies (A471).
+	 */
+	async submit(request: RunRequest, onProgress: ProgressListener, signal: AbortSignal, onRecording: () => void = () => undefined): Promise<SubmitOutcome>
 	{
 		const quest = await this.dependencies.getAuthoredQuest(request.questId);
 		if (!quest) throw new AppErrorException("quest-not-found", "That quest is not in the content.", "Go back to the World Map and open it again.", request.questId);
@@ -62,6 +69,9 @@ export class QuestSubmitService
 		const run = await this.dependencies.runQuest(request, onProgress, signal);
 		this.stopIfCancelled(signal);
 
+		// The engine builds every file in full; the reviewer reads the same capped copy the attempt stores, so a finding always points at code the explainer can see (A473).
+		const reviewedFiles = this.fileRules.capFiles(request.files);
+
 		let review: CodeReview | undefined;
 
 		if (run.compiled)
@@ -69,11 +79,13 @@ export class QuestSubmitService
 			onProgress({ phase: "reviewing", lastLine: "Reviewing your code" });
 
 			const patternCards = await this.dependencies.getPatternCards();
-			review = await this.dependencies.reviewCode(codeReviewInputFrom(quest, patternCards, request.files, run), signal);
+			review = await this.dependencies.reviewCode(codeReviewInputFrom(quest, patternCards, reviewedFiles, run), signal);
 			this.stopIfCancelled(signal);
 		}
 
-		const outcome = await this.dependencies.recordCodeAttempt({ questId: quest.id, run, review, files: { ...request.files } });
+		onRecording();
+
+		const outcome = await this.dependencies.recordCodeAttempt({ questId: quest.id, run, review, files: reviewedFiles });
 
 		return review ? { run, review, outcome } : { run, outcome };
 	}

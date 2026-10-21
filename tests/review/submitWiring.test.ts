@@ -27,7 +27,11 @@ import { TestsOnlyProvider } from "../../src/main/services/review/providers/Test
 import { ProviderSelector } from "../../src/main/services/review/ProviderSelector";
 import { ReviewService } from "../../src/main/services/review/ReviewService";
 import { createTestProgressService } from "../support/progressFixtures";
-import { expectAppError, fixedSettings, sampleRun, ScriptedProvider } from "./reviewTestKit";
+import { CUT_OFF_NOTE, MAXIMUM_STORED_FILE_LENGTH, STORED_DETAIL_ATTEMPTS_PER_QUEST } from "../../src/main/services/progress/AttemptFileRules";
+import { refusedError } from "../../src/main/services/review/reviewErrors";
+import { API_FAILING_TESTS_REASON } from "../../src/main/services/review/ReviewService";
+import { makeQuest } from "../support/progressFixtures";
+import { expectAppError, fixedSettings, passingRun, recorded, sampleCodeInput, sampleRun, ScriptedProvider } from "./reviewTestKit";
 
 /** A build quest with the fields the review reads. */
 function buildQuest(overrides: Partial<ReviewedCodeQuest> = {}): ReviewedCodeQuest
@@ -240,7 +244,7 @@ describe("AttemptReviewService", () =>
 		const { service, received } = followUps();
 
 		await expect(service.explainFinding({ attemptId: "attempt-1", findingIndex: 0 })).resolves.toBe("Because nothing hears it.");
-		expect(received.explain[0]).toEqual({ cacheKey: "attempt-1:0", brief: "Build a health component.", finding: codeReview("claude-code").findings[0], files: { "Health.cpp": "// code" } });
+		expect(received.explain[0]).toEqual({ cacheKey: "attempt-1:2026-10-21T10:00:00.000Z:0", brief: "Build a health component.", finding: codeReview("claude-code").findings[0], files: { "Health.cpp": "// code" } });
 	});
 
 	it("grades a reflection answer against the review's question with its summary as context", async () =>
@@ -369,6 +373,174 @@ describe("createReviewHandlers end to end with fakes", () =>
 
 		expect(explanation).toContain("fired 0 times");
 		await expect(handlers.answerReflection({ attemptId, answer: "Because." })).resolves.toMatchObject({ provider: "tests-only" });
+	});
+});
+
+/** A real ReviewService over two scripted AI providers, with the given choice. */
+function reviewServiceWith(choice: "auto" | "anthropic-api", claudeCode: ScriptedProvider, anthropicApi: ScriptedProvider): ReviewService
+{
+	const testsOnly = new TestsOnlyProvider();
+	const graders = { codeReviewer: new CodeReviewer(), breakdownGrader: new BreakdownGrader(), explainGrader: new ExplainGrader(), findingExplainer: new FindingExplainer() };
+
+	return new ReviewService(new ProviderSelector(fixedSettings(choice), [claudeCode, anthropicApi], testsOnly), claudeCode, testsOnly, graders);
+}
+
+describe("M1.7c fix round 1", () =>
+{
+	it("fix 1: a progress reset cannot serve an old explanation, because the attempt time is in the cache key", async () =>
+	{
+		const explainer = new FindingExplainer();
+		const provider = new ScriptedProvider("claude-code", ["{\"explanation\": \"First save.\"}", "{\"explanation\": \"After the reset.\"}"]);
+		let attempts: AttemptRecord[] = [{ attemptId: "attempt-1", questId: "w1.health", at: "2026-10-21T10:00:00.000Z", score: 80, passed: true, xpGained: 100, review: codeReview("claude-code"), files: {} }];
+		const service = new AttemptReviewService({ attempts: () => attempts, submittedFiles: () => ({}), questBrief: async () => "" }, { explainFinding: (input) => explainer.explain(provider, input), gradeExplain: async () => { throw new Error("not used"); } });
+
+		await expect(service.explainFinding({ attemptId: "attempt-1", findingIndex: 0 })).resolves.toBe("First save.");
+
+		// After resetProgress the first new attempt is attempt-1 again, at a later time.
+		attempts = [{ ...attempts[0]!, at: "2026-10-22T09:00:00.000Z" }];
+		await expect(service.explainFinding({ attemptId: "attempt-1", findingIndex: 0 })).resolves.toBe("After the reset.");
+		expect(provider.requests).toHaveLength(2);
+	});
+
+	it("fix 2: once recording starts the run is ended, so a cancel finds no run and the saved Submit is reported as done", async () =>
+	{
+		let releaseRecording: () => void = () => undefined;
+		const recordingGate = new Promise<void>((resolve) => { releaseRecording = resolve; });
+		let recordingStarted: () => void = () => undefined;
+		const recordingBegan = new Promise<void>((resolve) => { recordingStarted = resolve; });
+
+		const review: ReviewHandlerService = {
+			getProviderStatuses: async () => [],
+			testClaudeCode: async () => ({ id: "claude-code", available: false }),
+			explainFinding: async () => "",
+			answerReflection: async () => ({ score: 0, verdict: "incorrect", note: "", provider: "tests-only" }),
+			submitQuest: async (_request, _onProgress, _signal, onRecording) =>
+			{
+				onRecording?.();
+				recordingStarted();
+				await recordingGate;
+
+				return { run: sampleRun(), outcome: OUTCOME } as Awaited<ReturnType<ReviewHandlerService["submitQuest"]>>;
+			},
+		};
+
+		const handlersByChannel = new Map<string, WrappedHandler>();
+		const registry = new RunRegistry();
+		const unused = (): never => { throw new Error("not used"); };
+		registerHandlers({ handle: (channel, listener) => void handlersByChannel.set(channel, listener as WrappedHandler) }, createHandlers({
+			getAppVersion: () => "1.0.0", getEngineLocator: unused, getContentCatalog: unused, pickFolder: async () => null, progressService: {}, progressContentService: {}, getSandboxService: unused,
+			runRegistry: registry, sendProgress: () => undefined, settingsService: {}, readEnvironmentStatus: unused, getReviewHandlers: () => review,
+		} as unknown as HandlerDependencies));
+		const invoke = (channel: string, ...methodArguments: unknown[]): Promise<IpcResponse<unknown>> => (handlersByChannel.get(channel) as unknown as (event: object, ...rest: unknown[]) => Promise<IpcResponse<unknown>>)({}, ...methodArguments);
+
+		const submit = invoke(IPC_CHANNELS.submitQuest, { runId: "run-9", questId: "w1.health", files: { "Health.cpp": "// code" } });
+		await recordingBegan;
+
+		expect(await invoke(IPC_CHANNELS.cancelRun, "run-9")).toMatchObject({ ok: false, error: { code: "run-not-found" } });
+
+		releaseRecording();
+		expect(await submit).toMatchObject({ ok: true, value: { outcome: OUTCOME } });
+	});
+
+	it("fix 2: QuestSubmitService calls onRecording after the review and right before recording", async () =>
+	{
+		const order: string[] = [];
+		const service = new QuestSubmitService({
+			getAuthoredQuest: async () => buildQuest(),
+			getPatternCards: async () => PATTERN_CARDS,
+			runQuest: async () => { order.push("run"); return sampleRun(); },
+			reviewCode: async () => { order.push("review"); return codeReview("claude-code"); },
+			recordCodeAttempt: async () => { order.push("record"); return OUTCOME; },
+		});
+
+		await service.submit(REQUEST, () => undefined, new AbortController().signal, () => order.push("recording starts"));
+
+		expect(order).toEqual(["run", "review", "recording starts", "record"]);
+	});
+
+	it("fix 3 (A70): Claude Code reviews a compiled submit with failing tests; the API reviews only all-passed submits", async () =>
+	{
+		const withClaude = reviewServiceWith("auto", new ScriptedProvider("claude-code", [recorded("code-review", "good.json")]), new ScriptedProvider("anthropic-api", []));
+		await expect(withClaude.reviewCode(sampleCodeInput())).resolves.toMatchObject({ provider: "claude-code" });
+
+		const signedOut = new ScriptedProvider("claude-code", [], { id: "claude-code", available: false, reason: "Claude Code was not found." });
+		const api = new ScriptedProvider("anthropic-api", [recorded("code-review", "good.json")]);
+		const withApi = reviewServiceWith("auto", signedOut, api);
+
+		await expect(withApi.reviewCode(sampleCodeInput())).resolves.toMatchObject({ provider: "tests-only", fallbackReason: API_FAILING_TESTS_REASON });
+		expect(api.requests).toHaveLength(0);
+
+		await expect(withApi.reviewCode(sampleCodeInput({ run: passingRun() }))).resolves.toMatchObject({ provider: "anthropic-api" });
+		expect(api.requests).toHaveLength(1);
+	});
+
+	it("fix 3 (A70): with the API chosen explicitly, failing tests are graded by tests only with the reason", async () =>
+	{
+		const api = new ScriptedProvider("anthropic-api", []);
+		const service = reviewServiceWith("anthropic-api", new ScriptedProvider("claude-code", []), api);
+
+		const review = await service.reviewCode(sampleCodeInput());
+
+		expect(review).toMatchObject({ provider: "tests-only", fallbackReason: API_FAILING_TESTS_REASON });
+		expect(review?.retryReviewSuggested).toBeUndefined();
+		expect(api.requests).toHaveLength(0);
+	});
+
+	it("fix 4: the reviewer reads the same capped files the attempt stores, while the engine builds the full files", async () =>
+	{
+		const huge = "x".repeat(MAXIMUM_STORED_FILE_LENGTH + 100);
+		const calls = { reviewInputs: [] as CodeReviewInput[], recorded: [] as CodeAttemptSubmission[] };
+		let ranWith: Record<string, string> = {};
+		const service = new QuestSubmitService({
+			getAuthoredQuest: async () => buildQuest(),
+			getPatternCards: async () => PATTERN_CARDS,
+			runQuest: async (request) => { ranWith = request.files; return sampleRun(); },
+			reviewCode: async (input) => { calls.reviewInputs.push(input); return codeReview("claude-code"); },
+			recordCodeAttempt: async (submission) => { calls.recorded.push(submission); return OUTCOME; },
+		});
+
+		await service.submit({ ...REQUEST, files: { "Huge.cpp": huge } }, () => undefined, new AbortController().signal);
+
+		const capped = "x".repeat(MAXIMUM_STORED_FILE_LENGTH) + CUT_OFF_NOTE;
+		expect(ranWith["Huge.cpp"]).toBe(huge);
+		expect(calls.reviewInputs[0]?.files["Huge.cpp"]).toBe(capped);
+		expect(calls.recorded[0]?.files["Huge.cpp"]).toBe(capped);
+	});
+
+	it("fix 5: a malformed or refused reply after the engine run falls back to tests only with a retry hint, and the Submit is recorded", async () =>
+	{
+		for (const reply of ["{\"score\": \"oops\"}", refusedError("Claude Code") as unknown as Error])
+		{
+			const reviewService = reviewServiceWith("auto", new ScriptedProvider("claude-code", [reply]), new ScriptedProvider("anthropic-api", []));
+			const { service: progress } = createTestProgressService();
+			const handlers = createReviewHandlers({
+				reviewService,
+				content: { listPacks: async () => PACKS, getAuthoredQuest: async () => buildQuest(), getPatternCards: async () => PATTERN_CARDS },
+				progress,
+				runQuest: async () => sampleRun(),
+			});
+
+			const submit = await handlers.submitQuest(REQUEST, () => undefined, new AbortController().signal);
+
+			expect(submit.review).toMatchObject({ provider: "tests-only", retryReviewSuggested: true, fallbackReason: expect.stringMatching(/Retry review/) });
+			expect(progress.getProgress().attempts).toHaveLength(1);
+			expect(submit.outcome.attempt.review?.provider).toBe("tests-only");
+		}
+	});
+
+	it("fix 6: only a quest's last five Submits keep their review, like their files", async () =>
+	{
+		const { service: progress } = createTestProgressService();
+		const quest = makeQuest({ id: "w1.health", kind: "build" });
+
+		for (let index = 1; index <= STORED_DETAIL_ATTEMPTS_PER_QUEST + 2; index++)
+		{
+			await progress.recordAttempt({ quest, score: 50, passed: false, compiled: true, isSubmit: true, review: { ...codeReview("claude-code"), summary: `review ${index}` } }, [quest]);
+		}
+
+		const summaries = progress.getProgress().attempts.map((attempt) => attempt.review?.summary ?? null);
+
+		expect(summaries).toEqual([null, null, "review 3", "review 4", "review 5", "review 6", "review 7"]);
 	});
 });
 

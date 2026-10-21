@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { AttemptRecord } from "@shared/types/progress";
 import type { CodeReview } from "@shared/types/review";
 
-import { AttemptFileRules, CUT_OFF_NOTE, MAXIMUM_STORED_ATTEMPT_LENGTH, MAXIMUM_STORED_FILE_LENGTH, STORED_FILE_ATTEMPTS_PER_QUEST } from "../../src/main/services/progress/AttemptFileRules";
+import { AttemptFileRules, CUT_OFF_NOTE, MAXIMUM_STORED_ATTEMPT_LENGTH, MAXIMUM_STORED_FILE_LENGTH, STORED_DETAIL_ATTEMPTS_PER_QUEST } from "../../src/main/services/progress/AttemptFileRules";
 import { ProgressService } from "../../src/main/services/progress/ProgressService";
 import { FixedClock } from "../support/FixedClock";
 import { createTestProgressService, localMoment, makeQuest } from "../support/progressFixtures";
@@ -97,13 +97,13 @@ describe("AttemptFileRules", () =>
 
 	it("prunes only the given quest and keeps attempts without files as they are", () =>
 	{
-		const attempts: AttemptRecord[] = Array.from({ length: STORED_FILE_ATTEMPTS_PER_QUEST + 1 }, (_, index) => ({ attemptId: `a${index}`, questId: "q1", at: "2026-10-21T10:00:00.000Z", score: 0, passed: false, xpGained: 0, files: { "A.h": String(index) } }));
+		const attempts: AttemptRecord[] = Array.from({ length: STORED_DETAIL_ATTEMPTS_PER_QUEST + 1 }, (_, index) => ({ attemptId: `a${index}`, questId: "q1", at: "2026-10-21T10:00:00.000Z", score: 0, passed: false, xpGained: 0, files: { "A.h": String(index) } }));
 		attempts.push({ attemptId: "other", questId: "q2", at: "2026-10-21T10:00:00.000Z", score: 0, passed: false, xpGained: 0, files: { "B.h": "b" } });
 
-		const pruned = rules.pruneOlderFiles(attempts, "q1");
+		const pruned = rules.pruneOlderDetails(attempts, "q1");
 
 		expect(pruned[0]).not.toHaveProperty("files");
-		expect(pruned.slice(1, STORED_FILE_ATTEMPTS_PER_QUEST + 1).every((attempt) => attempt.files !== undefined)).toBe(true);
+		expect(pruned.slice(1, STORED_DETAIL_ATTEMPTS_PER_QUEST + 1).every((attempt) => attempt.files !== undefined)).toBe(true);
 		expect(pruned.at(-1)?.files).toEqual({ "B.h": "b" });
 		expect(attempts[0]?.files).toBeDefined();
 	});

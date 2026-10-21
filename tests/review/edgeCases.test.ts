@@ -15,7 +15,7 @@ import { ProviderSelector } from "../../src/main/services/review/ProviderSelecto
 import { timeoutError, unavailableError } from "../../src/main/services/review/reviewErrors";
 import { ReviewService } from "../../src/main/services/review/ReviewService";
 import { SafeStorageReviewSettings } from "../../src/main/services/review/settings/SafeStorageReviewSettings";
-import { expectAppError, fixedSettings, planWithLabels, recorded, sampleBreakdownInput, sampleCodeInput, ScriptedProvider } from "./reviewTestKit";
+import { expectAppError, fixedSettings, passingRun, planWithLabels, recorded, sampleBreakdownInput, sampleCodeInput, ScriptedProvider } from "./reviewTestKit";
 
 /** A service over a scripted Claude Code and a given API provider. */
 function serviceWith(choice: ReviewProviderSetting, claudeCode: ScriptedProvider, anthropicApi: ScriptedProvider | AnthropicApiProvider)
@@ -112,7 +112,7 @@ describe("decision 2: secure storage that cannot be read never blocks a submit",
 		const claudeCode = new ScriptedProvider("claude-code", [], { id: "claude-code", available: false, reason: "Claude Code was not found." });
 		const { service } = serviceWith("auto", claudeCode, lockedKeyApi());
 
-		const review = await service.reviewCode(sampleCodeInput());
+		const review = await service.reviewCode(sampleCodeInput({ run: passingRun() }));
 
 		expect(review).toMatchObject({ provider: "tests-only", fallbackReason: expect.stringContaining("secure storage is not available") });
 

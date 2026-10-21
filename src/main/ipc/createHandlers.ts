@@ -97,8 +97,8 @@ export interface ReviewHandlerService
 	/** Grades the learner's answer to a stored review's reflection question. */
 	answerReflection(request: ReflectionAnswerRequest): Promise<ExplainGrade>;
 
-	/** Runs, reviews, and records a build or refactor Submit. */
-	submitQuest(request: RunRequest, onProgress: ProgressListener, signal: AbortSignal): Promise<SubmitOutcome>;
+	/** Runs, reviews, and records a build or refactor Submit. `onRecording` ends the run in the registry once recording starts, so a late cancel cannot report a saved Submit as cancelled (A471). */
+	submitQuest(request: RunRequest, onProgress: ProgressListener, signal: AbortSignal, onRecording?: () => void): Promise<SubmitOutcome>;
 }
 
 /** The part of SettingsService the handlers use, so tests can pass a fake. */
@@ -267,7 +267,7 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		},
 		submitQuest: {
 			argumentSchemas: [runRequestSchema],
-			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getReviewHandlers().submitQuest(request, onProgress, signal)),
+			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getReviewHandlers().submitQuest(request, onProgress, signal, () => dependencies.runRegistry.end(request.runId))),
 		},
 		checkSnippetSyntax: { argumentSchemas: [syntaxCheckRequestSchema], handle: (request) => dependencies.getQuestRunService().checkSnippetSyntax(request.code) },
 		cancelRun: { argumentSchemas: [idSchema], handle: (runId) => dependencies.runRegistry.cancel(runId) },

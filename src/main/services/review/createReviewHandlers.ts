@@ -28,8 +28,8 @@ export interface ReviewHandlers
 	/** Grades the answer to a stored review's reflection question. */
 	answerReflection(request: ReflectionAnswerRequest): Promise<ExplainGrade>;
 
-	/** Runs, reviews, and records a Submit. */
-	submitQuest(request: RunRequest, onProgress: ProgressListener, signal: AbortSignal): Promise<SubmitOutcome>;
+	/** Runs, reviews, and records a Submit. `onRecording` is called once recording starts (A471). */
+	submitQuest(request: RunRequest, onProgress: ProgressListener, signal: AbortSignal, onRecording?: () => void): Promise<SubmitOutcome>;
 }
 
 /** What the review handlers are built from. */
@@ -96,6 +96,6 @@ export function createReviewHandlers(sources: ReviewHandlerSources): ReviewHandl
 		testClaudeCode: () => reviewService.testClaudeCode(),
 		explainFinding: (request) => followUps.explainFinding(request),
 		answerReflection: (request) => followUps.answerReflection(request),
-		submitQuest: (request, onProgress, signal) => submitter.submit(request, onProgress, signal),
+		submitQuest: (request, onProgress, signal, onRecording) => submitter.submit(request, onProgress, signal, onRecording),
 	};
 }

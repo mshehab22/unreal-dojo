@@ -461,7 +461,7 @@ export class ProgressService
 			const attempt: AttemptRecord = { attemptId: `attempt-${before.attempts.length + 1}`, questId: quest.id, at: now.toISOString(), score: input.score, passed: input.passed, xpGained: xp.total };
 			if (input.review) attempt.review = structuredClone(input.review);
 			if (input.isSubmit && input.files) attempt.files = this.attemptFileRules.capFiles(input.files);
-			next.attempts = this.attemptFileRules.pruneOlderFiles([...next.attempts, attempt], quest.id);
+			next.attempts = this.attemptFileRules.pruneOlderDetails([...next.attempts, attempt], quest.id);
 
 			const unlockedQuestIds = new UnlockGraph(allQuests).newlyUnlocked(this.unlockState(unlockBaseline), this.unlockState(next));
 

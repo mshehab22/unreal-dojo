@@ -58,6 +58,21 @@ Options: an app flag or environment variable that calls `app.setPath("userData",
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A474 2026-10-21 Reviews are pruned with files: only a quest's last five Submits keep them (M1.7c fix round 1, Lead direction)
+Directed by the Lead: stored code reviews follow the same limit as stored files (A467). `AttemptFileRules.pruneOlderDetails` counts a quest's attempts that hold a review or files, newest first, and removes both from all but the latest five; score, pass, and XP stay on every attempt. "Why is this a finding?" on an older attempt answers `attempt-not-found` ("That attempt has no code review."). Reverse cost: none.
+
+### A473 2026-10-21 The reviewer reads the capped files the attempt stores (M1.7c fix round 1, Lead direction)
+Directed by the Lead: `QuestSubmitService` applies `AttemptFileRules.capFiles` once after the run and gives that copy to both the code reviewer and the recorder, so every finding points at code the explainer can show later. The runner still builds the full files. `capFiles` is idempotent (a cut file cut again is unchanged), so the recorder's own cap changes nothing. Reverse cost: none.
+
+### A472 2026-10-21 A bad or refused code review after a finished engine run falls back to tests-only (M1.7c fix round 1, Lead direction)
+Directed by the Lead: for the code review only, `review-invalid-output` and `review-refused` no longer fail the call. Tests-only answers with the error's message, "press Retry review to ask again", and `retryReviewSuggested: true`, and Submit records the attempt as usual. The provider is not marked unavailable (the next Submit asks it again). Breakdown and explain grading still surface these errors, since nothing expensive is lost there. Reverse cost: low.
+
+### A471 2026-10-21 Once recording starts, a Submit is finished and cannot be cancelled (M1.7c fix round 1, builder-review)
+A cancel during `recordCodeAttempt` saved the attempt while `trackRun` reported `run-cancelled`. Options: change `trackRun` for every operation; skip the cancel check after completion; end the run in the registry before recording. Chosen: the third, for Submit only. `submitQuest` takes an `onRecording` callback that the handler wires to `runRegistry.end(runId)`; `QuestSubmitService` calls it after the review and right before recording. A cancel after that answers `run-not-found` ("It may have finished already."), the signal never aborts, and the Submit answers its saved outcome. `trackRun` still ends the run in `finally` (ending twice is harmless). Quitting no longer waits for that save, which is written atomically. Reverse cost: low.
+
+### A470 2026-10-21 The finding explanation cache key includes the attempt's time (M1.7c fix round 1, builder-review)
+Attempt ids restart at `attempt-1` after `resetProgress`, so `<attemptId>:<findingIndex>` could serve an explanation of an earlier, different review. Options: clear the cache on reset (needs a hook from progress into review); add the attempt's `at` timestamp to the key. Chosen: the key is `<attemptId>:<at>:<findingIndex>`, which is unique across resets with no new dependency. Reverse cost: none.
+
 ### A469 2026-10-21 Submit's engine check uses the tests-only reviewer (M1.7c, builder-review)
 The integration test must run on any machine with the engine, without a Claude Code login or an API key, and must not spend money. Chosen (as the Lead asked): `tests/integration/submitQuest.test.ts` builds the same `createReviewHandlers` wiring the app uses, with a `ReviewService` whose settings choose `tests-only`, a real `ProgressService` on an in-memory disk, and the real content and unreal services, then submits `f1-score-keeper` with its reference solution. It is opt-in through `DOJO_ENGINE_ROOT`, like the M1.3b check (A187), and runs under the shared engine lock. Reverse cost: none.
 

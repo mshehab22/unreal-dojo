@@ -38,6 +38,22 @@ export interface ReviewGraders
 /** Failures that mean "this provider cannot review right now": it is set aside and the next provider is tried. */
 const PROVIDER_UNAVAILABLE_CODES: ReadonlySet<AppErrorCode> = new Set<AppErrorCode>(["review-unavailable", "secure-storage-unavailable"]);
 
+/** A reply the reviewer gave but the app could not use. For a code review it falls back instead of failing the Submit (A472). */
+const BAD_REPLY_CODES: ReadonlySet<AppErrorCode> = new Set<AppErrorCode>(["review-invalid-output", "review-refused"]);
+
+/** Why the API key did not review a submit with failing tests (A70). */
+export const API_FAILING_TESTS_REASON = "The API key reviews only submits where every test passed, so this one was graded by its tests. Fix the failing tests and submit again for a full review, or set up Claude Code to review every submit that compiles.";
+
+/** Per-grader rules for the failover loop. */
+interface FailoverOptions
+{
+	/** A reason to answer with tests only instead of asking this provider, or null to ask it. */
+	skipReason?: (provider: IReviewProvider) => string | null;
+
+	/** True when a bad or refused reply should fall back to tests only with a retry hint instead of failing the call. */
+	fallBackOnBadReply?: boolean;
+}
+
 /** The tiny request the Settings "Test" button sends through Claude Code, to prove the login works end to end. */
 const CONNECTION_CHECK_REQUEST = {
 	systemPrompt: "You check that a connection works. Reply with only the JSON object the schema asks for, with ok set to true.",
@@ -89,7 +105,10 @@ export class ReviewService
 	{
 		if (!input.run.compiled) return undefined;
 
-		return this.withProvider((provider) => this.graders.codeReviewer.review(provider, input, signal), (fallback) => this.testsOnly.reviewCode(input, fallback));
+		// A70: the paid API reviews only submits where every test passed; a bad or refused reply never loses a finished engine run (A472).
+		const options: FailoverOptions = { skipReason: (provider) => (provider.id === "anthropic-api" && !input.run.ok ? API_FAILING_TESTS_REASON : null), fallBackOnBadReply: true };
+
+		return this.withProvider((provider) => this.graders.codeReviewer.review(provider, input, signal), (fallback) => this.testsOnly.reviewCode(input, fallback), options);
 	}
 
 	/** Grades a revised breakdown plan. */
@@ -111,20 +130,25 @@ export class ReviewService
 	}
 
 	/**
-	 * Runs one grader on the selected provider and decides what a failure means (A154, A300, A301):
+	 * Runs one grader on the selected provider and decides what a failure means (A154, A300, A301, A70, A472):
 	 * - review-unavailable (not installed, not signed in, key rejected) or secure-storage-unavailable (the key cannot be read):
 	 *   the provider is marked and the next pick runs, in `auto` the next AI provider, otherwise tests only with the reason.
 	 * - review-timeout: tests only at once, with the reason and a "Retry review" hint, never the next AI provider, so a slow
 	 *   Claude Code does not turn into a paid API review on its own. The provider is not marked; the next submit tries it again.
-	 * - cancel, refusal, and invalid output are not provider problems and are thrown as they are.
+	 * - refusal and invalid output are thrown as they are, except where `fallBackOnBadReply` is set (the code review, A472): then tests only with a retry hint.
+	 * - a provider `skipReason` names (the API on a submit with failing tests, A70) is not asked; tests only answers with that reason.
+	 * - cancel is always thrown.
 	 * Each marking removes one provider, so the loop ends.
 	 */
-	private async withProvider<Result>(useProvider: (provider: IReviewProvider) => Promise<Result>, useTestsOnly: (fallback: TestsOnlyFallback) => Result): Promise<Result>
+	private async withProvider<Result>(useProvider: (provider: IReviewProvider) => Promise<Result>, useTestsOnly: (fallback: TestsOnlyFallback) => Result, options: FailoverOptions = {}): Promise<Result>
 	{
 		for (;;)
 		{
 			const selection = await this.selector.select();
 			if (selection.kind === "tests-only") return useTestsOnly({ reason: selection.reason });
+
+			const skipReason = options.skipReason?.(selection.provider) ?? null;
+			if (skipReason !== null) return useTestsOnly({ reason: skipReason });
 
 			try
 			{
@@ -137,6 +161,7 @@ export class ReviewService
 				const { code, message, suggestedAction } = error.appError;
 
 				if (code === "review-timeout") return useTestsOnly({ reason: `${message} ${suggestedAction}`, retryReviewSuggested: true });
+				if (options.fallBackOnBadReply && BAD_REPLY_CODES.has(code)) return useTestsOnly({ reason: `${message} The tests-only review stands in; press Retry review to ask again.`, retryReviewSuggested: true });
 				if (!PROVIDER_UNAVAILABLE_CODES.has(code)) throw error;
 
 				this.selector.markUnavailable(selection.provider.id, `${message} ${suggestedAction}`);

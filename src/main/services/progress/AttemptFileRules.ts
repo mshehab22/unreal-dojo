@@ -1,4 +1,4 @@
-// Keeps the files stored on Submit attempts small, so "why is this a finding?" can read them without the save file growing without bound (A467).
+// Keeps the files and reviews stored on Submit attempts small, so "why is this a finding?" can read them without the save file growing without bound (A467, A474).
 import type { AttemptRecord } from "@shared/types/progress";
 
 /** Longest single stored file, in characters (about 64 KB of source). */
@@ -7,8 +7,8 @@ export const MAXIMUM_STORED_FILE_LENGTH = 64 * 1024;
 /** Most characters stored for one attempt, across its files (about 256 KB). */
 export const MAXIMUM_STORED_ATTEMPT_LENGTH = 256 * 1024;
 
-/** How many of a quest's latest attempts keep their files; older ones drop them. */
-export const STORED_FILE_ATTEMPTS_PER_QUEST = 5;
+/** How many of a quest's latest attempts keep their files and code review; older ones keep only score, pass, and XP. */
+export const STORED_DETAIL_ATTEMPTS_PER_QUEST = 5;
 
 /** Line added to a file cut at the per-file cap, so a reader knows the rest is missing. */
 export const CUT_OFF_NOTE = "\n// (Unreal Dojo kept only the first 64 KB of this file.)";
@@ -36,8 +36,8 @@ export class AttemptFileRules
 		return kept;
 	}
 
-	/** Answers the attempts with files removed from all but the latest five of `questId`'s attempts that have files. Other quests are untouched. */
-	pruneOlderFiles(attempts: readonly AttemptRecord[], questId: string): AttemptRecord[]
+	/** Answers the attempts with files and reviews removed from all but the latest five of `questId`'s attempts that hold either. Other quests are untouched (A467, A474). */
+	pruneOlderDetails(attempts: readonly AttemptRecord[], questId: string): AttemptRecord[]
 	{
 		let keptForQuest = 0;
 		const pruned = [...attempts];
@@ -45,13 +45,13 @@ export class AttemptFileRules
 		for (let index = pruned.length - 1; index >= 0; index--)
 		{
 			const attempt = pruned[index];
-			if (!attempt || attempt.questId !== questId || attempt.files === undefined) continue;
+			if (!attempt || attempt.questId !== questId || (attempt.files === undefined && attempt.review === undefined)) continue;
 
 			keptForQuest++;
-			if (keptForQuest <= STORED_FILE_ATTEMPTS_PER_QUEST) continue;
+			if (keptForQuest <= STORED_DETAIL_ATTEMPTS_PER_QUEST) continue;
 
-			const { files: _dropped, ...withoutFiles } = attempt;
-			pruned[index] = withoutFiles;
+			const { files: _droppedFiles, review: _droppedReview, ...summary } = attempt;
+			pruned[index] = summary;
 		}
 
 		return pruned;

@@ -23,7 +23,7 @@ import { labelMatches, TestsOnlyProvider } from "../../src/main/services/review/
 import { ProviderSelector, UNAVAILABLE_MARK_MS } from "../../src/main/services/review/ProviderSelector";
 import { cancelledError, invalidOutputError, refusedError, unavailableError } from "../../src/main/services/review/reviewErrors";
 import { ReviewService } from "../../src/main/services/review/ReviewService";
-import { expectAppError, fixedSettings, makeTestFolder, planWithLabels, recorded, removeTestFolders, sampleBreakdownInput, sampleCodeInput, sampleRun, ScriptedProvider } from "./reviewTestKit";
+import { expectAppError, fixedSettings, makeTestFolder, passingRun, planWithLabels, recorded, removeTestFolders, sampleBreakdownInput, sampleCodeInput, sampleRun, ScriptedProvider } from "./reviewTestKit";
 
 afterEach(removeTestFolders);
 
@@ -52,8 +52,8 @@ describe("fix 1: a provider that cannot review is skipped", () =>
 	{
 		const { service, claudeCode, anthropicApi } = failoverService("auto", [signedOutError()], [recorded("code-review", "good.json"), recorded("code-review", "good.json")]);
 
-		await expect(service.reviewCode(sampleCodeInput())).resolves.toMatchObject({ provider: "anthropic-api", score: 82 });
-		await expect(service.reviewCode(sampleCodeInput())).resolves.toMatchObject({ provider: "anthropic-api" });
+		await expect(service.reviewCode(sampleCodeInput({ run: passingRun() }))).resolves.toMatchObject({ provider: "anthropic-api", score: 82 });
+		await expect(service.reviewCode(sampleCodeInput({ run: passingRun() }))).resolves.toMatchObject({ provider: "anthropic-api" });
 
 		expect(claudeCode.requests).toHaveLength(1);
 		expect(anthropicApi.requests).toHaveLength(2);
@@ -63,7 +63,7 @@ describe("fix 1: a provider that cannot review is skipped", () =>
 	{
 		const { service } = failoverService("auto", [signedOutError()], [unavailableError("The Anthropic API rejected the stored key.", "Check the key in Settings.")]);
 
-		const review = await service.reviewCode(sampleCodeInput());
+		const review = await service.reviewCode(sampleCodeInput({ run: passingRun() }));
 
 		expect(review).toMatchObject({ provider: "tests-only", fallbackReason: expect.stringContaining("Claude Code is not signed in.") });
 		expect(review?.fallbackReason).toContain("rejected the stored key");
@@ -77,7 +77,7 @@ describe("fix 1: a provider that cannot review is skipped", () =>
 		expect(anthropicApi.requests).toHaveLength(0);
 	});
 
-	it("does not fail over on cancel, refusal, or invalid output", async () =>
+	it("does not fail over on cancel, refusal, or invalid output (outside the code review, which falls back, A472)", async () =>
 	{
 		const cases: Array<[Error, "run-cancelled" | "review-refused" | "review-invalid-output"]> = [
 			[cancelledError(), "run-cancelled"],
@@ -87,9 +87,9 @@ describe("fix 1: a provider that cannot review is skipped", () =>
 
 		for (const [error, code] of cases)
 		{
-			const { service, anthropicApi } = failoverService("auto", [error], [recorded("code-review", "good.json")]);
+			const { service, anthropicApi } = failoverService("auto", [error], [recorded("explain", "good.json")]);
 
-			await expectAppError(service.reviewCode(sampleCodeInput()), code);
+			await expectAppError(service.gradeExplain({ prompt: "p", answer: "a" }), code);
 			expect(anthropicApi.requests, code).toHaveLength(0);
 		}
 	});

@@ -36,7 +36,7 @@ export class AttemptReviewService
 	{
 	}
 
-	/** Explains in plain English why a finding is a finding. Cached by attempt and finding index. */
+	/** Explains in plain English why a finding is a finding. Cached by attempt id, attempt time, and finding index. */
 	async explainFinding(request: FindingExplanationRequest): Promise<string>
 	{
 		const { attempt, review } = this.reviewedAttempt(request.attemptId);
@@ -45,7 +45,8 @@ export class AttemptReviewService
 		if (!finding) throw new AppErrorException("attempt-not-found", "That finding is not in this review.", "Open the review again and pick a finding from the list.", `finding ${request.findingIndex} of ${review.findings.length}`);
 
 		return this.graders.explainFinding({
-			cacheKey: `${request.attemptId}:${request.findingIndex}`,
+			// Attempt ids restart at attempt-1 after a progress reset, so the attempt's time is part of the key (A470).
+			cacheKey: `${request.attemptId}:${attempt.at}:${request.findingIndex}`,
 			brief: await this.sources.questBrief(attempt.questId),
 			finding,
 			files: this.sources.submittedFiles(attempt),
