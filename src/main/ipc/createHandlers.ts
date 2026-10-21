@@ -2,7 +2,11 @@
 import type { DojoMethod } from "@shared/ipc";
 import type { ContentStatus, GlossaryAlias, LearnerQuest, LearnerWorld, PackOutline } from "@shared/types/catalog";
 import type { GlossaryEntry, PatternCard } from "@shared/types/content";
-import type { EngineInstall, ToolchainCheck } from "@shared/types/engine";
+import type { EngineInstall, SandboxSetupResult, ToolchainCheck } from "@shared/types/engine";
+import type { BuildProgressEvent } from "@shared/types/run";
+
+import type { ProgressListener } from "../services/unreal/ProgressUpdate";
+import type { RunRegistry } from "../services/unreal/RunRegistry";
 
 import type { ProgressService } from "../services/progress/ProgressService";
 import type { HandlerDefinition, HandlerTable } from "./HandlerDefinition";
@@ -25,6 +29,7 @@ import {
 	settingsPatchSchema,
 	syntaxCheckRequestSchema,
 } from "./requestSchemas";
+import { trackRun } from "./trackRun";
 
 /** What the handlers need from the outside world. Grows as services are built; tests pass fakes. */
 export interface HandlerDependencies
@@ -43,6 +48,22 @@ export interface HandlerDependencies
 
 	/** The learner's progress and the game rules (M1.6). */
 	progressService: ProgressService;
+
+	/** Returns the sandbox service (M1.2). A function for the same reason. */
+	getSandboxService: () => SandboxSetupService;
+
+	/** Running operations by run id, for `cancelRun`. */
+	runRegistry: RunRegistry;
+
+	/** Sends a progress event to the renderer (`sendBuildProgress` in the real app). */
+	sendProgress: (event: BuildProgressEvent) => void;
+}
+
+/** The part of SandboxProjectService the handlers use, so tests can pass a fake. */
+export interface SandboxSetupService
+{
+	/** Copies the template into the picked folder and runs the first full build. */
+	create(enginePath: string, pickedFolder: string, onProgress: ProgressListener, signal: AbortSignal): Promise<SandboxSetupResult>;
 }
 
 /** The part of EngineLocator the handlers use, so tests can pass a fake. */
@@ -90,7 +111,7 @@ const PICK_ENGINE_TITLE = "Choose your Unreal Engine folder (the one that contai
 const ARRIVES_WITH = {
 	settings: "the settings service (app-shell)",
 	engine: "the engine locator (M1.1)",
-	sandbox: "sandbox setup (M1.2)",
+	sandbox: "the settings service (sandbox setup itself works, M1.2)",
 	editor: "the fast loop (M1.4)",
 	runs: "the build and test loop (M1.3 and M1.4)",
 	submit: "the build loop, rules, and review (M1.3, M1.6, M1.7)",
@@ -137,14 +158,17 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		completeFirstRun: stub("completeFirstRun", ARRIVES_WITH.settings, []),
 
 		pickSandboxFolder: stub("pickSandboxFolder", ARRIVES_WITH.sandbox, []),
-		createSandbox: stub("createSandbox", ARRIVES_WITH.sandbox, [sandboxSetupRequestSchema]),
+		createSandbox: {
+			argumentSchemas: [sandboxSetupRequestSchema],
+			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getSandboxService().create(request.enginePath, request.folder, onProgress, signal)),
+		},
 		rebuildSandbox: stub("rebuildSandbox", ARRIVES_WITH.sandbox, [idSchema]),
 		openEditor: stub("openEditor", ARRIVES_WITH.editor, [idSchema.nullable()]),
 
 		runQuest: stub("runQuest", ARRIVES_WITH.runs, [runRequestSchema]),
 		submitQuest: stub("submitQuest", ARRIVES_WITH.submit, [runRequestSchema]),
 		checkSnippetSyntax: stub("checkSnippetSyntax", ARRIVES_WITH.runs, [syntaxCheckRequestSchema]),
-		cancelRun: stub("cancelRun", ARRIVES_WITH.runs, [idSchema]),
+		cancelRun: { argumentSchemas: [idSchema], handle: (runId) => dependencies.runRegistry.cancel(runId) },
 
 		getProgress: { argumentSchemas: [], handle: () => progressService.getProgress() },
 		getRules: { argumentSchemas: [], handle: () => progressService.getRules() },

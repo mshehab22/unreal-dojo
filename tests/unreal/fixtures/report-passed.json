@@ -1,0 +1,44 @@
+﻿{
+	"devices": [
+		{
+			"deviceName": "Mohammads-MacBook-Air.local",
+			"instance": "3B0F0A7C7A4C45521B1CECBA8D8E46CC",
+			"instanceName": "Mohammads-MacBook-Air.local-13312",
+			"platform": "MacEditor",
+			"oSVersion": "macOS 27.0.1 26A434",
+			"model": "Default",
+			"gPU": "Apple M5",
+			"cPUModel": "Apple M5",
+			"rAMInGB": 24,
+			"renderMode": "SM6",
+			"rHI": "",
+			"appInstanceLog": ""
+		}
+	],
+	"reportCreatedOn": "2026.10.21-14.24.35",
+	"succeeded": 1,
+	"succeededWithWarnings": 0,
+	"failed": 0,
+	"notRun": 0,
+	"inProcess": 0,
+	"totalDuration": 0.026841416954994202,
+	"comparisonExported": false,
+	"comparisonExportDirectory": "",
+	"tests": [
+		{
+			"testDisplayName": "TakesDamage",
+			"fullTestPath": "Dojo.Sample.Health.TakesDamage",
+			"tags": [],
+			"state": "Success",
+			"deviceInstance": [
+				"3B0F0A7C7A4C45521B1CECBA8D8E46CC"
+			],
+			"duration": 0.026841416954994202,
+			"dateTime": "2026.10.21-14.24.35",
+			"entries": [],
+			"warnings": 0,
+			"errors": 0,
+			"artifacts": []
+		}
+	]
+}

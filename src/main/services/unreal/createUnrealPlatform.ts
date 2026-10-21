@@ -1,12 +1,17 @@
 // Picks the Windows or macOS objects from process.platform. The only place in the app that branches on the platform for Unreal (D16).
+import { spawn } from "node:child_process";
+
 import type { CommandRunner } from "./CommandRunner";
 import type { EngineRegistry } from "./EngineRegistry";
 import { MacPlatformPaths } from "./MacPlatformPaths";
 import { MacToolchainChecker } from "./MacToolchainChecker";
 import type { PlatformPaths } from "./PlatformPaths";
+import { PosixProcessTreeKiller } from "./PosixProcessTreeKiller";
+import type { ProcessTreeKiller } from "./ProcessTreeKiller";
 import type { ToolchainChecker } from "./ToolchainChecker";
 import { WindowsEngineRegistry } from "./WindowsEngineRegistry";
 import { WindowsPlatformPaths } from "./WindowsPlatformPaths";
+import { WindowsProcessTreeKiller } from "./WindowsProcessTreeKiller";
 import { WindowsToolchainChecker } from "./WindowsToolchainChecker";
 
 /** The platform-specific pieces the Unreal services are built from. */
@@ -17,6 +22,9 @@ export interface UnrealPlatform
 
 	/** The Windows registry, or null on macOS. */
 	engineRegistry: EngineRegistry | null;
+
+	/** Kills a build or editor process with all its children. */
+	processTreeKiller: ProcessTreeKiller;
 }
 
 /** What the factory reads from the running process. Passed in so tests can ask for either platform. */
@@ -44,10 +52,32 @@ export function createUnrealPlatform(inputs: UnrealPlatformInputs): UnrealPlatfo
 	{
 		const paths = new WindowsPlatformPaths({ programFiles: environment.ProgramFiles, programData: environment.ProgramData });
 
-		return { paths, toolchainChecker: new WindowsToolchainChecker(commandRunner, environment["ProgramFiles(x86)"]), engineRegistry: new WindowsEngineRegistry(commandRunner) };
+		return {
+			paths,
+			toolchainChecker: new WindowsToolchainChecker(commandRunner, environment["ProgramFiles(x86)"]),
+			engineRegistry: new WindowsEngineRegistry(commandRunner),
+			processTreeKiller: new WindowsProcessTreeKiller(startDetached),
+		};
 	}
 
-	if (platform === "darwin") return { paths: new MacPlatformPaths(homeFolder), toolchainChecker: new MacToolchainChecker(commandRunner), engineRegistry: null };
+	if (platform === "darwin")
+	{
+		return {
+			paths: new MacPlatformPaths(homeFolder),
+			toolchainChecker: new MacToolchainChecker(commandRunner),
+			engineRegistry: null,
+			processTreeKiller: new PosixProcessTreeKiller((processId, signal) => process.kill(processId, signal)),
+		};
+	}
 
 	return null;
+}
+
+/** Starts a helper program and lets it run on its own (taskkill). */
+function startDetached(command: string, commandArguments: string[]): void
+{
+	const child = spawn(command, commandArguments, { shell: false, windowsHide: true, stdio: "ignore", detached: true });
+
+	child.on("error", () => undefined);
+	child.unref();
 }

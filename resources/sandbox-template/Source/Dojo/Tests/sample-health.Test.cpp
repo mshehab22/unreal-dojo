@@ -4,7 +4,7 @@
 #if WITH_AUTOMATION_TESTS
 
 #include "Kismet/GameplayStatics.h"
-#include "Quests/SampleHealth/SampleHealthComponent.h"
+#include "SampleHealthComponent.h"
 #include "Support/DojoTestActor.h"
 #include "Support/DojoTestWorld.h"
 

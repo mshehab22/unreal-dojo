@@ -1,17 +1,23 @@
 // App lifecycle and composition root: builds services, registers IPC, and opens the window.
+import { join } from "node:path";
+
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 
 import { createContentCatalog } from "./content/createContentCatalog";
 import { resolveContentRoot } from "./content/resolveContentRoot";
 import { createHandlers } from "./ipc/createHandlers";
 import { registerHandlers } from "./ipc/registerHandlers";
+import { sendBuildProgress } from "./ipc/sendBuildProgress";
 import { createEngineLocator } from "./services/unreal/createEngineLocator";
+import { createUnrealServices, type UnrealServices } from "./services/unreal/createUnrealServices";
+import { ElectronStoreSandboxPathStore } from "./services/unreal/ElectronStoreSandboxPathStore";
 import type { EngineLocator } from "./services/unreal/EngineLocator";
 import { MathRandomSource } from "./services/progress/MathRandomSource";
 import { NodeFileSystem } from "./services/progress/NodeFileSystem";
 import { ProgressService } from "./services/progress/ProgressService";
 import { ProgressStore } from "./services/progress/ProgressStore";
 import { SystemClock } from "./services/progress/SystemClock";
+import { RunRegistry } from "./services/unreal/RunRegistry";
 import { createMainWindow } from "./window/createMainWindow";
 
 /** Opens the native folder picker over the focused window. Resolves null when the learner cancels. */
@@ -41,13 +47,37 @@ async function start(): Promise<void>
 	// A refused save still lets the app open; every progress call answers the save-failed error so the renderer can show it.
 	if (refusal) console.error(`Progress refused: ${refusal.message} ${refusal.detail ?? ""}`);
 
-	registerHandlers(ipcMain, createHandlers({ getAppVersion: () => app.getVersion(), getEngineLocator, getContentCatalog: () => contentCatalog, pickFolder, progressService }));
+	let unrealServices: UnrealServices | null = null;
+	const getUnrealServices = (): UnrealServices =>
+		(unrealServices ??= createUnrealServices({ templateFolder: sandboxTemplateFolder(), engineInspector: getEngineLocator(), pathStore: new ElectronStoreSandboxPathStore() }));
+
+	registerHandlers(
+		ipcMain,
+		createHandlers({
+			getAppVersion: () => app.getVersion(),
+			getEngineLocator,
+			getContentCatalog: () => contentCatalog,
+			pickFolder,
+			progressService,
+			getSandboxService: () => getUnrealServices().sandboxService,
+			runRegistry: new RunRegistry(),
+			sendProgress: sendBuildProgress,
+		}),
+	);
 	createMainWindow();
 
 	app.on("activate", () =>
 	{
 		if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
 	});
+}
+
+/** The shipped sandbox template: next to the asar when packaged (extraResources), in the source tree in development. */
+function sandboxTemplateFolder(): string
+{
+	const resourcesRoot = app.isPackaged ? process.resourcesPath : app.getAppPath();
+
+	return join(resourcesRoot, "resources", "sandbox-template");
 }
 
 app.on("window-all-closed", () =>

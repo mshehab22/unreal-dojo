@@ -50,4 +50,19 @@ export interface PlatformPaths
 
 	/** The Epic launcher's `LauncherInstalled.dat`, which lists every engine the launcher installed. */
 	launcherInstalledDataFile(): string;
+
+	/** The program that builds a target: `Build.sh` on macOS, `UnrealBuildTool.exe` on Windows (Node cannot spawn a `.bat` without a shell, A182). */
+	buildProgram(engineRoot: string): string;
+
+	/** True when arguments go to the program exactly as written (Windows, so Unreal sees `-Name="value"`); false when each argument is passed as is (macOS). */
+	readonly verbatimArguments: boolean;
+
+	/** An option with a value, for example `-ExecCmds=...`: quoted after the `=` on Windows, left whole on macOS (A183). */
+	optionArgument(name: string, value: string): string;
+
+	/** A bare path argument: quoted on Windows, left whole on macOS. */
+	pathArgument(somePath: string): string;
+
+	/** Longest sandbox folder path that is safe for Unreal's build, or null when there is no practical limit. 100 on Windows, where deep intermediate paths pass 260 characters. */
+	readonly maximumSandboxPathLength: number | null;
 }

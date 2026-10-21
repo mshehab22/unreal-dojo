@@ -1,0 +1,29 @@
+Sandbox: /private/var/folders/f4/1hmcglvx5_l9nn1n7h1gtr940000gn/T/dojo-integration-M0CGVR/DojoSandbox; first build ok=true
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > creates the sandbox and its first full build passes 20245ms
+  "ok": true,
+  "compiled": true,
+      "name": "Dojo.Sample.Health.TakesDamage",
+      "passed": true,
+      "durationMs": 17
+  "testsPassed": 1,
+  "testsTotal": 1,
+  "durationMs": 54030,
+  "loop": "headless"
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > writes the sample quest, rebuilds, and its test passes 54063ms
+ [{"name":"Dojo.Probe.Value.Seven","passed":true,"durationMs":8}]
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > builds a brand new quest folder whose test includes the quest header by bare name (A181) 34501ms
+[{"name":"Dojo.Sample.Health.TakesDamage","passed":false,"durationMs":16,"message":"Expected 'Health clamps at zero' to be 0.000000, but it was -430.000000 and outside tolerance 0.000100."}]
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > reports a failed assertion with its message 36966ms
+/private/var/folders/f4/1hmcglvx5_l9nn1n7h1gtr940000gn/T/dojo-integration-M0CGVR/DojoSandbox/Source/Dojo/Quests/sample-health/SampleHealthComponent.cpp:44:1: error: expected unqualified-id
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > reports a compile error in the learner's file with the filtered output 12709ms
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > cancels mid-build and leaves no process behind 1036ms
+  "ok": false,
+  "compiled": true,
+  "testsPassed": 0,
+  "testsTotal": 0,
+  "durationMs": 13857,
+  "loop": "headless",
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > cancels mid-test and leaves no process behind 14879ms
+Timings (ms): {"createAndColdBuild":20243,"passingRun":54031,"newQuestRun":34499,"failingRun":36965,"compileErrorRun":12710}
+      Tests  7 passed (7)
+exit 0

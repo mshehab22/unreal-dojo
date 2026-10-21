@@ -1,0 +1,57 @@
+﻿{
+	"devices": [
+		{
+			"deviceName": "Mohammads-MacBook-Air.local",
+			"instance": "35BC5B143E47FF6FB25057B4B9E33A66",
+			"instanceName": "Mohammads-MacBook-Air.local-13924",
+			"platform": "MacEditor",
+			"oSVersion": "macOS 27.0.1 26A434",
+			"model": "Default",
+			"gPU": "Apple M5",
+			"cPUModel": "Apple M5",
+			"rAMInGB": 24,
+			"renderMode": "SM6",
+			"rHI": "",
+			"appInstanceLog": ""
+		}
+	],
+	"reportCreatedOn": "2026.10.21-14.25.07",
+	"succeeded": 0,
+	"succeededWithWarnings": 0,
+	"failed": 1,
+	"notRun": 0,
+	"inProcess": 0,
+	"totalDuration": 0.020013373345136642,
+	"comparisonExported": false,
+	"comparisonExportDirectory": "",
+	"tests": [
+		{
+			"testDisplayName": "TakesDamage",
+			"fullTestPath": "Dojo.Sample.Health.TakesDamage",
+			"tags": [],
+			"state": "Fail",
+			"deviceInstance": [
+				"35BC5B143E47FF6FB25057B4B9E33A66"
+			],
+			"duration": 0.020013373345136642,
+			"dateTime": "2026.10.21-14.25.07",
+			"entries": [
+				{
+					"event":
+					{
+						"type": "Error",
+						"message": "Expected 'Health clamps at zero' to be 0.000000, but it was -430.000000 and outside tolerance 0.000100.",
+						"context": "",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "Unknown",
+					"lineNumber": 0,
+					"timestamp": "2026.10.21-14.25.07"
+				}
+			],
+			"warnings": 0,
+			"errors": 1,
+			"artifacts": []
+		}
+	]
+}

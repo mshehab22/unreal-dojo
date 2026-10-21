@@ -4,8 +4,10 @@ import { describe, expect, it } from "vitest";
 import { createUnrealPlatform } from "../../src/main/services/unreal/createUnrealPlatform";
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
 import { MacToolchainChecker } from "../../src/main/services/unreal/MacToolchainChecker";
+import { PosixProcessTreeKiller } from "../../src/main/services/unreal/PosixProcessTreeKiller";
 import { WindowsEngineRegistry } from "../../src/main/services/unreal/WindowsEngineRegistry";
 import { WindowsPlatformPaths } from "../../src/main/services/unreal/WindowsPlatformPaths";
+import { WindowsProcessTreeKiller } from "../../src/main/services/unreal/WindowsProcessTreeKiller";
 import { WindowsToolchainChecker } from "../../src/main/services/unreal/WindowsToolchainChecker";
 import { FakeCommandRunner } from "./FakeCommandRunner";
 
@@ -83,6 +85,31 @@ describe("MacPlatformPaths", () =>
 	});
 });
 
+describe("build program and argument quoting", () =>
+{
+	it("calls UnrealBuildTool.exe directly and quotes values verbatim on Windows, with a 100 character sandbox limit", () =>
+	{
+		const paths = new WindowsPlatformPaths({});
+
+		expect(paths.buildProgram("C:\\UE")).toBe("C:\\UE\\Engine\\Binaries\\DotNET\\UnrealBuildTool\\UnrealBuildTool.exe");
+		expect(paths.optionArgument("ExecCmds", "Automation RunTests Dojo; Quit")).toBe("-ExecCmds=\"Automation RunTests Dojo; Quit\"");
+		expect(paths.pathArgument("C:\\My Sandbox\\Dojo.uproject")).toBe("\"C:\\My Sandbox\\Dojo.uproject\"");
+		expect(paths.verbatimArguments).toBe(true);
+		expect(paths.maximumSandboxPathLength).toBe(100);
+	});
+
+	it("runs Build.sh and passes arguments whole on macOS, with no path limit", () =>
+	{
+		const paths = new MacPlatformPaths("/Users/learner");
+
+		expect(paths.buildProgram("/UE")).toBe("/UE/Engine/Build/BatchFiles/Mac/Build.sh");
+		expect(paths.optionArgument("ExecCmds", "Automation RunTests Dojo; Quit")).toBe("-ExecCmds=Automation RunTests Dojo; Quit");
+		expect(paths.pathArgument("/My Sandbox/Dojo.uproject")).toBe("/My Sandbox/Dojo.uproject");
+		expect(paths.verbatimArguments).toBe(false);
+		expect(paths.maximumSandboxPathLength).toBeNull();
+	});
+});
+
 describe("createUnrealPlatform", () =>
 {
 	const commandRunner = new FakeCommandRunner({});
@@ -95,6 +122,7 @@ describe("createUnrealPlatform", () =>
 		expect(platform?.paths.launcherInstalledDataFile()).toBe("E:\\Data\\Epic\\UnrealEngineLauncher\\LauncherInstalled.dat");
 		expect(platform?.toolchainChecker).toBeInstanceOf(WindowsToolchainChecker);
 		expect(platform?.engineRegistry).toBeInstanceOf(WindowsEngineRegistry);
+		expect(platform?.processTreeKiller).toBeInstanceOf(WindowsProcessTreeKiller);
 	});
 
 	it("returns the Mac objects on darwin, with no registry", () =>
@@ -104,6 +132,7 @@ describe("createUnrealPlatform", () =>
 		expect(platform?.paths).toBeInstanceOf(MacPlatformPaths);
 		expect(platform?.toolchainChecker).toBeInstanceOf(MacToolchainChecker);
 		expect(platform?.engineRegistry).toBeNull();
+		expect(platform?.processTreeKiller).toBeInstanceOf(PosixProcessTreeKiller);
 	});
 
 	it("returns null on any other platform", () =>
