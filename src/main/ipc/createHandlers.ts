@@ -1,5 +1,7 @@
 // Builds the handler for every DojoApi method. Services replace the stubs here as each system task lands.
 import type { DojoMethod } from "@shared/ipc";
+import type { ContentStatus, GlossaryAlias, LearnerQuest, LearnerWorld, PackOutline } from "@shared/types/catalog";
+import type { GlossaryEntry, PatternCard } from "@shared/types/content";
 import type { EngineInstall, ToolchainCheck } from "@shared/types/engine";
 
 import type { HandlerDefinition, HandlerTable } from "./HandlerDefinition";
@@ -11,6 +13,7 @@ import {
 	conceptSubmissionSchema,
 	dailyOfferIndexSchema,
 	drillAnswerSchema,
+	drillRequestSchema,
 	findingExplanationRequestSchema,
 	idSchema,
 	playerNameSchema,
@@ -30,6 +33,12 @@ export interface HandlerDependencies
 
 	/** Returns the engine locator (M1.1). A function so an unsupported platform fails on the call, not at startup. */
 	getEngineLocator: () => EngineLocatorService;
+
+	/** Returns the content catalog loaded at startup. */
+	getContentCatalog: () => ContentCatalogService;
+
+	/** Opens the native folder picker with a title and resolves the chosen folder, or null when the learner cancels. */
+	pickFolder: (title: string) => Promise<string | null>;
 }
 
 /** The part of EngineLocator the handlers use, so tests can pass a fake. */
@@ -40,12 +49,43 @@ export interface EngineLocatorService
 
 	/** The platform build toolchain check. */
 	checkToolchain(): Promise<ToolchainCheck>;
+
+	/** Reads a folder the learner picked; throws `engine-not-found` or `engine-version-unsupported`. */
+	inspectFolder(folder: string): Promise<EngineInstall>;
 }
+
+/** The part of ContentCatalog the handlers use, so tests can pass a fake. */
+export interface ContentCatalogService
+{
+	/** Load counts and problems. */
+	getStatus(): Promise<ContentStatus>;
+
+	/** Every pack as an outline. */
+	listPacks(): Promise<PackOutline[]>;
+
+	/** One full world; throws `world-not-found`. */
+	getWorld(worldId: string): Promise<LearnerWorld>;
+
+	/** One full quest; throws `quest-not-found`. */
+	getQuest(questId: string): Promise<LearnerQuest>;
+
+	/** Every glossary entry. */
+	getGlossary(): Promise<GlossaryEntry[]>;
+
+	/** The flat alias table. */
+	getGlossaryAliases(): Promise<GlossaryAlias[]>;
+
+	/** Every pattern card. */
+	getPatternCards(): Promise<PatternCard[]>;
+}
+
+/** Title of the native folder picker for a manual engine pick. */
+const PICK_ENGINE_TITLE = "Choose your Unreal Engine folder (the one that contains Engine)";
 
 /** Task names used in not-implemented messages, so the renderer can say when a feature arrives. */
 const ARRIVES_WITH = {
 	settings: "the settings service (app-shell)",
-	engine: "the engine locator (M1.1) and its folder picker",
+	engine: "the engine locator (M1.1)",
 	sandbox: "sandbox setup (M1.2)",
 	editor: "the fast loop (M1.4)",
 	runs: "the build and test loop (M1.3 and M1.4)",
@@ -78,7 +118,14 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		clearApiKey: stub("clearApiKey", ARRIVES_WITH.settings, []),
 
 		detectEngines: { argumentSchemas: [], handle: () => dependencies.getEngineLocator().findEngines() },
-		pickEngineFolder: stub("pickEngineFolder", ARRIVES_WITH.engine, []),
+		pickEngineFolder: {
+			argumentSchemas: [],
+			handle: async () =>
+			{
+				const folder = await dependencies.pickFolder(PICK_ENGINE_TITLE);
+				return folder === null ? null : dependencies.getEngineLocator().inspectFolder(folder);
+			},
+		},
 		checkToolchain: { argumentSchemas: [], handle: () => dependencies.getEngineLocator().checkToolchain() },
 		getEnvironmentStatus: stub("getEnvironmentStatus", ARRIVES_WITH.engine, []),
 		completeFirstRun: stub("completeFirstRun", ARRIVES_WITH.settings, []),
@@ -110,6 +157,15 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		chooseDailyOffer: stub("chooseDailyOffer", ARRIVES_WITH.progress, [dailyOfferIndexSchema]),
 		resetProgress: stub("resetProgress", ARRIVES_WITH.progress, []),
 
+		getContentStatus: { argumentSchemas: [], handle: () => dependencies.getContentCatalog().getStatus() },
+		listPacks: { argumentSchemas: [], handle: () => dependencies.getContentCatalog().listPacks() },
+		getWorld: { argumentSchemas: [idSchema], handle: (worldId) => dependencies.getContentCatalog().getWorld(worldId) },
+		getQuest: { argumentSchemas: [idSchema], handle: (questId) => dependencies.getContentCatalog().getQuest(questId) },
+		getGlossary: { argumentSchemas: [], handle: () => dependencies.getContentCatalog().getGlossary() },
+		getGlossaryAliases: { argumentSchemas: [], handle: () => dependencies.getContentCatalog().getGlossaryAliases() },
+		getPatternCards: { argumentSchemas: [], handle: () => dependencies.getContentCatalog().getPatternCards() },
+
+		startDrill: stub("startDrill", ARRIVES_WITH.progress, [drillRequestSchema]),
 		getDrillSummary: stub("getDrillSummary", ARRIVES_WITH.progress, []),
 		answerDrillItem: stub("answerDrillItem", ARRIVES_WITH.progress, [drillAnswerSchema]),
 		finishDrill: stub("finishDrill", ARRIVES_WITH.progress, [idSchema]),

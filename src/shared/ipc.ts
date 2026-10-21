@@ -1,4 +1,7 @@
 // The typed contract between the renderer and the main process: every method the system specs need, its channel, and the progress event channel.
+import type { ContentStatus, GlossaryAlias, LearnerQuest, LearnerWorld, PackOutline } from "./types/catalog";
+import type { GlossaryEntry, PatternCard } from "./types/content";
+import type { DrillRequest, DrillSession } from "./types/drill";
 import type { EngineInstall, EnvironmentStatus, SandboxFolderChoice, SandboxSetupResult, ToolchainCheck } from "./types/engine";
 import type { AppError } from "./types/errors";
 import type {
@@ -146,7 +149,33 @@ export interface DojoInvokeApi
 	/** Deletes all progress and returns the fresh save. The renderer asks for confirmation first. */
 	resetProgress(): Promise<PlayerProgress>;
 
-	// Drills (progress-and-rules; startDrill arrives with the content types, see M0.2b)
+	// Content (content-engine, loaded once at startup by app-shell)
+
+	/** Returns how the content load went: counts and every problem found. Rejects with `content-invalid` only when nothing could be read. */
+	getContentStatus(): Promise<ContentStatus>;
+
+	/** Returns every pack with its worlds and quest outlines, in order: the whole World Map in one answer. */
+	listPacks(): Promise<PackOutline[]>;
+
+	/** Returns one world with its full quests (hint texts left out). Rejects with `world-not-found` for an unknown id. */
+	getWorld(worldId: string): Promise<LearnerWorld>;
+
+	/** Returns one full quest (hint texts left out). Rejects with `quest-not-found` for an unknown id. */
+	getQuest(questId: string): Promise<LearnerQuest>;
+
+	/** Returns every glossary entry, for the Codex and the hover cards. */
+	getGlossary(): Promise<GlossaryEntry[]>;
+
+	/** Returns the flat alias table (every term and alias, longest first) for Monaco's hover and completion and for the TermLinker. */
+	getGlossaryAliases(): Promise<GlossaryAlias[]>;
+
+	/** Returns every pattern card, for the Character screen and pattern chips. */
+	getPatternCards(): Promise<PatternCard[]>;
+
+	// Drills (progress-and-rules)
+
+	/** Starts a drill session: today's due items, a world's test-out, or the one-item Parsons fallback for a quest. */
+	startDrill(request: DrillRequest): Promise<DrillSession>;
 
 	/** Returns due counts for the Studio home. */
 	getDrillSummary(): Promise<DrillSummary>;
@@ -221,6 +250,14 @@ export const IPC_CHANNELS = {
 	getDailyQuest: "dojo:getDailyQuest",
 	chooseDailyOffer: "dojo:chooseDailyOffer",
 	resetProgress: "dojo:resetProgress",
+	getContentStatus: "dojo:getContentStatus",
+	listPacks: "dojo:listPacks",
+	getWorld: "dojo:getWorld",
+	getQuest: "dojo:getQuest",
+	getGlossary: "dojo:getGlossary",
+	getGlossaryAliases: "dojo:getGlossaryAliases",
+	getPatternCards: "dojo:getPatternCards",
+	startDrill: "dojo:startDrill",
 	getDrillSummary: "dojo:getDrillSummary",
 	answerDrillItem: "dojo:answerDrillItem",
 	finishDrill: "dojo:finishDrill",
