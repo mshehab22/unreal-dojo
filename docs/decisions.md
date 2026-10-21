@@ -6,6 +6,9 @@ Newest first inside each section. A decision names the options considered, the c
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A390 2026-10-21 A world's stage path wraps into balanced rows that fit the card (M2.1c, builder-ui-core)
+The real Pack 1 World 1 has 12 stages; in one row they need about 1,060 px, wider than a contract card at 1100x700, so the World Map scrolled sideways. Options: scroll inside the stage strip (hides the boss and later stages off to the right); shrink the nodes and labels (titles become unreadable); wrap the path. Chosen: wrap. `StagePath` measures its own width (ResizeObserver), fits `floor(width / 88 px)` stages per row, and splits the stages into the fewest balanced rows (12 at 1100 wide become 6 and 6; at 1440 they fit in one row). Each row is an equal-column grid with its own connecting line, and the boss stays last. The fake's first world now mirrors the real World 1 (12 stages, real titles) so the fake e2e would catch a regression. Reverse cost: low, one component.
+
 ### A251 2026-10-21 The fake data source is refused in packaged builds (M2.1, builder-ui-core; fix round 1, Lead request)
 Options: trust that nobody sets the storage key in an installed app; strip the fake from production builds at build time (the e2e tests run the production build, so they would lose it); ask main. Chosen: ask main. `createMainWindow` adds `--dojo-packaged` to `additionalArguments` when `app.isPackaged`; the preload exposes `window.dojo.isPackaged()` (synchronous, from `process.argv`), added to `DojoApi`; `chooseDataSource` returns the real bridge whenever it is true. The fake's chunk still ships but can never load in an installer. Touches app-shell files (`createMainWindow.ts`, the preload, `ipc.ts`, the preload bridge test) at the Lead's request. Reverse cost: low.
 

@@ -154,6 +154,14 @@ test("screens show the returning learner's real numbers", async () =>
 	await expect(window.locator('[data-testid="stage-node"][data-rematch="true"]')).toHaveCount(1);
 	await expect(window.locator('[data-testid="stage-node"][data-status="in_progress"]')).toHaveCount(1);
 
+	// The first world is shaped like the real World 1: 12 stages. At 1100 wide they wrap into rows instead of scrolling sideways (A390).
+	const firstWorld = window.locator('[data-testid="contract-card"][data-world="objects-and-reflection"]');
+	await expect(firstWorld.getByTestId("stage-node")).toHaveCount(12);
+	await setViewport(1100, 700);
+	await expect(firstWorld.getByTestId("stage-path")).not.toHaveAttribute("data-rows", "1");
+	await expectNoSidewaysScroll("world map with 12 stages at 1100x700");
+	await setViewport(1440, 900);
+
 	// A disabled button still explains itself on hover (A245).
 	await window.getByTestId("test-out").hover();
 	await expect(window.getByRole("tooltip")).toContainText("drill screen");

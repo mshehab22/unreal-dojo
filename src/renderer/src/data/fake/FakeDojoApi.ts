@@ -299,7 +299,7 @@ export class FakeDojoApi implements DojoClient
 
 		if (!isFresh)
 		{
-			statuses["foundations.objects"] = { eligible: false, testedOut: false, reason: "Every quest here is passed already." };
+			statuses["objects-and-reflection"] = { eligible: false, testedOut: false, reason: "Every quest here is passed already." };
 			statuses["foundations.memory"] = { eligible: true, testedOut: false };
 		}
 

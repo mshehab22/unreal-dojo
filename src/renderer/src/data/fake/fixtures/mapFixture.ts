@@ -38,18 +38,23 @@ export const MAP_FIXTURE: PackFixture[] = [
 		summary: "Objects, memory, containers, the gameplay framework, and how Unreal code talks to itself.",
 		worlds: [
 			{
-				id: "foundations.objects",
+				// Shaped like the real Pack 1 World 1 (12 stages, real titles), so the World Map's layout is tested at real lengths (A390).
+				id: "objects-and-reflection",
 				title: "Objects and reflection",
-				summary: "Brightline Games is building a night market and needs lanterns a designer can tune without touching code. Every value they ask for must show up in the editor, and the lanterns must flicker on their own once placed.",
+				summary: "A training yard client wants targets their designers can tune without a programmer. Learn how UObjects, actors, and the reflection macros let the editor, Blueprint, and the console see your C++.",
 				stages: [
-					{ id: "foundations.objects.uproperty", title: "UPROPERTY puts a field in the editor", kind: "concept", difficulty: 1, xp: 20, minutes: 6, terms: ["uproperty", "reflection", "editanywhere"], skills: ["ue.objects.uproperty"], status: "passed", bestScore: 100 },
-					{ id: "foundations.objects.uclass", title: "UCLASS and the generated header", kind: "concept", difficulty: 1, xp: 20, minutes: 5, terms: ["uclass", "generated-body", "unreal-header-tool"], skills: ["ue.objects.uclass"], status: "passed", bestScore: 80 },
-					{ id: "foundations.objects.lantern", title: "A lantern with tunable brightness", kind: "build", scaffold: "worked", difficulty: 1, xp: 60, minutes: 20, terms: ["uproperty", "actor"], skills: ["ue.objects.uproperty", "ue.objects.actors"], status: "passed", bestScore: 92 },
-					{ id: "foundations.objects.flicker", title: "Flicker on a timer", kind: "build", scaffold: "faded", difficulty: 2, xp: 80, minutes: 25, terms: ["timer-manager", "timer-handle"], skills: ["ue.objects.actors"], patterns: ["update-method"], status: "passed", bestScore: 74, dueForRematch: true },
-					{ id: "foundations.objects.switch-plan", title: "Plan the lantern switch", kind: "breakdown", difficulty: 2, xp: 70, minutes: 12, skills: ["breakdown.decompose"], status: "passed", bestScore: 85 },
-					{ id: "foundations.objects.switch", title: "Lantern switch", kind: "build", scaffold: "stub", difficulty: 2, xp: 90, minutes: 30, terms: ["ufunction", "blueprintcallable"], skills: ["ue.objects.ufunction"], status: "passed", bestScore: 88 },
-					{ id: "foundations.objects.proximity", title: "Proximity lantern", kind: "build", scaffold: "blank", difficulty: 3, xp: 120, minutes: 40, terms: ["overlap-event", "sphere-component"], skills: ["ue.objects.actors", "ue.collision.overlaps"], patterns: ["component"], status: "passed", bestScore: 81 },
-					{ id: "foundations.objects.boss", title: "Boss: Night market lights", kind: "boss", difficulty: 3, xp: 300, minutes: 90, skills: ["breakdown.integrate"], patterns: ["component", "observer"], status: "passed", bestScore: 78 },
+					{ id: "f1-uobject-and-actor", title: "UObjects, actors, and the class default object", kind: "concept", difficulty: 1, xp: 20, minutes: 5, terms: ["uobject", "actor", "cdo"], skills: ["ue.objects.uobject"], status: "passed", bestScore: 100 },
+					{ id: "f1-reflection-and-uclass", title: "Reflection, UCLASS, and the generated header", kind: "concept", difficulty: 1, xp: 20, minutes: 6, terms: ["uclass", "generated-body", "unreal-header-tool"], skills: ["ue.objects.uclass"], status: "passed", bestScore: 80 },
+					{ id: "f1-uproperty-specifiers", title: "UPROPERTY specifiers decide who can see and change a field", kind: "concept", difficulty: 1, xp: 25, minutes: 6, terms: ["uproperty", "editanywhere", "blueprintreadwrite"], skills: ["ue.objects.uproperty"], status: "passed", bestScore: 100 },
+					{ id: "f1-ufunction-specifiers", title: "UFUNCTION opens a function to Blueprint and the console", kind: "concept", difficulty: 2, xp: 25, minutes: 7, terms: ["ufunction", "blueprintcallable"], skills: ["ue.objects.ufunction"], status: "passed", bestScore: 90 },
+					{ id: "f1-training-dummy", title: "A training dummy the console can strike", kind: "build", scaffold: "worked", difficulty: 1, xp: 40, minutes: 20, terms: ["uproperty", "ufunction"], skills: ["ue.objects.actors"], status: "passed", bestScore: 92 },
+					{ id: "f1-uenum-and-ustruct", title: "UENUM and USTRUCT bring your own types into reflection", kind: "concept", difficulty: 2, xp: 25, minutes: 6, terms: ["uenum", "ustruct"], skills: ["ue.objects.types"], status: "passed", bestScore: 80 },
+					{ id: "f1-popup-target", title: "A pop-up target that shows its state by name", kind: "build", scaffold: "faded", difficulty: 2, xp: 60, minutes: 25, terms: ["uenum", "timer-manager"], skills: ["ue.objects.actors"], patterns: ["update-method"], status: "passed", bestScore: 74, dueForRematch: true },
+					{ id: "f1-cast-and-isa", title: "Cast and IsA ask an object what it really is", kind: "concept", difficulty: 2, xp: 25, minutes: 6, terms: ["cast", "isa"], skills: ["ue.objects.casting"], status: "passed", bestScore: 100 },
+					{ id: "f1-score-keeper", title: "A score keeper that tells dummies from targets", kind: "build", scaffold: "stub", difficulty: 2, xp: 80, minutes: 30, terms: ["cast", "tarray"], skills: ["ue.objects.casting"], patterns: ["component"], status: "passed", bestScore: 88 },
+					{ id: "f1-practice-bell", title: "A bell whose ring Blueprint can restyle", kind: "build", scaffold: "blank", difficulty: 3, xp: 120, minutes: 40, terms: ["blueprintnativeevent", "blueprintimplementableevent"], skills: ["ue.objects.ufunction"], patterns: ["component"], status: "passed", bestScore: 81 },
+					{ id: "f1-dash-with-cooldown", title: "Plan a dash with a cooldown", kind: "breakdown", difficulty: 2, xp: 90, minutes: 15, skills: ["breakdown.decompose"], status: "passed", bestScore: 85 },
+					{ id: "f1-boss-training-yard", title: "Boss: the training yard", kind: "boss", difficulty: 3, xp: 300, minutes: 60, skills: ["breakdown.integrate"], patterns: ["component", "observer"], status: "passed", bestScore: 78 },
 				],
 			},
 			{
