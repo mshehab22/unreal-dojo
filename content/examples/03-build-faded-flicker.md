@@ -41,12 +41,14 @@ Place the lantern in the sandbox map and press Play. Type `slomo 0.2` in the con
 
 class UPointLightComponent;
 
+/** A lantern that dips its light on a looping timer, like a flame in a draft. */
 UCLASS()
 class ADojoExFlickerLantern : public AActor
 {
 	GENERATED_BODY()
 
 public:
+	/** Creates the light component and turns ticking off. */
 	ADojoExFlickerLantern();
 
 	UPROPERTY(VisibleAnywhere, Category = "Lantern")
@@ -59,11 +61,15 @@ public:
 	float Brightness = 8.f;
 
 protected:
+	/** Lights the lantern and starts the flicker timer. */
 	virtual void BeginPlay() override;
+	/** Clears both timers before the actor leaves play. */
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
+	/** Dims the light and schedules the return to full brightness. */
 	void Flicker();
+	/** Puts the light back to full brightness. */
 	void Restore();
 
 	FTimerHandle FlickerHandle;
@@ -79,6 +85,7 @@ private:
 #include "Components/PointLightComponent.h"
 #include "TimerManager.h"
 
+/** Creates the light as the root component. */
 ADojoExFlickerLantern::ADojoExFlickerLantern()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -87,6 +94,7 @@ ADojoExFlickerLantern::ADojoExFlickerLantern()
 	RootComponent = Light;
 }
 
+/** Lights the lantern and starts the looping flicker timer. */
 void ADojoExFlickerLantern::BeginPlay()
 {
 	Super::BeginPlay(); // @explain: Parent setup runs first so the light is registered before we touch it.
@@ -95,16 +103,19 @@ void ADojoExFlickerLantern::BeginPlay()
 	GetWorldTimerManager().SetTimer(FlickerHandle, this, &ADojoExFlickerLantern::Flicker, FlickerInterval, true); // @explain: The last argument makes the timer loop, so Flicker runs every interval without Tick.
 }
 
+/** Dims the light to a quarter and schedules Restore 0.1 seconds later. */
 void ADojoExFlickerLantern::Flicker()
 {
 	// Your code: dim the light, then schedule Restore 0.1 seconds from now.
 }
 
+/** Puts the light back to full brightness. */
 void ADojoExFlickerLantern::Restore()
 {
 	Light->SetIntensity(Brightness);
 }
 
+/** Clears both timers before the actor leaves play. */
 void ADojoExFlickerLantern::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	// Your code: clear both timers.

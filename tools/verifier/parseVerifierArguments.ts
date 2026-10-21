@@ -6,7 +6,7 @@ export interface VerifierOptions
 	/** The content folder (holds glossary.json, patterns.json, packs/, examples/). */
 	contentFolder: string;
 
-	/** Only read this pack. */
+	/** Only report this pack's files; every pack is still read (A206). Under `--engine`, only this pack's quests are judged. */
 	packId?: string;
 
 	/** Only report the file that defines this quest. */

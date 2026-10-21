@@ -190,7 +190,9 @@ describe("glossary", () =>
 			glossaryEntry("pawn", { term: "Pawn", aliases: ["actor"], unrealDocsUrl: "https://dev.epicgames.com/pawn" }),
 		];
 		const found = await messages(glossaryCheck, inputWith([], { glossary }));
+		const self = await messages(glossaryCheck, inputWith([], { glossary: [glossaryEntry("tick", { related: ["tick"] })] }));
 
+		expect(self).toEqual(["related: an entry cannot be related to itself"]);
 		expect(found).toEqual([
 			"related: \"ghost\" is not a glossary id",
 			"unrealDocsUrl: pin the link with ?application_version=5.8",
@@ -233,6 +235,27 @@ describe("plan coverage, quest shape, and repetition", () =>
 		const found = await messages(planCoverageCheck, inputWith([[trimmed]]));
 
 		expect(found).toEqual(["expected at least 2 reference plans, found 1", "plan \"component-counts-fires\" does not cover required pieces: hud-bar"]);
+	});
+
+	it("flags a boss plan that misses a required piece", async () =>
+	{
+		const boss = example<AuthoredQuest>("08-boss-lighthouse.md");
+
+		if (boss.kind !== "boss") throw new Error("expected a boss");
+
+		const plans = boss.referencePlans.map((plan, index) => (index === 1 ? { ...plan, pieces: plan.pieces.filter((piece) => piece.id !== "ship") } : plan));
+
+		expect(await messages(planCoverageCheck, inputWith([[{ ...boss, referencePlans: plans }]]))).toEqual(["plan \"tracker-on-ship\" does not cover required pieces: safety, ship"]);
+	});
+
+	it("needs exactly 8 integration rubric bullets on a boss", async () =>
+	{
+		const boss = example<AuthoredQuest>("08-boss-lighthouse.md");
+
+		if (boss.kind !== "boss") throw new Error("expected a boss");
+
+		expect(await messages(questShapeCheck, inputWith([[boss]]))).toEqual([]);
+		expect(await messages(questShapeCheck, inputWith([[{ ...boss, integrationRubric: boss.integrationRubric.slice(0, 7) }]]))).toEqual(["expected 8 integration rubric bullets, found 7"]);
 	});
 
 	it("flags a rubric outside 5 to 6 bullets and an empty concepts list", async () =>

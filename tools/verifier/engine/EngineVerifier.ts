@@ -84,6 +84,12 @@ function buildErrors(result: ProcessResult, questId?: string): string[]
 	return scoped.slice(0, MAXIMUM_QUOTED_LINES).map((line) => line.trim());
 }
 
+/** A warning that a starter check could not reach a verdict. */
+function inconclusive(file: string, reason: string): ContentProblem
+{
+	return { ...errorAt(file, `starter check inconclusive: ${reason}`, "engine"), severity: "warning" };
+}
+
 /** Turns quest records into engine quests, reading each reference solution; quests without one are skipped (the solution check reports them). */
 async function engineQuests(records: readonly QuestRecord[], solutionsFolder: string): Promise<{ quests: EngineQuest[]; problems: ContentProblem[] }>
 {
@@ -187,11 +193,25 @@ export class EngineVerifier
 
 		timings.solutionTestsSeconds = secondsSince(testsStarted);
 
-		for (const entry of judged) problems.push(...this.judgeSolution(entry, run.outcomes));
+		const solutionFailed = new Set<string>();
+
+		for (const entry of judged)
+		{
+			const found = this.judgeSolution(entry, run.outcomes);
+
+			if (found.length > 0) solutionFailed.add(entry.quest.id);
+
+			problems.push(...found);
+		}
 
 		const startersStarted = performance.now();
 
-		for (const entry of judged) problems.push(...(await this.checkStarter(sandbox, entry)));
+		for (const entry of judged)
+		{
+			// A starter can only be judged against a solution that passes; otherwise "the starter fails" proves nothing.
+			if (solutionFailed.has(entry.quest.id)) problems.push(inconclusive(entry.file, "the reference solution fails, so the starter was not checked"));
+			else problems.push(...(await this.checkStarter(sandbox, entry)));
+		}
 
 		timings.starterChecksSeconds = secondsSince(startersStarted);
 
@@ -235,6 +255,12 @@ export class EngineVerifier
 
 		const build = await sandbox.build();
 
+		// A starter that does not compile is fine only when the errors are in its own files; anything else means it broke other quests' code.
+		if (build.exitCode !== 0 && buildErrors(build, entry.quest.id).length === 0)
+		{
+			problems.push(inconclusive(entry.file, "the starter broke other quests' code (no build error points into its own files)"));
+		}
+
 		if (build.exitCode === 0)
 		{
 			const run = await sandbox.runTests(entry.testNames);
@@ -242,7 +268,7 @@ export class EngineVerifier
 
 			if (run.outcomes === undefined || outcomes.some((outcome) => outcome === undefined))
 			{
-				problems.push({ ...errorAt(entry.file, "starter check inconclusive: the starter built but its tests did not all run", "engine"), severity: "warning" });
+				problems.push(inconclusive(entry.file, "the starter built but its tests did not all run"));
 			}
 			else if (outcomes.every((outcome) => outcome?.passed === true))
 			{

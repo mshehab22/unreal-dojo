@@ -55,6 +55,12 @@ class FakeSandbox implements VerifierSandbox
 	removed = false;
 	starterPasses = new Set<string>();
 
+	/** Starter quest id to the quest whose files the build error points at while that starter is in place. */
+	starterBreaks = new Map<string, string>();
+
+	/** Quests whose tests are missing from the report while their starter is in place. */
+	starterTestsMissing = new Set<string>();
+
 	/** Records the files. */
 	async writeQuestFiles(questId: string, files: readonly SandboxFile[]): Promise<void>
 	{
@@ -70,8 +76,10 @@ class FakeSandbox implements VerifierSandbox
 	async build(): Promise<ProcessResult>
 	{
 		const broken = [...this.written].find(([, files]) => files.some((file) => file.text.includes("BROKEN")));
+		const breaker = [...this.starterBreaks.keys()].find((id) => this.holdsStarter(id));
+		const blamed = broken?.[0] ?? (breaker === undefined ? undefined : this.starterBreaks.get(breaker));
 
-		return broken === undefined ? processResult(0) : processResult(6, [`/x/Source/Dojo/Quests/${broken[0]}/a.cpp:3:1: error: expected ';'`, "Result: Failed (OtherCompilationError)"]);
+		return blamed === undefined ? processResult(0) : processResult(6, [`/x/Source/Dojo/Quests/${blamed}/a.cpp:3:1: error: expected ';'`, "Result: Failed (OtherCompilationError)"]);
 	}
 
 	/** Passes each test whose quest holds its solution (or a starter listed in `starterPasses`). */
@@ -82,13 +90,22 @@ class FakeSandbox implements VerifierSandbox
 		for (const name of testNames)
 		{
 			const questId = name.replace("Dojo.Test.", "");
-			const isStarter = this.written.get(questId)?.some((file) => file.text === "STARTER") ?? false;
+			const isStarter = this.holdsStarter(questId);
+
+			if (isStarter && this.starterTestsMissing.has(questId)) continue;
+
 			const passed = !isStarter || this.starterPasses.has(questId);
 
 			outcomes.set(name, { passed, state: passed ? "Success" : "Fail", messages: passed ? [] : ["Error: Expected true"] });
 		}
 
 		return { process: processResult(0), outcomes };
+	}
+
+	/** Whether a quest's folder currently holds its starter. */
+	holdsStarter(questId: string): boolean
+	{
+		return this.written.get(questId)?.some((file) => file.text === "STARTER") ?? false;
 	}
 
 	/** Marks the sandbox removed. */
@@ -232,7 +249,35 @@ describe("EngineVerifier", () =>
 		const report = await verifyWith(sandbox, [failing, quest("b")], solutions, new Set(["a"]));
 
 		expect(report.questsChecked).toBe(1);
-		expect(report.problems.map((problem) => problem.message)).toEqual(["test Dojo.Test.a fails with the reference solution (Fail):\nError: Expected true"]);
+		expect(report.problems.map((problem) => problem.message)).toEqual([
+			"test Dojo.Test.a fails with the reference solution (Fail):\nError: Expected true",
+			"starter check inconclusive: the reference solution fails, so the starter was not checked",
+		]);
 		expect(sandbox.written.has("b")).toBe(true);
+	});
+
+	it("treats a starter build failure in another quest's files as inconclusive, and one in its own files as fine", async () =>
+	{
+		const sandbox = new FakeSandbox();
+
+		sandbox.starterBreaks.set("a", "b");
+		sandbox.starterBreaks.set("b", "b");
+
+		const report = await verifyWith(sandbox, [quest("a"), quest("b")], await writeSolutions({ a: "SOLUTION", b: "SOLUTION" }));
+
+		expect(report.problems.map((problem) => `${problem.severity ?? "error"} ${problem.file}: ${problem.message}`)).toEqual([
+			"warning examples/a.md: starter check inconclusive: the starter broke other quests' code (no build error points into its own files)",
+		]);
+	});
+
+	it("warns when a starter builds but its tests do not run", async () =>
+	{
+		const sandbox = new FakeSandbox();
+
+		sandbox.starterTestsMissing.add("a");
+
+		const report = await verifyWith(sandbox, [quest("a")], await writeSolutions({ a: "SOLUTION" }));
+
+		expect(report.problems.map((problem) => [problem.severity, problem.message])).toEqual([["warning", "starter check inconclusive: the starter built but its tests did not all run"]]);
 	});
 });

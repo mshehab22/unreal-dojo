@@ -100,6 +100,14 @@ describe("runVerifier", () =>
 		expect(result.problemCount).toBe(1);
 	});
 
+	it("indents the continuation lines of a multi-line message", async () =>
+	{
+		const check = { name: "multi", run: () => [{ file: "glossary.json", section: "engine", message: "did not build:\nfirst error\nsecond error" }] };
+		const lines = formatReport(await runVerifier(defaultOptions(), [check]));
+
+		expect(lines).toContain("      engine: did not build:\n          first error\n          second error");
+	});
+
 	it("runs registered checks after parsing and reports their problems", async () =>
 	{
 		const check = { name: "always", run: () => [{ file: "glossary.json", message: "from a check" }] };

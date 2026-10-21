@@ -3,13 +3,17 @@ import type { ContentProblem } from "../../src/shared/types/content";
 
 import type { FileReport, VerifierResult } from "./runVerifier";
 
+/** Indent for the second and later lines of a multi-line message (quoted build errors and test messages). */
+const CONTINUATION_INDENT = "          ";
+
 /** One problem as an indented line: its severity when it is a warning, where it is, then what is wrong. */
 function formatProblem(problem: ContentProblem): string
 {
 	const where = [problem.line === undefined ? undefined : `line ${problem.line}`, problem.section].filter((part) => part !== undefined).join(", ");
 	const label = problem.severity === "warning" ? "warning: " : "";
+	const message = problem.message.split("\n").join(`\n${CONTINUATION_INDENT}`);
 
-	return where === "" ? `      ${label}${problem.message}` : `      ${label}${where}: ${problem.message}`;
+	return where === "" ? `      ${label}${message}` : `      ${label}${where}: ${message}`;
 }
 
 /** `ok` for a clean file, `warn` when it has only warnings, `FAIL` when it has an error. */

@@ -111,10 +111,10 @@ Checks, all with file names in the output. Errors unless marked as warnings:
 2. Write every build and refactor quest's reference solution to `Source/Dojo/Quests/<quest-id>/` and its tests to `Source/Dojo/Tests/<quest-id>.Test.cpp`. Every solution is always written, because quests may use each other's classes; tests include quest headers as `Quests/<quest-id>/<File>.h`.
 3. Build once with the platform build script (the exact command in `docs/systems/unreal-pipeline.md`). A failed build is reported on every judged quest, quoting the error lines that point into that quest's files.
 4. Run every judged quest's tests in one headless `UnrealEditor-Cmd` run (names joined with `+`) and read `index.json`. Each test named in a quest's `IMPLEMENT_*_AUTOMATION_TEST` macros must run and report `Success`.
-5. Starter check, one quest at a time: write the starter files in place of the solution, build, and run that quest's tests. A starter that does not compile is fine; a starter whose tests all pass is an error; a starter that builds but whose tests do not run is a warning. Then put the solution back.
+5. Starter check, one quest at a time, only for quests whose solution passed: write the starter files in place of the solution, build, and run that quest's tests. A starter that does not compile is fine when a build error points into its own files; a build failure anywhere else, a starter that builds but whose tests do not run, and a skipped check (the solution failed) are "inconclusive" warnings (A212); a starter whose tests all pass is an error. Then put the solution back, more than a second after the last build so UBT sees the rewrite.
 6. Remove the sandbox when everything passed. Otherwise keep it and print its path; build and test logs are in `Saved/VerifierLogs/`.
 
-Measured on the MacBook Air, UE 5.8.3, 5 example quests: see "Measured timings" below. Status on 2026-10-21: three code examples pass every step; the two timer examples fail until the `FDojoTestWorld::Tick` frame counter fix lands (`docs/problems.md`).
+Measured on the MacBook Air, UE 5.8.3, 5 example quests: see "Measured timings" below. Status on 2026-10-21: three code examples pass every step; the two timer examples fail until the `FDojoTestWorld::Tick` frame counter fix lands (`docs/problems.md`). The engine is driven through the verifier's own `runProcess` for now, which works on the Mac only; fix round 2 moves it onto M1.3's `UnrealBuilder` and `AutomationTestRunner` once M1.3 merges (A211).
 
 ## Measured timings
 

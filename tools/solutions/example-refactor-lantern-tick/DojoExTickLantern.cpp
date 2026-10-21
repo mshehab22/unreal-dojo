@@ -3,6 +3,7 @@
 #include "Components/PointLightComponent.h"
 #include "TimerManager.h"
 
+/** Creates the light as the root component. */
 ADojoExTickLantern::ADojoExTickLantern()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -11,6 +12,7 @@ ADojoExTickLantern::ADojoExTickLantern()
 	RootComponent = Light;
 }
 
+/** Starts the looping flicker timer. */
 void ADojoExTickLantern::BeginPlay()
 {
 	Super::BeginPlay();
@@ -18,6 +20,7 @@ void ADojoExTickLantern::BeginPlay()
 	GetWorldTimerManager().SetTimer(FlickerHandle, this, &ADojoExTickLantern::Flicker, FlickerInterval, true);
 }
 
+/** Clears the flicker timer before the actor leaves play. */
 void ADojoExTickLantern::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	GetWorldTimerManager().ClearTimer(FlickerHandle);
@@ -25,6 +28,7 @@ void ADojoExTickLantern::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
+/** Counts a flicker and alternates the light between dim and full. */
 void ADojoExTickLantern::Flicker()
 {
 	FlickerCount++;

@@ -3,6 +3,7 @@
 #include "Components/PointLightComponent.h"
 #include "Components/SphereComponent.h"
 
+/** Creates the overlap sphere as the root and attaches the light to it. */
 ADojoExProximityLantern::ADojoExProximityLantern()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -17,6 +18,7 @@ ADojoExProximityLantern::ADojoExProximityLantern()
 	Light->SetupAttachment(Sphere);
 }
 
+/** Applies the radius, binds the overlap events, and sets the starting light. */
 void ADojoExProximityLantern::BeginPlay()
 {
 	Super::BeginPlay();
@@ -27,11 +29,13 @@ void ADojoExProximityLantern::BeginPlay()
 	ApplyLight();
 }
 
+/** Whether at least one visitor is inside the sphere. */
 bool ADojoExProximityLantern::IsLit() const
 {
 	return VisitorCount > 0;
 }
 
+/** Counts a visitor coming in and updates the light. */
 void ADojoExProximityLantern::HandleBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (OtherActor == this) return;
@@ -40,6 +44,7 @@ void ADojoExProximityLantern::HandleBeginOverlap(UPrimitiveComponent* Overlapped
 	ApplyLight();
 }
 
+/** Counts a visitor leaving and updates the light. */
 void ADojoExProximityLantern::HandleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex)
 {
 	if (OtherActor == this) return;
@@ -48,6 +53,7 @@ void ADojoExProximityLantern::HandleEndOverlap(UPrimitiveComponent* OverlappedCo
 	ApplyLight();
 }
 
+/** Turns the light on or off to match IsLit. */
 void ADojoExProximityLantern::ApplyLight()
 {
 	Light->SetIntensity(IsLit() ? Brightness : 0.f);

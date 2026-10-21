@@ -375,3 +375,19 @@ exit code 0
   - `--engine` has not been run on the Windows desktop the plan names
   - starter checks take about 30 to 40 seconds per quest, which will be slow for a full pack (see A208)
 
+### Fix round 1
+- What the reviewer asked for and what changed:
+  - A starter that fails to build now counts as "does not pass" only when the errors are in its own files; a failure in other quests' code is an inconclusive warning.
+  - The starter check is skipped, with an inconclusive warning, when the solution itself failed.
+  - The report indents the second and later lines of long messages, such as quoted build errors.
+  - The `--pack` option's description now says it only narrows the report.
+  - New unit tests cover a boss with the wrong integration rubric size, a glossary entry listing itself as related, a boss plan missing a piece, a starter that builds but whose tests do not run, the two inconclusive cases, and the indented report lines.
+  - Every class and function in the example starters and the reference solutions now has a one-line comment.
+  - The Lead decided the verifier must run Unreal through M1.3's builder and test runner instead of its own process code (A211); that is round 2, after M1.3 merges.
+- Proof:
+  - typecheck passes.
+  - `npm test`: 14 files, 163 tests passed.
+  - build passes.
+  - The verifier on the repo: 8 examples ok, exit 0.
+  - `--engine` reran with the commented examples: the same three pass, and the two timer examples still fail only on the helper bug, now each with an "inconclusive: the reference solution fails" warning instead of a starter verdict. The run took 1215 s of wall time but only 235 s of CPU, because it waited on Unreal's build mutex while other sessions built.
+
