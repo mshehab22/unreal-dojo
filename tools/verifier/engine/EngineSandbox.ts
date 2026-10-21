@@ -14,6 +14,12 @@ const BUILD_TIMEOUT_MILLISECONDS = 15 * 60_000;
 /** Headless test timeout from the unreal-pipeline spec. */
 const TEST_TIMEOUT_MILLISECONDS = 10 * 60_000;
 
+/**
+ * Gap kept between a build finishing and the next write. UBT rebuilds a file only when it is newer than its output,
+ * and a file written in the same second as the last compile was skipped on 5.8.3 (seen in M1.8).
+ */
+const TIMESTAMP_GAP_MILLISECONDS = 1_100;
+
 /** Plugins only 5.8 and later ship; removed from the copy for older engines (A41). */
 const PLUGINS_FROM_5_8 = new Set(["ModelContextProtocol", "AutomationTestToolset", "LiveCodingToolset"]);
 
@@ -50,6 +56,7 @@ export class EngineSandbox
 	readonly folder: string;
 	private readonly target: EngineTarget;
 	private runNumber = 0;
+	private lastBuildEnded = 0;
 
 	/** Use `EngineSandbox.create`. */
 	private constructor(folder: string, target: EngineTarget)
@@ -83,6 +90,8 @@ export class EngineSandbox
 	/** Replaces a quest's code folder `Source/Dojo/Quests/<quest-id>/` with `files`, written fresh so the build sees new times. */
 	async writeQuestFiles(questId: string, files: readonly SandboxFile[]): Promise<void>
 	{
+		await this.waitPastLastBuild();
+
 		const questFolder = join(this.folder, "Source", "Dojo", "Quests", questId);
 
 		await rm(questFolder, { recursive: true, force: true });
@@ -94,6 +103,8 @@ export class EngineSandbox
 	/** Writes a quest's tests to `Source/Dojo/Tests/<quest-id>.Test.cpp` with a header comment naming the quest. */
 	async writeQuestTests(questId: string, source: string): Promise<void>
 	{
+		await this.waitPastLastBuild();
+
 		await writeFile(join(this.folder, "Source", "Dojo", "Tests", `${questId}.Test.cpp`), `// Quest test: ${questId} (written by the content verifier).\n${source}\n`, "utf8");
 	}
 
@@ -104,6 +115,7 @@ export class EngineSandbox
 		const editorTarget = "DojoEditor";
 		const result = await runProcess(paths.buildScript(root), [editorTarget, paths.buildPlatform, "Development", `-Project=${this.projectFile()}`, "-WaitMutex", "-Progress"], BUILD_TIMEOUT_MILLISECONDS, onLine);
 
+		this.lastBuildEnded = Date.now();
 		await this.saveLog(`build-${++this.runNumber}.log`, result);
 
 		return result;
@@ -141,6 +153,14 @@ export class EngineSandbox
 	async remove(): Promise<void>
 	{
 		await rm(this.folder, { recursive: true, force: true });
+	}
+
+	/** Waits until the clock is past the last build by more than a second, so files written now are newer than every output. */
+	private async waitPastLastBuild(): Promise<void>
+	{
+		const remaining = this.lastBuildEnded + TIMESTAMP_GAP_MILLISECONDS - Date.now();
+
+		if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
 	}
 
 	/** Writes a process's output to `Saved/VerifierLogs/<name>` for anyone inspecting a kept sandbox. */

@@ -346,4 +346,32 @@ exit code 0
 - What changed: a quest now runs exactly the tests it declares, each name anchored, and any other test in the report is ignored. The first engine run with `^Name$` hung every test run for 10 minutes. The engine's macOS start-up code turns every `$` on its command line into a quote, which broke the quoting and swallowed `-NullRHI`. So on the Mac the names are anchored at the start only, and the report filter keeps the verdict exact; Windows keeps both anchors (A180). On Windows the program path is now passed quoted. A kill after the root exits is still skipped there, now documented: the process id may already belong to another program (A183, A188). Quitting cancels every running build and test first and waits up to 5 seconds. The warning is sent as a progress line during setup, and `pickSandboxFolder` now answers with the folder and its warnings, using the folder picker from main (A189).
 - Proof: the real-engine run on UE 5.8.3, after both rebases and under the shared engine lock, passed 7 of 7 in 105 s. In the new-quest case a second quest with a failing test named `Dojo.Probe.Value.SevenOther` sat in the sandbox, and the probe quest's verdict held only its own passing test. Trimmed output: `docs/iterations/m1-3-integration-run.txt`. Unit and IPC tests cover overlapping names, argv0 quoting, `cancelAll` (all runs end, and a stuck run stops the wait at its limit), and the setup warning.
 - Still open: everything Windows (problems.md), including the quoted program path and the two-ended anchors.
+## M1.8 GlossaryService, TermLinker, full verifier, --engine (content-engine, builder-content-engine)
+- What changed: glossary words now become hover links. A shared matcher finds glossary terms in lesson text (the longest one first, code names in their exact case, ordinary words in any case) and skips headings, code blocks, and links. Words that are also everyday English, such as check or cast, link only when written as code. The same list of spellings is ready for the code editor's hover and completion. The content checker now enforces the curriculum rules too:
+  - rubric sizes
+  - every id a quest points at exists
+  - prerequisites form no loops and every quest can be reached from its pack's first quest
+  - each world's build quests fade from worked to blank
+  - later worlds reuse earlier ideas
+  - breakdown plans cover every required piece
+  - choice questions have enough real choices, with a note on every wrong answer
+  - glossary links are pinned to 5.8
+  - every code quest has a reference solution
+
+  Coverage of the whole glossary and of the patterns is shown as a short warning until release. With `--engine` it copies the sandbox project, builds every reference solution with the real Unreal Engine, runs their tests, and then checks each quest's starter code does not already pass.
+- How to see it: run `npx tsx tools/verify-content.ts` (add `--release` to turn the coverage warnings into errors), and `npx tsx tools/verify-content.ts --engine ~/Applications/UE_5.8` to build and test the examples (about three to four minutes).
+- What went wrong and how it was solved: the first engine build failed on every file because the Mac's temp folder is reached through a link and Unreal's build accelerator refused the two spellings of one folder; the sandbox now uses the real path. A starter check put a solution back in the same second the build had just compiled the starter, so the build tool skipped it; the sandbox now waits more than a second after each build before writing. The two examples that use timers failed even with correct code: the sandbox's test world advances timers only on its first frame. Adding one line to that helper made every example test pass in a test copy; the fix was sent to builder-unreal, who owns the file (`docs/problems.md`).
+- Proof:
+  - `npm run typecheck` passes.
+  - `npm test`: 14 files, 158 tests passed. The content tests cover term linking (identifier versus word, code blocks, headings, inline code, code-only terms, links), every content check, and the engine stage with a fake sandbox.
+  - `npm run build` passes.
+  - The verifier on the repo: all 8 examples ok, 3 coverage warnings, exit 0.
+  - `--engine` on the 5 code examples with UE 5.8.3: the worked lantern, the switch, and the proximity lantern pass (solution passes, starter fails). This answers the queued question: the proximity sphere is registered before it is attached and works. The two timer examples fail only because of the helper bug.
+  - Timings: 300 quests with every check in 0.47 to 0.55 seconds; `--engine` on the examples in 195 to 258 seconds. Details are in `docs/systems/content-engine.md`.
+- Decisions made: A200 to A210 (inline code linking, the identifier rule, shared folder for the linker, reachability meaning, fade ladder details, coverage warnings and `--release`, `--pack` narrowing only the report, solutions for the examples, how `--engine` builds and judges, duplicate spellings, solutions checked on every run).
+- Not done or left for later:
+  - the `FDojoTestWorld::Tick` fix (builder-unreal), after which `--engine` on the examples should be fully green
+  - wiring `GlossaryService.aliasTable()` to IPC (app-shell) and the HoverCard and Monaco providers (ui-core and ui-quests)
+  - `--engine` has not been run on the Windows desktop the plan names
+  - starter checks take about 30 to 40 seconds per quest, which will be slow for a full pack (see A208)
 

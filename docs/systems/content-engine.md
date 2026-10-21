@@ -114,11 +114,19 @@ Checks, all with file names in the output. Errors unless marked as warnings:
 5. Starter check, one quest at a time: write the starter files in place of the solution, build, and run that quest's tests. A starter that does not compile is fine; a starter whose tests all pass is an error; a starter that builds but whose tests do not run is a warning. Then put the solution back.
 6. Remove the sandbox when everything passed. Otherwise keep it and print its path; build and test logs are in `Saved/VerifierLogs/`.
 
-Measured on the MacBook Air, UE 5.8.3, 5 example quests: see "Measured timings" below.
+Measured on the MacBook Air, UE 5.8.3, 5 example quests: see "Measured timings" below. Status on 2026-10-21: three code examples pass every step; the two timer examples fail until the `FDojoTestWorld::Tick` frame counter fix lands (`docs/problems.md`).
 
 ## Measured timings
 
-(Filled in by M1.8, below.)
+MacBook Air M5 (10 cores, 24 GB), UE 5.8.3, 2026-10-21 (M1.8):
+
+| Run | Time | Notes |
+| --- | --- | --- |
+| Content checks, repo content (8 examples, 191 glossary entries, 22 pattern cards) | 29 ms checking, about 0.3 s for the command | |
+| Content checks, generated 300-quest pack plus the real glossary and patterns (323 files) | 75 to 101 ms checking, 0.47 to 0.55 s for the command | three runs; the budget is 3 s |
+| `--engine`, 5 code examples | 195 to 258 s in all | first build 25 to 30 s, one headless run of all tests 23 to 35 s, starter checks 143 to 193 s (about 30 to 40 s per quest: an incremental build plus one headless run) |
+
+Starter checks dominate. For a full pack, M2 or later can cut this with one batched starter build, falling back to one quest at a time only when that build fails (see A208).
 
 ## Done criteria
 
