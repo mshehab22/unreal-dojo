@@ -286,6 +286,15 @@ Options: a marker string such as `{{ENGINE}}`; empty; a real version. Chosen: em
 ### A40 2026-10-21 The sample quest ships in the template as the sandbox smoke test (builder-unreal, M1.2a)
 Options: keep the sample out of the shipped template; ship it. Chosen: ship it as `Quests/SampleHealth/USampleHealthComponent` with test `Dojo.Sample.Health.TakesDamage`, so the first-run build has something to compile and the first test run proves the whole chain. Named "Sample" so it cannot clash with a content pack's own health component class (all quests share one module, so two `UHealthComponent` classes would not compile). Content authors should give quest classes names unique within the module. Reverse cost: delete two folders.
 
+### A66 2026-10-21 Quest code follows the game-dev-rules naming, including enum value prefixes
+From the M2.3 review: `EDojoF1TargetState` used Epic-style values (Lowered, Raised, Broken), while the game-dev-rules skill asks enum values to carry the enum's initials. Options: follow Epic's coding standard in quest code; follow Mohammad's game-dev-rules. Chosen: game-dev-rules, since the app teaches the conventions Mohammad wants to write by, and CLAUDE.md applies the skill to this project. Reverse cost: a rename across quests, tests, and solutions.
+
+### A65 2026-10-21 A skipped or reset prerequisite's files are filled with its reference solution
+From the M2.3 review: later quests (the score keeper, the boss) compile against earlier quests' learner files. Test-out skips worked and faded quests, and a reset removes a quest's files, so a later starter could fail to compile through no fault of the learner. Options: forbid cross-quest dependencies; fill missing prerequisite files with the reference solution; refuse to start the later quest. Chosen: fill with the reference solution and tell the learner which files came from the reference. Content declares each quest's cross-quest file dependencies; unreal-pipeline implements it. Reverse cost: low.
+
+### A64 2026-10-21 Pattern chips stay hidden until the quest is passed
+From the M2.3 review: `patterns[]` in front matter feeds the verifier's use-case counts and card unlocks, but showing a "State" chip in a brief names the pattern before it is built, against the author rule. Options: drop `patterns[]` from early quests; hide the chips until pass. Chosen: keep the data, hide the chips until the quest is passed (and in the breakdown until the reference plan is shown). Recorded in `docs/systems/ui-quests.md`. Reverse cost: none.
+
 ### A63 2026-10-21 Only `src/main/services/unreal/` spawns Unreal processes
 Reviews found the verifier's `--engine` and the QA engine smoke each had their own Unreal spawning code, each with its own Windows bugs (no shell for `.bat` throws EINVAL on Node 24; cmd quoting breaks on `C:\Program Files`; timeouts kill only the top process). Options: fix each copy; route every Unreal build and test through M1.3's `UnrealBuilder` and `AutomationTestRunner`. Chosen: one implementation. The verifier and the smoke rebase onto M1.3 once it merges and call those classes. Reverse cost: low.
 

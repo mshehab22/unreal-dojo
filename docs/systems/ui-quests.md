@@ -23,3 +23,5 @@ Boss: breakdown first, then a piece picker (the learner chooses the order), each
 - Every reward moment has one motion; nothing else animates.
 
 Choice order: multiple-choice and which-pattern choices are shuffled each time an item is shown; the stored `answerIndex` refers to the authored order (A61).
+
+Pattern chips: a quest's `patterns[]` are not shown before the quest is passed (or, in a breakdown, before the reference plan is revealed), so a pattern is never named before it is built (A64).
