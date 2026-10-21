@@ -88,15 +88,34 @@ describe("UnlockGraph", () =>
 		expect(rules.passes([], () => "mastered")).toBe(false);
 	});
 
-	it("opens Pack 4 only after the Pack 1 world 5 and Pack 2 world 4 bosses", () =>
+	it("opens Pack 4 only after the bosses of the Communication (Pack 1) and Component (Pack 2) worlds, found by world id (A68, A510)", () =>
 	{
-		const packOneBoss = makeQuest({ id: "p1w5-boss", title: "Foundations Boss", kind: "boss", packId: "foundations", packOrder: 1, worldId: "p1w5", worldOrder: 5 });
-		const packTwoBoss = makeQuest({ id: "p2w4-boss", title: "Patterns Boss", kind: "boss", packId: "patterns", packOrder: 2, worldId: "p2w4", worldOrder: 4 });
+		const packOneBoss = makeQuest({ id: "p1-communication-boss", title: "Foundations Boss", kind: "boss", packId: "foundations", packOrder: 1, worldId: "communication", worldOrder: 5 });
+		// The Component world sits at order 9 here: order no longer matters, only the id.
+		const packTwoBoss = makeQuest({ id: "p2-component-boss", title: "Component Boss", kind: "boss", packId: "patterns", packOrder: 2, worldId: "component", worldOrder: 9 });
+		const decoyBoss = makeQuest({ id: "p2-world4-boss", title: "World Four Boss", kind: "boss", packId: "patterns", packOrder: 2, worldId: "update-method", worldOrder: 4 });
 		const packFourFirst = makeQuest({ id: "p4-first", title: "Inventory", packId: "systems", packOrder: 4, worldId: "p4w1", worldOrder: 1 });
-		const graph = new UnlockGraph([packOneBoss, packTwoBoss, packFourFirst]);
+		const graph = new UnlockGraph([packOneBoss, packTwoBoss, decoyBoss, packFourFirst]);
 
-		expect(graph.availability(state(["p1w5-boss"]))["p4-first"]).toMatchObject({ status: "locked", lockedReason: "Beat Patterns Boss first." });
-		expect(graph.availability(state(["p1w5-boss", "p2w4-boss"]))["p4-first"]?.status).toBe("available");
+		expect(graph.availability(state(["p1-communication-boss", "p2-world4-boss"]))["p4-first"]).toMatchObject({ status: "locked", lockedReason: "Beat Component Boss first." });
+		expect(graph.availability(state(["p1-communication-boss", "p2-component-boss"]))["p4-first"]?.status).toBe("available");
+	});
+
+	it("keeps Pack 4 locked while a gate world does not exist yet, even with every existing boss passed", () =>
+	{
+		const packOneBoss = makeQuest({ id: "p1-communication-boss", title: "Foundations Boss", kind: "boss", packId: "foundations", packOrder: 1, worldId: "communication", worldOrder: 5 });
+		const packFourFirst = makeQuest({ id: "p4-first", title: "Inventory", packId: "systems", packOrder: 4, worldId: "p4w1", worldOrder: 1 });
+		const graph = new UnlockGraph([packOneBoss, packFourFirst]);
+
+		expect(graph.availability(state(["p1-communication-boss"]))["p4-first"]).toMatchObject({ status: "locked", lockedReason: "Beat the component world's boss (not released yet) first." });
+		expect(new UnlockGraph([packFourFirst]).availability(state())["p4-first"]).toMatchObject({ status: "locked", lockedReason: "Beat the communication world's boss (not released yet) and the component world's boss (not released yet) first." });
+	});
+
+	it("gates nothing in packs other than Pack 4", () =>
+	{
+		const packOneFirst = makeQuest({ id: "p1-first", packId: "foundations", packOrder: 1, worldId: "objects-and-reflection" });
+
+		expect(new UnlockGraph([packOneFirst]).availability(state())["p1-first"]?.status).toBe("available");
 	});
 
 	it("reports quests that a pass newly unlocked", () =>
