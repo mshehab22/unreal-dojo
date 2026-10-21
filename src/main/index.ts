@@ -1,17 +1,33 @@
 // App lifecycle and composition root: builds services, registers IPC, and opens the window.
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { randomUUID } from "node:crypto";
+import { renameSync } from "node:fs";
+import { access } from "node:fs/promises";
+import { join } from "node:path";
+
+import { app, BrowserWindow, dialog, ipcMain, safeStorage } from "electron";
 
 import { createContentCatalog } from "./content/createContentCatalog";
 import { resolveContentRoot } from "./content/resolveContentRoot";
 import { createHandlers } from "./ipc/createHandlers";
 import { registerHandlers } from "./ipc/registerHandlers";
+import { sendBuildProgress } from "./ipc/sendBuildProgress";
 import { createEngineLocator } from "./services/unreal/createEngineLocator";
+import { createUnrealServices, type UnrealServices } from "./services/unreal/createUnrealServices";
 import type { EngineLocator } from "./services/unreal/EngineLocator";
 import { MathRandomSource } from "./services/progress/MathRandomSource";
 import { NodeFileSystem } from "./services/progress/NodeFileSystem";
+import { ProgressContentService } from "./services/progress/ProgressContentService";
+import { createTestsOnlyGraders } from "./services/progress/ProgressGraders";
 import { ProgressService } from "./services/progress/ProgressService";
 import { ProgressStore } from "./services/progress/ProgressStore";
 import { SystemClock } from "./services/progress/SystemClock";
+import { createReviewService, type ReviewService } from "./services/review/ReviewService";
+import { SafeStorageReviewSettings } from "./services/review/settings/SafeStorageReviewSettings";
+import { ElectronSettingsStore } from "./services/settings/ElectronSettingsStore";
+import { EnvironmentStatusReader } from "./services/settings/EnvironmentStatusReader";
+import { openSettingsStore } from "./services/settings/openSettingsStore";
+import { SettingsService } from "./services/settings/SettingsService";
+import { RunRegistry } from "./services/unreal/RunRegistry";
 import { createMainWindow } from "./window/createMainWindow";
 
 /** Opens the native folder picker over the focused window. Resolves null when the learner cancels. */
@@ -24,6 +40,20 @@ async function pickFolder(title: string): Promise<string | null>
 	return result.canceled ? null : (result.filePaths[0] ?? null);
 }
 
+/** Tells whether a file or folder exists. */
+async function pathExists(path: string): Promise<boolean>
+{
+	try
+	{
+		await access(path);
+		return true;
+	}
+	catch
+	{
+		return false;
+	}
+}
+
 /** Starts the app once Electron is ready and reopens the window when the macOS dock icon is clicked. */
 async function start(): Promise<void>
 {
@@ -31,6 +61,19 @@ async function start(): Promise<void>
 
 	let engineLocator: EngineLocator | null = null;
 	const getEngineLocator = (): EngineLocator => (engineLocator ??= createEngineLocator());
+
+	// A corrupt config.json is set aside instead of stopping the app (A429).
+	const settingsStore = openSettingsStore({
+		open: () => new ElectronSettingsStore(),
+		configPath: join(app.getPath("userData"), "config.json"),
+		renameFile: renameSync,
+		now: () => new Date(),
+		warn: (message) => console.warn(message),
+	});
+	const settingsService = new SettingsService(settingsStore, safeStorage, {
+		inspectEngine: (folder) => getEngineLocator().inspectFolder(folder),
+		isSandboxProject: (folder) => pathExists(join(folder, "Dojo.uproject")),
+	});
 	const progressStore = new ProgressStore(new NodeFileSystem(), app.getPath("userData"));
 	const progressService = await ProgressService.openOrRefuse(progressStore, new SystemClock(), new MathRandomSource());
 	const refusal = progressService.getRefusal();
@@ -41,13 +84,77 @@ async function start(): Promise<void>
 	// A refused save still lets the app open; every progress call answers the save-failed error so the renderer can show it.
 	if (refusal) console.error(`Progress refused: ${refusal.message} ${refusal.detail ?? ""}`);
 
-	registerHandlers(ipcMain, createHandlers({ getAppVersion: () => app.getVersion(), getEngineLocator, getContentCatalog: () => contentCatalog, pickFolder, progressService }));
+	const runRegistry = new RunRegistry();
+	stopRunsBeforeQuit(runRegistry);
+
+	let unrealServices: UnrealServices | null = null;
+	const getUnrealServices = (): UnrealServices =>
+		(unrealServices ??= createUnrealServices({ templateFolder: sandboxTemplateFolder(), engineInspector: getEngineLocator(), pathStore: settingsService }));
+
+	// Built on first use; read here only for the provider statuses. The review handlers are wired by ai-review.
+	let reviewService: ReviewService | null = null;
+	const getReviewService = (): ReviewService =>
+		(reviewService ??= createReviewService(new SafeStorageReviewSettings({ currentSettings: () => settingsService.current(), loadEncryptedApiKey: () => settingsService.loadEncryptedApiKey(), decryptor: safeStorage })));
+
+	const environmentStatusReader = new EnvironmentStatusReader({
+		currentSettings: () => settingsService.current(),
+		inspectEngine: (folder) => getEngineLocator().inspectFolder(folder),
+		pathExists,
+		reviewStatuses: () => getReviewService().getProviderStatuses(),
+		editorConnected: async () => false,
+	});
+
+	// Tests-only graders stand in until the review service is wired with the settings service (A318).
+	const progressContentService = new ProgressContentService(contentCatalog, progressService, createTestsOnlyGraders(), new MathRandomSource(), () => randomUUID());
+
+	registerHandlers(
+		ipcMain,
+		createHandlers({
+			getAppVersion: () => app.getVersion(),
+			getEngineLocator,
+			getContentCatalog: () => contentCatalog,
+			pickFolder,
+			progressService,
+			progressContentService,
+			getSandboxService: () => getUnrealServices().sandboxService,
+			runRegistry,
+			sendProgress: sendBuildProgress,
+			settingsService,
+			readEnvironmentStatus: () => environmentStatusReader.read(),
+		}),
+	);
 	createMainWindow();
 
 	app.on("activate", () =>
 	{
 		if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
 	});
+}
+
+/** How long quitting waits for cancelled builds and test runs to end. Killing a process tree takes well under a second. */
+const QUIT_WAIT_MS = 5000;
+
+/** Cancels every running build and test before the app quits, so no UBT or editor is orphaned holding UBT's mutex. */
+function stopRunsBeforeQuit(runRegistry: RunRegistry): void
+{
+	let stopping = false;
+
+	app.on("before-quit", (event) =>
+	{
+		if (stopping || !runRegistry.hasRuns()) return;
+
+		stopping = true;
+		event.preventDefault();
+		void runRegistry.cancelAll(QUIT_WAIT_MS).finally(() => app.quit());
+	});
+}
+
+/** The shipped sandbox template: next to the asar when packaged (extraResources), in the source tree in development. */
+function sandboxTemplateFolder(): string
+{
+	const resourcesRoot = app.isPackaged ? process.resourcesPath : app.getAppPath();
+
+	return join(resourcesRoot, "resources", "sandbox-template");
 }
 
 app.on("window-all-closed", () =>

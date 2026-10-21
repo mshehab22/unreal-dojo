@@ -18,6 +18,9 @@ export class WindowsPlatformPaths implements PlatformPaths
 {
 	readonly buildPlatform: UnrealBuildPlatform = "Win64";
 	readonly caseInsensitivePaths = true;
+	readonly verbatimArguments = true;
+	readonly testNameEndAnchor = "$";
+	readonly maximumSandboxPathLength = 100;
 
 	private readonly programFiles: string;
 	private readonly programData: string;
@@ -105,5 +108,23 @@ export class WindowsPlatformPaths implements PlatformPaths
 	launcherInstalledDataFile(): string
 	{
 		return win32.join(this.programData, "Epic", "UnrealEngineLauncher", "LauncherInstalled.dat");
+	}
+
+	/** `UnrealBuildTool.exe`, called directly: `Build.bat` would need `cmd.exe`, and Node refuses to spawn a `.bat` without a shell. */
+	buildProgram(engineRoot: string): string
+	{
+		return this.unrealBuildTool(engineRoot);
+	}
+
+	/** `-Name="value"`, the form Unreal's Windows command line parser reads a value with spaces from. */
+	optionArgument(name: string, value: string): string
+	{
+		return `-${name}="${value}"`;
+	}
+
+	/** The path in double quotes. */
+	pathArgument(somePath: string): string
+	{
+		return `"${somePath}"`;
 	}
 }

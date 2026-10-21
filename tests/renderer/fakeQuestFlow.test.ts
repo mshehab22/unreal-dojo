@@ -11,6 +11,7 @@ import { ContentLoader } from "../../src/main/services/content";
 import { FakeDojoApi } from "../../src/renderer/src/data/fake/FakeDojoApi";
 import { judgeBuild, testNamesIn } from "../../src/renderer/src/data/fake/FakeBuildJudge";
 import { gradeParsons, gradeQuestion } from "../../src/renderer/src/data/fake/FakeItemGrader";
+import { matchRequiredPieces } from "../../src/renderer/src/data/fake/FakeReviews";
 import { mergeRetriedReview } from "../../src/renderer/src/screens/quests/loot/mergeRetriedReview";
 import { buildFakeWorldFixture } from "../../tools/fake/buildFakeWorldFixture";
 
@@ -171,9 +172,41 @@ describe("Retry review on the loot screen (A356)", () =>
 		expect(retried.outcome.xp.total).toBe(0);
 		expect(merged.outcome.xp.total).toBe(first.outcome.xp.total);
 		expect(merged.outcome.attempt.attemptId).toBe(retried.outcome.attempt.attemptId);
+		expect(merged.outcome.attempt.score).toBe(first.outcome.attempt.score);
+		expect(merged.outcome.attempt.passed).toBe(true);
 		expect(merged.detail.kind === "build" && merged.detail.review?.provider).toBe("claude-code");
 
 		const failedFirst = { ...previous, outcome: { ...first.outcome, attempt: { ...first.outcome.attempt, passed: false } } };
 		expect(mergeRetriedReview(failedFirst, retried, files).outcome).toBe(retried.outcome);
 	}, 20_000);
+});
+
+describe("the quests scenario and the fake breakdown grader", () =>
+{
+	it("starts World 1 unplayed: nothing passed, no attempts, rematches, or World 1 card use cases (A351)", async () =>
+	{
+		const fake = new FakeDojoApi("quests");
+		const progress = await fake.getProgress();
+		const availability = await fake.getQuestAvailability();
+		const worldOneIds = Object.keys(availability).filter((questId) => questId.startsWith("f1-"));
+
+		expect(worldOneIds).toHaveLength(12);
+		expect(worldOneIds.filter((questId) => availability[questId]?.status === "passed")).toEqual([]);
+		expect(availability["f1-boss-training-yard"]?.status).toBe("locked");
+		expect(progress.attempts.some((attempt) => attempt.questId.startsWith("f1-"))).toBe(false);
+		expect(Object.keys(progress.rematches).some((questId) => questId.startsWith("f1-"))).toBe(false);
+		expect(Object.values(progress.patternCards).flatMap((card) => card.useCasesPassed).some((questId) => questId.startsWith("f1-"))).toBe(false);
+	});
+
+	it("credits each learner piece to at most one required piece", async () =>
+	{
+		const quest = await new FakeDojoApi("quests").getQuest("f1-dash-with-cooldown");
+
+		if (quest.kind !== "breakdown") throw new Error("breakdown expected");
+
+		const oneBigPiece = { pieces: [{ id: "p", kind: "component" as const, label: "Dash component", purpose: "Dash input, cooldown ready events, wall stop, movement lock, HUD wedge, editable distance values" }], edges: [] };
+		const matches = matchRequiredPieces(quest.requiredPieces, oneBigPiece);
+
+		expect(matches.filter((match) => match !== undefined)).toHaveLength(1);
+	});
 });

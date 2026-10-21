@@ -10,21 +10,10 @@ export class TestOutRules
 	/** Compares mastery levels. */
 	private readonly mastery = new MasteryRules();
 
-	/** Worlds whose terms (the union of their quests' terms) are all at least proficient. A world with no terms never tests out. */
-	testedOutWorlds(quests: RuleQuest[], masteryOf: (itemId: string) => MasteryLevel | null | undefined): string[]
+	/** True when there is at least one term and every one is at least proficient. */
+	passes(termIds: string[], masteryOf: (itemId: string) => MasteryLevel | null | undefined): boolean
 	{
-		const termsByWorld = new Map<string, Set<string>>();
-
-		for (const quest of quests)
-		{
-			const terms = termsByWorld.get(quest.worldId) ?? new Set<string>();
-			quest.terms.forEach((term) => terms.add(term));
-			termsByWorld.set(quest.worldId, terms);
-		}
-
-		return [...termsByWorld.entries()]
-			.filter(([, terms]) => terms.size > 0 && [...terms].every((term) => this.mastery.isAtLeast(masteryOf(term), "proficient")))
-			.map(([worldId]) => worldId);
+		return termIds.length > 0 && termIds.every((term) => this.mastery.isAtLeast(masteryOf(term), "proficient"));
 	}
 
 	/** True for the quests a test-out lets the learner skip: worked and faded build quests. Bosses and everything else never skip. */

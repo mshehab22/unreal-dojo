@@ -333,6 +333,182 @@ exit code 0
 - Proof (rebased onto main, UE 5.8.3 on the Mac, under the shared engine lock): verifier on the foundations pack, no problems. Reference solutions: build `Result: Succeeded`, headless run 8 succeeded, 0 failed. Starters, each alone: the training dummy builds and fails both its tests; the pop-up target and bell fail to compile; the score keeper builds and fails its test. Typecheck and unit tests pass. Nothing visible in the app changed, so no screenshots; logs were in this session's scratch folder and are not kept.
 - Decisions made: A267 to A269.
 
+## M1.2 and M1.3 Sandbox setup and the headless loop (unreal-pipeline, builder-unreal)
+- What changed: the app can now create the learner's sandbox Unreal project and run a quest in it from start to finish without the editor open. Creating the sandbox copies the shipped template into a new `DojoSandbox` folder, tells the project which engine it belongs to, drops the three 5.8-only plugins for older engines, remembers where the sandbox is, and runs the first full build while reporting progress. Running a quest writes the learner's files into the sandbox, builds, starts a headless editor that runs only that quest's tests, reads the engine's test report, and returns a verdict: did it compile, which tests passed, and the failed assertion's text. A run can be cancelled at any point, and the build or editor is killed with every helper it started. Every piece is behind an interface, so the Windows paths and commands are unit tested on the Mac.
+- What was tried and what was solved: the first real run failed its very first build with missing precompiled header and object files. The sandbox was in the Mac temp folder, which is reached through a link (`/var` to `/private/var`), and the build tool lost track of its files across that link; the sandbox path is now always stored with links resolved (A190), and the next three runs built cleanly. A cancel that arrived while a process was still starting was missed; the supervisor now checks for it right after start. Content tests include quest headers by bare name and later quests include earlier quests' headers, so every quest folder is now an include path, and the template's sample quest moved to the same layout the writer uses (A181); a brand new quest folder was proven to build. Windows needs different handling for the build script and for quoting, decided but not yet run there (A182, A183). Content-engine found that the test world's `Tick` only fired timers on the first frame; that one-line fix is in this branch too.
+- How to see it: `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/integration` creates a sandbox in a temp folder and runs the sample quest passing, with a failed assertion, with a compile error, a new quest, and cancelled mid-build and mid-test. In the app, `createSandbox` and `cancelRun` now answer; there is no screen for it yet (M2.1), so there is no screenshot.
+- Proof: the real-engine run on this Mac (UE 5.8.3), 7 of 7 passed, trimmed output in `docs/iterations/m1-3-integration-run.txt`. Timings are in `docs/systems/unreal-pipeline.md`. Typecheck passes; unit tests, build, and end-to-end results are in the report to the Lead.
+- Decisions made: A180 to A190 in `docs/decisions.md`.
+- Not done or left for later: `runQuest`, `rebuildSandbox`, and `pickSandboxFolder` are not wired to IPC yet, because they need the settings service, the content lookup, and the folder dialog (A189). The services behind them are ready. Opening the editor after setup arrives with `EditorLauncher` in M1.4. Nothing has run on Windows (problems.md). Also new in problems.md: a compile error left in one quest breaks every quest's build, because all quests share one module.
+
+### Fix round 1
+- What the reviewer asked for: (1) a quest's test filter matched any test whose name merely contained it, so a correct quest failed because another quest's test ran; (2) on Windows the program path would split at the spaces in `C:\Program Files\...`, and nothing was killed once the root process had exited; (3) quitting the app left a build or editor running, which would block the next build on UBT's lock; (4) the long-path warning never reached the learner during setup. Also: rebase onto main twice (content catalog, folder picker, progress service).
+- What changed: a quest now runs exactly the tests it declares, each name anchored, and any other test in the report is ignored. The first engine run with `^Name$` hung every test run for 10 minutes. The engine's macOS start-up code turns every `$` on its command line into a quote, which broke the quoting and swallowed `-NullRHI`. So on the Mac the names are anchored at the start only, and the report filter keeps the verdict exact; Windows keeps both anchors (A180). On Windows the program path is now passed quoted. A kill after the root exits is still skipped there, now documented: the process id may already belong to another program (A183, A188). Quitting cancels every running build and test first and waits up to 5 seconds. The warning is sent as a progress line during setup, and `pickSandboxFolder` now answers with the folder and its warnings, using the folder picker from main (A189).
+- Proof: the real-engine run on UE 5.8.3, after both rebases and under the shared engine lock, passed 7 of 7 in 105 s. In the new-quest case a second quest with a failing test named `Dojo.Probe.Value.SevenOther` sat in the sandbox, and the probe quest's verdict held only its own passing test. Trimmed output: `docs/iterations/m1-3-integration-run.txt`. Unit and IPC tests cover overlapping names, argv0 quoting, `cancelAll` (all runs end, and a stuck run stops the wait at its limit), and the setup warning.
+- Still open: everything Windows (problems.md), including the quoted program path and the two-ended anchors.
+## M1.8 GlossaryService, TermLinker, full verifier, --engine (content-engine, builder-content-engine)
+- What changed: glossary words now become hover links. A shared matcher finds glossary terms in lesson text (the longest one first, code names in their exact case, ordinary words in any case) and skips headings, code blocks, and links. Words that are also everyday English, such as check or cast, link only when written as code. The same list of spellings is ready for the code editor's hover and completion. The content checker now enforces the curriculum rules too:
+  - rubric sizes
+  - every id a quest points at exists
+  - prerequisites form no loops and every quest can be reached from its pack's first quest
+  - each world's build quests fade from worked to blank
+  - later worlds reuse earlier ideas
+  - breakdown plans cover every required piece
+  - choice questions have enough real choices, with a note on every wrong answer
+  - glossary links are pinned to 5.8
+  - every code quest has a reference solution
+
+  Coverage of the whole glossary and of the patterns is shown as a short warning until release. With `--engine` it copies the sandbox project, builds every reference solution with the real Unreal Engine, runs their tests, and then checks each quest's starter code does not already pass.
+- How to see it: run `npx tsx tools/verify-content.ts` (add `--release` to turn the coverage warnings into errors), and `npx tsx tools/verify-content.ts --engine ~/Applications/UE_5.8` to build and test the examples (about three to four minutes).
+- What went wrong and how it was solved: the first engine build failed on every file because the Mac's temp folder is reached through a link and Unreal's build accelerator refused the two spellings of one folder; the sandbox now uses the real path. A starter check put a solution back in the same second the build had just compiled the starter, so the build tool skipped it; the sandbox now waits more than a second after each build before writing. The two examples that use timers failed even with correct code: the sandbox's test world advances timers only on its first frame. Adding one line to that helper made every example test pass in a test copy; the fix was sent to builder-unreal, who owns the file (`docs/problems.md`).
+- Proof:
+  - `npm run typecheck` passes.
+  - `npm test`: 14 files, 158 tests passed. The content tests cover term linking (identifier versus word, code blocks, headings, inline code, code-only terms, links), every content check, and the engine stage with a fake sandbox.
+  - `npm run build` passes.
+  - The verifier on the repo: all 8 examples ok, 3 coverage warnings, exit 0.
+  - `--engine` on the 5 code examples with UE 5.8.3: the worked lantern, the switch, and the proximity lantern pass (solution passes, starter fails). This answers the queued question: the proximity sphere is registered before it is attached and works. The two timer examples fail only because of the helper bug.
+  - Timings: 300 quests with every check in 0.47 to 0.55 seconds; `--engine` on the examples in 195 to 258 seconds. Details are in `docs/systems/content-engine.md`.
+- Decisions made: A200 to A210 (inline code linking, the identifier rule, shared folder for the linker, reachability meaning, fade ladder details, coverage warnings and `--release`, `--pack` narrowing only the report, solutions for the examples, how `--engine` builds and judges, duplicate spellings, solutions checked on every run).
+- Not done or left for later:
+  - the `FDojoTestWorld::Tick` fix (builder-unreal), after which `--engine` on the examples should be fully green
+  - wiring `GlossaryService.aliasTable()` to IPC (app-shell) and the HoverCard and Monaco providers (ui-core and ui-quests)
+  - `--engine` has not been run on the Windows desktop the plan names
+  - starter checks take about 30 to 40 seconds per quest, which will be slow for a full pack (see A208)
+
+### Fix round 1
+- What the reviewer asked for and what changed:
+  - A starter that fails to build now counts as "does not pass" only when the errors are in its own files; a failure in other quests' code is an inconclusive warning.
+  - The starter check is skipped, with an inconclusive warning, when the solution itself failed.
+  - The report indents the second and later lines of long messages, such as quoted build errors.
+  - The `--pack` option's description now says it only narrows the report.
+  - New unit tests cover a boss with the wrong integration rubric size, a glossary entry listing itself as related, a boss plan missing a piece, a starter that builds but whose tests do not run, the two inconclusive cases, and the indented report lines.
+  - Every class and function in the example starters and the reference solutions now has a one-line comment.
+  - The Lead decided the verifier must run Unreal through M1.3's builder and test runner instead of its own process code (A211); that is round 2, after M1.3 merges.
+- Proof:
+  - typecheck passes.
+  - `npm test`: 14 files, 163 tests passed.
+  - build passes.
+  - The verifier on the repo: 8 examples ok, exit 0.
+  - `--engine` reran with the commented examples: the same three pass, and the two timer examples still fail only on the helper bug, now each with an "inconclusive: the reference solution fails" warning instead of a starter verdict. The run took 1215 s of wall time but only 235 s of CPU, because it waited on Unreal's build mutex while other sessions built.
+
+### Fix round 2, part 1 (new checks; the move onto M1.3's runners waits for M1.3)
+- What the Lead asked for: three new checks. A quest that compiles against another quest's files must say so on its "Compiles against earlier quests:" brief line, and those quests must be prerequisites. A concept quest needs at least one question that can be marked without AI. Each breakdown piece label must keep at least 4 meaningful characters once words like "component" or "event" are removed.
+- What changed:
+  - All three checks are in, with tests.
+  - The branch is rebased onto main, so the verifier now also checks Pack 1 World 1. It passes every rule: 12 quests, 24 files checked, only the coverage warnings.
+  - The check found that my own switch example included the lantern quest's header without declaring it; the example now declares it and lists the lantern as a prerequisite.
+  - On rebasing, the app's content screen had its own copy of the glossary spelling list with a slightly different rule. The verifier, the linker, and the glossary service now all use that one list (A213).
+- Proof:
+  - typecheck passes.
+  - `npm test`: 42 files, 496 tests passed.
+  - build passes.
+  - The verifier on main's content: 24 files, no problems, 3 coverage warnings.
+
+### Fix round 2, part 2 (M1.3's runners, bosses)
+- What the Lead asked for: run Unreal only through the app's own builder and test runner from M1.3 (A211). Build and test every boss's reference integration, and warn when a boss has none (A67).
+- What changed:
+  - The verifier's own process code is deleted. It writes quest files with the app's file writer, builds with the app's builder, and runs tests with the app's test runner, so the verifier and the Build screen now drive Unreal in exactly the same way.
+  - A boss's folder in `tools/solutions/` holds its integration code, its test files, and, as author-foundations proposed, extended versions of piece quests' files that replace them while the boss is built.
+  - Before checking the piece quests' starters, the verifier takes the boss out again, so a piece starter is judged on its own.
+  - A boss with no folder is a warning until the Pack 1 World 1 boss's integration lands (A215).
+- Proof:
+  - `--engine ~/Applications/UE_5.8`, run when nothing else was using the engine: all 9 reference solutions (5 examples, 4 Pack 1 World 1 build quests) build and pass their tests, and all 9 starters fail. Total 472 s.
+  - The two timer examples now pass with M1.3's test world fix.
+  - typecheck passes and the content tests pass. The new tests cover bosses with no starter check, a boss folder with no tests, piece overrides being written and then removed, and the override folder rules.
+- Not done or left for later:
+  - neither boss has an integration yet (the World 1 one is being written by author-foundations; the example lighthouse has none)
+  - `--engine` has not been run on Windows
+
+## M2.1c World Map overflow with the real World 1 (ui-core, builder-ui-core)
+- What changed: with the real first world (12 quests) on the map, its path was wider than the screen at 1100x700 and the World Map scrolled sideways; the stand-in's shorter worlds never showed it. A world's path now wraps into even rows that fit the card: at 1100 wide the 12 stages sit in two rows of six, at 1440 they fit in one. Each row keeps its own connecting line and the boss stays last (A390). The stand-in's first world is now shaped like the real one, with its 12 stages and real titles, so the screen tests would catch this again.
+- How it was checked: the failure was reproduced in a throwaway copy of main with the progress wiring task (M1.6b) merged in: the M0.3 frame test failed with "world-map at 1100x700". With this fix copied in, that test and the smoke test passed; with it removed again, the test failed again. The throwaway copy was deleted; nothing from M1.6b is in this branch.
+- Checks: `npm run typecheck` passes; `npm test` 462 passed (new: rows per width and balanced splitting); `npx tsx tools/verify-content.ts` no problems; `npm run build` passes; `npm run test:e2e` 14 passed (the screen test now also checks the 12-stage world wraps at 1100 and never scrolls sideways). The `m2-1-*.jpg` proofs were saved again because the stand-in's first world changed.
+
+![[m2-1-world-map-1100x700.jpg|800]]
+*The 12-stage first world at the minimum size: two rows of six, no sideways scroll.*
+
+- Decisions made: A390 in `docs/decisions.md`.
+
+## M1.6b Progress wiring (progress-and-rules, builder-rules)
+- What changed: the World Map, hints, concept quests, breakdowns, the daily quest, and drills now answer for real instead of saying "not built yet". The app reads the lessons it loaded at startup to know each quest's place, price, and prerequisites, and to find every question that can quiz each term, pattern, and code-reordering exercise. Answers are marked in the main process, terms enter the review schedule when a concept quest is finished, a breakdown keeps the first plan and shows the closest reference plan before grading the revision, and drills come in three kinds: today's review, a world's test-out, and the reorder exercise offered after two failed submits.
+- What was found and solved: taken literally, the unlock rule would have locked every concept quest forever, because it asks for a quest's terms to be familiar before the quest that teaches them; now only terms some concept quest teaches can lock a quest, and never the quest that teaches them (A312). A world's test-out now happens only in that world's test-out drill, not after any drill (A313).
+- How to see it: no new screen yet (the quest screens are M2.2). Run `npm test`; `tests/progress/progressContentHandlers.test.ts` walks through every method on a small set of lessons, from a locked World Map to a passed test-out.
+- Proof: typecheck passes. Unit tests: 37 files, 454 passed; the progress tests are 198 of them (21 new for the mapper, the item bank, and the ten methods, including a full due drill, a test-out, and the reorder fallback). Build passes. End-to-end: 4 of 4 passed. Content verifier: no problems.
+- Decisions made: A310 to A319 in `docs/decisions.md`.
+- Not done or left for later: AI grading of explain items and breakdowns uses the self-check fallback until the review service is connected (it needs the settings service); the swap is one line (A318). The daily quest offers no short build until content can say a build adds no new class (A311, a content-engine follow-up). Drill sessions are not saved across a restart (answers are).
+
+### Fix round 1
+- What the reviewer asked for: (1) a drill with nothing due was filled with practice items and still paid 10 XP, so it could be repeated for XP; (2) the daily limit of 20 reviews applied per drill, so a large backlog could be cleared in one day; (3) a world whose quests named a term no concept quest teaches could never be tested out; (4) the test-out asked about patterns the learner had not built yet; (5) one concept question could appear twice in a drill when it quizzed two due terms; (6) mark the progress and drill rows done in the app-shell IPC table.
+- What changed: the branch was first rebased onto main (keeping both sides of the decisions and iterations). Practice drills still run, but XP, the streak, and the daily drill offer count only when the drill held at least one item that was actually due (A320). The daily limit now counts every item reviewed since midnight, across all drills (A321). A world's test-out uses only the terms some concept quest teaches, and only the patterns whose card is already unlocked (A322). A question already in a drill is not shown again for another term (A323). The IPC table rows are marked done.
+- Proof: typecheck passes. Unit tests: 40 files, 489 passed (482 after the rebase plus 7 new: practice drills pay nothing four times in a row and a real due drill the next day pays 10; a backlog of 25 spreads over two drills and leaves 5 for tomorrow; the cap counts distinct reviews since midnight; one question never repeats; a world with an untaught term tests out; patterns join a test-out only once their card is unlocked). The practice-drill test and the repeat-question test fail when their fixes are switched off. Build passes. End-to-end: 14 of 14 passed (with M2.1's screens now on main). Content verifier: no problems.
+- Not done or left for later: nothing new; the M1.6b list still stands.
+
+### Fix round 2
+- What the reviewer asked for: the daily limit still leaked. When a drill had room left, it filled up with other items the learner had met, and those could include items due today beyond the limit of 20, so they were reviewed early and moved past today.
+- What changed: the filler now skips every item due by the end of today. Items within the limit come in as due items; the rest wait for tomorrow.
+- Proof: typecheck passes. Unit tests: 40 files, 490 passed, including a new one: 30 items due, twelve drills in a row, and only the first 20 had their schedule moved today, with 10 still waiting for tomorrow. It fails on the round 1 code. Build passes. End-to-end: 14 of 14 passed.
+- Not done or left for later: nothing new; the M1.6b list still stands.
+
+## M0.2c Settings service (app-shell, builder-shell)
+- What changed: the Settings and first-run screens now talk to real settings. The app remembers the engine folder, the sandbox folder, the loop mode, the review choice, the model, the theme, and a new editor port setting in one small settings file, and reads it once at startup. The API key is locked with the computer's own keychain before it is saved; the window is only ever told whether a key is stored, never the key. Finishing first-run setup is remembered, so the next launch skips it. The Title screen's status chips now come from real checks: the engine in settings, whether the sandbox has been built, which reviewer would be used right now, and the loop mode.
+- What can go wrong and how it is handled: if the keychain is locked or unavailable, saving a key answers a plain message with what to do, and nothing is stored. A setting that was hand-edited into something invalid resets to its default on its own, without touching the others. If one status check fails (the engine folder was moved, say), only that chip shows as missing.
+- What was tried and what was solved: the full end-to-end run failed once on the window-size check (853 high instead of 858). The same check also fails on main from time to time (2 of 8 runs in a side-by-side try): the screen's usable height moves by a few points while the app starts, most likely the Dock resizing as Electron windows open and close. It is not caused by this change; reported to the Lead, no test edited.
+- How to see it: `npm run dev`, open Settings, change the loop mode or the reviewer, quit and relaunch, and the choice is still there. Paste any text as an API key and the screen shows it as stored; the settings file holds only scrambled bytes.
+- Proof: typecheck passes; unit tests: 48 files, 539 passed (7 skipped, as on main), including a settings round trip, the key stored and cleared through a fake keychain, and a locked keychain giving the clear error; content verifier: no problems; build passes; end-to-end: 14 passed. Nothing new on screen beyond real values, so there is no new screenshot.
+- Decisions made: A420 to A426 in `docs/decisions.md`.
+- Not done or left for later: `editorConnected` stays false until the fast loop (M1.4). The review handlers (provider list, Claude Code test, review steps) are ai-review's to wire against the review service the composition root now builds. The old sandbox path store in the unreal folder is unused and can be deleted by its owner. The Settings screen has no field for the editor port yet.
+- Proof paths: `tests/settings/settingsService.test.ts` (settings, key, first run, environment status), `tests/ipcHandlers.test.ts` (the settings channels through the real handler table).
+
+### Fix round 1
+- What the reviewer asked for: (1) the settings took any folder the window sent: a made-up sandbox folder and `/tmp` as the engine were both kept, and setup could be marked finished with them; (2) a damaged settings file stopped the app from starting at all; (3) the entry needed the paths of its test files.
+- What changed: the window can no longer set the sandbox folder (only clear it); the sandbox setup sets it after creating the folder. An engine folder is checked with the engine finder before it is kept, and a folder that is not an engine gets the finder's own plain message. Finishing setup checks both again: the engine must still be an engine and the sandbox folder must hold the Dojo project. A damaged settings file is renamed to `config.invalid-<time>.json` next to it, a fresh one starts from the defaults, and one line goes to the log (A427 to A429).
+- What was tried and what was solved: checked in the built app with a deliberately broken settings file in a throwaway user data folder: the app opened, the broken file sat beside a fresh one, `/tmp` as the engine was refused with "That folder does not look like an Unreal Engine install.", a sandbox path was refused at the door, the real engine at `~/Applications/UE_5.8` was kept, and finishing setup was refused because no sandbox exists yet. One end-to-end run failed on a hover tooltip in the World Map test, which runs only against the window's fake data; it passed 3 of 3 alone and the whole suite passed on the rerun.
+- Proof: typecheck passes; unit tests: 52 files, 619 passed (7 skipped, as on main), with the new refusals and the damaged-file recovery in `tests/settings/settingsService.test.ts` and the refusals through IPC in `tests/ipcHandlers.test.ts`; content verifier: no problems; build passes; end-to-end: 14 passed.
+
+
+## M3.1 Pack 2 lesson zero and the Observer arc (content-patterns, author-patterns)
+- What changed: Pack 2, Patterns in Unreal, now exists with its first world, "The lens, then the first payoff" (seven quests). Lesson zero teaches how to judge a design by the price of the next change. Then the arc for the pattern Unreal hands over most completely: a concept quest on the engine's delegates that never names the pattern, a worked build, a concept quest that names what was just built (Observer), a stub build in a different mechanic, a refactor of tightly wired code into it, and a "when not to use it" quest. The world also holds Observer, ahead of the Time world, so lesson zero has a payoff in the same sitting (A370).
+- The quests and their observables:
+  - Judge a design by the price of the next change (concept): predict, card, six questions.
+  - Announce it once, let anyone listen (concept): native and dynamic multicast delegates, binding, unbinding in EndPlay, dependency direction.
+  - A bounty board that hears every fall (build, worked): three foes with 1, 2, and 3 hits to defeat; each `ke * TakeHit` in the console moves the board from 0 / 3 to 1 / 3, 2 / 3, then BOUNTY DONE. The foes never know the board exists.
+  - What you just built has a name (concept): the Observer card, plus recognize items such as spotting engine overlap events as a subject.
+  - A tutorial sign that stops listening when it is done (build, stub): two `ke * Pull` runs take the sign from "Pull the lever: 2 left" to "Well done", after which the sign has unbound itself. The Level Blueprint can also listen to the lever's On Pulled event. Its one deliberate failure: a sign wired twice hears every pull twice (A376).
+  - Unplug the generator from its devices (refactor): `ke * Toggle` twice still lights and darkens the lamps and sounds the alarm once, but the generator no longer knows lamps or alarms exist.
+  - When a plain call beats a delegate (concept): five cases, with the binding-order trap as the example.
+- The Observer card in the pattern list now lists the two build quests as use cases, with one new recall item and one new when-not scenario. No new glossary terms were needed; six delegate terms now point to the delegates concept quest as their first quest (A379).
+- Proof, all on UE 5.8.3 on the MacBook Air, each sandbox a fresh copy of the template, built and tested with the commands in the unreal-pipeline spec under the shared engine lock:
+  - Reference solutions: build succeeded, 9 of 9 tests passed.
+  - Starters: all three compile; 7 of 9 tests fail. The refactor's behavior test passes on its working starter by design, and so does the sign's reflection test (its declarations are given). Each quest has at least one failing test.
+  - The deliberate failure, checked on its own: the reference sign with plain `AddDynamic` fails only `WiredTwiceHearsOnce` (heard 2, expected 1, plus the engine's duplicate-binding ensure).
+  - Content verifier `--pack patterns` on main: no problems. The full M1.8 checks, run from the unreleased verifier branch on a copy of this content, also report no problems (fade ladder, unlock graph, cross-quest dependencies, solution files).
+- Not done: World 1 has no breakdown or boss yet (A380). No screenshots: nothing ran in the editor's viewport, because this Mac's editor runs with `-NullRHI`. Windows is unverified. Decisions A370 to A381.
+
+### Fix round 1
+- Rebased on main. The full verifier now on main reports no problems for `--pack patterns`.
+- The delegates quest now says what really happens when an `AddDynamic` handler lacks UFUNCTION. The engine logs an ensure when you bind, the binding still counts as bound, and every broadcast silently skips the handler; nothing crashes. The old spot-the-bug item, whose bug was a missing line, is now a multiple-choice "what happens" question.
+- Originality (D13): lesson zero no longer echoes the source's definition of coupling. It now counts a dependency as the files a reader has to open (the gate depends on the alarm), and the fill-blank asks for "depends". The Observer card's intent, problem, and two items no longer use an achievements system or coin milestones; they use this world's foes, bounty boards, crowd, and scoreboard. The lapsed-listener example on the card and its spot-the-bug item now use a round bounty board that the arena respawns every round, instead of a UI screen. The when-not quest's choice about achievements is rewritten the same way.
+- Rubrics now only ask for what the briefs say: the tutorial sign's brief now states what Watch does with an empty lever, a finished step, or a different lever. The refactor's rubric drops "reconnecting to another generator", which the working starter never did, and its brief now states that connecting twice must leave one binding, which the tests check.
+- Lesson zero no longer lists `coding-standard`. `endplay` now points to the delegates quest as its first quest. A379 and A381 are corrected (A381 now says the unlock also needs Pack 1 World 1 terms at Familiar).
+- Engine, UE 5.8.3 on the Mac, fresh sandboxes from the rebased template under the engine lock: reference solutions 9 of 9 pass; starters all compile and 7 of 9 fail, the same split as before (the refactor's behavior test and the sign's reflection test pass on their starters by design).
+
+### Fix round 2
+- The Observer card's lapsed-listener sentence is corrected: a plain `AddLambda` capturing the board does not keep it alive. Garbage collection never sees the binding, so the retired board keeps counting until it is freed, and the next broadcast then calls into freed memory.
+- The `multicast-delegate` glossary entry's example now uses this world's bounty board, crowd audio, and scoreboard instead of an achievement tracker (D13). Verifier `--pack patterns`: no problems. No code or tests changed, so the engine results from fix round 1 stand.
+
+## M2.1d Codex search keeps the keyboard's choice (ui-core, builder-ui-core)
+- What changed: in the Cmd+K search, a result row that appeared under a pointer resting over the panel took the highlight, so Enter opened that row instead of the top match (the tester saw "Save Game" open instead of "UPROPERTY" in 2 of 5 runs). The highlight now follows the pointer only when the pointer itself moves; rows that appear or slide under a still pointer (while typing, or while the panel rises into place) leave the keyboard's choice alone. The arrow keys and typing stay in charge. Each time the panel opens, the pointer's resting place is forgotten, so a pointer moved while the panel was closed does not count either. Two small World Map touches from the last review: a boss stage reads "The training yard" with a capital once its "Boss:" prefix is dropped (also on the Studio's shipped titles), and a small turn mark shows where a wrapped path continues on the next row.
+- How it was checked: a new screen test, which runs on every e2e run, turns animation on (the panel's rise is what slides rows under the pointer) and opens the search five times. Each time it rests the pointer just inside where the second result row will land (then the fourth, in turn), types, presses Enter, and expects the top match to open. On the old code it failed on the first or second opening in every try, on the second row as well as the fourth; with the fix it passed three runs in a row (15 openings). The same test checks that moving the pointer onto a row still highlights it. The QA harness's stopgap of parking the pointer in the corner can stay.
+- Checks: `npm run typecheck` passes; `npm test` 596 passed, 7 skipped by their own suites (new: the pointer-moved rule and the boss title wording); `npx tsx tools/verify-content.ts` no problems; `npm run build` passes; `npm run test:e2e` 15 passed. The `m2-1-*.jpg` proofs were saved again.
+
+![[m2-1-world-map-1100x700.jpg|800]]
+*At the minimum size the 12-stage world wraps after six stages; the small turn mark under the end of the first row shows the path continues below.*
+
+![[m2-1-codex-search-1100x700.jpg|800]]
+*Codex search: the top match stays highlighted until the keyboard or a real pointer movement changes it.*
+
+- Decisions made: none new; the pointer rule is a bug fix under A240's data layer and A390's path layout.
+
 
 ## M2.2 Quest screens (ui-quests, builder-ui-quests)
 - What changed: every quest can now be played. Clicking an open stage on the World Map, Studio's Continue, Start drill, or a world's Test out opens the matching screen. All of it runs on built-in sample data for now, and that sample data is the real Pack 1 World 1 (the training yard), so what you see is the actual content.
@@ -358,7 +534,7 @@ exit code 0
 *Concept loot: score, XP, what changed.*
 
 ![[m2-2-drill-pattern-discrimination.jpg|800]]
-*Drill: which pattern fits. The wrong pick shows why it does not fit.*
+*Drill: which pattern fits, answered wrong on purpose: the right pattern is marked and the note says why the pick does not fit.*
 
 ![[m2-2-drill-parsons-marked.jpg|800]]
 *Drill: Parsons reorder after checking. The decoy line is marked with its mistake and the working order is shown.*
@@ -403,10 +579,31 @@ exit code 0
 *Two failed submits: the Parsons fallback, and the Seer Stone offer explaining that it arrives later.*
 
 ![[m2-2-build-1100x700.jpg|800]]
-*Build at the smallest window (1100x700): the brief folds to a strip so the editor has room.*
+*Build at the smallest window (1100x700): the brief is folded to a strip so the editor has room.*
 
 ![[m2-2-breakdown-1100x700.jpg|800]]
 *Breakdown at 1100x700.*
 
 - Decisions made: A350 to A364 in `docs/decisions.md`. The ones that need another system: A356 (Retry review submits again; a `retryReview(attemptId)` method would avoid a new attempt), A357 (bought hint texts are forgotten on restart; `getQuest` should return them), A358 (no method yet to view the reference solution), A352 (hover terms use a temporary linker until M1.8's TermLinker merges).
-- Not done or left for later: the boss's piece picker and integration build (a boss opens on its breakdown only); the Seer Stone flow (M3.3); hover terms in plain prose (with M1.8); everything here runs on the sample data until the run, review, and drill services are wired; unverified on Windows.
+- Not done or left for later: the boss's piece picker and integration build (a boss opens on its breakdown only); the Seer Stone flow (M3.3); everything here runs on the sample data until the run, review, and drill services are wired; unverified on Windows.
+
+### Fix round 1
+- What the reviewer and the Lead asked for: merge main (where the sample map's first world became the real World 1, already passed), make the quest flow start that world fresh again, steady a flaky editor step in the test, stop the build's right column scrolling sideways, give the breakdown board room at the smallest window, mark Parsons answers fairly, use the merged term linker, make the sample breakdown grader honest, keep the first pass's score after Retry review, and some polish.
+- What changed:
+  - The sample data for the quest screens starts Pack 1 World 1 untouched again (no passes, attempts, or rematches for it), so first passes pay XP, hints cost XP, and failed submits count.
+  - Hover terms now come from content-engine's term linker, so plain words in prose link too, the same way the Codex and the verifier see them.
+  - Build: the brief starts folded below 1600 wide and folds itself when the gaps open, so the editor has room while you write; a newly bought hint scrolls into view; the right column's buttons wrap instead of pushing the column wider.
+  - Breakdown: below 1300 wide the spec folds to a strip (a button opens it), so the board is at least 450 pixels wide at 1100x700; in the compare step the two boards stack at that size.
+  - Parsons: after checking, a decoy line is marked, but it no longer turns every line after it red: only the lines out of order are marked, and identical lines (two closing braces) count as interchangeable.
+  - The sample breakdown grader no longer lets one big piece cover seven required pieces: each of your pieces counts for at most one.
+  - After Retry review, the loot keeps the first pass's score, pass label, and XP; the new review shows its own score.
+- Proof (merged with main at e2e746a): `npm run typecheck` passes; `npm test` 54 files, 651 passed, 7 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (5 warnings from content); `npm run test:e2e` 21 passed, three runs in a row.
+- Screenshots: every picture above was taken again from this version.
+
+![[m2-2-breakdown-1100x700.jpg|800]]
+*Breakdown at 1100x700 with the spec folded: the board keeps its room.*
+
+![[m2-2-build-failed-submit-offers.jpg|800]]
+*Build at 1280 wide after two failed submits: the right column's buttons wrap, nothing scrolls sideways.*
+
+- Decisions made: fix round notes under A351, A352, A355, A356, and A360.

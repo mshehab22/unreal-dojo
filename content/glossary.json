@@ -1305,7 +1305,8 @@
       "destroy",
       "unbinding-delegates",
       "timer-manager"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "tick",
@@ -1453,14 +1454,15 @@
     ],
     "category": "framework",
     "short": "A delegate that can hold many listeners and calls all of them when broadcast.",
-    "long": "When several systems care about one event, such as the HUD, the audio manager, and the achievement tracker all reacting to an enemy dying, a multicast delegate lets each subscribe independently. Declare it with DECLARE_MULTICAST_DELEGATE_OneParam, subscribe with AddUObject or AddLambda, which return a handle you can use to unsubscribe, and fire it with Broadcast. The non-dynamic version is fast and works only from C++; Blueprints cannot bind to it.",
+    "long": "When several systems care about one event, such as a bounty board, the crowd audio, and the scoreboard all reacting to an arena foe falling, a multicast delegate lets each subscribe independently. Declare it with DECLARE_MULTICAST_DELEGATE_OneParam, subscribe with AddUObject or AddLambda, which return a handle you can use to unsubscribe, and fire it with Broadcast. The non-dynamic version is fast and works only from C++; Blueprints cannot bind to it.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/multicast-delegates-in-unreal-engine?application_version=5.8",
     "related": [
       "delegate",
       "dynamic-multicast-delegate",
       "broadcast",
       "unbinding-delegates"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "dynamic-delegate",
@@ -1498,7 +1500,8 @@
       "blueprintassignable",
       "overlap-event",
       "multicast-delegate"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "adddynamic",
@@ -1517,7 +1520,8 @@
       "unbinding-delegates",
       "overlap-event",
       "beginplay"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "broadcast",
@@ -1533,7 +1537,8 @@
       "multicast-delegate",
       "dynamic-multicast-delegate",
       "delegate"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "unbinding-delegates",
@@ -1553,7 +1558,8 @@
       "endplay",
       "multicast-delegate",
       "delegate"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "blueprintassignable",
@@ -1570,7 +1576,8 @@
       "uproperty",
       "broadcast",
       "user-widget"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "uinterface",

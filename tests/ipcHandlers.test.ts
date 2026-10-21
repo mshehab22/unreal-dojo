@@ -9,7 +9,11 @@ import { createHandlers, type ContentCatalogService, type HandlerDependencies } 
 import type { HandlerDefinition } from "../src/main/ipc/HandlerDefinition";
 import { idSchema, playerNameSchema } from "../src/main/ipc/requestSchemas";
 import { registerHandlers, wrapHandler, type IpcHandleRegistrar, type WrappedHandler } from "../src/main/ipc/registerHandlers";
+import { createTestProgressContent } from "./support/contentFixture";
 import { createTestProgressService } from "./support/progressFixtures";
+import { SettingsService } from "../src/main/services/settings/SettingsService";
+import { RunRegistry } from "../src/main/services/unreal/RunRegistry";
+import { FakeSecretEncryptor, FakeSettingsChecks, MemorySettingsStore } from "./settings/settingsFakes";
 
 /** A fake toolchain answer the engine handlers pass through. */
 const FAKE_TOOLCHAIN = { ok: true, tool: "xcode-select", message: "Xcode 27.1 is selected.", toolVersion: "27.1", problems: [] } as const;
@@ -43,6 +47,20 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 	getContentCatalog: () => FAKE_CONTENT_CATALOG,
 	pickFolder: async () => "/Picked/UE_5.8",
 	progressService: createTestProgressService().service,
+	getSandboxService: () => ({
+		folderWarnings: (pickedFolder) => (pickedFolder.length > 10 ? ["long path"] : []),
+		create: async (_enginePath, pickedFolder, onProgress) =>
+		{
+			onProgress({ phase: "building", lastLine: "Result: Succeeded", percent: 100 });
+
+			return { ok: true, sandboxPath: `${pickedFolder}/DojoSandbox`, durationMs: 5, compilerOutput: "" };
+		},
+	}),
+	runRegistry: new RunRegistry(),
+	sendProgress: () => undefined,
+	progressContentService: createTestProgressContent().content,
+	settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
+	readEnvironmentStatus: async () => ({ engine: null, sandbox: { path: null, ready: false }, reviewProvider: null, loopMode: "auto", editorConnected: false }),
 };
 
 /** A stand-in for ipcMain that records each registered channel. */
@@ -170,19 +188,53 @@ describe("registerHandlers", () =>
 		expectError(await invoke(IPC_CHANNELS.getQuest, "missing-quest"), "quest-not-found");
 	});
 
-	it("checks startDrill's request and then answers not-implemented until progress-and-rules builds it", async () =>
+	it("checks startDrill's request and then answers from progress-and-rules (M1.6b)", async () =>
 	{
 		const invoke = createInvoker();
 
-		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "test-out", worldId: "objects" }), "not-implemented");
-		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "parsons-fallback", questId: "w1-health" }), "not-implemented");
-		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "due" }), "not-implemented");
+		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "test-out", worldId: "objects" }), "world-not-found");
+		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "parsons-fallback", questId: "w1-health" }), "quest-not-found");
+		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "due" }), "quest-locked");
+		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "lucky" }), "invalid-payload");
+	});
+
+	it("answers the settings channels from the settings service and never sends the API key back", async () =>
+	{
+		const encryptor = new FakeSecretEncryptor();
+		const { registrar, handlersByChannel } = createFakeRegistrar();
+		registerHandlers(registrar, createHandlers({ ...FAKE_DEPENDENCIES, settingsService: new SettingsService(new MemorySettingsStore(), encryptor, new FakeSettingsChecks()) }));
+
+		const call = (channel: string, ...methodArguments: unknown[]) => handlersByChannel.get(channel)?.({} as Parameters<WrappedHandler>[0], ...methodArguments) as Promise<IpcResponse<unknown>>;
+		const apiKey = "sk-ant-test-abcdef0123456789";
+
+		expect(await call(IPC_CHANNELS.setApiKey, `  ${apiKey}  `)).toEqual({ ok: true, value: undefined });
+
+		const settings = await call(IPC_CHANNELS.getSettings);
+		expect(settings).toMatchObject({ ok: true, value: { hasApiKey: true } });
+		expect(JSON.stringify(settings)).not.toContain(apiKey);
+
+		expect(await call(IPC_CHANNELS.updateSettings, { mcpPort: 8123 })).toMatchObject({ ok: true, value: { mcpPort: 8123, hasApiKey: true } });
+		expectError(await call(IPC_CHANNELS.updateSettings, { mcpPort: 80 }), "invalid-payload");
+		expectError(await call(IPC_CHANNELS.updateSettings, { hasApiKey: false }), "invalid-payload");
+		expectError(await call(IPC_CHANNELS.updateSettings, { sandboxPath: "/definitely/not/a/sandbox" }), "invalid-payload");
+		expectError(await call(IPC_CHANNELS.updateSettings, { enginePath: "/tmp" }), "engine-not-found");
+		expect(await call(IPC_CHANNELS.updateSettings, { enginePath: "/Engines/UE_5.8/Engine", sandboxPath: null })).toMatchObject({ ok: true, value: { enginePath: "/Engines/UE_5.8", sandboxPath: null } });
+
+		expect(await call(IPC_CHANNELS.clearApiKey)).toEqual({ ok: true, value: undefined });
+		expect(await call(IPC_CHANNELS.getSettings)).toMatchObject({ ok: true, value: { hasApiKey: false } });
+
+		encryptor.available = false;
+		const refusal = expectError(await call(IPC_CHANNELS.setApiKey, apiKey), "secure-storage-unavailable");
+		expect(JSON.stringify(refusal)).not.toContain(apiKey);
+
+		expect(await call(IPC_CHANNELS.getEnvironmentStatus)).toMatchObject({ ok: true, value: { loopMode: "auto", editorConnected: false } });
+		expectError(await call(IPC_CHANNELS.completeFirstRun), "settings-invalid");
 	});
 
 	it("answers a stub with a not-implemented AppError that names when it arrives", async () =>
 	{
 		const invoke = createInvoker();
-		const error = expectError(await invoke(IPC_CHANNELS.getSettings), "not-implemented");
+		const error = expectError(await invoke(IPC_CHANNELS.getReviewProviders), "not-implemented");
 
 		expect(error.suggestedAction).toMatch(/arrives with/);
 	});
@@ -195,7 +247,7 @@ describe("registerHandlers", () =>
 		{
 			const response = await invoke(IPC_CHANNELS[method]);
 
-			if (!response.ok) expect(["not-implemented", "invalid-payload"]).toContain(response.error.code);
+			if (!response.ok) expect(["not-implemented", "invalid-payload", "settings-invalid"]).toContain(response.error.code);
 		}
 	});
 });
@@ -242,7 +294,34 @@ describe("payload validation", () =>
 
 		expectError(await invoke(IPC_CHANNELS.runQuest, { runId: "run-1", questId: "w1-health", files: { "DojoHealthComponent.h": "#pragma once" } }), "not-implemented");
 		expectError(await invoke(IPC_CHANNELS.openEditor, null), "not-implemented");
-		expectError(await invoke(IPC_CHANNELS.updateSettings, { loopMode: "fast", enginePath: null }), "not-implemented");
+		expect(await invoke(IPC_CHANNELS.updateSettings, { loopMode: "fast", enginePath: null })).toMatchObject({ ok: true, value: { loopMode: "fast", enginePath: null } });
+	});
+
+	it("creates the sandbox through the service, streaming progress stamped with the run id", async () =>
+	{
+		const { registrar, handlersByChannel } = createFakeRegistrar();
+		const events: unknown[] = [];
+		registerHandlers(registrar, createHandlers({ ...FAKE_DEPENDENCIES, runRegistry: new RunRegistry(), sendProgress: (event) => events.push(event) }));
+
+		const handler = handlersByChannel.get(IPC_CHANNELS.createSandbox);
+		const response = await handler?.({} as Parameters<WrappedHandler>[0], { runId: "setup-1", enginePath: "/Engines/UE_5.8", folder: "/Picked" });
+
+		expect(response).toEqual({ ok: true, value: { ok: true, sandboxPath: "/Picked/DojoSandbox", durationMs: 5, compilerOutput: "" } });
+		expect(events).toEqual([expect.objectContaining({ runId: "setup-1", phase: "building", percent: 100 })]);
+	});
+
+	it("answers pickSandboxFolder with the picked folder and its warnings", async () =>
+	{
+		const invoke = createInvoker();
+
+		expect(await invoke(IPC_CHANNELS.pickSandboxFolder)).toEqual({ ok: true, value: { path: "/Picked/UE_5.8", warnings: ["long path"] } });
+	});
+
+	it("answers cancelRun for an unknown run with run-not-found", async () =>
+	{
+		const invoke = createInvoker();
+
+		expectError(await invoke(IPC_CHANNELS.cancelRun, "nothing-running"), "run-not-found");
 	});
 
 	it("passes zod's parsed copy to the handler, with strings trimmed", async () =>

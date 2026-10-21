@@ -29,12 +29,12 @@ export function LastSubmitCard({ outcome, review, onOpenLoot, onRetryReview, isR
 			</span>
 			{review?.fallbackReason && <p className="text-xs text-warn">{review.fallbackReason}</p>}
 			<div className="flex flex-wrap gap-2">
-				<Button size="sm" variant="secondary" onClick={onOpenLoot}>
+				<Button size="sm" variant="secondary" className="h-auto min-h-8 py-1.5 whitespace-normal" onClick={onOpenLoot}>
 					Loot and review
 					<ArrowRightIcon />
 				</Button>
 				{review?.retryReviewSuggested && (
-					<Button size="sm" variant="outline" onClick={onRetryReview} disabled={isRetrying} data-testid="retry-review">
+					<Button size="sm" variant="outline" className="h-auto min-h-8 py-1.5 whitespace-normal" onClick={onRetryReview} disabled={isRetrying} data-testid="retry-review">
 						<RefreshCwIcon />
 						{isRetrying ? "Asking again" : "Retry review"}
 					</Button>

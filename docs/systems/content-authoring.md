@@ -29,7 +29,7 @@ One complete example per kind lives in `content/examples/` (concept, breakdown, 
 - `07-breakdown-campfire.md`: breakdown with two reference plans.
 - `08-boss-lighthouse.md`: boss with build pieces and an 8 bullet integration rubric.
 
-The examples are format references: they are not in a pack, have no reference solution in `tools/solutions/`, and are not compiled by `--engine` (A103). Their tests use the sandbox's `FDojoTestWorld` helper the way real quests do. Section order per kind, the front matter fields, and every data shape are in `docs/systems/content-engine.md` under "Markdown format". Run `npx tsx tools/verify-content.ts --quest <id>` to check one quest while writing it.
+The five code examples ship reference solutions in `tools/solutions/example-*/` and pass `npx tsx tools/verify-content.ts --engine ~/Applications/UE_5.8` (A207): each solution builds and passes its tests, and each starter does not. Their tests use the sandbox's `FDojoTestWorld` and include quest headers as `Quests/<quest-id>/<File>.h`, the folder QuestFileWriter writes to; a quest's own `.cpp` includes its own header by bare name. Copy that include form. Section order per kind, the front matter fields, and every data shape are in `docs/systems/content-engine.md` under "Markdown format". Run `npx tsx tools/verify-content.ts --quest <id>` to check one quest while writing it.
 
 Includes in real quests (A260): the sandbox puts quest files in `Source/Dojo/Quests/<quest-id>/` and tests in `Source/Dojo/Tests/`, and only the module root is on the include path, so tests and any quest that reuses an earlier quest's class include `"Quests/<quest-id>/<File>.h"`. A file includes its own header by bare name. Pack 1 uses quest ids `f1-<slug>` to `f6-<slug>`, classes `ADojoF<world><Name>`, and test names `Dojo.F<world>.<Quest>.<Case>` (A261).
 
@@ -55,7 +55,7 @@ Pattern cards list ids in Part 3 teaching order, with Strategy, Factory Method (
 
 Pack 1, Unreal C++ Foundations: worlds and topics in `docs/product.md`. Use `research/unreal-concepts-inventory.md` for the concept order and glossary ids. World 1 is the vertical slice: 6 concept quests, 4 build quests on the fade ladder, the "dash with cooldown" breakdown from the GameDev.tv research section 6, one boss.
 
-Pack 2, Patterns in Unreal: follow `research/patterns-inventory.md` Part 3 order exactly; each pattern gets the mini-arc (predict and card from the chapter study, recognize items from its recall and scenario questions, two build use cases from its use-case list in different mechanics, one refactor, one when-not item); combos world uses Part 4 bosses. Lesson zero is the architecture chapter as a concept quest.
+Pack 2, Patterns in Unreal: follow `research/patterns-inventory.md` Part 3 order exactly; each pattern gets the mini-arc (predict and card from the chapter study, recognize items from its recall and scenario questions, two build use cases from its use-case list in different mechanics, one refactor, one when-not item); combos world uses Part 4 bosses. Lesson zero is the architecture chapter as a concept quest. World 1 (`01-lens-and-observer`) holds lesson zero and the Observer arc, so Observer comes before the Time world (A370); quest ids are `p<world>-<slug>`, classes `ADojoP<world><Name>`, tests `Dojo.P<world>.<Quest>.<Case>` (A372).
 
 Pack 3, Mechanics Lab: the 8 modules with the 96 original exercise ideas and 16 bosses from the GameDev.tv research section 6, pruned to 4 to 6 build quests per world plus breakdowns of the 15 ready mechanics. World 6 boss is the Quest System (two reference breakdowns, pieces, integration rubric with 8 bullets, difficulty 5).
 
@@ -64,3 +64,5 @@ Pack 4, Systems Lab: the 8 systems specced in the GameDev.tv research section 6,
 ## Done criteria per world
 
 Verifier green with `--engine` on the Windows desktop (or logged as unverified on the Mac); a fresh reviewer agent spot-check for copied wording, solution leaks, UE API accuracy, and the fade ladder; an `iterations.md` entry listing the quests and their observables.
+
+Bosses (A67): every boss ships a C++ reference integration of one of its reference plans in `tools/solutions/<boss-id>/`, with automation tests that drive simulated time through two full rounds and assert the observables named in the spec. The verifier builds and runs it with `--engine`. Layout (A215): the folder's `*.Test.cpp` files are the tests and every other `.h` and `.cpp` file is integration code; a subfolder named after one of the boss's `pieces` holds extended versions of that piece's files (same names only), which replace them while the boss is built; nothing else goes in the folder. An include of a piece quest's files needs the A268 line in the spec.

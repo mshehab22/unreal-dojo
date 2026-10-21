@@ -33,7 +33,9 @@ export function CodeReviewSection({ review, attemptId, onRetryReview, isRetrying
 	return (
 		<div data-testid="code-review" data-provider={review.provider} className="flex flex-col gap-5">
 			<div className="flex flex-col gap-2">
-				<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Reviewed by {reviewProviderLabel(review.provider)}</span>
+				<span data-testid="review-score" className="font-mono text-2xs tracking-widest text-paper-faint uppercase">
+					Reviewed by {reviewProviderLabel(review.provider)}, review score {review.score}
+				</span>
 				{review.fallbackReason && (
 					<div data-testid="review-fallback" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-warn/50 bg-warn/5 p-3 text-sm text-warn">
 						<span>{review.fallbackReason}</span>

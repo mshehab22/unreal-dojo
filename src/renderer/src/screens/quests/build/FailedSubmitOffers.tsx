@@ -23,13 +23,13 @@ export function FailedSubmitOffers({ questId, failedSubmits, seerStones, hasPars
 		<div data-testid="failed-submit-offers" className="flex flex-col gap-2 rounded-md border border-warn/40 bg-warn/5 p-3">
 			<p className="text-sm text-paper">{failedSubmits} submits without a pass. Two ways to get unstuck:</p>
 			{hasParsons && (
-				<Button variant="secondary" size="sm" className="self-start" onClick={() => navigate("drill", { kind: "parsons-fallback", quest: questId })} data-testid="parsons-fallback">
+				<Button variant="secondary" size="sm" className="h-auto min-h-8 self-start py-1.5 text-left whitespace-normal" onClick={() => navigate("drill", { kind: "parsons-fallback", quest: questId })} data-testid="parsons-fallback">
 					<ListOrderedIcon />
 					Rebuild it from shuffled lines
 				</Button>
 			)}
 			<DisabledWithReason testId="seer-stone-offer" reason="Viewing the reference solution arrives with the Seer Stone flow (M3.3). It will cost this quest's XP, or a Seer Stone, and schedule a rematch.">
-				<Button variant="outline" size="sm" disabled>
+				<Button variant="outline" size="sm" className="h-auto min-h-8 min-w-0 shrink py-1.5 text-left whitespace-normal" disabled>
 					<EyeIcon />
 					View the solution ({seerStones} Seer {seerStones === 1 ? "Stone" : "Stones"} held)
 				</Button>

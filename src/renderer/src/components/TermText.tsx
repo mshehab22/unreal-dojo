@@ -1,14 +1,13 @@
-// Renders quest Markdown with glossary terms as hover cards. The seam for M1.8's TermLinker: today a temporary linker links inline code and bold text that name a term exactly.
-import type { ReactNode } from "react";
+// Renders quest Markdown with glossary terms as hover cards, linked by content-engine's TermLinker (the same rules as the verifier and the editor).
+import { useMemo, type ReactNode } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type { PluggableList } from "unified";
 
-import type { GlossaryAlias } from "@shared/types/catalog";
-import type { GlossaryEntry } from "@shared/types/content";
+import { termLinker } from "@shared/content/termLinker";
 
 import { QUERY_KEYS } from "@/data/queryKeys";
 import { useDojoQuery } from "@/data/useDojoQuery";
-import { matchGlossaryTerm } from "@/lib/matchGlossaryTerm";
 import { cn } from "@/lib/utils";
 
 import { CodeBlock } from "./quests/CodeBlock";
@@ -36,45 +35,57 @@ function textOf(children: ReactNode): string
 	return "";
 }
 
-/** Wraps `content` in a hover card when `text` names a glossary term. */
-function linked(text: string, content: ReactNode, aliases: readonly GlossaryAlias[], entries: ReadonlyMap<string, GlossaryEntry>): ReactNode
+/** The props react-markdown hands the `glossary-term` element the TermLinker emits. */
+interface GlossaryTermProps
 {
-	const entryId = matchGlossaryTerm(text, aliases);
-	const entry = entryId ? entries.get(entryId) : undefined;
-
-	return entry ? <TermHoverCard entry={entry}>{content}</TermHoverCard> : content;
+	readonly entryId?: string;
+	readonly children?: ReactNode;
 }
 
-/** Quest Markdown with headings, lists, code, and hoverable glossary terms. Works before the glossary loads; terms link once it has. */
+/** Quest Markdown with headings, lists, code, and hoverable glossary terms. Works before the glossary loads; terms link once the alias table has. */
 export function TermText({ markdown, className, inline = false }: TermTextProps)
 {
 	const aliases = useDojoQuery(QUERY_KEYS.glossaryAliases, (client) => client.getGlossaryAliases());
 	const glossary = useDojoQuery(QUERY_KEYS.glossary, (client) => client.getGlossary());
-	const aliasList = aliases.data ?? [];
-	const entries = new Map((glossary.data ?? []).map((entry) => [entry.id, entry]));
+	const aliasList = aliases.data;
+	const entries = useMemo(() => new Map((glossary.data ?? []).map((entry) => [entry.id, entry])), [glossary.data]);
+	const plugins = useMemo((): PluggableList => (aliasList ? [remarkGfm, [termLinker, { aliases: aliasList }]] : [remarkGfm]), [aliasList]);
 
-	const components: Components = {
-		p: ({ children }) => (inline ? <span>{children}</span> : <p>{children}</p>),
-		pre: ({ children }) => <>{children}</>,
-		code: ({ className: languageClass, children }) =>
+	// Built once per glossary, so hover cards keep their state across renders.
+	const components = useMemo(() =>
+	{
+		/** A linked term as its hover card, or plain text before the glossary loads. */
+		const GlossaryTerm = ({ entryId, children }: GlossaryTermProps): ReactNode =>
 		{
-			const text = textOf(children);
+			const entry = entryId ? entries.get(entryId) : undefined;
 
-			if (languageClass?.startsWith("language-") || text.includes("\n")) return <CodeBlock code={text.replace(/\n$/, "")} />;
+			return entry ? <TermHoverCard entry={entry}>{children}</TermHoverCard> : <>{children}</>;
+		};
 
-			return linked(text, <code className="rounded-xs bg-raised px-1 py-0.5 font-mono text-[0.9em] text-paper">{children}</code>, aliasList, entries);
-		},
-		strong: ({ children }) => linked(textOf(children), <strong className="font-semibold text-paper">{children}</strong>, aliasList, entries),
-		a: ({ href, children }) => (
-			<a href={href} target="_blank" rel="noreferrer" className="text-pack underline underline-offset-4">
-				{children}
-			</a>
-		),
-	};
+		return {
+			p: ({ children }) => (inline ? <span>{children}</span> : <p>{children}</p>),
+			pre: ({ children }) => <>{children}</>,
+			code: ({ className: languageClass, children }) =>
+			{
+				const text = textOf(children);
+
+				if (languageClass?.startsWith("language-") || text.includes("\n")) return <CodeBlock code={text.replace(/\n$/, "")} />;
+
+				return <code className="rounded-xs bg-raised px-1 py-0.5 font-mono text-[0.9em] text-paper">{children}</code>;
+			},
+			strong: ({ children }) => <strong className="font-semibold text-paper">{children}</strong>,
+			a: ({ href, children }) => (
+				<a href={href} target="_blank" rel="noreferrer" className="text-pack underline underline-offset-4">
+					{children}
+				</a>
+			),
+			"glossary-term": GlossaryTerm,
+		} as Components;
+	}, [entries, inline]);
 
 	return (
 		<div data-testid="term-text" className={cn(inline ? "inline" : PROSE_CLASS, "select-text", className)}>
-			<Markdown remarkPlugins={[remarkGfm]} components={components}>
+			<Markdown remarkPlugins={plugins} components={components}>
 				{markdown}
 			</Markdown>
 		</div>

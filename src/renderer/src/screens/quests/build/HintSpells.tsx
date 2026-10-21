@@ -1,5 +1,6 @@
 // Hint spells: how many are left, what the next one costs in XP on a pass, and every hint revealed so far.
 import { SparklesIcon } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 import type { HintReveal } from "@shared/types/progress";
 
@@ -21,7 +22,14 @@ interface HintSpellsProps
 /** The spell slots and the revealed texts. Hints never contain code. */
 export function HintSpells({ hintCount, hintsRevealed, revealed, nextCost, onReveal, isRevealing }: HintSpellsProps)
 {
+	const latestHint = useRef<HTMLParagraphElement>(null);
 	const remaining = Math.max(0, hintCount - hintsRevealed);
+
+	// A newly revealed hint scrolls into view, so it is never bought out of sight.
+	useEffect(() =>
+	{
+		latestHint.current?.scrollIntoView({ block: "nearest" });
+	}, [revealed.length]);
 	const lostTexts = hintsRevealed - revealed.length;
 
 	return (
@@ -37,15 +45,15 @@ export function HintSpells({ hintCount, hintsRevealed, revealed, nextCost, onRev
 					))}
 				</span>
 			</div>
-			{revealed.map((hint) => (
-				<p key={hint.hintIndex} data-testid="hint-text" className="rounded-md border border-patterns/40 bg-patterns-soft px-3 py-2 text-sm text-paper">
+			{revealed.map((hint, index) => (
+				<p key={hint.hintIndex} ref={index === revealed.length - 1 ? latestHint : undefined} data-testid="hint-text" className="rounded-md border border-patterns/40 bg-patterns-soft px-3 py-2 text-sm text-paper">
 					<span className="mr-1.5 font-mono text-2xs text-patterns">{hint.hintIndex + 1}</span>
 					{hint.text}
 				</p>
 			))}
 			{lostTexts > 0 && <p className="text-xs text-paper-faint">{lostTexts === 1 ? "One hint was" : `${lostTexts} hints were`} revealed in an earlier session.</p>}
 			{remaining > 0 ? (
-				<Button variant="outline" size="sm" className="self-start" onClick={onReveal} disabled={isRevealing} data-testid="reveal-hint">
+				<Button variant="outline" size="sm" className="h-auto min-h-8 self-start py-1.5 text-left whitespace-normal" onClick={onReveal} disabled={isRevealing} data-testid="reveal-hint">
 					{isRevealing ? "Casting" : `Reveal hint ${hintsRevealed + 1} (costs ${nextCost} XP on a pass)`}
 				</Button>
 			) : (

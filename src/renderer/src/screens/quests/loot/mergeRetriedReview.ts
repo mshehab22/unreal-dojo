@@ -1,4 +1,4 @@
-// What the loot screen shows after Retry review. The contract records the resubmit as another attempt (A356), so a pass that was already paid keeps its loot and takes the new review.
+// What the loot screen shows after Retry review. The contract records the resubmit as another attempt (A356), so a pass that was already paid keeps its loot, score, and pass label, and takes the new review (whose own score the review shows).
 import type { SubmitOutcome } from "@shared/types/progress";
 
 import type { LootEntry } from "./useLootStore";
@@ -10,8 +10,8 @@ export function mergeRetriedReview(previous: LootEntry, retried: SubmitOutcome, 
 
 	if (!previous.outcome.attempt.passed) return { quest: previous.quest, outcome: retried.outcome, detail };
 
-	// Why? and the reflection look the review up by attempt id, so the id (and its score) come from the retry.
-	const attempt = { ...previous.outcome.attempt, attemptId: retried.outcome.attempt.attemptId, score: retried.outcome.attempt.score };
+	// Why? and the reflection look the review up by attempt id, so only the id comes from the retry.
+	const attempt = { ...previous.outcome.attempt, attemptId: retried.outcome.attempt.attemptId };
 
 	return { quest: previous.quest, outcome: { ...previous.outcome, attempt }, detail };
 }

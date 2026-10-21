@@ -53,7 +53,7 @@ Rematch: a due pattern or term surfaces as a quest from a different world than t
 
 ## Architecture (keep current)
 
-Last updated by M1.6 (rules, scheduler, save file).
+Last updated by M1.6b (content-backed progress and drill methods).
 
 ### Layers
 - Pure rule classes (no I/O, time and randomness passed in): `PassRules`, `XpRules`, `HintSpellRules`, `LevelRules`, `PatternCardRules`, `SkillRules`, `MasteryRules`, `SpreeRules`, `StreakRules`, `SeerStoneRules`, `ChestRules`, `TestOutRules`, `RematchSelector`, `UnlockGraph`, `DrillScheduler`, `DailyQuestService`, and the scheduler `Sm2Scheduler` behind the `ReviewScheduler` interface (FSRS replaces it by implementing the same interface; the review log already holds every review).
@@ -82,8 +82,16 @@ Last updated by M1.6 (rules, scheduler, save file).
 - World Map (`getQuestAvailability`): today's scheduled due items (`DrillScheduler.scheduledDueToday`, never "Drill me" or hover-injected items) surface as rematches of passed quests in other worlds, then the unlock graph answers (a rematch is flagged once its due time has come). Passing a rematch reviews the due items the quest uses, so it cannot be farmed.
 - Daily candidates: `DailyQuestService.candidatesFrom(quests, availability)` gives open concept quests and short builds (`scaffold: worked`, `addsNewClass` false).
 
-### IPC wired in M1.6
-`getProgress`, `getRules`, `setPlayerName`, `saveQuestDraft`, `resetQuest`, `recordTermHover`, `queueDrillItem`, `chooseDailyOffer`, `resetProgress`, `getDrillSummary`. The others (including `getTestOutStatus`, added by the M0.2 fix round) in the progress and drill groups need loaded content (quest facts, hints, drill items) and are wired after M0.4 and M0.2b merge (A135). `src/main/index.ts` opens the service before registering handlers.
+### Content-backed methods (M1.6b)
+- `ProgressContentService` answers `getQuestAvailability`, `getTestOutStatus`, `revealHint`, `submitConcept`, `submitBreakdown`, `reviseBreakdown`, `getDailyQuest`, `startDrill`, `answerDrillItem`, and `finishDrill`. It reads the content catalog through `ProgressContentSource` (`listPacks`, `getWorld`, `getAuthoredQuest`, `getPatternCards`; `ContentCatalog` meets it), builds a view per content load (cached on the outline list), and applies everything through `ProgressService`.
+- `toRuleQuests.ts` maps pack outlines to `RuleQuest[]` (A311). `DrillItemBank.ts` indexes every way to ask about each scheduled item: terms through concept questions, patterns through which-pattern questions and card recall and scenarios, Parsons blocks keyed `parsons.<questId>.<blockId>` (A310). `ItemGrader.ts` grades answers in main (A314, A315). `DrillSessionStore.ts` keeps open sessions in memory (A319). `ProgressGraders.ts` is the explain and breakdown grader interface, with tests-only graders until the review service is wired (A318).
+- Every quest-specific call checks the quest exists (`quest-not-found`) and is not locked (`quest-locked` with the map's reason).
+- Concept submit: questions graded in main, 80% passes, each of the quest's terms reviewed once with quality from the score inside the same queued step as the attempt. Breakdown: the first plan is kept as `submittedPlan`, the closest reference plan is shown, the revision is graded; a boss breakdown records no pass (A316, A317).
+- Drills: due (today's due items within what is left of the day's cap of 20, A321, filled from met items to 6 to 10, with the three required formats when content has them, never the same question twice, A323), test-out (a world's taught terms and its patterns with an unlocked card, only when eligible; tests the world out when every taught term stays proficient, A313, A322), Parsons fallback (after two failed submits, pays nothing). Drill XP, streak credit, and the daily drill offer count only when the drill held a scheduled due item; otherwise it is practice (A320).
+- Unlocks: only terms some concept quest teaches gate a quest, and a concept quest is never gated by its own terms (A312).
+
+### IPC wired
+M1.6: `getProgress`, `getRules`, `setPlayerName`, `saveQuestDraft`, `resetQuest`, `recordTermHover`, `queueDrillItem`, `chooseDailyOffer`, `resetProgress`, `getDrillSummary`. M1.6b: the ten content-backed methods above. Every progress and drill method is now wired. `src/main/index.ts` opens the progress service, then builds `ProgressContentService` on the content catalog.
 
 ### Tests
 `tests/progress/*.test.ts`, one file per rule area, plus `progressStore.test.ts` (round trip, two simulated crashes, corrupt recovery, real disk) and `progressService.test.ts` (end to end on an in-memory disk). Shared builders in `tests/support/`.

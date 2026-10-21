@@ -1,5 +1,5 @@
 // Quest: sample-health (template proof). Hand-written sample that shows the shape of a build quest; not part of any content pack.
-#include "Quests/SampleHealth/SampleHealthComponent.h"
+#include "SampleHealthComponent.h"
 #include "Dojo.h"
 #include "GameFramework/Actor.h"
 

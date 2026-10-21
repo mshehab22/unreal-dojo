@@ -33,13 +33,13 @@ Reviewers are spawned fresh per task; they do not own systems.
 
 ### M1 Engine and rules (parallel across systems)
 - [x] M1.1 unreal-pipeline: PlatformPaths for Windows and macOS with fake-fs unit tests; EngineLocator (default paths, Windows registry, manual pick, vswhere and Xcode checks). Proof: unit tests on both platform objects.
-- [ ] M1.2 unreal-pipeline: sandbox template in `resources/sandbox-template/` and SandboxProjectService (copy, EngineAssociation, first full build with streamed progress). Proof: the template builds on the Windows desktop; timings recorded in `systems/unreal-pipeline.md`.
-- [ ] M1.3 unreal-pipeline: headless loop (UnrealBuilder, AutomationTestRunner, ReportParser, LogFilter) with the hand-written sample quest (Health component + one automation test). Proof: integration test passes on the Windows desktop; timings recorded.
+- [x] M1.2 unreal-pipeline: sandbox template in `resources/sandbox-template/` and SandboxProjectService (copy, EngineAssociation, first full build with streamed progress). Proof: the template builds on the Windows desktop; timings recorded in `systems/unreal-pipeline.md`.
+- [x] M1.3 unreal-pipeline: headless loop (UnrealBuilder, AutomationTestRunner, ReportParser, LogFilter) with the hand-written sample quest (Health component + one automation test). Proof: integration test passes on the Windows desktop; timings recorded.
 - [ ] M1.4 unreal-pipeline: fast loop (McpEditorClient, LiveEditorRunner: CompileLiveCoding then RunTests, header-change detection that falls back to UBT). Proof: same sample quest round-trips in seconds with the editor open; timings recorded.
 - [ ] M1.5 unreal-pipeline: the same four tasks verified on the Mac. If Unreal is not installed there yet, log as unverified and continue.
 - [x] M1.6 progress-and-rules: XpRules, roles, cards and tiers, spells, Seer Stone, spree and armor, streak and freezes, mastery meter, SM-2 scheduler with review log, DrillScheduler, DailyQuestService, unlock graph, atomic save. Proof: unit tests for every rule in the spec's tables.
 - [x] M1.7 ai-review (live run still open, problems.md): providers, prompts, JSON schemas, parsers, breakdown grader, explain-item grader, provider selection. Proof: unit tests on recorded outputs; one live run through Claude Code logged.
-- [ ] M1.8 content-engine: GlossaryService, TermLinker (remark plugin), Monaco hover and completion data, full verifier (repetition rules, fade check, pattern use-case counts, reachability, `--engine` mode). Proof: unit tests; verifier on the sample quest with `--engine` on the Windows desktop.
+- [x] M1.8 content-engine: GlossaryService, TermLinker (remark plugin), Monaco hover and completion data, full verifier (repetition rules, fade check, pattern use-case counts, reachability, `--engine` mode). Proof: unit tests; verifier on the sample quest with `--engine` on the Windows desktop.
 
 ### M2 Vertical slice (first build Mohammad practices on)
 - [ ] M2.1 ui-core: Title, First-run setup (engine, sandbox, full build progress), Studio home, World Map, Settings, Codex, Character. Proof: Playwright screenshots of each screen.
@@ -48,7 +48,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 - [ ] M2.4 qa: the end-to-end learner flow (set up sandbox, hover a term, predict and pass a concept quest, do a drill, submit a breakdown and revise, fail then pass a build with a hint, loot screen, next quest unlocked, restart and persist) recorded as a GIF. Add to "Ready to playtest".
 
 ### M3 Patterns, mechanics, economy
-- [ ] M3.1 content-patterns: Pack 2 lesson zero (architecture lens) and the Observer mini-arc (predict and card, recognize, two use cases, refactor, when-not). Proof: verifier green with `--engine`.
+- [x] M3.1 content-patterns: Pack 2 lesson zero (architecture lens) and the Observer mini-arc (predict and card, recognize, two use cases, refactor, when-not). Proof: verifier green with `--engine`.
 - [ ] M3.2 content-mechanics: Pack 3 World 6 (delegates) with the Quest System boss (two reference breakdowns, pieces, integration rubric). Proof: verifier green with `--engine`.
 - [ ] M3.3 progress-and-rules + ui: daily quest with chests, Seer Stone flow, spree and armor display, streak celebrations, test-out drill per world. Proof: unit tests plus Playwright screenshots.
 - [ ] M3.4 ai-review: alternative-after-pass surfacing, free "why is this a finding" follow-up, reflection question answer flow. Proof: Playwright.
@@ -78,18 +78,32 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | merged 329a995 | merged | 1 fix round; build about 20 s, headless test about 18 s on UE 5.8.3 Mac |
 | M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | merged 267739b | merged | Passed first review; Windows unverified (problems.md) |
 | M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | merged | merged | 2 fix rounds; rematch farming closed, proven with randomized sequences |
-| M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | m1-6b-progress-wiring @ 9af55f9 | fixes | Round 1 held except the cap: overflow items still reviewed as filler. Round 2 in progress |
+| M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | merged 4bff33b | merged | 2 fix rounds; merge conflicts with M1.3 resolved keeping both |
+| M2.1c World Map overflow with real content | ui-core | ui-core (session "M0.3 Design tokens...") | merged 8798d5d | merged | Passed first review |
+| M2.1d Codex palette hover and map polish | ui-core | ui-core (session "M0.3 Design tokens...") | merged | merged | Passed first review. Follow-up: the resting-pointer test uses a fixed pointer spot; read the row position at runtime so it keeps proving the fix |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
-| M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop @ 5cdd7fd | re-review | All four items fixed; 7 of 7 real runs; rebased on main |
-| M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | m1-8-verifier @ 5ac6787 | fixes | Reviewer confirmed 3 of 5 and the timer diagnosis (5 of 5 with the M1.3 fix). Round 1: starter check edge cases, report layout, tests, comments. Round 2 after M1.3 merges: reuse M1.3 runners (A63), rerun --engine |
+| M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 8665386 | merged | 1 fix round plus a test fix; includes the GFrameCounter timer fix |
+| M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring @ 99a6796 | fixes | runQuest verified on the engine. Round 1: syntax check passes on clang failure, boss prerequisites (Lead: match quest ids on the line, overrides win), passed quests refilled from savedFiles, check file race |
+| M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged 742676e | merged | 1 fix round; probes verified in a packaged build |
+| M1.7c submitQuest and review IPC wiring | ai-review | builder-review (session) | m1-7c-submit-wiring | building | Lead: review and capped submitted files stored on the attempt (edited by builder-review in ProgressService); tests-only review counts tests only |
+| M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | merged b06a722 | merged | 2 rounds; --engine 9 of 9 on UE 5.8.3 through M1.3 runners |
+| M1.8b Verifier follow-ups | content-engine | content-engine (session "M0.4 Content types...") | m1-8b-verifier-followups | building | Bare-name cross-quest includes, Ctrl+C cancel, template copy skips build folders |
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
-| M2.3b World 1 follow-ups, then Pack 1 World 2 | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 | building | Boss miss penalty (Lead decision), A66 in patterns.json; then World 2 |
-| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 8b6e368 | fixes | Round 1: cleanup and test order now; after M1.3 merges the smoke reuses M1.3 runners (A63) |
+| M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c1b7533) | fixes (round 4) | Boss integration 10 of 10 with main template; add a test for hits cleared in round 2 and the A340 layout paragraph. Branch merges whole with World 2 once all parts pass |
+| M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c3c9c14) | fixes (one rubric line); boss waits on A67 | 20 of 20 on UE 5.8.3; new rack test proven |
+| M2.2 Quest screens | ui-quests | builder-ui-quests (session) | claude/m2-2-quest-screens-a21151 @ 214f85c | fixes | Core rules hold. Round 1: merge with main breaks the fake quest flow (A390 vs A351), editor test flake, sideways scroll in build column, breakdown board too narrow at 1100, Parsons marking, switch to the real TermLinker, fake grader, retry label, polish |
+| M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
+| M4.x Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | from the M3.1 branch | building | Next pattern in Part 3 order |
+| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 14cb005 | fixes (round 3) | Height varies 5 points as the Dock resizes; bound the check instead of matching |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
+Queued for unreal-pipeline (from the M0.2c review, A426): `docs/systems/unreal-pipeline.md` lines 29 and 84 still name `ElectronStoreSandboxPathStore`; the class is unused once settings land.
+Queued for qa (from the M0.2c review): `ui-core-screens.spec.ts` and other specs not yet on the harness run against the real user data folder; with settings real, move every spec onto the harness so no run shares `config.json`.
+Queued for app-shell and progress (from the M2.2 review, A357): revealed hint texts are lost after a restart; store revealed hints in progress and return them with the quest.
+Queued for ai-review (from the M2.2 review, A356): a real `retryReview(attemptId)` that reviews the stored submitted files again without a new run; the screen resubmits as a stopgap.
 Queued for unreal-pipeline (A65): fill a tested-out or reset prerequisite quest's files with its reference solution before building a later quest that depends on it, and tell the learner which files came from the reference.
 Queued for M2.2 (from the M1.7b review): the Build screen shows a "Retry review" button when a review falls back to tests-only with `retryReviewSuggested`.
 Queued for the verifier (from the M1.6b review): a concept quest must have at least one question that is not explain-in-one-sentence, since tests-only grading cannot pass explain items.
@@ -114,3 +128,11 @@ Look for: does it feel like a game studio you want to come back to, is anything 
 ## Handoff notes
 
 (The Lead writes a handoff here before its context fills: what is in flight, what each builder was told, what is next.)
+
+### Handoff, 2026-10-21 afternoon
+- The board above is current. Every task row names its session (sidebar titles still show each session's first task; the board maps them) and branch with the commit last reviewed.
+- Merge rules in practice: merge only after a reviewer PASS; run `npm ci`, typecheck, test, verifier, build, test:e2e on main after each merge; resolve docs-only conflicts by keeping both sides; code conflicts by hand (`createHandlers.ts` and `src/main/index.ts` collect every service's dependencies, keep all). If checks fail after a merge, remove only that merge commit (check `git log --first-parent HEAD~1..HEAD` first) and send the branch back. Chain every command after a merge with `&&`.
+- Unreal runs on this Mac take turns through a lock directory: `mkdir` it before an engine run, `rmdir` after (path in the reviewers' shared instructions in the Lead's scratchpad; any agreed path works if the Lead changes). Six builder processes were killed at once at 15:25 (exit 143), likely memory pressure; keep heavy runs serialized.
+- Waiting to merge, in order: M2.1c (World Map overflow), then M1.6b (passed). M2.3b merges as its own commits (round 3 pending, then the World 2 boss reference per A67). World 2's 11 non-boss quests are in review.
+- Next after these: M1.4 fast loop (MCP, Windows Live Coding only, A45), submitQuest orchestration (run, then review through M1.7, then recordAttempt) once M1.3b lands, wiring the review provider IPC, M2.4 end-to-end learner flow (tester) once M2.2 and the run wiring land, M3.2 Pack 3 World 6, M3.3 to M3.4.
+- Needs Mohammad: a signed-in `claude` CLI for the live review run, `gh auth login` for the private CI repo, optionally the Metal toolchain. All decisions to review are under "Awaiting Mohammad's review" (A01 onward; Lead decisions are A01 to A06 and A60 to A67).

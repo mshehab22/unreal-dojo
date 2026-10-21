@@ -27,6 +27,7 @@ const questProgressSchema: z.ZodType<QuestProgress> = z.object({
 	savedFiles: z.record(z.string(), z.string()),
 	breakdownPlan: breakdownPlanSchema.optional(),
 	revisionNote: z.string().optional(),
+	submittedPlan: breakdownPlanSchema.optional(),
 	lastAttemptAt: momentSchema.nullable(),
 });
 

@@ -39,14 +39,17 @@ Place twenty of these lanterns, press Play, and run `stat game` before and after
 
 class UPointLightComponent;
 
+/** A lantern that flickers on a fixed rhythm. */
 UCLASS()
 class ADojoExTickLantern : public AActor
 {
 	GENERATED_BODY()
 
 public:
+	/** Creates the light component. */
 	ADojoExTickLantern();
 
+	/** Counts time and flickers every FlickerInterval seconds. */
 	virtual void Tick(float DeltaSeconds) override;
 
 	UPROPERTY(VisibleAnywhere, Category = "Lantern")
@@ -58,9 +61,11 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Lantern")
 	float Brightness = 8.f;
 
+	/** How many times the lantern has flickered, read by the tests. */
 	int32 GetFlickerCount() const { return FlickerCount; }
 
 private:
+	/** Counts a flicker and alternates the light between dim and full. */
 	void Flicker();
 
 	float SecondsSinceFlicker = 0.f;
@@ -75,6 +80,7 @@ private:
 
 #include "Components/PointLightComponent.h"
 
+/** Creates the light as the root component. */
 ADojoExTickLantern::ADojoExTickLantern()
 {
 	PrimaryActorTick.bCanEverTick = true; // @explain: This is what makes the engine call Tick every frame for every lantern.
@@ -83,6 +89,7 @@ ADojoExTickLantern::ADojoExTickLantern()
 	RootComponent = Light;
 }
 
+/** Adds the frame time and flickers each time a full interval has passed. */
 void ADojoExTickLantern::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -96,6 +103,7 @@ void ADojoExTickLantern::Tick(float DeltaSeconds)
 	}
 }
 
+/** Counts a flicker and alternates the light between dim and full. */
 void ADojoExTickLantern::Flicker()
 {
 	FlickerCount++;
@@ -110,7 +118,7 @@ void ADojoExTickLantern::Flicker()
 
 #if WITH_AUTOMATION_TESTS
 
-#include "DojoExTickLantern.h"
+#include "Quests/example-refactor-lantern-tick/DojoExTickLantern.h"
 #include "Support/DojoTestWorld.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_Examples_TickLantern_SameRhythmNoTick, "Dojo.Examples.TickLantern.SameRhythmNoTick", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)

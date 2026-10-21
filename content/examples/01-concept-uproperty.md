@@ -46,6 +46,7 @@ Every pointer to a UObject must also carry `UPROPERTY()`, even with no specifier
 # Example
 
 ```cpp
+/** A lantern actor whose point light glows at an editable brightness. */
 UCLASS()
 class ADojoExLantern : public AActor
 {

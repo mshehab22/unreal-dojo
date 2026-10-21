@@ -48,6 +48,8 @@ void FDojoTestWorld::Tick(int32 FrameCount, float DeltaSeconds)
 {
 	for (int32 Frame = 0; Frame < FrameCount; ++Frame)
 	{
+		// The timer manager ticks once per engine frame number, and only the engine loop advances it; without this, timers fire on the first frame only.
+		++GFrameCounter;
 		World->Tick(LEVELTICK_All, DeltaSeconds);
 	}
 }

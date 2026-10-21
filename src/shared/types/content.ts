@@ -354,9 +354,15 @@ export interface Pack
 	worlds: World[];
 }
 
+/** How serious a content problem is. Errors fail the verifier; warnings are printed and do not, until `--release`. */
+export type ProblemSeverity = "error" | "warning";
+
 /** One thing wrong with a content file, always naming the file. */
 export interface ContentProblem
 {
+	/** Absent means "error". */
+	severity?: ProblemSeverity;
+
 	/** Path relative to the content folder, with forward slashes. */
 	file: string;
 

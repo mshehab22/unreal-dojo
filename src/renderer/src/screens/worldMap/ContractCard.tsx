@@ -9,7 +9,7 @@ import { StudioPortrait } from "@/components/StudioPortrait";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-import { StageNode } from "./StageNode";
+import { StagePath } from "./StagePath";
 
 /** Props for ContractCard. */
 interface ContractCardProps
@@ -52,12 +52,7 @@ export function ContractCard({ world, availability, testOut, rematchShare }: Con
 					{testOut && !testOut.eligible && !testOut.testedOut && testOut.reason && isOpen && <span className="max-w-40 text-right text-2xs text-paper-faint">{testOut.reason}</span>}
 				</div>
 			</div>
-			<div className="relative flex items-start justify-between gap-1 px-1">
-				<span aria-hidden="true" className="absolute top-5 right-10 left-10 h-px bg-line-strong" />
-				{world.quests.map((quest) => (
-					<StageNode key={quest.id} quest={quest} availability={availability[quest.id]} rematchShare={rematchShare} />
-				))}
-			</div>
+			<StagePath quests={world.quests} availability={availability} rematchShare={rematchShare} />
 		</article>
 	);
 }

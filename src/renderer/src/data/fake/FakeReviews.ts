@@ -67,20 +67,52 @@ function labelWords(label: string): string[]
 	return label.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length >= 4 && !COMMON_WORDS.has(word));
 }
 
-/** True when a learner piece shares a meaning word with the required piece's label or reason. */
-function covers(required: RequiredPiece, plan: BreakdownPlan): string | undefined
+/** Matches required pieces to learner pieces, one to one: the pairs sharing the most words are matched first, and words that appear in most required pieces (such as "dash" in a dash plan) do not count. */
+export function matchRequiredPieces(requiredPieces: readonly RequiredPiece[], plan: BreakdownPlan): (string | undefined)[]
 {
-	const wanted = new Set([...labelWords(required.label), ...labelWords(required.why)]);
+	const requiredWords = requiredPieces.map((required) => new Set([...labelWords(required.label), ...labelWords(required.why)]));
+	const counts = new Map<string, number>();
 
-	return plan.pieces.find((piece) => [...labelWords(piece.label), ...labelWords(piece.purpose)].some((word) => wanted.has(word)))?.label;
+	for (const words of requiredWords) for (const word of words) counts.set(word, (counts.get(word) ?? 0) + 1);
+
+	const isCommon = (word: string): boolean => (counts.get(word) ?? 0) > requiredPieces.length / 2;
+	const pairs: { required: number; learner: number; shared: number }[] = [];
+
+	plan.pieces.forEach((piece, learner) =>
+	{
+		const words = new Set([...labelWords(piece.label), ...labelWords(piece.purpose)].filter((word) => !isCommon(word)));
+
+		requiredWords.forEach((wanted, required) =>
+		{
+			const shared = [...words].filter((word) => wanted.has(word)).length;
+
+			if (shared > 0) pairs.push({ required, learner, shared });
+		});
+	});
+
+	pairs.sort((first, second) => second.shared - first.shared);
+
+	const matched: (string | undefined)[] = requiredPieces.map(() => undefined);
+	const usedLearners = new Set<number>();
+
+	for (const pair of pairs)
+	{
+		if (matched[pair.required] !== undefined || usedLearners.has(pair.learner)) continue;
+
+		matched[pair.required] = plan.pieces[pair.learner]?.label;
+		usedLearners.add(pair.learner);
+	}
+
+	return matched;
 }
 
-/** A breakdown grade: required pieces matched by shared words, the revision note weighed by how much it says, and the other reference plan offered next. */
+/** A breakdown grade: required pieces matched one to one by shared words, the revision note weighed by how much it says, and the other reference plan offered next. */
 export function gradeBreakdown(requiredPieces: readonly RequiredPiece[], plan: BreakdownPlan, revisionNote: string, shownPlanIndex: number, planCount: number): BreakdownGrade
 {
-	const coverage = requiredPieces.map((required) =>
+	const matches = matchRequiredPieces(requiredPieces, plan);
+	const coverage = requiredPieces.map((required, index) =>
 	{
-		const matchedTo = covers(required, plan);
+		const matchedTo = matches[index];
 
 		return { label: required.label, covered: matchedTo !== undefined, ...(matchedTo ? { matchedTo } : {}) };
 	});

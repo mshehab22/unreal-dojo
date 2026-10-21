@@ -13,6 +13,9 @@ const WORLD_ONE = JSON.parse(readFileSync(resolve("src/renderer/src/data/fake/fi
 	world: { quests: { id: string; kind: string; parsons?: { id: string; lines: string[] }[]; questions?: { type: string; modelAnswer?: string }[] }[] };
 };
 
+/** The pattern the drill's which-pattern item (the State card's first scenario) wants. */
+const STATE_SCENARIO_ANSWER = (JSON.parse(readFileSync(resolve("content/patterns.json"), "utf8")) as { id: string; scenarios: { answer?: string }[] }[]).find((card) => card.id === "state")?.scenarios[0]?.answer ?? "state";
+
 /** The proof picture size: 1280 wide, as the task asks. */
 const PROOF_SIZE = { width: 1280, height: 800 } as const;
 
@@ -52,12 +55,12 @@ async function openFake(hash: string, scenario = "quests"): Promise<void>
 	await window.evaluate("document.fonts.ready.then(() => true)");
 }
 
-/** Fails when the stage scrolls sideways. */
+/** Fails when the stage, or any side column inside it, scrolls sideways. */
 async function expectNoSidewaysScroll(label: string): Promise<void>
 {
-	const overflows = await window.evaluate<boolean>("(() => { const stage = document.querySelector('main'); return stage ? stage.scrollWidth > stage.clientWidth : true; })()");
+	const overflowing = await window.evaluate<string[]>("(() => { const stage = document.querySelector('main'); if (!stage) return ['no stage']; return [stage, ...stage.querySelectorAll('aside')].filter((box) => box.scrollWidth > box.clientWidth + 1).map((box) => { const edge = box.getBoundingClientRect().right; const widest = [...box.querySelectorAll('*')].sort((first, second) => second.getBoundingClientRect().right - first.getBoundingClientRect().right)[0]; const culprit = widest && widest.getBoundingClientRect().right > edge ? ' (' + (widest.getAttribute('data-testid') ?? widest.tagName + '.' + String(widest.className).slice(0, 60)) + ')' : ''; return (box.getAttribute('aria-label') ?? box.tagName) + ' ' + box.scrollWidth + '>' + box.clientWidth + culprit; }); })()");
 
-	expect(overflows, label).toBe(false);
+	expect(overflowing, label).toEqual([]);
 }
 
 /** The World 1 quest with this id. */
@@ -84,9 +87,18 @@ async function selectInEditor(editor: Locator, text: string): Promise<void>
 	await expect(editor.locator(".find-widget.visible textarea, .find-widget.visible input").first()).toBeFocused();
 	await window.keyboard.press(`${SHORTCUT_MODIFIER}+a`);
 	await window.keyboard.insertText(text);
+
+	// Wait until the widget found exactly this text once, so Enter selects it and not a stale match.
+	await expect(editor.locator(".find-widget .matchesCount")).toHaveText(/^1 of 1$/);
 	await window.keyboard.press("Enter");
 	await window.keyboard.press("Escape");
 	await expect(editor.locator(".find-widget.visible")).toHaveCount(0);
+}
+
+/** The build editor's visible lines in screen order (Monaco reuses line elements, so their order in the page is not the text order). */
+async function visibleEditorText(): Promise<string>
+{
+	return window.evaluate<string>("[...document.querySelectorAll('[data-testid=build-quest] [data-testid=code-editor] .view-line')].sort((first, second) => parseFloat(first.style.top) - parseFloat(second.style.top)).map((line) => line.textContent.replace(/\\u00a0/g, ' ')).join('\\n')");
 }
 
 /** Inserts text into the focused editor as one input, so auto-closed brackets and the completion list never change it. Monaco indents each new line itself. */
@@ -205,7 +217,13 @@ test("a drill with every item type, Parsons distractors marked, and the finish c
 			await item.locator('[data-testid="parsons-placed-line"]').first().focus();
 			await window.keyboard.press("Alt+ArrowDown");
 		}
-		else if (type === "multiple-choice" || type === "which-pattern")
+		else if (type === "which-pattern")
+		{
+			// Keyboard: focus a wrong pattern on purpose and pick it with Space, so the feedback shows why it does not fit.
+			await item.locator(`[data-testid="choice"] input:not([value="${STATE_SCENARIO_ANSWER}"])`).first().focus();
+			await window.keyboard.press("Space");
+		}
+		else if (type === "multiple-choice")
 		{
 			// Keyboard: focus the first choice and pick it with Space.
 			await item.getByTestId("choice").first().locator("input").focus();
@@ -233,7 +251,11 @@ test("a drill with every item type, Parsons distractors marked, and the finish c
 			await saveScreenshot(testInfo, "drill-parsons-marked");
 		}
 
-		if (type === "which-pattern") await saveScreenshot(testInfo, "drill-pattern-discrimination");
+		if (type === "which-pattern")
+		{
+			await expect(item.getByTestId("question-feedback")).toHaveAttribute("data-correct", "false");
+			await saveScreenshot(testInfo, "drill-pattern-discrimination");
+		}
 		if (type === "explain-in-one-sentence") await saveScreenshot(testInfo, "drill-explain-graded");
 		if (type === "spot-the-bug") await saveScreenshot(testInfo, "drill-spot-the-bug");
 
@@ -329,7 +351,7 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await expect(build).toBeVisible();
 	await waitForEditor(build);
 
-	// Below 1400 wide the brief starts folded so the editor has room; the toggle opens it.
+	// Below 1600 wide the brief starts folded so the editor has room; the toggle opens it. Opening the gaps folds it again.
 	await window.getByTestId("toggle-brief").click();
 	await expect(window.getByTestId("scaffold-badge")).toHaveAttribute("data-scaffold", "worked");
 
@@ -350,8 +372,10 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await saveScreenshot(testInfo, "build-gate-open");
 	await window.getByTestId("toggle-reasons").click();
 
-	// Run the starter with the keyboard: it builds, and the reflection test fails.
-	await window.getByTestId("brief-column").click();
+	await expect(window.getByTestId("brief-column")).toHaveCount(0);
+
+	// Run the starter with the keyboard from outside the editor: it builds, and the reflection test fails.
+	await window.getByRole("heading", { level: 1 }).click();
 	await window.keyboard.press(`${SHORTCUT_MODIFIER}+Enter`);
 	await expect(window.getByTestId("run-result")).toHaveAttribute("data-ok", "false", { timeout: 20_000 });
 	await expect(window.locator('[data-testid="test-row"][data-passed="false"]').first()).toBeVisible();
@@ -368,14 +392,14 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await expect(editor.locator(".view-lines")).toContainText("GENERATED_BODY");
 	await selectInEditor(editor, "void Strike();");
 	await typeInEditor('UFUNCTION(BlueprintCallable, Category = "Dummy")\nvoid Strike();');
-	await expect(editor.locator(".view-lines")).toContainText("UFUNCTION(BlueprintCallable");
+	await expect.poll(() => visibleEditorText()).toMatch(/\n\s*UFUNCTION\(BlueprintCallable, Category = "Dummy"\)\n\s*void Strike\(\);\n/);
 	await saveScreenshot(testInfo, "build-editing-header");
 
 	await window.getByTestId("file-tab").filter({ hasText: "DojoF1TrainingDummy.cpp" }).click();
 	await expect(editor.locator(".view-lines")).toContainText("CreateDefaultSubobject");
 	await selectInEditor(editor, "// Your code: do nothing if the dummy is already down; otherwise count the strike and refresh the label.");
 	await typeInEditor("if (IsKnockedDown()) return;\nHitsTaken++;\nRefreshLabel();");
-	await expect(editor.locator(".view-lines")).toContainText("HitsTaken++;");
+	await expect.poll(() => visibleEditorText()).toMatch(/\{\n\s*if \(IsKnockedDown\(\)\) return;\n\s*HitsTaken\+\+;\n\s*RefreshLabel\(\);\n\}/);
 	await saveScreenshot(testInfo, "build-editing-source");
 
 	// Run again from inside the editor: every test passes.
@@ -392,6 +416,7 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await expect(window.getByTestId("code-review")).toHaveAttribute("data-provider", "claude-code", { timeout: 20_000 });
 	await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "true");
 	await expect(window.getByTestId("xp-total")).not.toHaveText("0 XP");
+	await expect(window.getByTestId("review-score")).toContainText("review score");
 
 	// Findings explain themselves for free; the reflection takes one sentence.
 	await window.getByTestId("finding-why").first().click();
@@ -430,6 +455,9 @@ test("two failed submits offer the Parsons fallback, which opens a one-item dril
 	}
 
 	await expect(window.getByTestId("failed-submit-offers")).toBeVisible();
+	await setViewport(1100, 700);
+	await expectNoSidewaysScroll("build with the failed-submit offers at 1100x700");
+	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
 	await expect(async () =>
 	{
 		await window.mouse.move(5, 5);
@@ -465,6 +493,9 @@ test("every quest screen fits at 1100x700 and 1440x900 without sideways scroll",
 			await expect(window.getByRole("heading", { level: 1 })).toHaveCount(1);
 
 			if (route.file === "build") await waitForEditor(window.getByTestId("build-quest"));
+
+			// The board keeps room to plan in, even at the smallest window (the spec folds below 1300 wide).
+			if (route.file === "breakdown") expect((await window.getByTestId("learner-board").boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(450);
 
 			await expectNoSidewaysScroll(`${route.file} at ${size.width}x${size.height}`);
 			await saveScreenshot(testInfo, `${route.file}-${size.width}x${size.height}`);

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { shuffledOrder } from "@/lib/presentationOrder";
 import { cn } from "@/lib/utils";
 
+import { misplacedLineIds } from "./parsonsPlacement";
+
 /** One line the learner can place. */
 interface ParsonsLine
 {
@@ -104,8 +106,7 @@ export function ParsonsInput({ block, order, onChange, disabled = false, reveale
 		setDragged(null);
 	};
 
-	/** Whether a placed line sits where the block has it (identical lines may swap, as the grader allows). */
-	const isInPlace = (id: string, index: number): boolean => byId.get(id)?.text === block.lines[index] && !id.startsWith("distractor-");
+	const misplaced = revealed ? misplacedLineIds(order, (id) => byId.get(id)?.text, block.lines) : new Set<string>();
 
 	return (
 		<div data-testid="parsons" className="grid grid-cols-2 gap-4">
@@ -148,7 +149,7 @@ export function ParsonsInput({ block, order, onChange, disabled = false, reveale
 					{order.map((id, index) =>
 					{
 						const line = byId.get(id);
-						const wrong = revealed && !isInPlace(id, index);
+						const wrong = misplaced.has(id);
 
 						return (
 							<li key={id} onDragOver={(event) => event.preventDefault()} onDrop={(event) => dropAt(event, index)} className="flex flex-col gap-1">

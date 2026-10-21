@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 
 import type { GlossaryEntry } from "@shared/types/content";
 
-import { formatDue, formatElapsed, formatMonth, humanizeId } from "../../src/renderer/src/lib/formatting";
+import { formatDue, formatElapsed, formatMonth, humanizeId, withoutBossPrefix } from "../../src/renderer/src/lib/formatting";
 import { levelStanding, xpToNextLevel } from "../../src/renderer/src/lib/levels";
 import { describeLoop } from "../../src/renderer/src/lib/loopDescription";
+import { hasPointerMoved } from "../../src/renderer/src/lib/pointerMovement";
+import { balancedRows, stagesPerRow } from "../../src/renderer/src/lib/pathRows";
 import { explainSandboxFailure } from "../../src/renderer/src/lib/sandboxFailure";
 import { groupSkills, skillPrefix } from "../../src/renderer/src/lib/skillGroups";
 import { skillGroupName, skillLabel } from "../../src/renderer/src/lib/skillNames";
@@ -78,6 +80,12 @@ describe("formatting", () =>
 		expect(humanizeId("night-market-lighting")).toBe("Night market lighting");
 	});
 
+	it("drops the boss prefix and starts with a capital", () =>
+	{
+		expect(withoutBossPrefix("Boss: the training yard")).toBe("The training yard");
+		expect(withoutBossPrefix("Plan a dash")).toBe("Plan a dash");
+	});
+
 	it("writes months out", () =>
 	{
 		expect(formatMonth("2026-09")).toBe("September 2026");
@@ -145,5 +153,39 @@ describe("explainSandboxFailure", () =>
 		const explanation = explainSandboxFailure(output, "rebuild");
 
 		expect(`${explanation.message} ${explanation.suggestedAction}`).not.toMatch(/step 1|not in anything you wrote/);
+	});
+});
+
+describe("path rows", () =>
+{
+	it("fits as many stages as the width allows, at least one", () =>
+	{
+		expect(stagesPerRow(700)).toBe(7);
+		expect(stagesPerRow(40)).toBe(1);
+		expect(stagesPerRow(0)).toBeGreaterThan(0);
+	});
+
+	it("splits a 12-stage world into balanced rows that never exceed the limit", () =>
+	{
+		const stages = Array.from({ length: 12 }, (_unused, index) => index);
+
+		expect(balancedRows(stages, 7).map((row) => row.length)).toEqual([6, 6]);
+		expect(balancedRows(stages, 12).map((row) => row.length)).toEqual([12]);
+		expect(balancedRows(stages, 5).map((row) => row.length)).toEqual([4, 4, 4]);
+		expect(balancedRows([], 5)).toEqual([]);
+	});
+});
+
+describe("hasPointerMoved", () =>
+{
+	it("never counts the first position, which only records where the pointer rests", () =>
+	{
+		expect(hasPointerMoved(null, { x: 10, y: 20 })).toBe(false);
+	});
+
+	it("ignores events from content moving under a still pointer and counts real moves", () =>
+	{
+		expect(hasPointerMoved({ x: 10, y: 20 }, { x: 10, y: 20 })).toBe(false);
+		expect(hasPointerMoved({ x: 10, y: 20 }, { x: 11, y: 20 })).toBe(true);
 	});
 });

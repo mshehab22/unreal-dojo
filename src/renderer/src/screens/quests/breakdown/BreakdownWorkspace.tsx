@@ -1,5 +1,5 @@
 // The breakdown board at work: plan with the spec beside it, submit, compare with a reference plan, revise with a note, and grade.
-import { SendIcon } from "lucide-react";
+import { PanelLeftCloseIcon, PanelLeftOpenIcon, SendIcon } from "lucide-react";
 import { useState } from "react";
 
 import type { BreakdownQuest, BossQuest } from "@shared/types/content";
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { QUERY_KEYS } from "@/data/queryKeys";
 import { useDojoAction } from "@/data/useDojoAction";
 import { useDraftAutosave } from "@/data/useDraftAutosave";
+import { cn } from "@/lib/utils";
 
 import { useLootStore } from "../loot/useLootStore";
 import { ArrowPanel } from "./ArrowPanel";
@@ -29,6 +30,9 @@ interface BreakdownWorkspaceProps
 	readonly quest: BreakdownQuest | BossQuest;
 	readonly initialPlan: BreakdownPlan;
 }
+
+/** The window width from which the spec column starts open; below it the board needs the room (A355). */
+const WIDE_ENOUGH_FOR_SPEC = 1300;
 
 /** The steps of a breakdown. */
 const STEPS = ["Plan", "Compare and revise", "Result"] as const;
@@ -45,6 +49,7 @@ export function BreakdownWorkspace({ quest, initialPlan }: BreakdownWorkspacePro
 	const [edgeKind, setEdgeKind] = useState<BreakdownEdgeKind>("owns");
 	const [referenceIndex, setReferenceIndex] = useState<number | null>(null);
 	const [note, setNote] = useState("");
+	const [specOpen, setSpecOpen] = useState(() => window.innerWidth >= WIDE_ENOUGH_FOR_SPEC);
 	const autosave = useDraftAutosave({ questId: quest.id, breakdownPlan: plan });
 	const submit = useDojoAction((client, submitted: BreakdownPlan) => client.submitBreakdown({ questId: quest.id, plan: submitted }));
 	const revise = useDojoAction((client, revised: BreakdownPlan, revisionNote: string) => client.reviseBreakdown({ questId: quest.id, revisedPlan: revised, revisionNote }), [QUERY_KEYS.progress, QUERY_KEYS.availability]);
@@ -90,12 +95,15 @@ export function BreakdownWorkspace({ quest, initialPlan }: BreakdownWorkspacePro
 			{flowError && <AppErrorView error={flowError} onRetry={() => void (reference ? grade() : submitPlan())} />}
 
 			{!reference ? (
-				<div className="grid min-h-[30rem] flex-1 grid-cols-[minmax(14rem,19rem)_minmax(0,1fr)_minmax(15rem,18rem)] gap-4">
-					<aside aria-label="Spec" className="min-h-0 overflow-y-auto rounded-lg border border-line bg-surface p-4">
-						<TermText markdown={quest.spec} />
+				<div className={cn("grid min-h-[30rem] flex-1 gap-4", specOpen ? "grid-cols-[minmax(14rem,19rem)_minmax(0,1fr)_minmax(14rem,16rem)]" : "grid-cols-[2.5rem_minmax(0,1fr)_minmax(14rem,16rem)]")}>
+					<aside aria-label="Spec" className={cn("flex min-h-0 flex-col gap-2 overflow-y-auto rounded-lg border border-line bg-surface", specOpen ? "p-4" : "items-center py-2")}>
+						<Button variant="ghost" size="icon" className={specOpen ? "self-end" : ""} aria-label={specOpen ? "Hide the spec" : "Show the spec"} aria-expanded={specOpen} onClick={() => setSpecOpen(!specOpen)} data-testid="toggle-spec">
+							{specOpen ? <PanelLeftCloseIcon /> : <PanelLeftOpenIcon />}
+						</Button>
+						{specOpen ? <TermText markdown={quest.spec} /> : <span className="font-mono text-2xs tracking-widest text-paper-faint uppercase [writing-mode:vertical-rl]">Spec</span>}
 					</aside>
 					<BreakdownBoard plan={plan} positions={positions} onPositionsChange={setPositions} onPlanChange={setPlan} selectedPieceId={selectedPieceId} onSelectPiece={setSelectedPieceId} newEdgeKind={edgeKind} ariaLabel="Your plan" testId="learner-board" />
-					<aside aria-label="Pieces and arrows" className="flex min-h-0 flex-col gap-4 overflow-y-auto rounded-lg border border-line bg-surface p-4">
+					<aside aria-label="Pieces and arrows" className="flex min-h-0 flex-col gap-4 overflow-x-hidden overflow-y-auto rounded-lg border border-line bg-surface p-4">
 						{editing}
 						<div className="mt-auto flex flex-col gap-2 border-t border-line pt-3">
 							{problems.map((problem) => (
@@ -112,16 +120,19 @@ export function BreakdownWorkspace({ quest, initialPlan }: BreakdownWorkspacePro
 					</aside>
 				</div>
 			) : (
-				<div className="grid min-h-[30rem] flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(15rem,18rem)] gap-4">
-					<div className="flex min-h-0 flex-col gap-2">
-						<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Your plan</span>
-						<BreakdownBoard plan={plan} positions={positions} onPositionsChange={setPositions} onPlanChange={setPlan} selectedPieceId={selectedPieceId} onSelectPiece={setSelectedPieceId} newEdgeKind={edgeKind} ariaLabel="Your plan" testId="learner-board" />
+				<div className="grid min-h-[30rem] flex-1 grid-cols-[minmax(0,1fr)_minmax(14rem,16rem)] gap-4 min-[1300px]:grid-cols-[minmax(0,1fr)_minmax(15rem,18rem)]">
+					{/* Side by side from 1300 wide; stacked below that, so neither board gets narrow. */}
+					<div className="grid min-h-0 grid-rows-2 gap-4 min-[1300px]:grid-cols-2 min-[1300px]:grid-rows-1">
+						<div className="flex min-h-0 flex-col gap-2">
+							<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Your plan</span>
+							<BreakdownBoard plan={plan} positions={positions} onPositionsChange={setPositions} onPlanChange={setPlan} selectedPieceId={selectedPieceId} onSelectPiece={setSelectedPieceId} newEdgeKind={edgeKind} ariaLabel="Your plan" testId="learner-board" />
+						</div>
+						<div className="flex min-h-0 flex-col gap-2">
+							<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Reference: {reference.title}</span>
+							<BreakdownBoard plan={referenceAsPlan(reference)} positions={referencePositions} onPositionsChange={setReferencePositions} readOnly ariaLabel={`Reference plan: ${reference.title}`} testId="reference-board" />
+						</div>
 					</div>
-					<div className="flex min-h-0 flex-col gap-2">
-						<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Reference: {reference.title}</span>
-						<BreakdownBoard plan={referenceAsPlan(reference)} positions={referencePositions} onPositionsChange={setReferencePositions} readOnly ariaLabel={`Reference plan: ${reference.title}`} testId="reference-board" />
-					</div>
-					<aside aria-label="Revise" className="flex min-h-0 flex-col gap-4 overflow-y-auto rounded-lg border border-line bg-surface p-4">
+					<aside aria-label="Revise" className="flex min-h-0 flex-col gap-4 overflow-x-hidden overflow-y-auto rounded-lg border border-line bg-surface p-4">
 						<RevisionPanel reference={reference} patternIds={quest.patterns} note={note} onNoteChange={setNote} onGrade={() => void grade()} isGrading={revise.isPending} blockers={problems} />
 						<div className="flex flex-col gap-4 border-t border-line pt-3">{editing}</div>
 					</aside>

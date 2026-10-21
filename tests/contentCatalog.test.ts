@@ -13,7 +13,11 @@ import { resolveContentRoot } from "../src/main/content/resolveContentRoot";
 import { AppErrorException } from "../src/main/errors/AppErrorException";
 import { createHandlers } from "../src/main/ipc/createHandlers";
 import { registerHandlers, type WrappedHandler } from "../src/main/ipc/registerHandlers";
+import { createTestProgressContent } from "./support/contentFixture";
 import { createTestProgressService } from "./support/progressFixtures";
+import { SettingsService } from "../src/main/services/settings/SettingsService";
+import { RunRegistry } from "../src/main/services/unreal/RunRegistry";
+import { FakeSecretEncryptor, FakeSettingsChecks, MemorySettingsStore } from "./settings/settingsFakes";
 import { createContentFixture, readExamples, retagQuest, writePack, writeWorld, type ContentFixture } from "./content/contentFixture";
 
 /** A glossary entry with the given id, term, and aliases. */
@@ -189,6 +193,12 @@ describe("ContentCatalog load failures", () =>
 				getContentCatalog: () => catalog,
 				pickFolder: async () => null,
 				progressService: createTestProgressService().service,
+				getSandboxService: () => { throw new Error("not used"); },
+				runRegistry: new RunRegistry(),
+				sendProgress: () => undefined,
+				progressContentService: createTestProgressContent().content,
+				settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
+				readEnvironmentStatus: () => { throw new Error("not used"); },
 			}),
 		);
 

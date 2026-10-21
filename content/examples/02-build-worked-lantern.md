@@ -41,12 +41,14 @@ Drag `DojoExLantern` from the Content Browser into the sandbox map, set Brightne
 
 class UPointLightComponent;
 
+/** A lantern actor whose point light glows at an editable brightness. */
 UCLASS()
 class ADojoExLantern : public AActor
 {
 	GENERATED_BODY()
 
 public:
+	/** Creates the light component and turns ticking off. */
 	ADojoExLantern();
 
 	UPROPERTY(VisibleAnywhere, Category = "Lantern") // @explain: VisibleAnywhere shows the component in Details without letting anyone replace it.
@@ -56,6 +58,7 @@ public:
 	float Brightness = 8.f;
 
 protected:
+	/** Applies Brightness to the light when play starts. */
 	virtual void BeginPlay() override;
 };
 ```
@@ -67,6 +70,7 @@ protected:
 
 #include "Components/PointLightComponent.h"
 
+/** Creates the light as the root component with a warm color. */
 ADojoExLantern::ADojoExLantern()
 {
 	PrimaryActorTick.bCanEverTick = false; // @explain: The lantern never changes on its own, so it should cost nothing per frame.
@@ -76,6 +80,7 @@ ADojoExLantern::ADojoExLantern()
 	Light->SetLightColor(FLinearColor(1.f, 0.55f, 0.2f));
 }
 
+/** Applies the editable brightness once play starts. */
 void ADojoExLantern::BeginPlay()
 {
 	Super::BeginPlay(); // @explain: The parent BeginPlay registers components and runs Blueprint BeginPlay, so it comes first.
@@ -92,7 +97,7 @@ void ADojoExLantern::BeginPlay()
 #if WITH_AUTOMATION_TESTS
 
 #include "Components/PointLightComponent.h"
-#include "DojoExLantern.h"
+#include "Quests/example-build-worked-lantern/DojoExLantern.h"
 #include "Support/DojoTestWorld.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_Examples_Lantern_StartsLit, "Dojo.Examples.Lantern.StartsLit", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)

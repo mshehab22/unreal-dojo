@@ -43,7 +43,7 @@ interface BuildWorkspaceProps
 }
 
 /** The window width from which the brief column starts open. */
-const WIDE_ENOUGH_FOR_BRIEF = 1400;
+const WIDE_ENOUGH_FOR_BRIEF = 1600;
 
 /** Words needed in a self-explanation before it counts. */
 const EXPLANATION_MIN_WORDS = 3;
@@ -99,6 +99,13 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 	const busy = run.status === "running" || submit.status === "running";
 	const activeMarkedLines = gateOpen ? [] : (quest.files.find((file) => file.name === activeFile)?.markedLines ?? []).map((marked) => marked.line);
 	const submitBlockedReason = gateOpen ? null : "Explain the marked lines first; Submit opens with the gaps.";
+
+	/** Opens the gaps and folds the brief, so the editor gets the room for writing code. */
+	const openGaps = (): void =>
+	{
+		setGateOpen(true);
+		setBriefOpen(false);
+	};
 
 	/** Records one file's new text, in the ref at once and in state for the next render. */
 	const changeFile = (name: string, value: string): void =>
@@ -195,7 +202,7 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 			explanations={explanations}
 			onExplain={(key, text) => setExplanations((current) => ({ ...current, [key]: text }))}
 			isOpen={gateOpen}
-			onOpen={() => setGateOpen(true)}
+			onOpen={openGaps}
 			onShowLine={(fileName) => setActiveFile(fileName)}
 		/>
 	) : undefined;
@@ -229,7 +236,7 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 					commands={{ onRun: () => void startRun(), onSubmit: () => void startSubmit(), onSave: () => void autosave.saveNow() }}
 					gate={gate}
 				/>
-				<aside aria-label="Run and submit" className="flex min-h-0 flex-col overflow-y-auto rounded-lg border border-line bg-surface px-4 pb-4">
+				<aside aria-label="Run and submit" className="flex min-h-0 flex-col overflow-x-hidden overflow-y-auto rounded-lg border border-line bg-surface px-4 pb-4">
 					<RunColumn
 						run={run}
 						submit={submit}

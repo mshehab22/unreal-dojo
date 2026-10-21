@@ -22,7 +22,7 @@ function questProgressFor(stage: StageFixture, index: number): QuestProgress
 		hintsRevealed: index % 4 === 1 ? 1 : 0,
 		solutionViewed: false,
 		seerStoneSpent: false,
-		effortXpGranted: stage.id === "foundations.objects.flicker",
+		effortXpGranted: stage.id === "f1-popup-target",
 		savedFiles: {},
 		lastAttemptAt: touched ? daysFromNow(-30 + index) : null,
 	};
@@ -37,7 +37,7 @@ function attemptsFor(stages: StageFixture[]): AttemptRecord[]
 	{
 		if (stage.status !== "passed") return;
 
-		if (stage.id === "foundations.objects.flicker")
+		if (stage.id === "f1-popup-target")
 		{
 			attempts.push({ attemptId: `attempt-${index}-a`, questId: stage.id, at: daysFromNow(-24 + index, -2), score: 55, passed: false, xpGained: 4 });
 		}
@@ -74,19 +74,21 @@ export function returningProgressFixture(): PlayerProgress
 	return {
 		version: 1,
 		playerName: "Mohammad",
-		studio: { name: "Night Owl Studio", modules: ["night-market-lighting"], cosmetics: ["neon-sign"] },
+		studio: { name: "Night Owl Studio", modules: ["training-yard-targets"], cosmetics: ["neon-sign"] },
 		xp: 1240,
 		role: "Scripter",
 		streak: { count: 9, lastActivityAt: daysFromNow(-1), freezes: 1, milestones: [7] },
 		spree: { current: 3, best: 5, armor: 1 },
 		seerStones: 1,
 		patternCards: {
-			component: { tier: "silver", useCasesPassed: ["foundations.objects.proximity", "foundations.objects.boss", "foundations.objects.switch"] },
-			"update-method": { tier: "bronze", useCasesPassed: ["foundations.objects.flicker"] },
-			observer: { tier: "bronze", useCasesPassed: ["foundations.objects.boss"] },
+			component: { tier: "silver", useCasesPassed: ["f1-score-keeper", "f1-practice-bell", "f1-boss-training-yard"] },
+			"update-method": { tier: "bronze", useCasesPassed: ["f1-popup-target"] },
+			observer: { tier: "bronze", useCasesPassed: ["f1-boss-training-yard"] },
 		},
 		skills: {
 			"ue.objects.uproperty": { points: 9, mastery: "mastered" },
+			"ue.objects.types": { points: 2, mastery: "familiar" },
+			"ue.objects.casting": { points: 4, mastery: "proficient" },
 			"ue.objects.uclass": { points: 4, mastery: "proficient" },
 			"ue.objects.actors": { points: 11, mastery: "proficient" },
 			"ue.objects.ufunction": { points: 4, mastery: "familiar" },
@@ -116,7 +118,7 @@ export function returningProgressFixture(): PlayerProgress
 			tobjectptr: { ease: 2.5, intervalDays: 3, repetitions: 2, mastery: "familiar", skillId: "ue.memory.gc", lastReviewedAt: daysFromNow(-2) },
 		},
 		drillQueue: [],
-		rematches: { "foundations.objects.flicker": daysFromNow(0, -2) },
+		rematches: { "f1-popup-target": daysFromNow(0, -2) },
 		testedOutWorldIds: [],
 		xpPotionUntil: null,
 		hoverCounts: { tsoftobjectptr: 2, "garbage-collection": 4 },
@@ -150,7 +152,7 @@ export function freshProgressFixture(): PlayerProgress
 		testedOutWorldIds: [],
 		xpPotionUntil: null,
 		hoverCounts: {},
-		daily: { date: todayLocal(), offered: [{ kind: "drill" }, { kind: "concept", questId: "foundations.objects.uproperty" }, { kind: "concept", questId: "patterns.lens.decoupling" }], done: false, monthBadges: [], completedDates: [] },
+		daily: { date: todayLocal(), offered: [{ kind: "drill" }, { kind: "concept", questId: "f1-uobject-and-actor" }, { kind: "concept", questId: "patterns.lens.decoupling" }], done: false, monthBadges: [], completedDates: [] },
 		createdAt: daysFromNow(0),
 		updatedAt: daysFromNow(0),
 	};

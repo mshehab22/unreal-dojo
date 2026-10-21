@@ -5,7 +5,8 @@ import type { GlossaryAlias } from "@shared/types/catalog";
 import type { ReferencePlan } from "@shared/types/content";
 
 import { hashForRoute, routeFromHash, routeParametersFromHash } from "../../src/renderer/src/app/router/routes";
-import { matchGlossaryTerm, termAtWord } from "../../src/renderer/src/lib/matchGlossaryTerm";
+import { misplacedLineIds } from "../../src/renderer/src/components/quests/parsonsPlacement";
+import { termAtWord } from "../../src/renderer/src/lib/matchGlossaryTerm";
 import { shuffledOrder } from "../../src/renderer/src/lib/presentationOrder";
 import { edgeKindFromLabel, layoutPositions, newPiece, planProblems, referenceAsPlan, withEdge, withoutPiece } from "../../src/renderer/src/screens/quests/breakdown/boardModel";
 import { markedLineKey, markedLinesOf } from "../../src/renderer/src/screens/quests/build/markedLines";
@@ -156,24 +157,41 @@ describe("quest routes", () =>
 	});
 });
 
-describe("glossary term matching (temporary TermText linker)", () =>
+describe("editor glossary hover matching", () =>
 {
 	const aliases: GlossaryAlias[] = [
 		{ text: "UPROPERTY", entryId: "uproperty", caseSensitive: true, codeOnly: false, short: "s" },
 		{ text: "actor", entryId: "actor", caseSensitive: false, codeOnly: false, short: "s" },
 	];
 
-	it("matches identifiers exactly and plain words in any case", () =>
-	{
-		expect(matchGlossaryTerm("UPROPERTY", aliases)).toBe("uproperty");
-		expect(matchGlossaryTerm("uproperty", aliases)).toBeNull();
-		expect(matchGlossaryTerm(" Actor ", aliases)).toBe("actor");
-		expect(matchGlossaryTerm("", aliases)).toBeNull();
-	});
-
 	it("finds editor hover words only among identifiers", () =>
 	{
 		expect(termAtWord("UPROPERTY", aliases)?.entryId).toBe("uproperty");
 		expect(termAtWord("actor", aliases)).toBeNull();
+	});
+});
+
+describe("Parsons marking after a check", () =>
+{
+	const lines = ["void A()", "{", "x++;", "}"];
+	const texts: Record<string, string> = { "line-0": "void A()", "line-1": "{", "line-2": "x++;", "line-3": "}", "distractor-0": "Super::A();" };
+	const textOf = (lineId: string): string | undefined => texts[lineId];
+
+	it("marks a decoy without painting every later line", () =>
+	{
+		expect(misplacedLineIds(["distractor-0", "line-0", "line-1", "line-2", "line-3"], textOf, lines)).toEqual(new Set(["distractor-0"]));
+	});
+
+	it("marks only the lines outside the longest in-order run", () =>
+	{
+		expect(misplacedLineIds(["line-2", "line-0", "line-1", "line-3"], textOf, lines)).toEqual(new Set(["line-2"]));
+	});
+
+	it("treats identical lines as interchangeable (A314)", () =>
+	{
+		const braces = ["{", "{", "}", "}"];
+		const braceTexts: Record<string, string> = { "line-0": "{", "line-1": "{", "line-2": "}", "line-3": "}" };
+
+		expect(misplacedLineIds(["line-1", "line-0", "line-3", "line-2"], (lineId) => braceTexts[lineId], braces).size).toBe(0);
 	});
 });

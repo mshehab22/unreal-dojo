@@ -80,9 +80,9 @@ describe("parseQuestFile happy paths", () =>
 
 		const source = quest.files.find((file) => file.name === "DojoExLantern.cpp");
 
-		expect(source?.markedLines?.map((marked) => marked.line)).toEqual([7, 9, 16]);
+		expect(source?.markedLines?.map((marked) => marked.line)).toEqual([8, 10, 18]);
 		expect(source?.starter).not.toContain("@explain");
-		expect(source?.starter.split("\n")[6]).toBe("\tPrimaryActorTick.bCanEverTick = false;");
+		expect(source?.starter.split("\n")[7]).toBe("\tPrimaryActorTick.bCanEverTick = false;");
 		expect(quest.parsons?.[0]?.distractors[0]?.mistake).toContain("constructor");
 	});
 

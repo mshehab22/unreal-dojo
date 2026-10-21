@@ -15,6 +15,12 @@ export async function readExamples(): Promise<Map<string, string>>
 	return new Map(names.map((name, index) => [name, texts[index] ?? ""]));
 }
 
+/** Copies the repo's real `glossary.json` and `patterns.json` into a fixture, so quests that list real terms pass the reference checks. */
+export async function writeRepoGlossary(fixture: ContentFixture): Promise<void>
+{
+	for (const name of ["glossary.json", "patterns.json"]) await fixture.write(name, await readFile(resolve("content", name), "utf8"));
+}
+
 /** Gives an example quest a new id and order, and drops its prerequisites, so many copies can live in one pack. */
 export function retagQuest(text: string, id: string, order: number): string
 {

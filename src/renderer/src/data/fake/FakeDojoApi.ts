@@ -40,7 +40,7 @@ import { enginesFixture, manualEngineFixture, reviewProvidersFixture, sandboxFol
 import { FakeQuestFlow } from "./FakeQuestFlow";
 import { MAP_FIXTURE, type PackFixture } from "./fixtures/mapFixture";
 import { freshProgressFixture, returningProgressFixture } from "./fixtures/progressFixture";
-import { questFlowMapFixture } from "./fixtures/questFlowMapFixture";
+import { questFlowMapFixture, questFlowProgressFixture } from "./fixtures/questFlowFixture";
 import { buildQuestOutline } from "./fixtures/questFactory";
 import { rulesFixture } from "./fixtures/rulesFixture";
 import { FAILED_BUILD_OUTPUT, SandboxBuildSimulator } from "./SandboxBuildSimulator";
@@ -102,10 +102,11 @@ function initialState(scenario: FakeScenario): FakeState
 			reviewProvider: "auto",
 			modelId: "claude-sonnet-5-5",
 			theme: "dark",
+			mcpPort: 8000,
 			hasApiKey: false,
 			firstRunCompletedAt: isFresh ? null : daysFromNow(-32),
 		},
-		progress: isFresh ? freshProgressFixture() : returningProgressFixture(),
+		progress: isFresh ? freshProgressFixture() : scenario === "quests" ? questFlowProgressFixture() : returningProgressFixture(),
 		editorConnected: false,
 		failNextBuild: scenario === "first-build-fails",
 		map: scenario === "quests" ? questFlowMapFixture() : MAP_FIXTURE,
@@ -325,7 +326,7 @@ export class FakeDojoApi implements DojoClient
 
 		if (!isFresh)
 		{
-			statuses["foundations.objects"] = { eligible: false, testedOut: false, reason: "Every quest here is passed already." };
+			statuses["objects-and-reflection"] = { eligible: false, testedOut: false, reason: "Every quest here is passed already." };
 			statuses["foundations.memory"] = { eligible: true, testedOut: false };
 		}
 

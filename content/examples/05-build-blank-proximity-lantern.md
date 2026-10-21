@@ -56,7 +56,7 @@ Place the lantern in the sandbox map with `show Collision` typed in the console 
 #if WITH_AUTOMATION_TESTS
 
 #include "Components/SphereComponent.h"
-#include "DojoExProximityLantern.h"
+#include "Quests/example-build-blank-proximity-lantern/DojoExProximityLantern.h"
 #include "Support/DojoTestActor.h"
 #include "Support/DojoTestWorld.h"
 

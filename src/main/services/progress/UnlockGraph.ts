@@ -4,6 +4,7 @@ import type { MasteryLevel, PlayerProgress, QuestAvailability } from "@shared/ty
 import { MasteryRules } from "./MasteryRules";
 import type { RuleQuest } from "./RuleQuest";
 import { PACK_GATES } from "./rules";
+import { taughtTermsOf } from "./taughtTerms";
 import { TestOutRules } from "./TestOutRules";
 
 /** The learner state the graph reads. */
@@ -43,12 +44,16 @@ export class UnlockGraph
 	/** Boss quest ids each pack (by id) waits for. */
 	private readonly packGateBossIds: Map<string, string[]>;
 
+	/** Terms some concept quest teaches. Only these can gate a quest: a term nothing teaches could never reach familiar (A312). */
+	private readonly taughtTerms: Set<string>;
+
 	/** Builds the graph from every loaded quest. */
 	constructor(private readonly quests: RuleQuest[])
 	{
 		this.questsById = new Map(quests.map((quest) => [quest.id, quest]));
 		this.alwaysAvailableIds = this.findAlwaysAvailable();
 		this.packGateBossIds = this.findPackGates();
+		this.taughtTerms = taughtTermsOf(quests);
 	}
 
 	/** Availability of every quest. */
@@ -105,7 +110,9 @@ export class UnlockGraph
 
 		if (testedOut) return null;
 
-		const weakTerms = quest.terms.filter((termId) => !this.mastery.isAtLeast(state.masteryOf(termId), "familiar"));
+		// A concept quest is where its terms are learned, so its own terms never lock it.
+		const gatingTerms = quest.kind === "concept" ? [] : quest.terms.filter((termId) => this.taughtTerms.has(termId));
+		const weakTerms = gatingTerms.filter((termId) => !this.mastery.isAtLeast(state.masteryOf(termId), "familiar"));
 		if (weakTerms.length > 0) return `Get ${this.joinList(weakTerms)} to Familiar in a drill first.`;
 
 		return null;
