@@ -1,0 +1,27 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "",
+	"Category": "",
+	"Description": "Unreal Dojo sandbox project. The app copies this template, sets EngineAssociation, and builds learner quests here.",
+	"Modules": [
+		{
+			"Name": "Dojo",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "ModelContextProtocol",
+			"Enabled": true
+		},
+		{
+			"Name": "AutomationTestToolset",
+			"Enabled": true
+		},
+		{
+			"Name": "LiveCodingToolset",
+			"Enabled": true
+		}
+	]
+}
