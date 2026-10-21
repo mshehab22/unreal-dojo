@@ -17,7 +17,18 @@ export const QUERY_KEYS = {
 	packs: "packs",
 	glossary: "glossary",
 	patternCards: "pattern-cards",
+	glossaryAliases: "glossary-aliases",
+	quest: "quest",
 } as const;
 
-/** One query key. */
-export type QueryKey = (typeof QUERY_KEYS)[keyof typeof QUERY_KEYS];
+/** A fixed query key. */
+type FixedQueryKey = (typeof QUERY_KEYS)[keyof typeof QUERY_KEYS];
+
+/** One query key: a fixed one, or one quest's key (`quest:<id>`), which invalidating `quest` also refreshes. */
+export type QueryKey = FixedQueryKey | `${typeof QUERY_KEYS.quest}:${string}`;
+
+/** The key of one full quest. */
+export function questKey(questId: string): QueryKey
+{
+	return `${QUERY_KEYS.quest}:${questId}`;
+}

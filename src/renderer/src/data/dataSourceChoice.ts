@@ -4,9 +4,9 @@
 export const DATA_SOURCE_STORAGE_KEY = "dojo.dataSource";
 
 /** The fake's starting states. */
-export const FAKE_SCENARIOS = ["returning", "fresh", "first-build-fails"] as const;
+export const FAKE_SCENARIOS = ["returning", "fresh", "first-build-fails", "quests"] as const;
 
-/** One fake starting state: a learner part way in, a learner who never ran setup, or a setup whose first build fails once. */
+/** One fake starting state: a learner part way in, a learner who never ran setup, a setup whose first build fails once, or the returning learner with the real Pack 1 World 1 open on the map (the quest screens' flow). */
 export type FakeScenario = (typeof FAKE_SCENARIOS)[number];
 
 /** Which data source to use. */

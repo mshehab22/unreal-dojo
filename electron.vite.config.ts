@@ -5,6 +5,8 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
 
+import { fakeWorldFixture } from "./tools/fake/fakeWorldPlugin";
+
 const sharedAlias = { "@shared": resolve("src/shared") };
 
 export default defineConfig({
@@ -24,6 +26,6 @@ export default defineConfig({
 	},
 	renderer: {
 		resolve: { alias: { ...sharedAlias, "@": resolve("src/renderer/src") } },
-		plugins: [react(), tailwindcss()],
+		plugins: [react(), tailwindcss(), fakeWorldFixture()],
 	},
 });

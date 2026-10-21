@@ -1,0 +1,9 @@
+/* Marks for worked-level lines the learner explains before the gaps open. Colors come from the design tokens. */
+.dojo-marked-line {
+	background: color-mix(in srgb, var(--color-warn) 9%, transparent);
+}
+
+.dojo-marked-gutter {
+	margin-left: 4px;
+	border-left: 3px solid var(--color-warn);
+}

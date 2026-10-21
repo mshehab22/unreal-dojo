@@ -8,23 +8,24 @@ import { useRefetchOnFocus } from "@/data/useRefetchOnFocus";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 
 import { NavigationRail } from "./NavigationRail";
-import { useRoute } from "./router/useRoute";
+import { useRoute, useRouteParameters } from "./router/useRoute";
 import { ScreenOutlet } from "./ScreenOutlet";
 
 /** Lays out every screen inside the rail and the scrollable stage. */
 export function AppFrame()
 {
 	const route = useRoute();
+	const parameters = useRouteParameters();
 	const stageReference = useRef<HTMLElement>(null);
 
 	useGlobalShortcuts();
 	useRefetchOnFocus();
 
-	// A new screen starts at the top, not where the last one was scrolled to.
+	// A new screen (or the same screen for another quest) starts at the top, not where the last one was scrolled to.
 	useEffect(() =>
 	{
 		stageReference.current?.scrollTo({ top: 0 });
-	}, [route.id]);
+	}, [route.id, parameters]);
 
 	return (
 		<TooltipProvider>

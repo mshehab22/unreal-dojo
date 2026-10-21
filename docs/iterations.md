@@ -701,3 +701,129 @@ total                                       39.2  PASSED
 - Decisions made: A510 (the world ids and how a missing world keeps the pack closed) and A511 (the checker warning, added as one new verifier check).
 - Not done or left for later: the authors of Pack 1 world 5 and the Pack 2 Component world must use the ids `communication` and `component` (A510). content-engine may want to mention the new check in its spec.
 
+
+## M2.2 Quest screens (ui-quests, builder-ui-quests)
+- What changed: every quest can now be played. Clicking an open stage on the World Map, Studio's Continue, Start drill, or a world's Test out opens the matching screen. All of it runs on built-in sample data for now, and that sample data is the real Pack 1 World 1 (the training yard), so what you see is the actual content.
+  - Concept: a no-penalty guess first, then the card with underlined terms that show a short definition on hover (with Read more and Drill me), the example in a real code editor with Check syntax, then the questions. Answers are graded together; each question then shows whether it was right, the explanation, and for the one-sentence question the model answer.
+  - Drill: one item at a time, mixing recall, pattern discrimination, fill the blank, spot the bug, a Parsons reorder (put shuffled lines in order; the decoy lines are marked with what is wrong about them after you check), and a one-sentence explanation. A miss says "due for review" and when it comes back, never "lost". The finish card shows the score, XP, the streak kept, and the next due date.
+  - Breakdown: the spec on the left, a board in the middle where pieces (class, component, data, event, step) each need a name and a purpose, with arrows for owns, listens to, spawns, and then. Everything can also be done from the side panel with the keyboard. Submit shows your plan beside a reference plan, names the patterns for the first time, and asks for a revision note; the grade follows.
+  - Build: brief, editor, and runs in three columns. On a worked quest you first say in a sentence why each marked line is there; then the editor unlocks and the model reasons show. Run is free (Cmd/Ctrl+Enter), Submit records the attempt (Cmd/Ctrl+Shift+Enter), Cmd/Ctrl+S saves (it also saves by itself every few seconds). The right column shows the build's progress with Cancel, the tests, the build log, the hint spells with their XP cost, and after two failed submits the "rebuild it from shuffled lines" offer.
+  - Loot: the score counts up, XP is itemized, then what changed (level, cards flipping in, skills, spree, streak, chest, what unlocked, next reviews), the review with every rubric line, findings grouped by severity with a free "Why?", a reflection question, and after a pass an alternative solution. Improve, See it run, and Next close it. When the reviewer timed out, the review says so and offers Retry review.
+- How to see it: in the project folder on the Mac, `VITE_DOJO_FAKE=quests npm run dev`, then open the World Map. The first world is the real training yard.
+- Proof (MacBook Air M5): `npm run typecheck` passes; `npm test` 41 files, 485 tests passed; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems; `npm run test:e2e` 20 passed, including the new quest flow (6 tests) and ui-core's screens.
+- Screenshots (1280 wide unless named otherwise):
+
+![[m2-2-concept-predict.jpg|800]]
+*Concept: a guess before the card. Wrong guesses cost nothing.*
+
+![[m2-2-concept-card-hover-term.jpg|800]]
+*The card with a glossary term's hover card open, and the example in the editor below.*
+
+![[m2-2-concept-results.jpg|800]]
+*Questions graded together: each shows its explanation; the one-sentence question shows the model answer.*
+
+![[m2-2-concept-loot.jpg|800]]
+*Concept loot: score, XP, what changed.*
+
+![[m2-2-drill-pattern-discrimination.jpg|800]]
+*Drill: which pattern fits, answered wrong on purpose: the right pattern is marked and the note says why the pick does not fit.*
+
+![[m2-2-drill-parsons-marked.jpg|800]]
+*Drill: Parsons reorder after checking. The decoy line is marked with its mistake and the working order is shown.*
+
+![[m2-2-drill-spot-the-bug.jpg|800]]
+*Drill: spot the bug, with the fix.*
+
+![[m2-2-drill-explain-graded.jpg|800]]
+*Drill: one-sentence explanation, graded, with the model answer.*
+
+![[m2-2-drill-summary.jpg|800]]
+*Drill finish: right count, XP, streak kept, next due date.*
+
+![[m2-2-breakdown-plan.jpg|800]]
+*Breakdown: the spec, the board, and the side panel (pieces, purposes, arrows).*
+
+![[m2-2-breakdown-compare.jpg|800]]
+*Breakdown after Submit: your plan beside the reference, the patterns named, and the revision note.*
+
+![[m2-2-breakdown-loot-grade.jpg|800]]
+*Breakdown grade: required pieces covered or missing, concerns, strengths.*
+
+![[m2-2-build-gate.jpg|800]]
+*Build, worked level: explain each marked line before the gaps open.*
+
+![[m2-2-build-run-fails.jpg|800]]
+*Run on the starter: it builds, both tests fail with their messages.*
+
+![[m2-2-build-hint.jpg|800]]
+*A hint spell revealed, with the cost of the next one.*
+
+![[m2-2-build-run-passes.jpg|800]]
+*After filling both gaps: Run passes every test.*
+
+![[m2-2-build-loot.jpg|800]]
+*Build loot after Retry review: the pass keeps its XP.*
+
+![[m2-2-build-loot-review.jpg|800]]
+*The review: rubric lines, a finding explained with Why?, the reflection answered.*
+
+![[m2-2-build-failed-submit-offers.jpg|800]]
+*Two failed submits: the Parsons fallback, and the Seer Stone offer explaining that it arrives later.*
+
+![[m2-2-build-1100x700.jpg|800]]
+*Build at the smallest window (1100x700): the brief is folded to a strip so the editor has room.*
+
+![[m2-2-breakdown-1100x700.jpg|800]]
+*Breakdown at 1100x700.*
+
+- Decisions made: A350 to A364 in `docs/decisions.md`. The ones that need another system: A356 (Retry review submits again; a `retryReview(attemptId)` method would avoid a new attempt), A357 (bought hint texts are forgotten on restart; `getQuest` should return them), A358 (no method yet to view the reference solution), A352 (hover terms use a temporary linker until M1.8's TermLinker merges).
+- Not done or left for later: the boss's piece picker and integration build (a boss opens on its breakdown only); the Seer Stone flow (M3.3); everything here runs on the sample data until the run, review, and drill services are wired; unverified on Windows.
+
+### Fix round 1
+- What the reviewer and the Lead asked for: merge main (where the sample map's first world became the real World 1, already passed), make the quest flow start that world fresh again, steady a flaky editor step in the test, stop the build's right column scrolling sideways, give the breakdown board room at the smallest window, mark Parsons answers fairly, use the merged term linker, make the sample breakdown grader honest, keep the first pass's score after Retry review, and some polish.
+- What changed:
+  - The sample data for the quest screens starts Pack 1 World 1 untouched again (no passes, attempts, or rematches for it), so first passes pay XP, hints cost XP, and failed submits count.
+  - Hover terms now come from content-engine's term linker, so plain words in prose link too, the same way the Codex and the verifier see them.
+  - Build: the brief starts folded below 1600 wide and folds itself when the gaps open, so the editor has room while you write; a newly bought hint scrolls into view; the right column's buttons wrap instead of pushing the column wider.
+  - Breakdown: below 1300 wide the spec folds to a strip (a button opens it), so the board is at least 450 pixels wide at 1100x700; in the compare step the two boards stack at that size.
+  - Parsons: after checking, a decoy line is marked, but it no longer turns every line after it red: only the lines out of order are marked, and identical lines (two closing braces) count as interchangeable.
+  - The sample breakdown grader no longer lets one big piece cover seven required pieces: each of your pieces counts for at most one.
+  - After Retry review, the loot keeps the first pass's score, pass label, and XP; the new review shows its own score.
+- Proof (merged with main at e2e746a): `npm run typecheck` passes; `npm test` 54 files, 651 passed, 7 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (5 warnings from content); `npm run test:e2e` 21 passed, three runs in a row.
+- Screenshots: every picture above was taken again from this version.
+
+![[m2-2-breakdown-1100x700.jpg|800]]
+*Breakdown at 1100x700 with the spec folded: the board keeps its room.*
+
+![[m2-2-build-failed-submit-offers.jpg|800]]
+*Build at 1280 wide after two failed submits: the right column's buttons wrap, nothing scrolls sideways.*
+
+- Decisions made: fix round notes under A351, A352, A355, A356, and A360.
+
+### Fix round 2
+- What the reviewer and the Lead asked for: the breakdown compare step was unreadable below 1300 wide (the stacked boards drew their cards 4 to 5 pixels tall), and World 1's Test out reason in the quest sample data still said every quest was passed.
+- What changed: below 1300 wide each board now takes the full width, one above the other, and the revise panel follows (the page scrolls). Each board picks its columns from its own shape, so eight pieces lay out four by two in a wide box. The revise panel lists the reference plan as text: every piece with its kind, and every arrow in words, so it can be read at any size and by a screen reader. The Test out reason now follows the world's real standing in the sample data. The quest flow tests now run on the QA harness: each test gets a freshly launched app with its own settings folder.
+- Proof (merged with main at 55a2b80): `npm run typecheck` passes; `npm test` 54 files, 660 passed, 7 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (5 warnings from content); `npm run test:e2e` 26 passed, three runs in a row.
+
+![[m2-2-breakdown-compare-1100x700.jpg|800]]
+*Breakdown compare at 1100x700: both boards full width and readable.*
+
+![[m2-2-breakdown-compare-text-1100x700.jpg|800]]
+*The reference plan as text in the revise panel.*
+
+- Decisions made: fix round 2 note under A355.
+
+### Fix round 3 (revealed hints persist)
+- What changed: with M1.6c merged, the build screen shows the hints you already paid for from the quest itself, so they are there after leaving and coming back (and, in the real app, after a restart). Revealing asks for a specific hint by number: if that hint was already paid for (a stale screen, a double click), it comes back free instead of charging for the next one. The sample data keeps revealed hints the same way.
+- Proof (merged with main): `npm run typecheck` passes; `npm test` 55 files, 668 passed, 7 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (5 warnings from content); `npm run test:e2e` 26 passed, three runs in a row. The build flow now leaves the quest after buying a hint, comes back, and checks the hint is still shown and the button offers hint 2.
+- Decisions made: A357 marked superseded by A500 to A502.
+
+### Fix round 4
+- What the reviewer and the Lead asked for: right after Submit plan the page jumped down to the piece form (1100x700) or past the revision note (1440x900); and main's unit tests must not fail just because an author edited World 1.
+- What changed: the piece name box only takes focus for a piece you just added, and the compare step opens at its top with the reference heading in view; at 1440 the revision note and Grade come before the reference plan as text, so they are on screen at once. The sample data's copy of World 1 is no longer committed: it is built from the content folder whenever the app or the tests are built, so there is nothing to drift.
+- Proof (merged with main): `npm run typecheck` passes; `npm test` 56 files, 677 passed, 7 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (6 warnings from content); `npm run test:e2e` 27 passed, three runs in a row. Two compare-step checks now run, at 1100x700 and 1440x900.
+
+![[m2-2-breakdown-compare.jpg|800]]
+*Breakdown compare at 1280x800 right after Submit plan: it opens at the top.*
+
+- Decisions made: A365 (the fake's World 1 built from content); fix round 4 notes under A351 and A355.

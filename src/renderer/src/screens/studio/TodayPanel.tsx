@@ -4,7 +4,7 @@ import { PlayIcon } from "lucide-react";
 import type { GlossaryEntry } from "@shared/types/content";
 import type { DrillSummary, PlayerProgress, RulesSnapshot } from "@shared/types/progress";
 
-import { DisabledWithReason } from "@/components/DisabledWithReason";
+import { useNavigate } from "@/app/router/useRoute";
 import { Panel } from "@/components/Panel";
 import { StreakFlame } from "@/components/StreakFlame";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ interface TodayPanelProps
 /** Due drills, streak, and what comes due next. */
 export function TodayPanel({ progress, rules, drills, glossary }: TodayPanelProps)
 {
+	const navigate = useNavigate();
 	const termNames = new Map((glossary ?? []).map((entry) => [entry.id, entry.term]));
 	const upcoming = Object.entries(progress.schedule)
 		.filter(([, dueAt]) => new Date(dueAt).getTime() > Date.now())
@@ -36,12 +37,10 @@ export function TodayPanel({ progress, rules, drills, glossary }: TodayPanelProp
 					<span className="text-sm text-paper-muted">{drills.dueToday === 1 ? "item due for review" : "items due for review"}</span>
 					{drills.overflow > 0 && <span className="text-xs text-paper-faint">{drills.overflow} more slid to tomorrow</span>}
 				</div>
-				<DisabledWithReason testId="start-drill" reason="Drill sessions open with the drill screen, which comes next (M2.2).">
-					<Button variant="pack" disabled>
-						<PlayIcon />
-						Start drill
-					</Button>
-				</DisabledWithReason>
+				<Button variant="pack" data-testid="start-drill" onClick={() => navigate("drill", { kind: "due" })}>
+					<PlayIcon />
+					Start drill
+				</Button>
 			</div>
 			<StreakFlame count={progress.streak.count} freezes={progress.streak.freezes} maxFreezes={rules.maxFreezes} milestones={rules.streakMilestones} windowDays={rules.streakWindowDays} />
 			{upcoming.length > 0 && (

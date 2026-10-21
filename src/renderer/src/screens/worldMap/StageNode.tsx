@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import type { QuestOutline } from "@shared/types/catalog";
 import type { QuestAvailability } from "@shared/types/progress";
 
+import { useNavigate } from "@/app/router/useRoute";
 import { QUEST_KIND_DISPLAY } from "@/components/questKindIcons";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { withoutBossPrefix } from "@/lib/formatting";
@@ -49,9 +50,10 @@ function nodeClass(status: QuestAvailability["status"], isRematch: boolean): str
 	}
 }
 
-/** A node with its short label underneath. Hover or focus shows the title, kind, XP, and state (or why it is locked). */
+/** A node with its short label underneath. Hover or focus shows the title, kind, XP, and state (or why it is locked); a click opens an unlocked quest. */
 export function StageNode({ quest, availability, rematchShare }: StageNodeProps)
 {
+	const navigate = useNavigate();
 	const status = availability?.status ?? "locked";
 	const isBoss = quest.kind === "boss";
 	const isRematch = availability?.dueForRematch === true;
@@ -78,6 +80,8 @@ export function StageNode({ quest, availability, rematchShare }: StageNodeProps)
 					data-rematch={isRematch}
 					data-kind={quest.kind}
 					aria-label={`${quest.title}: ${stateLine(availability, rematchShare)}`}
+					aria-disabled={status === "locked"}
+					onClick={() => status !== "locked" && navigate("quest", { id: quest.id })}
 					className="group relative z-10 flex w-20 shrink-0 flex-col items-center gap-2 text-center outline-none"
 				>
 					<span

@@ -7,5 +7,5 @@
 			"@shared/*": ["./src/shared/*"]
 		}
 	},
-	"include": ["electron.vite.config.ts", "vitest.config.ts", "playwright.config.ts", "src/main/**/*", "src/preload/**/*", "src/shared/**/*", "tests/**/*", "e2e/**/*", "tools/**/*"]
+	"include": ["electron.vite.config.ts", "vitest.config.ts", "playwright.config.ts", "src/main/**/*", "src/preload/**/*", "src/shared/**/*", "tests/**/*", "e2e/**/*", "tools/**/*", "src/renderer/src/data/fake/fixtures/fakeWorldModule.d.ts"]
 }

@@ -137,9 +137,8 @@ test("screens show the returning learner's real numbers", async ({ dojo }) =>
 	await expect(window.getByTestId("daily-offer")).toHaveCount(3);
 	await expect(window.getByTestId("daily-offer").first()).toContainText("6 to 10 due items");
 	await expect(window.getByTestId("studio-daily")).toContainText("September 2026");
-	await window.getByTestId("start-drill").focus();
-	await expect(window.getByRole("tooltip")).toContainText("drill screen");
-	await window.keyboard.press("Escape");
+	// Start drill opens the drill screen since M2.2.
+	await expect(window.getByTestId("start-drill")).toBeEnabled();
 	await window.getByTestId("daily-offer").nth(1).getByRole("button", { name: "Pick this one" }).click();
 	await expect(window.getByTestId("daily-offer").nth(1)).toHaveAttribute("data-chosen", "true");
 
@@ -157,9 +156,8 @@ test("screens show the returning learner's real numbers", async ({ dojo }) =>
 	await expectNoSidewaysScroll(window, "world map with 12 stages at 1100x700");
 	await setViewport(window, 1440, 900);
 
-	// A disabled button still explains itself on hover (A245).
-	await window.getByTestId("test-out").hover();
-	await expect(window.getByRole("tooltip")).toContainText("drill screen");
+	// Test out opens the drill screen since M2.2.
+	await expect(window.getByTestId("test-out")).toBeEnabled();
 
 	await goTo(window, "#/character", "screen-character");
 	await expect(window.locator('[data-testid="pattern-card"][data-tier]')).toHaveCount(3);

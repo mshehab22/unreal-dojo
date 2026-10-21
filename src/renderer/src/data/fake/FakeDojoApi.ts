@@ -3,27 +3,32 @@
 import type { Unsubscribe } from "@shared/ipc";
 import type { ContentStatus, GlossaryAlias, LearnerQuest, LearnerWorld, PackOutline } from "@shared/types/catalog";
 import type { GlossaryEntry, PatternCard } from "@shared/types/content";
-import type { DrillSession } from "@shared/types/drill";
+import type { DrillRequest, DrillSession } from "@shared/types/drill";
 import type { EngineInstall, EnvironmentStatus, SandboxFolderChoice, SandboxSetupResult, ToolchainCheck } from "@shared/types/engine";
 import type { AppError } from "@shared/types/errors";
 import type {
 	BreakdownOutcome,
 	BreakdownReferenceChoice,
+	BreakdownRevision,
+	BreakdownSubmission,
 	ConceptOutcome,
+	ConceptSubmission,
 	DailyQuestState,
+	DrillAnswer,
 	DrillItemResult,
 	DrillOutcome,
 	DrillSummary,
 	HintReveal,
 	PlayerProgress,
 	QuestAvailability,
+	QuestDraft,
 	QuestProgress,
 	RulesSnapshot,
 	SubmitOutcome,
 	WorldTestOutStatus,
 } from "@shared/types/progress";
-import type { ExplainGrade, ReviewProviderStatus } from "@shared/types/review";
-import type { BuildProgressEvent, RunResult, SandboxSetupRequest, SyntaxCheckResult } from "@shared/types/run";
+import type { ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
+import type { BuildProgressEvent, RunRequest, RunResult, SandboxSetupRequest, SyntaxCheckRequest, SyntaxCheckResult } from "@shared/types/run";
 import type { Settings, SettingsPatch } from "@shared/types/settings";
 
 import glossaryJson from "../../../../../content/glossary.json";
@@ -32,8 +37,10 @@ import type { FakeScenario } from "../dataSourceChoice";
 import type { DojoClient } from "../DojoClient";
 import { daysFromNow } from "./fixtures/fakeClock";
 import { enginesFixture, manualEngineFixture, reviewProvidersFixture, sandboxFolderFixture, sandboxPathIn, toolchainFixture } from "./fixtures/machineFixture";
-import { MAP_FIXTURE } from "./fixtures/mapFixture";
+import { FakeQuestFlow } from "./FakeQuestFlow";
+import { MAP_FIXTURE, type PackFixture } from "./fixtures/mapFixture";
 import { freshProgressFixture, returningProgressFixture } from "./fixtures/progressFixture";
+import { questFlowMapFixture, questFlowProgressFixture } from "./fixtures/questFlowFixture";
 import { buildQuestOutline } from "./fixtures/questFactory";
 import { rulesFixture } from "./fixtures/rulesFixture";
 import { FAILED_BUILD_OUTPUT, SandboxBuildSimulator } from "./SandboxBuildSimulator";
@@ -53,17 +60,20 @@ function answer<Value>(value: Value): Promise<Value>
 	return new Promise((resolve) => setTimeout(() => resolve(structuredClone(value)), LATENCY_MS));
 }
 
-/** The error the fake answers for quest-flow methods the M2.1 screens never call (ui-quests builds those flows). */
-function notInFake(method: string): Promise<never>
+/** Waits the fake latency, then answers what `compute` returns, or rejects with the AppError it throws. */
+function answerFrom<Value>(compute: () => Value): Promise<Value>
 {
-	const error: AppError = {
-		code: "not-implemented",
-		message: "The fake data source has no answer for this yet.",
-		suggestedAction: "Quest flows arrive with the quest screens (M2.2).",
-		detail: `FakeDojoApi.${method}`,
-	};
-
-	return new Promise((_resolve, reject) => setTimeout(() => reject(error), LATENCY_MS));
+	return new Promise((resolve, reject) => setTimeout(() =>
+	{
+		try
+		{
+			resolve(structuredClone(compute()));
+		}
+		catch (thrown)
+		{
+			reject(thrown);
+		}
+	}, LATENCY_MS));
 }
 
 /** The fake's whole mutable state. */
@@ -73,12 +83,15 @@ interface FakeState
 	progress: PlayerProgress;
 	editorConnected: boolean;
 	failNextBuild: boolean;
+
+	/** The packs, worlds, and stages this scenario's map shows. */
+	map: PackFixture[];
 }
 
 /** Builds the starting state for a scenario. */
 function initialState(scenario: FakeScenario): FakeState
 {
-	const isFresh = scenario !== "returning";
+	const isFresh = scenario === "fresh" || scenario === "first-build-fails";
 	const engine = enginesFixture()[0] as EngineInstall;
 
 	return {
@@ -93,9 +106,10 @@ function initialState(scenario: FakeScenario): FakeState
 			hasApiKey: false,
 			firstRunCompletedAt: isFresh ? null : daysFromNow(-32),
 		},
-		progress: isFresh ? freshProgressFixture() : returningProgressFixture(),
+		progress: isFresh ? freshProgressFixture() : scenario === "quests" ? questFlowProgressFixture() : returningProgressFixture(),
 		editorConnected: false,
 		failNextBuild: scenario === "first-build-fails",
+		map: scenario === "quests" ? questFlowMapFixture() : MAP_FIXTURE,
 	};
 }
 
@@ -105,11 +119,22 @@ export class FakeDojoApi implements DojoClient
 	private readonly state: FakeState;
 	private readonly listeners = new Set<(event: BuildProgressEvent) => void>();
 	private readonly builds = new Map<string, SandboxBuildSimulator>();
+	private readonly quests: FakeQuestFlow;
 
 	/** Starts the fake in one scenario's state; the state lives until the page reloads. */
 	constructor(scenario: FakeScenario)
 	{
 		this.state = initialState(scenario);
+		this.quests = new FakeQuestFlow({
+			progress: () => this.state.progress,
+			settings: () => this.state.settings,
+			rules: rulesFixture,
+			patternCards: () => PATTERN_CARDS,
+			emit: (event) => this.emit(event),
+			outline: (questId) => this.outlines().find((outline) => outline.id === questId),
+			worldOutline: (worldId) => this.worldOutlines().find((world) => world.id === worldId),
+			openQuestIds: () => new Set(Object.entries(this.availability()).filter(([, availability]) => availability.status !== "locked").map(([questId]) => questId)),
+		});
 	}
 
 	// App
@@ -238,31 +263,32 @@ export class FakeDojoApi implements DojoClient
 		return answer(undefined);
 	}
 
-	// Runs (the quest screens' flows; not part of M2.1)
+	// Runs
 
-	/** Not answered by the fake yet. */
-	runQuest(): Promise<RunResult>
+	/** Simulates a free Run with progress events and the fake engine's verdict. */
+	runQuest(request: RunRequest): Promise<RunResult>
 	{
-		return notInFake("runQuest");
+		return this.quests.runQuest(request).then(answer);
 	}
 
-	/** Not answered by the fake yet. */
-	submitQuest(): Promise<SubmitOutcome>
+	/** Simulates a Submit: run, review, recorded attempt, loot. */
+	submitQuest(request: RunRequest): Promise<SubmitOutcome>
 	{
-		return notInFake("submitQuest");
+		return this.quests.submitQuest(request).then(answer);
 	}
 
-	/** Not answered by the fake yet. */
-	checkSnippetSyntax(): Promise<SyntaxCheckResult>
+	/** Checks a scratch buffer's brackets. */
+	checkSnippetSyntax(request: SyntaxCheckRequest): Promise<SyntaxCheckResult>
 	{
-		return notInFake("checkSnippetSyntax");
+		return answerFrom(() => this.quests.checkSnippetSyntax(request));
 	}
 
-	/** Cancels a simulated build. */
+	/** Cancels a simulated sandbox build or quest run. */
 	cancelRun(runId: string): Promise<void>
 	{
 		this.builds.get(runId)?.cancel();
 		this.builds.delete(runId);
+		this.quests.cancel(runId);
 
 		return answer(undefined);
 	}
@@ -287,22 +313,23 @@ export class FakeDojoApi implements DojoClient
 		return answer(this.availability());
 	}
 
-	/** Test-out eligibility by world id. */
+	/** Test-out eligibility by world id, with each reason taken from the world's standing in this scenario. */
 	getTestOutStatus(): Promise<Record<string, WorldTestOutStatus>>
 	{
 		const isFresh = Object.keys(this.state.progress.quests).length === 0;
+		const availability = this.availability();
 		const statuses: Record<string, WorldTestOutStatus> = {};
 
-		for (const world of MAP_FIXTURE.flatMap((pack) => pack.worlds))
+		// The reason follows the world's real standing in this scenario: all passed, or terms still short of proficient.
+		for (const world of this.state.map.flatMap((pack) => pack.worlds))
 		{
-			statuses[world.id] = { eligible: false, testedOut: false, reason: "Some terms in this world are not proficient yet." };
+			const testedOut = this.state.progress.testedOutWorldIds.includes(world.id);
+			const allPassed = world.stages.every((stage) => availability[stage.id]?.status === "passed");
+
+			statuses[world.id] = { eligible: false, testedOut, reason: allPassed ? "Every quest here is passed already." : "Some terms in this world are not proficient yet." };
 		}
 
-		if (!isFresh)
-		{
-			statuses["objects-and-reflection"] = { eligible: false, testedOut: false, reason: "Every quest here is passed already." };
-			statuses["foundations.memory"] = { eligible: true, testedOut: false };
-		}
+		if (!isFresh) statuses["foundations.memory"] = { eligible: true, testedOut: false };
 
 		return answer(statuses);
 	}
@@ -315,40 +342,40 @@ export class FakeDojoApi implements DojoClient
 		return answer(this.state.progress);
 	}
 
-	/** Not answered by the fake yet. */
-	saveQuestDraft(): Promise<void>
+	/** Autosaves a quest in progress. */
+	saveQuestDraft(draft: QuestDraft): Promise<void>
 	{
-		return notInFake("saveQuestDraft");
+		return answerFrom(() => this.quests.saveDraft(draft));
 	}
 
-	/** Not answered by the fake yet. */
-	resetQuest(): Promise<QuestProgress>
+	/** Clears a quest's saved work. */
+	resetQuest(questId: string): Promise<QuestProgress>
 	{
-		return notInFake("resetQuest");
+		return answerFrom(() => this.quests.reset(questId));
 	}
 
-	/** Not answered by the fake yet. */
-	revealHint(): Promise<HintReveal>
+	/** Reveals the next hint spell, or answers an already revealed one again for free (A501). */
+	revealHint(questId: string, hintIndex?: number): Promise<HintReveal>
 	{
-		return notInFake("revealHint");
+		return answerFrom(() => this.quests.revealHint(questId, hintIndex));
 	}
 
-	/** Not answered by the fake yet. */
-	submitConcept(): Promise<ConceptOutcome>
+	/** Grades a finished concept quest. */
+	submitConcept(submission: ConceptSubmission): Promise<ConceptOutcome>
 	{
-		return notInFake("submitConcept");
+		return answerFrom(() => this.quests.submitConcept(submission));
 	}
 
-	/** Not answered by the fake yet. */
-	submitBreakdown(): Promise<BreakdownReferenceChoice>
+	/** Takes the first breakdown plan and picks the reference plan to show. */
+	submitBreakdown(submission: BreakdownSubmission): Promise<BreakdownReferenceChoice>
 	{
-		return notInFake("submitBreakdown");
+		return answerFrom(() => this.quests.submitBreakdown(submission));
 	}
 
-	/** Not answered by the fake yet. */
-	reviseBreakdown(): Promise<BreakdownOutcome>
+	/** Grades the revised breakdown plan. */
+	reviseBreakdown(revision: BreakdownRevision): Promise<BreakdownOutcome>
 	{
-		return notInFake("reviseBreakdown");
+		return answerFrom(() => this.quests.reviseBreakdown(revision));
 	}
 
 	/** Counts a hover on a term. */
@@ -405,16 +432,16 @@ export class FakeDojoApi implements DojoClient
 		return answer({ dueToday: dueToday + (dueToday > 0 ? 5 : 0), overflow: 0, nextDueAt });
 	}
 
-	/** Not answered by the fake yet. */
-	answerDrillItem(): Promise<DrillItemResult>
+	/** Grades one drill item. */
+	answerDrillItem(answer: DrillAnswer): Promise<DrillItemResult>
 	{
-		return notInFake("answerDrillItem");
+		return answerFrom(() => this.quests.answerDrillItem(answer));
 	}
 
-	/** Not answered by the fake yet. */
-	finishDrill(): Promise<DrillOutcome>
+	/** Ends a drill session. */
+	finishDrill(sessionId: string): Promise<DrillOutcome>
 	{
-		return notInFake("finishDrill");
+		return answerFrom(() => this.quests.finishDrill(sessionId));
 	}
 
 	// AI review
@@ -431,16 +458,16 @@ export class FakeDojoApi implements DojoClient
 		return new Promise((resolve) => setTimeout(() => resolve({ id: "claude-code", available: true, version: "2.4.1" }), 900));
 	}
 
-	/** Not answered by the fake yet. */
-	explainFinding(): Promise<string>
+	/** Explains why a review finding is a finding. */
+	explainFinding(request: FindingExplanationRequest): Promise<string>
 	{
-		return notInFake("explainFinding");
+		return answerFrom(() => this.quests.explainFinding(request));
 	}
 
-	/** Not answered by the fake yet. */
-	answerReflection(): Promise<ExplainGrade>
+	/** Grades the answer to a review's reflection question. */
+	answerReflection(request: ReflectionAnswerRequest): Promise<ExplainGrade>
 	{
-		return notInFake("answerReflection");
+		return answerFrom(() => this.quests.answerReflection(request));
 	}
 
 	// Progress events
@@ -464,41 +491,27 @@ export class FakeDojoApi implements DojoClient
 	/** Counts of what the fake serves. */
 	getContentStatus(): Promise<ContentStatus>
 	{
-		const questCount = MAP_FIXTURE.flatMap((pack) => pack.worlds.flatMap((world) => world.stages)).length;
+		const questCount = this.state.map.flatMap((pack) => pack.worlds.flatMap((world) => world.stages)).length;
 
-		return answer({ root: "fake", packCount: MAP_FIXTURE.length, questCount, glossaryCount: GLOSSARY.length, patternCount: PATTERN_CARDS.length, problems: [] });
+		return answer({ root: "fake", packCount: this.state.map.length, questCount, glossaryCount: GLOSSARY.length, patternCount: PATTERN_CARDS.length, problems: [] });
 	}
 
-	/** The fixture map as outlines. */
+	/** The scenario's map as outlines. */
 	listPacks(): Promise<PackOutline[]>
 	{
-		const packs: PackOutline[] = MAP_FIXTURE.map((pack, packIndex) => ({
-			id: pack.id,
-			title: pack.title,
-			summary: pack.summary,
-			order: packIndex + 1,
-			worlds: pack.worlds.map((world, worldIndex) => ({
-				id: world.id,
-				title: world.title,
-				summary: world.summary,
-				order: worldIndex + 1,
-				quests: world.stages.map((stage, stageIndex) => buildQuestOutline(stage, stageIndex + 1)),
-			})),
-		}));
-
-		return answer(packs);
+		return answer(this.packOutlines());
 	}
 
-	/** Not answered by the fake yet: full quests belong to the quest screens (M2.2). */
-	getWorld(): Promise<LearnerWorld>
+	/** A full world: the real World 1, or stand-ins for an invented world. */
+	getWorld(worldId: string): Promise<LearnerWorld>
 	{
-		return notInFake("getWorld");
+		return answerFrom(() => this.quests.world(worldId));
 	}
 
-	/** Not answered by the fake yet: full quests belong to the quest screens (M2.2). */
-	getQuest(): Promise<LearnerQuest>
+	/** A full quest: real World 1 content, or a stand-in of the same kind for an invented stage. */
+	getQuest(questId: string): Promise<LearnerQuest>
 	{
-		return notInFake("getQuest");
+		return answerFrom(() => this.quests.quest(questId));
 	}
 
 	/** The real glossary from `content/glossary.json`. */
@@ -527,13 +540,49 @@ export class FakeDojoApi implements DojoClient
 		return answer(PATTERN_CARDS);
 	}
 
-	/** Not answered by the fake yet: drill sessions belong to the drill screen (M2.2). */
-	startDrill(): Promise<DrillSession>
+	/** Starts a drill session from real World 1 questions, pattern cards, and a Parsons block. */
+	startDrill(request: DrillRequest): Promise<DrillSession>
 	{
-		return notInFake("startDrill");
+		return answerFrom(() => this.quests.startDrill(request));
 	}
 
 	// Helpers
+
+	/** Sends a progress event to every listener. */
+	private emit(event: BuildProgressEvent): void
+	{
+		for (const listener of this.listeners) listener(event);
+	}
+
+	/** The map as pack outlines, as `listPacks` answers. */
+	private packOutlines(): PackOutline[]
+	{
+		return this.state.map.map((pack, packIndex) => ({
+			id: pack.id,
+			title: pack.title,
+			summary: pack.summary,
+			order: packIndex + 1,
+			worlds: pack.worlds.map((world, worldIndex) => ({
+				id: world.id,
+				title: world.title,
+				summary: world.summary,
+				order: worldIndex + 1,
+				quests: world.stages.map((stage, stageIndex) => buildQuestOutline(stage, stageIndex + 1)),
+			})),
+		}));
+	}
+
+	/** Every world outline on the map. */
+	private worldOutlines(): PackOutline["worlds"]
+	{
+		return this.packOutlines().flatMap((pack) => pack.worlds);
+	}
+
+	/** Every quest outline on the map. */
+	private outlines(): PackOutline["worlds"][number]["quests"]
+	{
+		return this.worldOutlines().flatMap((world) => world.quests);
+	}
 
 	/** Environment status from the current settings. */
 	private environment(): EnvironmentStatus
@@ -553,13 +602,14 @@ export class FakeDojoApi implements DojoClient
 		};
 	}
 
-	/** Availability for every quest. */
+	/** Availability for every quest. A quest the learner passed or started here shows that, over the fixture's state; the boss of a world opens once the rest is passed. */
 	private availability(): Record<string, QuestAvailability>
 	{
-		const isFresh = Object.keys(this.state.progress.quests).length === 0;
+		const progress = this.state.progress;
+		const isFresh = Object.keys(progress.quests).length === 0;
 		const result: Record<string, QuestAvailability> = {};
 
-		for (const pack of MAP_FIXTURE)
+		for (const pack of this.state.map)
 		{
 			pack.worlds.forEach((world, worldIndex) =>
 			{
@@ -567,7 +617,11 @@ export class FakeDojoApi implements DojoClient
 				{
 					if (!isFresh)
 					{
-						result[stage.id] = { status: stage.status, dueForRematch: stage.dueForRematch ?? false, skippable: false, ...(stage.lockedReason ? { lockedReason: stage.lockedReason } : {}) };
+						const saved = progress.quests[stage.id]?.status;
+						const restPassed = world.stages.every((other) => other.id === stage.id || other.status === "passed" || progress.quests[other.id]?.status === "passed");
+						const status = saved === "passed" || saved === "in_progress" ? saved : stage.kind === "boss" && stage.status === "locked" && restPassed ? "available" : stage.status;
+
+						result[stage.id] = { status, dueForRematch: stage.dueForRematch ?? false, skippable: false, ...(status === "locked" && stage.lockedReason ? { lockedReason: stage.lockedReason } : {}) };
 						return;
 					}
 
@@ -586,10 +640,7 @@ export class FakeDojoApi implements DojoClient
 	/** Runs one simulated build, forwarding its events to every listener. */
 	private async simulateBuild(runId: string, engineVersion: string, shouldFail: boolean): Promise<{ ok: boolean; durationMs: number }>
 	{
-		const simulator = new SandboxBuildSimulator(runId, (event) =>
-		{
-			for (const listener of this.listeners) listener(event);
-		});
+		const simulator = new SandboxBuildSimulator(runId, (event) => this.emit(event));
 
 		this.builds.set(runId, simulator);
 

@@ -1,7 +1,7 @@
 // Hash router hooks: the current route, and a way to move to another one.
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 
-import { hashForRoute, routeFromHash, type RouteDefinition, type RouteId } from "./routes";
+import { hashForRoute, routeFromHash, routeParametersFromHash, type RouteDefinition, type RouteId, type RouteParameters } from "./routes";
 
 /** Calls back whenever the location hash changes. */
 function subscribeToHash(onChange: () => void): () => void
@@ -25,11 +25,19 @@ export function useRoute(): RouteDefinition
 	return routeFromHash(hash);
 }
 
-/** A function that moves the app to another route. */
-export function useNavigate(): (id: RouteId) => void
+/** The current hash's query parameters, such as the quest id; re-renders when they change. */
+export function useRouteParameters(): RouteParameters
 {
-	return useCallback((id: RouteId) =>
+	const hash = useSyncExternalStore(subscribeToHash, readHash);
+
+	return useMemo(() => routeParametersFromHash(hash), [hash]);
+}
+
+/** A function that moves the app to another route, with optional query parameters. */
+export function useNavigate(): (id: RouteId, parameters?: RouteParameters) => void
+{
+	return useCallback((id: RouteId, parameters?: RouteParameters) =>
 	{
-		window.location.hash = hashForRoute(id);
+		window.location.hash = hashForRoute(id, parameters);
 	}, []);
 }
