@@ -1,0 +1,1 @@
+{"score":78,"summary":"Good plan.","requiredPiecesCovered":[{"label":"HealthComponent","covered":true},{"label":"OnDeath event","covered":true},{"label":"DoorActor","covered":true}],"concerns":[],"strengths":[],"revisionQuality":80,"alternativeToShow":5}

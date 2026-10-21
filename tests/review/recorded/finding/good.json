@@ -1,0 +1,1 @@
+{"explanation":"TakeDamage lowers CurrentHealth but never calls Broadcast, so anything bound to OnHealthChanged never hears about it. In a real game the health bar would stay full while the character dies. The Observer pattern only works when the subject actually notifies."}
