@@ -14,6 +14,7 @@ import { questShapeCheck } from "./checks/questShapeCheck";
 import { referenceCheck } from "./checks/referenceCheck";
 import { repetitionCheck } from "./checks/repetitionCheck";
 import { solutionCheck } from "./checks/solutionCheck";
+import { termOrderCheck } from "./checks/termOrderCheck";
 import { unlockGraphCheck } from "./checks/unlockGraphCheck";
 import type { VerifierOptions } from "./parseVerifierArguments";
 
@@ -65,6 +66,7 @@ export const CONTENT_CHECKS: readonly ContentCheck[] = [
 	solutionCheck,
 	dependencyCheck,
 	packGateCheck,
+	termOrderCheck,
 ];
 
 /** Lists every pack quest with its file, pack, and world position, then every example. */

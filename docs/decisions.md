@@ -67,6 +67,9 @@ Options: an app flag or environment variable that calls `app.setPath("userData",
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A670 2026-10-21 How the A72 term-order warning counts (M1.8d, builder-content-engine)
+A72 asks for a warning when a quest lists a term no earlier concept quest teaches. Open points decided: "teaches" means the term is in a concept quest's `terms[]` (the same meaning A312 uses); a concept quest teaches its own terms, so it never warns about them; every other kind (build, refactor, breakdown, boss) is checked; one warning per quest and term, so each line names one thing to fix; the warning names the concept quest that first teaches the term later, with its file, or says no concept quest teaches it; course order is pack order, then world order, then quest order; the format examples are not in the course and are skipped. Options considered for the grouping: one warning per quest listing every term (shorter, but each fix is hidden in a long line); one per term. Reverse cost: none.
+
 ### A604 2026-10-21 Reviews are pruned with files: only a quest's last five Submits keep them (M1.7c fix round 1, Lead direction)
 Directed by the Lead: stored code reviews follow the same limit as stored files (A467). `AttemptFileRules.pruneOlderDetails` counts a quest's attempts that hold a review or files, newest first, and removes both from all but the latest five; score, pass, and XP stay on every attempt. "Why is this a finding?" on an older attempt answers `attempt-not-found` ("That attempt has no code review."). Reverse cost: none.
 

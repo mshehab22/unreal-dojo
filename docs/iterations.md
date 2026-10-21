@@ -1036,3 +1036,29 @@ total                                       39.2  PASSED
 ### Fix round 1
 - Originality (D13): the course planner no longer puts undo in a designer's level-editing tool. It is now the player's build phase before an obstacle run: the runner sets up their own eight-slot course and can take placements back until the run starts. Mechanics, the redo-tail cut (A555), and the class and quest names are unchanged. The planner's brief, its class comment (starter and reference solution), the world summary, the actions-as-values card line, the card's which-pattern item (now a defense round's build phase), the card's spot-the-bug prompt, and the when-not quest's two "designer" mentions are reworded to match.
 - Only a header comment changed in the code. Rebuilt from fresh sandboxes on UE 5.8.3 under the engine lock: reference solutions 45 of 45 pass, including the three planner tests; starters compile and 38 of 45 fail, the same split as before. Verifier `--pack patterns`: no problems, plus the expected Pack 4 gate warning.
+
+## M1.8d Terms taught later than they are used (content-engine, builder-content-engine)
+- What changed: the verifier now warns when a quest uses a glossary term that no concept quest before it in the course teaches. After A72, such a term no longer locks the quest; it only links. The warning says which concept quest teaches the term later, or that none does, so authors can decide whether to teach it sooner. It never fails the verifier.
+- How to see it: `npx tsx tools/verify-content.ts` and look for warnings ending in "(A72)".
+- What it reports on main (b4b800a), 16 warnings:
+  - Pack 1 World 1:
+    - training dummy: `createdefaultsubobject` (taught later by f2-creating-objects)
+    - score keeper: `tarray` (f3-tarray)
+    - practice bell: `ue-log` (no concept quest teaches it)
+    - dash-cooldown breakdown: `character`, `character-movement-component`, and `launch-character` (no concept quest teaches them); `input-action` (p5-actions-as-values), `actor-component` (p3-update-method-card), `timer-manager` (p2-game-loop-when-not), and `multicast-delegate` (p1-multicast-delegates)
+  - Pack 1 World 2:
+    - dummy spawner: `createdefaultsubobject` (f2-creating-objects, later in the same world)
+    - clay disc: `ue-log` (none)
+    - clay-thrower breakdown: `object-pool` (none)
+  - Pack 1 World 3:
+    - score board: `fmath` (f3-vectors-and-fmath, later in the same world)
+    - announcer: `ue-log` (none)
+  - Pack 2 World 3:
+    - patrol drone: `super` (none)
+- Proof:
+  - typecheck passes; `npm test`: 68 files, 824 tests passed.
+  - New tests cover a term taught only later, a term never taught, a term taught earlier in the same world, a concept quest's own terms, and the examples being skipped.
+  - The verifier on main's content: 87 files, no problems, 22 warnings (the 16 above, plus coverage, pack gate, and example boss warnings).
+- Decisions made: A670.
+- Not done or left for later: whether to teach `ue-log`, `character`, `object-pool`, `super`, and the others sooner is a content decision for the pack authors.
+
