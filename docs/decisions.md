@@ -6,6 +6,36 @@ Newest first inside each section. A decision names the options considered, the c
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A89 2026-10-21 Content methods and `startDrill` wait for M0.2b (M0.2, builder-shell)
+`src/shared/types/content.ts` is still empty on this branch (M0.4 is writing it). Options: invent placeholder content types in app-shell; leave the methods out. Chosen: leave them out and add them in M0.2b after M0.4 merges: `listPacks`, `getPack` or `getWorld`, `getQuest`, `getGlossary`, the flat glossary term list for Monaco, `getPatternCards`, and `startDrill` (its items carry content shapes such as questions and Parsons blocks). Everything else in the specs is in the contract now. Reverse cost: none.
+
+### A88 2026-10-21 No "view reference solution" method yet (M0.2, builder-shell)
+`docs/product.md` and ui-quests say a learner can view a reference solution (costs the quest's XP or a Seer Stone, schedules a rematch), but `docs/systems/content-engine.md` says `tools/solutions/` is "never loaded by the app". Options: add `viewSolution` reading `tools/solutions/`; add it reading a solution shipped inside the quest file; leave it out. Chosen: leave it out until the Lead settles where solutions live in the shipped app. The Seer Stone count is already in `PlayerProgress`. Reverse cost: one method.
+
+### A87 2026-10-21 Breakdown is two calls: `submitBreakdown` then `reviseBreakdown` (M0.2, builder-shell)
+The ui-quests flow shows a reference plan after Submit, asks for a revision note, then grades. Options: one call with the plan and the note; two calls. Chosen: two. `submitBreakdown(plan)` answers only which reference plan to show (the renderer already has the plans from the quest); `reviseBreakdown(revisedPlan, revisionNote)` is graded and recorded. Most of the score comes from the revision, so grading before it would waste a review. Reverse cost: low.
+
+### A86 2026-10-21 Settings carry `hasApiKey` and `firstRunCompletedAt`; `completeFirstRun` method (M0.2, builder-shell)
+The API key never leaves main, so the renderer needs a flag to show "key stored" in Settings. First run needs a durable "done" mark so the Title screen knows to skip it even if the engine later disappears (that case shows an error chip instead). Options: derive "first run done" from engine and sandbox paths; store a timestamp. Chosen: timestamp. Reverse cost: none.
+
+### A85 2026-10-21 `BuildProgressEvent` gains `runId`, `loop`, `loopReason`, and two phases (M0.2, builder-shell)
+The unreal-pipeline spec's event has no run id and five phases. Added: `runId` (the task asked for it), `loop` and `loopReason` (the spec says the loop choice and its reason go into the stream), and phases `preparing` (template copy, loop choice) and `reviewing` (AI review inside Submit), because sandbox setup and Submit stream on the same channel. Reverse cost: low while only stubs exist.
+
+### A84 2026-10-21 Two extra shared type files and `src/main/errors/` (M0.2, builder-shell)
+Options: put engine and error types inside `settings.ts` and `run.ts`; give them their own files. Chosen: `src/shared/types/errors.ts` (`AppError`, `AppErrorCode`, `isAppError`) and `src/shared/types/engine.ts` (engine installs, toolchain, sandbox folder, environment status), both re-exported from `index.ts`. `AppErrorException` (what services throw) lives in `src/main/errors/` because every service uses it, not just IPC. Spec layout updated. Reverse cost: none.
+
+### A83 2026-10-21 Hand-written payload checks instead of a schema library (M0.2, builder-shell)
+Options: add zod or valibot (a `package.json` change while other worktrees also touch it, and every type written twice); hand-written small checks. Chosen: small composable checks in `src/main/ipc/payloadChecks.ts`, one check per request type in `requestChecks.ts`, and a type that forces one check per argument. Unknown fields are rejected; ids allow only letters, digits, dot, underscore, and dash; learner file names must be plain names with a C++ or text extension (no folders, no `..`), at most 50 files of about 1 MB each. Problem text goes in `detail` and never echoes a value. Reverse cost: medium; a schema library could replace `requestChecks.ts` later.
+
+### A82 2026-10-21 Long operations take a renderer-made run id (M0.2, builder-shell)
+Options: the call returns a run id at once and the result arrives as a final event; the renderer makes the id (`crypto.randomUUID()`) and the call's promise resolves with the result. Chosen: the second. The renderer can match progress events and cancel before the call returns, and the result keeps its type on the promise instead of travelling as an untyped event. The run services must reject a run id already in use (`run-already-exists`). Reverse cost: low while only stubs exist.
+
+### A81 2026-10-21 `DojoInvokeApi` plus `DojoApi`, channels typed as `dojo:<method>` (M0.2, builder-shell)
+`onBuildProgress` is a subscription, not an invoke channel, so the request methods are `DojoInvokeApi` and `DojoApi` adds the subscription. `IPC_CHANNELS` is checked against `` `dojo:${method}` `` for every method, so a channel can never drift from its method name. The progress channel is `dojo:event:buildProgress`. The preload builds its forwarding functions from `IPC_CHANNELS`, so a new method needs no preload edit. Reverse cost: none.
+
+### A80 2026-10-21 Failed calls reject with a plain `AppError`; methods keep `Promise<Value>` (M0.2, builder-shell)
+Options: every method returns `Promise<Result<Value>>` and the renderer checks `ok` on each call; main answers an `{ ok, value | error }` envelope over IPC and the preload rejects with the plain `AppError`. Chosen: the second. Throwing straight from `ipcMain.handle` loses the code and suggested action (Electron rewrites it into "Error invoking remote method"), so the envelope stays on the wire, but the renderer API reads like normal async code and the M0.1 `getAppVersion` call and ui-core's work in progress need no change. Verified in the built app: the rejected value arrives in the page with `code`, `message`, `suggestedAction`, and `detail` intact (plain object, not an `Error`). Renderer rule: `catch (error) { if (isAppError(error)) show it }`. Reverse cost: medium once screens use it.
+
 ### A19 2026-10-21 npm install scripts left unapproved; Electron downloads its binary on first use (M0.1, builder-shell)
 npm 11.19 blocks package install scripts until they are approved. Options: approve them in `package.json`; leave them. Chosen: leave them. Electron 44 fetches its binary on first run when it is missing, esbuild and fsevents ship prebuilt binaries, and electron-winstaller is only for Squirrel (not used). Everything passed without them. Reverse cost: one `npm install-scripts approve` line if a later package needs it.
 
