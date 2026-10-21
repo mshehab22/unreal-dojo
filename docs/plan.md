@@ -82,7 +82,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.7b Review fallback edges | ai-review | builder-review (session) | m1-7b-review-edges @ c14de07 | review | A300 to A302; 235 tests |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop @ 3891f21 | review | 7 of 7 real UE 5.8.3 runs on the Mac; runQuest IPC not wired yet |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | m1-8-verifier @ 5ac6787 | review | --engine on examples: 3 of 5 pass; 2 timer examples blocked on a sandbox helper bug (fix sent to builder-unreal) |
-| M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | m0-2b-content-ipc @ a09d7b7 | review | 152 tests; startDrill typed stub for M1.6 |
+| M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | m2-1-core-screens @ ad8b2ec | review | Seven screens on a typed fake DojoApi; 13 e2e |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3-pack1-world1 @ 5928451 | review | 8 reference tests pass by hand on the Mac; 4 starters fail as they should |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 8b6e368 | review | Engine smoke passed on UE 5.8.3 in 40 s |
