@@ -43,7 +43,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 
 ### M2 Vertical slice (first build Mohammad practices on)
 - [ ] M2.1 ui-core: Title, First-run setup (engine, sandbox, full build progress), Studio home, World Map, Settings, Codex, Character. Proof: Playwright screenshots of each screen.
-- [ ] M2.2 ui-quests: Concept (predict, card, editable example, questions), Drill (all item types including Parsons and explain), Breakdown board (React Flow, piece cards with purpose labels, reference compare, revision note), Build (brief with hover terms, Monaco with hover and completion, Run, Submit, build progress, tests, log, spells, see-it-run), Loot. Proof: Playwright flow through all of them with the sample content.
+- [x] M2.2 ui-quests: Concept (predict, card, editable example, questions), Drill (all item types including Parsons and explain), Breakdown board (React Flow, piece cards with purpose labels, reference compare, revision note), Build (brief with hover terms, Monaco with hover and completion, Run, Submit, build progress, tests, log, spells, see-it-run), Loot. Proof: Playwright flow through all of them with the sample content.
 - [x] M2.3 content-foundations: Pack 1 World 1 complete: concept quests for its terms, 4 build quests on the fade ladder, 1 breakdown (dash with cooldown), 1 boss, reference solutions, automation tests, one alternative per build quest. Proof: verifier green with `--engine`.
 - [ ] M2.4 qa: the end-to-end learner flow (set up sandbox, hover a term, predict and pass a concept quest, do a drill, submit a breakdown and revise, fail then pass a build with a hint, loot screen, next quest unlocked, restart and persist) recorded as a GIF. Add to "Ready to playtest".
 
@@ -96,7 +96,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | merged 2e29c7c | merged | 2 rounds plus boss round; 24 of 24 on UE 5.8.3; main --engine clean |
 | M4.P1.3 Pack 1 World 3 "Containers and strings" | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-world3 @ af0f154 | review | 12 quests; boss integration with mutations; main --engine clean |
 | M1.8c Missing boss integration is an error | content-engine | content-engine (session "M0.4 Content types...") | merged | merged | Lead checked the small diff; --engine 18 of 18 by the builder; example boss stays a warning (A520) |
-| M2.2 Quest screens | ui-quests | builder-ui-quests (session) | claude/m2-2-quest-screens-a21151 @ fccb063 | re-review | Compare opens at top; fake World 1 built from content; 27 e2e x3 |
+| M2.2 Quest screens | ui-quests | builder-ui-quests (session) | merged 07794f5 | merged | 4 fix rounds; at 1100x700 the revision note starts below the fold (accepted) |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
 | M4.P2.2 Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | claude/m3-patterns-world2-game-loop @ ca4950a | re-review | All six items |
 | M4.P2.3 Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | claude/m4-patterns-world3-update-method @ 7e9a328 | re-review | Moved out of the crypt; product.md world list |
@@ -122,6 +122,15 @@ Stages: waiting, building, review, fixes, testing, merged. Only the Lead edits t
 ## Ready to playtest
 
 (What Mohammad can try now, with exact steps. Nothing waits on this.)
+
+### Quest screens with sample data (M2.2, merged 2026-10-21)
+What is new: playing quests. Concept (predict, card, questions), Drill (every item type, including Parsons and explain), Breakdown (plan on a board, compare with the reference, write a revision), Build (brief with hover terms, code editor, Run, Submit, hints, see-it-run), and Loot. Runs, reviews, and grading use built-in sample data here; the real engine and AI review are being connected.
+1. In the project folder on the Mac: `npm install`, then `VITE_DOJO_FAKE=quests npm run dev`.
+2. On the World Map open Pack 1 World 1 and play the first concept quest: answer the predict question, read the card, hover a term, answer the questions.
+3. Start a drill from the Studio and try a Parsons item (drag lines into order; one decoy is in there).
+4. Open the training dummy build quest: buy a hint, edit the code, press Run (it fails first), fix it, Submit, and watch the loot.
+5. Open the dash breakdown: place pieces with purposes, Submit plan, compare with the reference, write the revision note.
+Look for: is it clear what to do next on every screen, is the code editor comfortable, does the loot feel earned, and is the breakdown board pleasant to use.
 
 ### Core screens with sample data (M2.1, merged 2026-10-21)
 What is new: Title, First-run setup, Studio, World Map, Character, Codex, and Settings. They run on built-in sample data because quests, drills, builds, and reviews are not connected yet.
