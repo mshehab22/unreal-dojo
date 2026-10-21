@@ -1508,7 +1508,8 @@
       "timer-manager",
       "endplay",
       "tick"
-    ]
+    ],
+    "firstQuestId": "f5-timers"
   },
   {
     "id": "timer-manager",
@@ -1528,7 +1529,8 @@
       "tick",
       "world",
       "delegate"
-    ]
+    ],
+    "firstQuestId": "f5-timers"
   },
   {
     "id": "delegate",
@@ -1550,7 +1552,8 @@
       "dynamic-multicast-delegate",
       "broadcast",
       "uinterface"
-    ]
+    ],
+    "firstQuestId": "f5-delegates"
   },
   {
     "id": "multicast-delegate",
@@ -1588,7 +1591,8 @@
       "dynamic-multicast-delegate",
       "ufunction",
       "reflection"
-    ]
+    ],
+    "firstQuestId": "f5-delegates"
   },
   {
     "id": "dynamic-multicast-delegate",
@@ -1704,7 +1708,8 @@
       "cast",
       "delegate",
       "blueprintnativeevent"
-    ]
+    ],
+    "firstQuestId": "f5-interfaces"
   },
   {
     "id": "iinterface",
@@ -1721,7 +1726,8 @@
       "uinterface",
       "blueprintnativeevent",
       "cast"
-    ]
+    ],
+    "firstQuestId": "f5-interfaces"
   },
   {
     "id": "cast",
