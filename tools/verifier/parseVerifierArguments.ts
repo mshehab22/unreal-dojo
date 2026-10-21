@@ -12,8 +12,14 @@ export interface VerifierOptions
 	/** Only report the file that defines this quest. */
 	questId?: string;
 
-	/** Engine root for compiling reference solutions (M1.8; refused until then). */
+	/** Engine root (or its `Engine` folder): compile and test every reference solution and starter. */
 	enginePath?: string;
+
+	/** Folder of reference solutions, one sub-folder per quest id. */
+	solutionsFolder: string;
+
+	/** Turn the "until the curriculum is complete" warnings into errors. */
+	release: boolean;
 
 	help: boolean;
 }
@@ -23,22 +29,25 @@ export type ParsedArguments = { ok: true; options: VerifierOptions } | { ok: fal
 
 /** Usage text printed by `--help` and after an argument error. */
 export const USAGE = [
-	"Usage: npx tsx tools/verify-content.ts [--pack <id>] [--quest <id>] [--content <folder>] [--engine <path>]",
-	"  --pack <id>        only read packs/<id>",
+	"Usage: npx tsx tools/verify-content.ts [--pack <id>] [--quest <id>] [--content <folder>] [--solutions <folder>] [--engine <path>] [--release]",
+	"  --pack <id>        only report packs/<id> (every pack is still read for cross-pack checks)",
 	"  --quest <id>       only report the file that defines this quest",
 	"  --content <folder> content folder to check (default: content/ in the repo)",
-	"  --engine <path>    compile and test reference solutions (arrives in M1.8)",
+	"  --solutions <folder> reference solutions (default: tools/solutions/ in the repo)",
+	"  --engine <path>    build every reference solution and starter with this engine and run their tests",
+	"  --release          coverage warnings become errors",
 ].join("\n");
 
-/** Reads `argv` (without the node and script entries). `defaultContentFolder` is used when `--content` is absent. */
-export function parseVerifierArguments(argv: readonly string[], defaultContentFolder: string): ParsedArguments
+/** Reads `argv` (without the node and script entries). The defaults are used when `--content` or `--solutions` is absent. */
+export function parseVerifierArguments(argv: readonly string[], defaultContentFolder: string, defaultSolutionsFolder: string = ""): ParsedArguments
 {
-	const options: VerifierOptions = { contentFolder: defaultContentFolder, help: false };
+	const options: VerifierOptions = { contentFolder: defaultContentFolder, solutionsFolder: defaultSolutionsFolder, release: false, help: false };
 	const valueFlags = new Map<string, (value: string) => void>([
 		["--pack", (value) => (options.packId = value)],
 		["--quest", (value) => (options.questId = value)],
 		["--content", (value) => (options.contentFolder = value)],
 		["--engine", (value) => (options.enginePath = value)],
+		["--solutions", (value) => (options.solutionsFolder = value)],
 	]);
 
 	for (let index = 0; index < argv.length; index++)
@@ -48,6 +57,12 @@ export function parseVerifierArguments(argv: readonly string[], defaultContentFo
 		if (flag === "--help" || flag === "-h")
 		{
 			options.help = true;
+			continue;
+		}
+
+		if (flag === "--release")
+		{
+			options.release = true;
 			continue;
 		}
 

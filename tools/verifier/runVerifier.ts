@@ -1,8 +1,18 @@
-// Runs the verifier: parse every file, run the registered checks, and group the problems per file.
-import type { ContentProblem } from "../../src/shared/types/content";
+// Runs the verifier: parse every file, run the content checks, and group the problems per file.
+import type { ContentProblem, LoadedContent } from "../../src/shared/types/content";
 import { ContentLoader } from "../../src/main/services/content/ContentLoader";
 
-import type { ContentCheck } from "./ContentCheck";
+import type { ContentCheck, QuestRecord, VerifierInput } from "./ContentCheck";
+import { coverageCheck } from "./checks/coverageCheck";
+import { fadeLadderCheck } from "./checks/fadeLadderCheck";
+import { glossaryCheck } from "./checks/glossaryCheck";
+import { planCoverageCheck } from "./checks/planCoverageCheck";
+import { questionCheck } from "./checks/questionCheck";
+import { questShapeCheck } from "./checks/questShapeCheck";
+import { referenceCheck } from "./checks/referenceCheck";
+import { repetitionCheck } from "./checks/repetitionCheck";
+import { solutionCheck } from "./checks/solutionCheck";
+import { unlockGraphCheck } from "./checks/unlockGraphCheck";
 import type { VerifierOptions } from "./parseVerifierArguments";
 
 /** The outcome for one file: its path and every problem in it (empty means it passed). */
@@ -27,13 +37,49 @@ export interface VerifierCounts
 export interface VerifierResult
 {
 	reports: FileReport[];
+
+	/** Errors only; these fail the run. */
 	problemCount: number;
+
+	warningCount: number;
 	counts: VerifierCounts;
 	elapsedMilliseconds: number;
+
+	/** What the content checks read, kept so the engine stage can reuse it. */
+	input: VerifierInput;
 }
 
-/** Parse-only mode registers no extra checks; M1.8 adds fade, reachability, and coverage checks to this list. */
-export const PARSE_ONLY_CHECKS: readonly ContentCheck[] = [];
+/** Every content check, in report order. The engine stage (`--engine`) runs separately after these. */
+export const CONTENT_CHECKS: readonly ContentCheck[] = [
+	questShapeCheck,
+	referenceCheck,
+	unlockGraphCheck,
+	fadeLadderCheck,
+	repetitionCheck,
+	planCoverageCheck,
+	questionCheck,
+	glossaryCheck,
+	coverageCheck,
+	solutionCheck,
+];
+
+/** Lists every pack quest with its file, pack, and world position, then every example. */
+function questRecords(content: LoadedContent, examples: { quests: VerifierInput["examples"]; questSources: Record<string, string> }): QuestRecord[]
+{
+	const records: QuestRecord[] = [];
+
+	for (const pack of content.packs)
+	{
+		pack.worlds.forEach((world, worldIndex) =>
+		{
+			for (const quest of world.quests) records.push({ quest, file: content.questSources[quest.id] ?? `packs/${pack.id}`, packId: pack.id, worldIndex });
+		});
+	}
+
+	for (const quest of examples.quests) records.push({ quest, file: examples.questSources[quest.id] ?? "examples" });
+
+	return records;
+}
 
 /** Groups problems under their file, keeping every read file (even clean ones) so the report lists each one. */
 function groupByFile(files: readonly string[], problems: readonly ContentProblem[]): FileReport[]
@@ -67,19 +113,49 @@ function filterToQuest(reports: readonly FileReport[], questId: string, questFil
 	return [{ file: "(none)", problems: [{ file: "(none)", message: `no quest with id "${questId}" parsed; run without --quest to see every problem` }] }];
 }
 
-/** Loads the content folder and the examples, runs `checks`, and returns per-file reports filtered by `--quest`. */
-export async function runVerifier(options: VerifierOptions, checks: readonly ContentCheck[] = PARSE_ONLY_CHECKS): Promise<VerifierResult>
+/** Keeps only files inside `packs/<packId>/`, or says the pack does not exist. */
+function filterToPack(reports: readonly FileReport[], packId: string): FileReport[]
+{
+	const prefix = `packs/${packId}/`;
+	const kept = reports.filter((report) => report.file.startsWith(prefix));
+
+	if (kept.length > 0) return kept;
+
+	return [{ file: "packs", problems: [{ file: "packs", message: `no pack folder named "${packId}"` }] }];
+}
+
+/** Counts a report list's errors and warnings. */
+function countProblems(reports: readonly FileReport[]): { errors: number; warnings: number }
+{
+	const all = reports.flatMap((report) => report.problems);
+	const warnings = all.filter((problem) => problem.severity === "warning").length;
+
+	return { errors: all.length - warnings, warnings };
+}
+
+/**
+ * Loads the whole content folder and the examples, runs `checks`, and returns per-file reports. Every pack is always
+ * read so cross-pack references and duplicate ids are checked; `--pack` and `--quest` only narrow what is reported (A206).
+ */
+export async function runVerifier(options: VerifierOptions, checks: readonly ContentCheck[] = CONTENT_CHECKS): Promise<VerifierResult>
 {
 	const started = performance.now();
 	const loader = new ContentLoader(options.contentFolder);
-	const loadOptions = options.packId === undefined ? {} : { packId: options.packId };
-	const [content, examples] = await Promise.all([loader.load(loadOptions), loader.loadExamples()]);
-	const input = { content, examples: examples.quests };
-	const problems = [...content.problems, ...examples.problems, ...checks.flatMap((check) => check.run(input))];
-	let reports = groupByFile([...content.files, ...examples.files], problems);
+	const [content, examples] = await Promise.all([loader.load(), loader.loadExamples()]);
+	const input: VerifierInput = {
+		content,
+		examples: examples.quests,
+		quests: questRecords(content, examples),
+		solutionsFolder: options.solutionsFolder,
+		release: options.release,
+	};
+	const checkProblems = (await Promise.all(checks.map((check) => check.run(input)))).flat();
+	let reports = groupByFile([...content.files, ...examples.files], [...content.problems, ...examples.problems, ...checkProblems]);
 
-	if (options.questId !== undefined) reports = filterToQuest(reports, options.questId, content.questSources[options.questId]);
+	if (options.packId !== undefined) reports = filterToPack(reports, options.packId);
+	if (options.questId !== undefined) reports = filterToQuest(reports, options.questId, content.questSources[options.questId] ?? examples.questSources[options.questId]);
 
+	const { errors, warnings } = countProblems(reports);
 	const counts: VerifierCounts = {
 		packs: content.packs.length,
 		worlds: content.packs.reduce((total, pack) => total + pack.worlds.length, 0),
@@ -89,10 +165,5 @@ export async function runVerifier(options: VerifierOptions, checks: readonly Con
 		patternCards: content.patterns.length,
 	};
 
-	return {
-		reports,
-		problemCount: reports.reduce((total, report) => total + report.problems.length, 0),
-		counts,
-		elapsedMilliseconds: performance.now() - started,
-	};
+	return { reports, problemCount: errors, warningCount: warnings, counts, elapsedMilliseconds: performance.now() - started, input };
 }

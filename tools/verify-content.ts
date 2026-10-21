@@ -14,7 +14,7 @@ const EXIT_USAGE = 2;
 /** Reads the command line, runs the verifier, prints the report, and sets the exit code. */
 async function main(): Promise<void>
 {
-	const parsed = parseVerifierArguments(process.argv.slice(2), resolve(import.meta.dirname, "..", "content"));
+	const parsed = parseVerifierArguments(process.argv.slice(2), resolve(import.meta.dirname, "..", "content"), resolve(import.meta.dirname, "solutions"));
 
 	if (!parsed.ok)
 	{

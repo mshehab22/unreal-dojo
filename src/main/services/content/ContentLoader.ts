@@ -84,12 +84,12 @@ export class ContentLoader
 	 * Parses the format examples in `examples/` as standalone quests. They are not part of any pack and the app
 	 * never shows them; the verifier parses them so the examples authors copy from can never go stale.
 	 */
-	async loadExamples(): Promise<{ quests: AuthoredQuest[]; files: string[]; problems: ContentProblem[] }>
+	async loadExamples(): Promise<{ quests: AuthoredQuest[]; files: string[]; questSources: Record<string, string>; problems: ContentProblem[] }>
 	{
 		const folder = join(this.root, "examples");
 		const run: LoadRun = { content: { packs: [], glossary: [], patterns: [], files: [], questSources: {}, problems: [] }, parsedQuests: [] };
 
-		if (!(await this.isDirectory(folder))) return { quests: [], files: [], problems: [] };
+		if (!(await this.isDirectory(folder))) return { quests: [], files: [], questSources: {}, problems: [] };
 
 		const names = (await readdir(folder)).filter((name) => name.endsWith(".md")).sort();
 		const parsed = await Promise.all(names.map((name) => this.readQuest(join(folder, name), run.content)));
@@ -99,7 +99,7 @@ export class ContentLoader
 		const dropped = this.dropDuplicateQuestIds(run);
 		const quests = run.parsedQuests.map((result) => result.quest).filter((quest) => !dropped.has(quest));
 
-		return { quests, files: run.content.files.sort(), problems: run.content.problems };
+		return { quests, files: run.content.files.sort(), questSources: run.content.questSources, problems: run.content.problems };
 	}
 
 	/** Reads `glossary.json` or `patterns.json` if present; an absent file means no entries yet. */
