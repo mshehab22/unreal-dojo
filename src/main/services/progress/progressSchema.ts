@@ -2,6 +2,7 @@
 import { z } from "zod";
 
 import type { BreakdownPlan, DailyQuestState, ItemMemory, PlayerProgress, QuestProgress, ReviewLogEntry } from "@shared/types/progress";
+import type { CodeReview } from "@shared/types/review";
 
 /** Mastery levels. */
 const masterySchema = z.enum(["attempted", "familiar", "proficient", "mastered"]);
@@ -13,6 +14,19 @@ const momentSchema = z.iso.datetime();
 const breakdownPlanSchema: z.ZodType<BreakdownPlan> = z.object({
 	pieces: z.array(z.object({ id: z.string(), kind: z.enum(["class", "component", "data", "event", "step"]), label: z.string(), purpose: z.string() })),
 	edges: z.array(z.object({ from: z.string(), to: z.string(), kind: z.enum(["owns", "listens-to", "spawns", "then"]) })),
+});
+
+/** A code review stored on a Submit attempt (A466). Same fields as `CodeReview`; added after the first save version, so it is optional on the attempt. */
+const codeReviewSchema: z.ZodType<CodeReview> = z.object({
+	score: z.number(),
+	summary: z.string(),
+	rubric: z.array(z.object({ line: z.string(), met: z.boolean(), note: z.string() })),
+	findings: z.array(z.object({ severity: z.enum(["problem", "suggestion", "praise"]), title: z.string(), detail: z.string(), file: z.string().optional(), line: z.int().optional() })),
+	reflectionQuestion: z.string(),
+	alternativeHint: z.string(),
+	provider: z.enum(["claude-code", "anthropic-api", "tests-only"]),
+	fallbackReason: z.string().optional(),
+	retryReviewSuggested: z.boolean().optional(),
 });
 
 /** One quest's progress. */
@@ -76,7 +90,7 @@ export const playerProgressSchema: z.ZodType<PlayerProgress> = z.object({
 	patternCards: z.record(z.string(), z.object({ tier: z.enum(["bronze", "silver", "gold"]), useCasesPassed: z.array(z.string()) })),
 	skills: z.record(z.string(), z.object({ points: z.number().min(0), mastery: masterySchema })),
 	quests: z.record(z.string(), questProgressSchema),
-	attempts: z.array(z.object({ attemptId: z.string(), questId: z.string(), at: momentSchema, score: z.number(), passed: z.boolean(), xpGained: z.int() })),
+	attempts: z.array(z.object({ attemptId: z.string(), questId: z.string(), at: momentSchema, score: z.number(), passed: z.boolean(), xpGained: z.int(), review: codeReviewSchema.optional(), files: z.record(z.string(), z.string()).optional() })),
 	reviewLog: z.array(reviewLogEntrySchema),
 	schedule: z.record(z.string(), momentSchema),
 	memory: z.record(z.string(), itemMemorySchema).default({}),

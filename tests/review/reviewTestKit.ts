@@ -128,6 +128,12 @@ export function sampleRun(overrides: Partial<RunResult> = {}): RunResult
 	};
 }
 
+/** A compiled run where every test passed: the only kind the API provider reviews (A70). */
+export function passingRun(): RunResult
+{
+	return sampleRun({ ok: true, testsPassed: 2, tests: [{ name: "Dojo.W1.HealthComponent.TakesDamage", passed: true }, { name: "Dojo.W1.HealthComponent.BroadcastsChange", passed: true }] });
+}
+
 /** A health component submit with three rubric lines. */
 export function sampleCodeInput(overrides: Partial<CodeReviewInput> = {}): CodeReviewInput
 {

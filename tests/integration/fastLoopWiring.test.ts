@@ -127,6 +127,7 @@ describe.skipIf(!HAS_ENGINE)(`fast loop wiring against ${ENGINE_ROOT || "no engi
 				getSandboxService: () => built.sandboxService,
 				getQuestRunService: () => built.questRunService,
 				getEditorService: () => built.editorService,
+				getReviewHandlers: () => { throw new Error("not used"); },
 				runRegistry,
 				sendProgress: (event) => events.push(event),
 				progressContentService: {} as never,

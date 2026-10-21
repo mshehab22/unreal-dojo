@@ -1,9 +1,10 @@
-// Builds the handler for every DojoApi method. Services replace the stubs here as each system task lands.
-import type { DojoMethod } from "@shared/ipc";
+// Builds the handler for every DojoApi method from the services the composition root passes in. No method is a stub any more.
 import type { ContentStatus, GlossaryAlias, LearnerQuest, LearnerWorld, PackOutline } from "@shared/types/catalog";
 import type { GlossaryEntry, PatternCard } from "@shared/types/content";
 import type { EngineInstall, EnvironmentStatus, SandboxSetupResult, ToolchainCheck } from "@shared/types/engine";
-import type { BuildProgressEvent, RunResult, SyntaxCheckResult } from "@shared/types/run";
+import type { SubmitOutcome } from "@shared/types/progress";
+import type { ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
+import type { BuildProgressEvent, RunRequest, RunResult, SyntaxCheckResult } from "@shared/types/run";
 import type { Settings, SettingsPatch } from "@shared/types/settings";
 
 import type { ProgressListener } from "../services/unreal/ProgressUpdate";
@@ -11,8 +12,7 @@ import type { RunRegistry } from "../services/unreal/RunRegistry";
 
 import type { ProgressContentService } from "../services/progress/ProgressContentService";
 import type { ProgressService } from "../services/progress/ProgressService";
-import type { HandlerDefinition, HandlerTable } from "./HandlerDefinition";
-import { notImplemented } from "./notImplemented";
+import type { HandlerTable } from "./HandlerDefinition";
 import {
 	apiKeySchema,
 	breakdownRevisionSchema,
@@ -75,6 +75,28 @@ export interface HandlerDependencies
 
 	/** Reads the engine, sandbox, review provider, loop mode, and editor connection for the Title chips. */
 	readEnvironmentStatus: () => Promise<EnvironmentStatus>;
+
+	/** Returns the review methods and Submit (M1.7c). A function so the review service is built on first use. */
+	getReviewHandlers: () => ReviewHandlerService;
+}
+
+/** The review methods and Submit the handlers call, so tests can pass a fake (ai-review, M1.7c). */
+export interface ReviewHandlerService
+{
+	/** Every review provider and whether it is available now. */
+	getProviderStatuses(): Promise<ReviewProviderStatus[]>;
+
+	/** Rechecks Claude Code with one tiny real request. */
+	testClaudeCode(): Promise<ReviewProviderStatus>;
+
+	/** Explains a finding of a stored review in plain English. */
+	explainFinding(request: FindingExplanationRequest): Promise<string>;
+
+	/** Grades the learner's answer to a stored review's reflection question. */
+	answerReflection(request: ReflectionAnswerRequest): Promise<ExplainGrade>;
+
+	/** Runs, reviews, and records a build or refactor Submit. `onRecording` ends the run in the registry once recording starts, so a late cancel cannot report a saved Submit as cancelled (A601). */
+	submitQuest(request: RunRequest, onProgress: ProgressListener, signal: AbortSignal, onRecording?: () => void): Promise<SubmitOutcome>;
 }
 
 /** The part of SettingsService the handlers use, so tests can pass a fake. */
@@ -173,27 +195,6 @@ const PICK_ENGINE_TITLE = "Choose your Unreal Engine folder (the one that contai
 /** Title of the folder picker for the sandbox. */
 const PICK_SANDBOX_TITLE = "Choose where to create the Unreal Dojo sandbox project";
 
-/** Task names used in not-implemented messages, so the renderer can say when a feature arrives. */
-const ARRIVES_WITH = {
-	engine: "the engine locator (M1.1)",
-	sandbox: "the settings service (sandbox setup itself works, M1.2)",
-	runs: "the build and test loop (M1.3 and M1.4)",
-	submit: "the build loop, rules, and review (M1.3, M1.6, M1.7)",
-	review: "AI review (M1.7)",
-} as const;
-
-/** Builds a handler that validates its arguments and then answers `not-implemented`. */
-function stub<Method extends DojoMethod>(method: Method, arrivesWith: string, argumentSchemas: HandlerDefinition<Method>["argumentSchemas"]): HandlerDefinition<Method>
-{
-	return {
-		argumentSchemas,
-		handle: () =>
-		{
-			throw notImplemented(method, arrivesWith);
-		},
-	};
-}
-
 /** Returns the full handler table. Every method of DojoApi must appear, or this does not compile. */
 export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 {
@@ -243,7 +244,10 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 			argumentSchemas: [runRequestSchema],
 			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getQuestRunService().runQuest(request.questId, request.files, onProgress, signal)),
 		},
-		submitQuest: stub("submitQuest", ARRIVES_WITH.submit, [runRequestSchema]),
+		submitQuest: {
+			argumentSchemas: [runRequestSchema],
+			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getReviewHandlers().submitQuest(request, onProgress, signal, () => dependencies.runRegistry.end(request.runId))),
+		},
 		checkSnippetSyntax: { argumentSchemas: [syntaxCheckRequestSchema], handle: (request) => dependencies.getQuestRunService().checkSnippetSyntax(request.code) },
 		cancelRun: { argumentSchemas: [idSchema], handle: (runId) => dependencies.runRegistry.cancel(runId) },
 
@@ -288,9 +292,9 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		answerDrillItem: { argumentSchemas: [drillAnswerSchema], handle: (answer) => progressContentService.answerDrillItem(answer) },
 		finishDrill: { argumentSchemas: [idSchema], handle: (sessionId) => progressContentService.finishDrill(sessionId) },
 
-		getReviewProviders: stub("getReviewProviders", ARRIVES_WITH.review, []),
-		testClaudeCode: stub("testClaudeCode", ARRIVES_WITH.review, []),
-		explainFinding: stub("explainFinding", ARRIVES_WITH.review, [findingExplanationRequestSchema]),
-		answerReflection: stub("answerReflection", ARRIVES_WITH.review, [reflectionAnswerRequestSchema]),
+		getReviewProviders: { argumentSchemas: [], handle: () => dependencies.getReviewHandlers().getProviderStatuses() },
+		testClaudeCode: { argumentSchemas: [], handle: () => dependencies.getReviewHandlers().testClaudeCode() },
+		explainFinding: { argumentSchemas: [findingExplanationRequestSchema], handle: (request) => dependencies.getReviewHandlers().explainFinding(request) },
+		answerReflection: { argumentSchemas: [reflectionAnswerRequestSchema], handle: (request) => dependencies.getReviewHandlers().answerReflection(request) },
 	};
 }

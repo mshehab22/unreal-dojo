@@ -49,7 +49,7 @@ Last updated by M0.2c (settings service).
 ### Processes and files
 - `src/main/index.ts`: composition root. Waits for `app.whenReady()`, opens the `ProgressService` on `<userData>/progress.json` (M1.6), calls `registerHandlers()`, opens the window, reopens it from the macOS dock, quits when all windows close on Windows.
 - `src/main/window/createMainWindow.ts`: the one `BrowserWindow`. 1440x900 (the OS caps it to the screen's work area), minimum 1100x700, background `#0b0d12`, `hiddenInset` title bar on macOS, `contextIsolation` on, `nodeIntegration` off, `sandbox` on. Shown on `ready-to-show`. New windows are denied and outside links (`http`, `https`) go to the system browser; in-page navigation away from the app is blocked the same way. Loads `ELECTRON_RENDERER_URL` in dev, `out/renderer/index.html` when built.
-- `src/main/ipc/`: the IPC boundary (see "IPC surface" below). `createHandlers.ts` builds the table with one `HandlerDefinition` per method (a zod schema per argument plus the answering function); `registerHandlers.ts` wraps each one and registers it on its channel; `requestSchemas.ts` holds the zod schemas, each typed against its shared type (A83); `notImplemented.ts` builds the stub error; `sendBuildProgress.ts` pushes progress events to every window.
+- `src/main/ipc/`: the IPC boundary (see "IPC surface" below). `createHandlers.ts` builds the table with one `HandlerDefinition` per method (a zod schema per argument plus the answering function); `registerHandlers.ts` wraps each one and registers it on its channel; `requestSchemas.ts` holds the zod schemas, each typed against its shared type (A83); `sendBuildProgress.ts` pushes progress events to every window.
 - `src/main/errors/AppErrorException.ts`: what services throw to send a specific `AppError` to the renderer (A84).
 - `src/main/content/`: the content the renderer reads (A220). `resolveContentRoot.ts` picks `<appPath>/content` in dev and `<process.resourcesPath>/content` when packaged (A13). `ContentCatalog.ts` loads the folder once through the content-engine's `ContentLoader`, starting in the background at startup, and answers every content request from memory; `createContentCatalog.ts` wires it to the real loader and file system. `contentViews.ts` makes the World Map outlines and the learner quests (hint texts left out, A222). `buildGlossaryAliases.ts` makes the flat alias table (A223).
 - `src/main/services/settings/`: the learner's settings (A420 to A426).
@@ -87,7 +87,7 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Sandbox | `createSandbox(request)`, `rebuildSandbox(runId)` | `SandboxSetupResult`, streams progress | M1.2 |
 | Sandbox | `openEditor(questId or null)` | nothing; opens the editor on the sandbox with its MCP server and resolves once it answers (the quest id is ignored until per-quest maps exist, A533) | done (M1.4b) |
 | Runs | `runQuest(request)` | `RunResult`, streams progress | M1.3, M1.4 |
-| Runs | `submitQuest(request)` | `SubmitOutcome` (run, review, loot), streams progress | M1.3 to M1.7 |
+| Runs | `submitQuest(request)` | `SubmitOutcome` (run, review, loot), streams progress | done (M1.7c, on M1.3b's run path) |
 | Runs | `checkSnippetSyntax(request)` | `SyntaxCheckResult` for the concept scratch buffer | M1.3 |
 | Runs | `cancelRun(runId)` | nothing | M1.3 |
 | Progress | `getProgress()`, `resetProgress()` | `PlayerProgress` | done (M1.6) |
@@ -113,11 +113,11 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Drills | `getDrillSummary()` | `DrillSummary` | done (M1.6) |
 | Drills | `answerDrillItem(answer)` | `DrillItemResult` | done (M1.6b; AI grading when the review service is wired, A318) |
 | Drills | `finishDrill(sessionId)` | `DrillOutcome` | done (M1.6b) |
-| Review | `getReviewProviders()`, `testClaudeCode()` | `ReviewProviderStatus[]`, `ReviewProviderStatus` | M1.7 |
-| Review | `explainFinding(request)` | plain-English text | M1.7 |
-| Review | `answerReflection(request)` | `ExplainGrade` | M1.7 |
+| Review | `getReviewProviders()`, `testClaudeCode()` | `ReviewProviderStatus[]`, `ReviewProviderStatus` | done (M1.7c) |
+| Review | `explainFinding(request)` | plain-English text | done (M1.7c) |
+| Review | `answerReflection(request)` | `ExplainGrade` | done (M1.7c) |
 
-Methods marked done answer for real; every other method checks its payload and answers `not-implemented`, naming the task that builds it. The Parsons fallback offer and the self-explanation gate are renderer-only (A89).
+Every method answers for real; the last stubs went with M1.4b and M1.7c, and `notImplemented.ts` was removed with them. The `not-implemented` AppError code stays for features a later task may stub again. The Parsons fallback offer and the self-explanation gate are renderer-only (A89).
 
 Content is read once at startup (A220). A file with problems is left out and listed in `getContentStatus().problems`; the rest still loads. Only a missing content folder or a load that throws makes the content methods reject, with `content-invalid` ("Unreal Dojo could not find its lessons."), and the next call tries the load again. Main never crashes on bad content.
 

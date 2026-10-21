@@ -83,6 +83,13 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 	progressContentService: createTestProgressContent({ source: { ...FAKE_CONTENT_CATALOG, getAuthoredQuest: async () => undefined } }).content,
 	settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
 	readEnvironmentStatus: async () => ({ engine: null, sandbox: { path: null, ready: false }, reviewProvider: null, loopMode: "auto", editorConnected: false }),
+	getReviewHandlers: () => ({
+		getProviderStatuses: async () => [{ id: "tests-only", available: true }],
+		testClaudeCode: async () => ({ id: "claude-code", available: false, reason: "not installed" }),
+		explainFinding: async () => "because",
+		answerReflection: async () => ({ score: 70, verdict: "partly", note: "n", provider: "tests-only" }),
+		submitQuest: async () => { throw new Error("not used"); },
+	}),
 };
 
 /** A stand-in for ipcMain that records each registered channel. */
@@ -251,14 +258,6 @@ describe("registerHandlers", () =>
 
 		expect(await call(IPC_CHANNELS.getEnvironmentStatus)).toMatchObject({ ok: true, value: { loopMode: "auto", editorConnected: false } });
 		expectError(await call(IPC_CHANNELS.completeFirstRun), "settings-invalid");
-	});
-
-	it("answers a stub with a not-implemented AppError that names when it arrives", async () =>
-	{
-		const invoke = createInvoker();
-		const error = expectError(await invoke(IPC_CHANNELS.getReviewProviders), "not-implemented");
-
-		expect(error.suggestedAction).toMatch(/arrives with/);
 	});
 
 	it("answers every channel with an IpcResponse, never a throw, even with no arguments", async () =>

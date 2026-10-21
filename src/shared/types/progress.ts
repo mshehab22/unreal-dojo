@@ -132,6 +132,9 @@ export interface AttemptRecord
 
 	/** The code review of a build, refactor, or boss Submit, kept so "why is this a finding?" and the reflection answer can find it by attempt id. */
 	review?: CodeReview;
+
+	/** The files submitted, on build, refactor, and boss Submits only, capped and kept for the quest's last five such attempts (A467). */
+	files?: Record<string, string>;
 }
 
 /** One spaced review of one item, appended forever so FSRS can replace SM-2 later without a migration. */
