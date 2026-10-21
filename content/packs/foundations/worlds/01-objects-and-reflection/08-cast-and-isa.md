@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: []
 skills: [object-model]
-terms: [cast, isa, isvalid, uclass]
+terms: [cast, isa, isvalid, uclass, tarray]
 prerequisites: [f1-popup-target]
 xp: 25
 estimatedMinutes: 6
@@ -33,7 +33,7 @@ explanation: Cast checks the real class through reflection and gives back null w
 
 # Card
 
-Engine functions usually hand you a general type: an overlap gives you an `AActor*`, a list a designer filled in the editor may hold anything. To use what is special about one kind of actor you need a pointer of that kind.
+Engine functions usually hand you a general type: an overlap gives you an `AActor*`, and a `TArray<AActor*>`, Unreal's growable list, filled by a designer in the editor may hold anything. A ranged for loop such as `for (AActor* Thing : Things)` visits each entry in order. To use what is special about one kind of actor you need a pointer of that kind.
 
 `Cast<ADojoF1TrainingDummy>(Thing)` asks reflection for the object's real class. If it is a training dummy, or any child of one, you get a typed pointer. If it is anything else, or Thing is already null, you get `nullptr`. So every Cast is followed by a check:
 

@@ -6,7 +6,7 @@ kind: concept
 difficulty: 1
 patterns: []
 skills: [object-model]
-terms: [uobject, actor, cdo, coding-standard, beginplay]
+terms: [uobject, actor, cdo, coding-standard, beginplay, createdefaultsubobject, ue-log]
 prerequisites: []
 xp: 20
 estimatedMinutes: 5
@@ -39,7 +39,9 @@ An **actor** (`AActor`) is a UObject that can live in a level: it has a place in
 
 Names carry the type, following Epic's coding standard: `A` for actors, `U` for other UObjects, `F` for plain structs, `E` for enums, `b` for booleans. The header tool relies on these prefixes and refuses a reflected class without the right one.
 
-When the engine starts, it runs each class's constructor once to build the **class default object** (CDO). Every actor you place or spawn begins as a copy of it. That is why a constructor should only create components and set default values: it often runs when no world exists, so it cannot find other actors or start gameplay. Runtime setup belongs in `BeginPlay`.
+When the engine starts, it runs each class's constructor once to build the **class default object** (CDO). Every actor you place or spawn begins as a copy of it. That is why a constructor should only create components and set default values: it often runs when no world exists, so it cannot find other actors or start gameplay. The components every instance has are made there with `CreateDefaultSubobject<T>(TEXT("Name"))`, so they become part of the template too. Runtime setup belongs in `BeginPlay`.
+
+To see what your code does, write to the output log with `UE_LOG(Category, Verbosity, TEXT("format"), values)`: `LogTemp` is a ready-made category, `Log`, `Warning`, and `Error` are the usual verbosities, and the format works like printf, with `*` before an FString such as `*GetName()`. The sandbox has its own category, `LogDojo`, declared in `Dojo.h`.
 
 # Example
 

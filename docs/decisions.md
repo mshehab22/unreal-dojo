@@ -4,6 +4,9 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A680 2026-10-21 Pack 1 term coverage under A72 (author-foundations)
+Main's verifier now warns when a quest uses a term no earlier concept quest teaches. Options per term: teach it in an earlier concept card where it fits, or drop it from a quest where it is incidental. Chosen: UE_LOG and CreateDefaultSubobject are taught in World 1's UObject and actor card; TArray in World 1's Cast and IsA card (its example already walks an array); RegisterComponent in World 2's creating objects card (its text already explained it); PrimaryActorTick in World 4's components card; the Character Movement Component and LaunchCharacter in World 4's pawns and controllers card. FMath is dropped from World 3's score board, where it was incidental. Left as they are: the World 1 dash breakdown's terms (character, movement, input, timers, delegates), which the brief places in World 1 on purpose and which only link there, and object-pool, left to the patterns pack's Object Pool world. Glossary first-quest links for ue-log, the movement component, LaunchCharacter, and RegisterComponent now point to those concept quests. Reverse cost: low.
+
 ### A612 2026-10-21 Engine integration test files run one at a time (builder-unreal, M1.4c)
 Each engine test file creates its own sandbox, builds it, and may open an editor; vitest runs test files in parallel by default, so running the folder at once builds several sandboxes together and the runs fail or time out. Options: force serial runs in `vitest.config.ts` (slows every unit test run); an npm script with the flag (needs a `package.json` change); document it. Chosen: document it in `docs/systems/unreal-pipeline.md` (one file at a time, or `--no-file-parallelism`, under the engine lock) and correct the M1.4b entry's wording. There is no npm script for these checks, so none needed changing. Reverse cost: none.
 

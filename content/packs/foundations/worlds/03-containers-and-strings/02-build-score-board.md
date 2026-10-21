@@ -7,7 +7,7 @@ scaffold: worked
 difficulty: 2
 patterns: []
 skills: [containers]
-terms: [tarray, uproperty, cast, fmath]
+terms: [tarray, uproperty, cast]
 prerequisites: [f3-tarray, f1-score-keeper, f1-training-dummy]
 xp: 50
 estimatedMinutes: 12

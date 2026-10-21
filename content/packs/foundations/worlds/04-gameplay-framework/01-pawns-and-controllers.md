@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: []
 skills: [framework]
-terms: [pawn, character, player-controller, possession, default-pawn-class]
+terms: [pawn, character, player-controller, possession, default-pawn-class, character-movement-component, launch-character]
 prerequisites: [f3-sentry]
 xp: 25
 estimatedMinutes: 7
@@ -35,7 +35,7 @@ explanation: The controller and the pawn are separate actors; losing the pawn le
 
 Unreal splits "a thing in the world that can be driven" from "the decisions that drive it".
 
-A **pawn** (`APawn`) is a body: an actor that can be possessed and moved by input or AI. A turret, a vehicle, and a camera drone can all be pawns. A **character** (`ACharacter`) is a pawn that comes with a capsule for collision, a skeletal mesh slot, and the Character Movement Component, so walking, jumping, falling, and swimming already work.
+A **pawn** (`APawn`) is a body: an actor that can be possessed and moved by input or AI. A turret, a vehicle, and a camera drone can all be pawns. A **character** (`ACharacter`) is a pawn that comes with a capsule for collision, a skeletal mesh slot, and the Character Movement Component, so walking, jumping, falling, and swimming already work. The **Character Movement Component** does that moving: it reads the input the controller adds, sweeps the capsule so the character never walks through walls, and handles slopes, steps, and network smoothing. To throw a character, for a dash or a jump pad, call `LaunchCharacter(Velocity, bXYOverride, bZOverride)` and let the movement component carry it, falling until it lands.
 
 A **controller** is the will. `APlayerController` turns a human's input into commands and owns the player's view and HUD; `AAIController` runs AI logic. A controller drives one pawn at a time through **possession**: `Controller->Possess(Pawn)` connects them and `UnPossess()` disconnects. Possession happens on the server (or in single player, the only machine), and the pawn's `PossessedBy` and the controller's `OnPossess` run when it does.
 

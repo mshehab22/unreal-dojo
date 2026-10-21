@@ -288,7 +288,8 @@
       "capsule-component",
       "blend-space",
       "replication"
-    ]
+    ],
+    "firstQuestId": "f4-pawns-and-controllers"
   },
   {
     "id": "launch-character",
@@ -306,7 +307,7 @@
       "character-movement-component",
       "sweep"
     ],
-    "firstQuestId": "f1-dash-with-cooldown"
+    "firstQuestId": "f4-pawns-and-controllers"
   },
   {
     "id": "projectile-movement-component",
@@ -1253,7 +1254,7 @@
       "scene-component",
       "on-construction"
     ],
-    "firstQuestId": "f4-fence"
+    "firstQuestId": "f2-creating-objects"
   },
   {
     "id": "spawnactor",
@@ -3155,7 +3156,8 @@
       "on-screen-debug-message",
       "text-macro",
       "fstring"
-    ]
+    ],
+    "firstQuestId": "f1-uobject-and-actor"
   },
   {
     "id": "log-category",

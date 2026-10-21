@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: []
 skills: [memory, object-model]
-terms: [createdefaultsubobject, newobject, spawnactor, cdo]
+terms: [createdefaultsubobject, newobject, spawnactor, cdo, register-component]
 prerequisites: [f2-spotter]
 xp: 25
 estimatedMinutes: 6
