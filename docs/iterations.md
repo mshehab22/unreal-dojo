@@ -520,3 +520,9 @@ exit code 0
 - What changed: the boss now lists a fifth addition, `ResetForRound` on the pop-up target, which lowers it from any state, clears hits and misses, and refreshes the label. Both reference plans' reset steps, the "additions" piece, the round-reset piece, and the integration rubric use it, and the line saying Repair clears misses is gone. The spec now says the keeper subtracts every miss from the points earned and only then clamps at 0 (A338).
 - Proof: the verifier reports no problems for the boss quest. Spec text only; no code changed, so nothing was rebuilt. Nothing visible in the app changed.
 - Decisions made: A338.
+
+### Fix round 2
+- What the reviewer asked for: the Blueprint plan's auto lower used a Delay, which ignores new calls while it counts, so with a rise every second only the first target would ever drop; and the bell rang "once" with nothing clearing that, so round 2 never rang. The Lead also asked for a full read of the boss as a learner building round 1 and then round 2.
+- What changed: both plans now remember each target's rise time and lower every target up for 2.5 seconds or longer on a 0.1 second looping timer, and the spec says why a Delay does not work. The bell step names a "bell rung this round" flag, and the rubric says it is cleared for round 2. The read-through found two more gaps of the same kind: keys pressed between rounds would have added misses to the next round, and a C++ director never receives keys unless it calls EnableInput. So the round now ends by stopping timers and keys and showing the score, and starts by resetting targets, dummies, the bell flag, and the rise times before anything runs; keys only work while a round runs (A339).
+- Proof: the verifier on the foundations pack reports no problems. Spec text only; no code changed. Nothing visible in the app changed.
+- Decisions made: A339.
