@@ -120,3 +120,11 @@ Look for: does it feel like a game studio you want to come back to, is anything 
 ## Handoff notes
 
 (The Lead writes a handoff here before its context fills: what is in flight, what each builder was told, what is next.)
+
+### Handoff, 2026-10-21 afternoon
+- The board above is current. Every task row names its session (sidebar titles still show each session's first task; the board maps them) and branch with the commit last reviewed.
+- Merge rules in practice: merge only after a reviewer PASS; run `npm ci`, typecheck, test, verifier, build, test:e2e on main after each merge; resolve docs-only conflicts by keeping both sides; code conflicts by hand (`createHandlers.ts` and `src/main/index.ts` collect every service's dependencies, keep all). If checks fail after a merge, remove only that merge commit (check `git log --first-parent HEAD~1..HEAD` first) and send the branch back. Chain every command after a merge with `&&`.
+- Unreal runs on this Mac take turns through a lock directory: `mkdir` it before an engine run, `rmdir` after (path in the reviewers' shared instructions in the Lead's scratchpad; any agreed path works if the Lead changes). Six builder processes were killed at once at 15:25 (exit 143), likely memory pressure; keep heavy runs serialized.
+- Waiting to merge, in order: M2.1c (World Map overflow), then M1.6b (passed). M2.3b merges as its own commits (round 3 pending, then the World 2 boss reference per A67). World 2's 11 non-boss quests are in review.
+- Next after these: M1.4 fast loop (MCP, Windows Live Coding only, A45), submitQuest orchestration (run, then review through M1.7, then recordAttempt) once M1.3b lands, wiring the review provider IPC, M2.4 end-to-end learner flow (tester) once M2.2 and the run wiring land, M3.2 Pack 3 World 6, M3.3 to M3.4.
+- Needs Mohammad: a signed-in `claude` CLI for the live review run, `gh auth login` for the private CI repo, optionally the Metal toolchain. All decisions to review are under "Awaiting Mohammad's review" (A01 onward; Lead decisions are A01 to A06 and A60 to A67).
