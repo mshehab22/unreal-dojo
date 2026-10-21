@@ -47,7 +47,7 @@ content/, resources/, research/, docs/
 Last updated by M0.2b (content IPC).
 
 ### Processes and files
-- `src/main/index.ts`: composition root. Waits for `app.whenReady()`, calls `registerHandlers()`, opens the window, reopens it from the macOS dock, quits when all windows close on Windows.
+- `src/main/index.ts`: composition root. Waits for `app.whenReady()`, opens the `ProgressService` on `<userData>/progress.json` (M1.6), calls `registerHandlers()`, opens the window, reopens it from the macOS dock, quits when all windows close on Windows.
 - `src/main/window/createMainWindow.ts`: the one `BrowserWindow`. 1440x900 (the OS caps it to the screen's work area), minimum 1100x700, background `#0b0d12`, `hiddenInset` title bar on macOS, `contextIsolation` on, `nodeIntegration` off, `sandbox` on. Shown on `ready-to-show`. New windows are denied and outside links (`http`, `https`) go to the system browser; in-page navigation away from the app is blocked the same way. Loads `ELECTRON_RENDERER_URL` in dev, `out/renderer/index.html` when built.
 - `src/main/ipc/`: the IPC boundary (see "IPC surface" below). `createHandlers.ts` builds the table with one `HandlerDefinition` per method (a zod schema per argument plus the answering function); `registerHandlers.ts` wraps each one and registers it on its channel; `requestSchemas.ts` holds the zod schemas, each typed against its shared type (A83); `notImplemented.ts` builds the stub error; `sendBuildProgress.ts` pushes progress events to every window.
 - `src/main/errors/AppErrorException.ts`: what services throw to send a specific `AppError` to the renderer (A84).

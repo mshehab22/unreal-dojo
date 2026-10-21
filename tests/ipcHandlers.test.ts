@@ -9,6 +9,7 @@ import { createHandlers, type ContentCatalogService, type HandlerDependencies } 
 import type { HandlerDefinition } from "../src/main/ipc/HandlerDefinition";
 import { idSchema, playerNameSchema } from "../src/main/ipc/requestSchemas";
 import { registerHandlers, wrapHandler, type IpcHandleRegistrar, type WrappedHandler } from "../src/main/ipc/registerHandlers";
+import { createTestProgressService } from "./support/progressFixtures";
 
 /** A fake toolchain answer the engine handlers pass through. */
 const FAKE_TOOLCHAIN = { ok: true, tool: "xcode-select", message: "Xcode 27.1 is selected.", toolVersion: "27.1", problems: [] } as const;
@@ -41,6 +42,7 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 	}),
 	getContentCatalog: () => FAKE_CONTENT_CATALOG,
 	pickFolder: async () => "/Picked/UE_5.8",
+	progressService: createTestProgressService().service,
 };
 
 /** A stand-in for ipcMain that records each registered channel. */
