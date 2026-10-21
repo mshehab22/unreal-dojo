@@ -84,7 +84,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 8665386 | merged | 1 fix round plus a test fix; includes the GFrameCounter timer fix |
-| M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring @ 99a6796 | fixes | runQuest verified on the engine. Round 1: syntax check passes on clang failure, boss prerequisites (Lead: match quest ids on the line, overrides win), passed quests refilled from savedFiles, check file race |
+| M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring @ 638febc | re-review | All four items and A426 cleanup; 11 of 11 engine runs |
 | M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged 742676e | merged | 1 fix round; probes verified in a packaged build |
 | M1.7c submitQuest and review IPC wiring | ai-review | builder-review (session) | m1-7c-submit-wiring @ 2efbe9e | building | Provider IPC, graders, stored review and files done; the run inside Submit waits for M1.3b |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | merged b06a722 | merged | 2 rounds; --engine 9 of 9 on UE 5.8.3 through M1.3 runners |
@@ -98,8 +98,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
 | M4.x Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | claude/m3-patterns-world2-game-loop @ 92381be | review | 18 of 18 solutions on UE 5.8.3 |
 | M4.x Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | claude/m4-patterns-world3-update-method @ 0edd88f | review (after World 2) | 27 of 27 solutions across three worlds |
-| M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop | building | McpEditorClient, EditorLauncher, LiveEditorRunner; Live Coding Windows only (A45) |
-| M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | m1-6c-revealed-hints @ dfe4dbb | fixes | Probes hold; regression: getWorld and getQuest fail on a refused save |
+| M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop @ 7fa6c10 | review | Real editor on the Mac: 4.4 s first run, then 32 ms; app wiring after M1.3b |
+| M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | m1-6c-revealed-hints @ 3c9f0a9 | re-review | Refused save no longer breaks quests and worlds |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
