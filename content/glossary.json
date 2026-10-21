@@ -17,7 +17,8 @@
       "uclass",
       "newobject",
       "cdo"
-    ]
+    ],
+    "firstQuestId": "f1-uobject-and-actor"
   },
   {
     "id": "actor",
@@ -37,7 +38,8 @@
       "spawnactor",
       "beginplay",
       "world"
-    ]
+    ],
+    "firstQuestId": "f1-uobject-and-actor"
   },
   {
     "id": "pawn",
@@ -282,6 +284,24 @@
       "blend-space",
       "replication"
     ]
+  },
+  {
+    "id": "launch-character",
+    "term": "LaunchCharacter",
+    "aliases": [
+      "LaunchCharacter()",
+      "ACharacter::LaunchCharacter"
+    ],
+    "category": "framework",
+    "short": "A character function that throws the character with a velocity you give it, the usual starting point for dashes, jump pads, and knockbacks.",
+    "long": "LaunchCharacter(Velocity, bXYOverride, bZOverride) hands a velocity to the Character Movement Component, which applies it on the next movement update and always switches the character to falling until it lands again, even when the push is flat along the ground. The two flags choose whether the new velocity replaces the current one on the flat axes and on the vertical axis, or is added to it; a dash usually replaces the flat part so it feels the same at a standstill and at a run. Because the movement component does the moving, it sweeps the capsule and never passes through a wall, but a launched character that meets a wall at an angle slides along it and keeps its speed, so a dash that must end at a wall needs a sweep first or a reaction to the hit.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/ACharacter/LaunchCharacter?application_version=5.8",
+    "related": [
+      "character",
+      "character-movement-component",
+      "sweep"
+    ],
+    "firstQuestId": "f1-dash-with-cooldown"
   },
   {
     "id": "projectile-movement-component",
@@ -558,7 +578,8 @@
       "ustruct",
       "uenum",
       "unreal-header-tool"
-    ]
+    ],
+    "firstQuestId": "f1-reflection-and-uclass"
   },
   {
     "id": "ustruct",
@@ -576,7 +597,8 @@
       "table-row-base",
       "reflection",
       "coding-standard"
-    ]
+    ],
+    "firstQuestId": "f1-uenum-and-ustruct"
   },
   {
     "id": "uenum",
@@ -595,7 +617,8 @@
       "ustruct",
       "state-machine",
       "reflection"
-    ]
+    ],
+    "firstQuestId": "f1-uenum-and-ustruct"
   },
   {
     "id": "uproperty",
@@ -617,7 +640,8 @@
       "meta-specifier",
       "garbage-collection",
       "tobjectptr"
-    ]
+    ],
+    "firstQuestId": "f1-uproperty-specifiers"
   },
   {
     "id": "editanywhere",
@@ -635,7 +659,8 @@
       "visibleanywhere",
       "category-specifier",
       "blueprintreadwrite"
-    ]
+    ],
+    "firstQuestId": "f1-uproperty-specifiers"
   },
   {
     "id": "visibleanywhere",
@@ -653,7 +678,8 @@
       "editanywhere",
       "blueprintreadonly",
       "createdefaultsubobject"
-    ]
+    ],
+    "firstQuestId": "f1-uproperty-specifiers"
   },
   {
     "id": "blueprintreadwrite",
@@ -670,7 +696,8 @@
       "uproperty",
       "blueprintcallable",
       "allowprivateaccess"
-    ]
+    ],
+    "firstQuestId": "f1-uproperty-specifiers"
   },
   {
     "id": "blueprintreadonly",
@@ -687,7 +714,8 @@
       "visibleanywhere",
       "allowprivateaccess",
       "uproperty"
-    ]
+    ],
+    "firstQuestId": "f1-uproperty-specifiers"
   },
   {
     "id": "category-specifier",
@@ -705,7 +733,8 @@
       "ufunction",
       "meta-specifier"
     ],
-    "linkMode": "code-only"
+    "linkMode": "code-only",
+    "firstQuestId": "f1-uproperty-specifiers"
   },
   {
     "id": "meta-specifier",
@@ -726,7 +755,8 @@
       "displayname-meta",
       "bindwidget",
       "category-specifier"
-    ]
+    ],
+    "firstQuestId": "f1-uproperty-specifiers"
   },
   {
     "id": "allowprivateaccess",
@@ -743,7 +773,8 @@
       "blueprintreadonly",
       "visibleanywhere",
       "forceinline"
-    ]
+    ],
+    "firstQuestId": "f1-uproperty-specifiers"
   },
   {
     "id": "displayname-meta",
@@ -760,7 +791,8 @@
       "uproperty",
       "ufunction",
       "uenum"
-    ]
+    ],
+    "firstQuestId": "f1-uproperty-specifiers"
   },
   {
     "id": "ufunction",
@@ -781,7 +813,8 @@
       "blueprintnativeevent",
       "server-rpc",
       "adddynamic"
-    ]
+    ],
+    "firstQuestId": "f1-ufunction-specifiers"
   },
   {
     "id": "blueprintcallable",
@@ -798,7 +831,8 @@
       "blueprintpure",
       "blueprint-vs-cpp",
       "category-specifier"
-    ]
+    ],
+    "firstQuestId": "f1-ufunction-specifiers"
   },
   {
     "id": "blueprintpure",
@@ -815,7 +849,8 @@
       "blueprintcallable",
       "ufunction",
       "blueprintreadonly"
-    ]
+    ],
+    "firstQuestId": "f1-ufunction-specifiers"
   },
   {
     "id": "blueprintimplementableevent",
@@ -832,7 +867,8 @@
       "ufunction",
       "blueprint-vs-cpp",
       "blueprint-class"
-    ]
+    ],
+    "firstQuestId": "f1-ufunction-specifiers"
   },
   {
     "id": "blueprintnativeevent",
@@ -850,7 +886,8 @@
       "ufunction",
       "server-rpc",
       "iinterface"
-    ]
+    ],
+    "firstQuestId": "f1-ufunction-specifiers"
   },
   {
     "id": "server-rpc",
@@ -942,7 +979,8 @@
       "ustruct",
       "unreal-header-tool",
       "reflection"
-    ]
+    ],
+    "firstQuestId": "f1-reflection-and-uclass"
   },
   {
     "id": "generated-h-include",
@@ -960,7 +998,8 @@
       "unreal-header-tool",
       "uclass",
       "forward-declaration"
-    ]
+    ],
+    "firstQuestId": "f1-reflection-and-uclass"
   },
   {
     "id": "unreal-header-tool",
@@ -978,7 +1017,8 @@
       "generated-body",
       "generated-h-include",
       "unreal-build-tool"
-    ]
+    ],
+    "firstQuestId": "f1-reflection-and-uclass"
   },
   {
     "id": "cdo",
@@ -999,7 +1039,8 @@
       "beginplay",
       "constructor-helpers",
       "blueprint-class"
-    ]
+    ],
+    "firstQuestId": "f1-uobject-and-actor"
   },
   {
     "id": "reflection",
@@ -1018,7 +1059,8 @@
       "ufunction",
       "unreal-header-tool",
       "garbage-collection"
-    ]
+    ],
+    "firstQuestId": "f1-reflection-and-uclass"
   },
   {
     "id": "garbage-collection",
@@ -1585,7 +1627,8 @@
       "uinterface",
       "overlap-event"
     ],
-    "linkMode": "code-only"
+    "linkMode": "code-only",
+    "firstQuestId": "f1-cast-and-isa"
   },
   {
     "id": "isa",
@@ -1603,7 +1646,8 @@
       "cast",
       "tsubclassof",
       "uobject"
-    ]
+    ],
+    "firstQuestId": "f1-cast-and-isa"
   },
   {
     "id": "destroy",
@@ -3165,7 +3209,8 @@
       "module",
       "uclass",
       "build-cs"
-    ]
+    ],
+    "firstQuestId": "f1-reflection-and-uclass"
   },
   {
     "id": "generate-project-files",
@@ -3473,7 +3518,8 @@
       "generated-h-include",
       "coding-standard",
       "forceinline"
-    ]
+    ],
+    "firstQuestId": "f1-reflection-and-uclass"
   },
   {
     "id": "super",
@@ -3601,7 +3647,8 @@
       "uenum",
       "tobjectptr",
       "forward-declaration"
-    ]
+    ],
+    "firstQuestId": "f1-uobject-and-actor"
   },
   {
     "id": "possession",

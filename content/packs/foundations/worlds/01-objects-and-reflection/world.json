@@ -1,0 +1,5 @@
+{
+	"id": "objects-and-reflection",
+	"title": "Objects and reflection",
+	"summary": "A training yard client wants targets their designers can tune without a programmer. Learn how UObjects, actors, and the reflection macros let the editor, Blueprint, and the console see your C++."
+}
