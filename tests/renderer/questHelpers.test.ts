@@ -8,7 +8,7 @@ import { hashForRoute, routeFromHash, routeParametersFromHash } from "../../src/
 import { misplacedLineIds } from "../../src/renderer/src/components/quests/parsonsPlacement";
 import { termAtWord } from "../../src/renderer/src/lib/matchGlossaryTerm";
 import { shuffledOrder } from "../../src/renderer/src/lib/presentationOrder";
-import { edgeKindFromLabel, layoutPositions, newPiece, planProblems, referenceAsPlan, withEdge, withoutPiece } from "../../src/renderer/src/screens/quests/breakdown/boardModel";
+import { columnsForBox, edgeKindFromLabel, layoutPositions, newPiece, planProblems, referenceAsPlan, withEdge, withoutPiece } from "../../src/renderer/src/screens/quests/breakdown/boardModel";
 import { markedLineKey, markedLinesOf } from "../../src/renderer/src/screens/quests/build/markedLines";
 import { splitBrief } from "../../src/renderer/src/screens/quests/build/splitBrief";
 import { drillRequestFromRoute, routeForDrillRequest } from "../../src/renderer/src/screens/quests/drill/drillRequestFromRoute";
@@ -193,5 +193,16 @@ describe("Parsons marking after a check", () =>
 		const braceTexts: Record<string, string> = { "line-0": "{", "line-1": "{", "line-2": "}", "line-3": "}" };
 
 		expect(misplacedLineIds(["line-1", "line-0", "line-3", "line-2"], (lineId) => braceTexts[lineId], braces).size).toBe(0);
+	});
+});
+
+describe("board columns from the box shape", () =>
+{
+	it("lays eight pieces out wide in a wide box and tall in a tall one", () =>
+	{
+		expect(columnsForBox(8, { width: 780, height: 300 })).toBe(4);
+		expect(columnsForBox(8, { width: 300, height: 900 })).toBeLessThanOrEqual(2);
+		expect(columnsForBox(1, { width: 780, height: 300 })).toBe(1);
+		expect(columnsForBox(8)).toBe(2);
 	});
 });

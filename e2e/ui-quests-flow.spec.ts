@@ -2,11 +2,15 @@
 // questions, a drill with every item type, a breakdown submitted and revised, a build that fails, takes a hint, then passes, the loot screen,
 // the Parsons fallback after two failed submits, and every quest screen at 1100x700 and 1440x900 without sideways scroll.
 // Page scripts are passed as strings because e2e is typechecked without the DOM library.
-// Saves screenshots to test-results/; SAVE_PROOF=1 also writes them to docs/iterations/m2-2-*.jpg at one pixel per CSS pixel (1280 wide).
+// Each test gets a freshly launched app with its own userData (the QA harness). Screenshots go to test-results/; with SAVE_PROOF=1 a passing
+// test's pictures are copied to docs/iterations/m2-2-*.jpg at one pixel per CSS pixel (1280 wide).
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { _electron as electron, expect, test, type ElectronApplication, type Locator, type Page, type TestInfo } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+
+import { expect, test } from "./support/dojoTest";
+import type { ProofCamera } from "./support/ProofCamera";
 
 /** The real World 1 the fake serves, read for answers the flow types (Parsons lines, the explain model answer). */
 const WORLD_ONE = JSON.parse(readFileSync(resolve("src/renderer/src/data/fake/fixtures/worldOneFixture.json"), "utf8")) as {
@@ -27,15 +31,13 @@ const SIZES = [
 
 const SHORTCUT_MODIFIER = process.platform === "darwin" ? "Meta" : "Control";
 
-let electronApp: ElectronApplication;
 let window: Page;
+let camera: ProofCamera;
 
-/** Screenshots the page into test-results/, and as a JPG at CSS pixel size into docs/iterations/ when SAVE_PROOF=1. */
-async function saveScreenshot(testInfo: TestInfo, name: string): Promise<void>
+/** Screenshots the page into test-results/; a passing test with SAVE_PROOF=1 gets it as a JPG in docs/iterations/. */
+async function saveScreenshot(name: string): Promise<void>
 {
-	await window.screenshot({ path: testInfo.outputPath(`m2-2-${name}.png`) });
-
-	if (process.env["SAVE_PROOF"] === "1") await window.screenshot({ path: resolve(`docs/iterations/m2-2-${name}.jpg`), type: "jpeg", quality: 80, scale: "css" });
+	await camera.capture(window, `m2-2-${name}.png`, { proofFileName: `m2-2-${name}.jpg`, proofFormat: "jpeg" });
 }
 
 /** Forces the page to render at an exact size, independent of how large the OS lets the window be (A90). */
@@ -101,29 +103,46 @@ async function visibleEditorText(): Promise<string>
 	return window.evaluate<string>("[...document.querySelectorAll('[data-testid=build-quest] [data-testid=code-editor] .view-line')].sort((first, second) => parseFloat(first.style.top) - parseFloat(second.style.top)).map((line) => line.textContent.replace(/\\u00a0/g, ' ')).join('\\n')");
 }
 
+/** The first plan the breakdown flows type: five dash pieces, each with a name and purpose, through the keyboard path (add button, then the fields). */
+async function addDashPieces(): Promise<void>
+{
+	const pieces: { kind: string; label: string; purpose: string }[] = [
+		{ kind: "step", label: "Bind the dash input action", purpose: "A press of the dash button calls the dash" },
+		{ kind: "component", label: "DashComponent", purpose: "Performs the dash: launches the character along the flattened camera direction" },
+		{ kind: "component", label: "CooldownComponent", purpose: "Reusable cooldown that can start and answer whether it is ready" },
+		{ kind: "event", label: "OnDashStarted and OnCooldownReady", purpose: "The HUD listens to these events instead of polling" },
+		{ kind: "data", label: "Dash tunables", purpose: "Distance, lock time, and cooldown as EditAnywhere values" },
+	];
+
+	for (const piece of pieces)
+	{
+		await window.getByTestId(`add-piece-${piece.kind}`).click();
+		await window.getByTestId("piece-label").fill(piece.label);
+		await window.getByTestId("piece-purpose").fill(piece.purpose);
+	}
+}
+
+/** The zoom React Flow settled on for one board, read from its viewport transform. */
+async function boardZoom(testId: string): Promise<number>
+{
+	return window.evaluate<number>(`(() => { const viewport = document.querySelector('[data-testid="${testId}"] .react-flow__viewport'); const match = viewport ? /scale\\(([0-9.]+)\\)/.exec(viewport.style.transform) : null; return match ? Number(match[1]) : 0; })()`);
+}
+
 /** Inserts text into the focused editor as one input, so auto-closed brackets and the completion list never change it. Monaco indents each new line itself. */
 async function typeInEditor(text: string): Promise<void>
 {
 	await window.keyboard.insertText(text);
 }
 
-test.beforeAll(async () =>
+// Every test drives its own freshly launched app; reduced motion zeroes every duration token, so screenshots never catch a transition.
+test.beforeEach(async ({ dojo, camera: testCamera }) =>
 {
-	electronApp = await electron.launch({ args: [resolve(".")] });
-	window = await electronApp.firstWindow();
-	await window.waitForLoadState("domcontentloaded");
-
-	// Reduced motion zeroes every duration token, so screenshots never catch a transition halfway.
+	window = dojo.window;
+	camera = testCamera;
 	await window.emulateMedia({ reducedMotion: "reduce" });
 });
 
-test.afterAll(async () =>
-{
-	await window.evaluate(`localStorage.removeItem("dojo.dataSource")`);
-	await electronApp.close();
-});
-
-test("a concept quest: predict, the card with hover terms and the example, questions, results, loot", async ({}, testInfo) =>
+test("a concept quest: predict, the card with hover terms and the example, questions, results, loot", async () =>
 {
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
 	await openFake("#/quest?id=f1-uobject-and-actor");
@@ -134,7 +153,7 @@ test("a concept quest: predict, the card with hover terms and the example, quest
 	// Predict: a guess, locked in, then the answer and why.
 	const predict = window.getByTestId("predict-step");
 	await predict.getByTestId("choice").filter({ hasText: "constructors only run when an actor is spawned" }).click();
-	await saveScreenshot(testInfo, "concept-predict");
+	await saveScreenshot("concept-predict");
 	await predict.getByRole("button", { name: "Lock in my guess" }).click();
 	await expect(window.getByTestId("predict-reveal")).toBeVisible();
 	await expect(predict.locator('[data-testid="choice"][data-right="true"]')).toContainText("template object");
@@ -150,7 +169,7 @@ test("a concept quest: predict, the card with hover terms and the example, quest
 		await term.hover();
 		await expect(window.getByTestId("term-card")).toBeVisible({ timeout: 1_500 });
 	}).toPass({ timeout: 10_000 });
-	await saveScreenshot(testInfo, "concept-card-hover-term");
+	await saveScreenshot("concept-card-hover-term");
 	await window.mouse.move(5, 5);
 	await card.getByRole("button", { name: "Check syntax" }).click();
 	await expect(window.getByTestId("syntax-result")).toHaveAttribute("data-ok", "true");
@@ -170,21 +189,21 @@ test("a concept quest: predict, the card with hover terms and the example, quest
 	await expect(window.locator('[data-testid="question-feedback"][data-correct="true"]')).toHaveCount(4);
 	await expect(window.getByTestId("model-answer")).toBeVisible();
 	await window.getByTestId("concept-result").scrollIntoViewIfNeeded();
-	await saveScreenshot(testInfo, "concept-results");
+	await saveScreenshot("concept-results");
 
 	// Loot.
 	await window.getByRole("button", { name: "See your loot" }).click();
 	await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "true");
 	await expect(window.getByTestId("loot-score")).toHaveAttribute("data-score", "100");
 	await expect(window.getByTestId("xp-total")).toContainText("XP");
-	await saveScreenshot(testInfo, "concept-loot");
+	await saveScreenshot("concept-loot");
 
 	// Next goes to the next quest in the world.
 	await window.getByTestId("loot-next").click();
 	await expect(window.getByTestId("screen-quest")).toHaveAttribute("data-quest", "f1-reflection-and-uclass");
 });
 
-test("a drill with every item type, Parsons distractors marked, and the finish card", async ({}, testInfo) =>
+test("a drill with every item type, Parsons distractors marked, and the finish card", async () =>
 {
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
 	await openFake("#/studio");
@@ -248,16 +267,16 @@ test("a drill with every item type, Parsons distractors marked, and the finish c
 		if (type === "parsons")
 		{
 			await expect(item.locator('[data-testid="parsons-placed-line"][data-wrong="true"]').first()).toBeVisible();
-			await saveScreenshot(testInfo, "drill-parsons-marked");
+			await saveScreenshot("drill-parsons-marked");
 		}
 
 		if (type === "which-pattern")
 		{
 			await expect(item.getByTestId("question-feedback")).toHaveAttribute("data-correct", "false");
-			await saveScreenshot(testInfo, "drill-pattern-discrimination");
+			await saveScreenshot("drill-pattern-discrimination");
 		}
-		if (type === "explain-in-one-sentence") await saveScreenshot(testInfo, "drill-explain-graded");
-		if (type === "spot-the-bug") await saveScreenshot(testInfo, "drill-spot-the-bug");
+		if (type === "explain-in-one-sentence") await saveScreenshot("drill-explain-graded");
+		if (type === "spot-the-bug") await saveScreenshot("drill-spot-the-bug");
 
 		await window.getByRole("button", { name: index === 6 ? "Finish the drill" : "Next" }).click();
 	}
@@ -268,10 +287,10 @@ test("a drill with every item type, Parsons distractors marked, and the finish c
 	await expect(summary).toBeVisible();
 	await expect(summary).toContainText("Next item due");
 	await expect(summary).toContainText("streak kept");
-	await saveScreenshot(testInfo, "drill-summary");
+	await saveScreenshot("drill-summary");
 });
 
-test("a breakdown: plan on the board, submit, compare with a reference, revise with a note, graded loot", async ({}, testInfo) =>
+test("a breakdown: plan on the board, submit, compare with a reference, revise with a note, graded loot", async () =>
 {
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
 	await openFake("#/quest?id=f1-dash-with-cooldown");
@@ -283,21 +302,7 @@ test("a breakdown: plan on the board, submit, compare with a reference, revise w
 	await expect(window.getByTestId("pattern-chips")).toHaveCount(0);
 	await expect(window.getByTestId("hint-spells")).toHaveCount(0);
 
-	const pieces: { kind: string; label: string; purpose: string }[] = [
-		{ kind: "step", label: "Bind the dash input action", purpose: "A press of the dash button calls the dash" },
-		{ kind: "component", label: "DashComponent", purpose: "Performs the dash: launches the character along the flattened camera direction" },
-		{ kind: "component", label: "CooldownComponent", purpose: "Reusable cooldown that can start and answer whether it is ready" },
-		{ kind: "event", label: "OnDashStarted and OnCooldownReady", purpose: "The HUD listens to these events instead of polling" },
-		{ kind: "data", label: "Dash tunables", purpose: "Distance, lock time, and cooldown as EditAnywhere values" },
-	];
-
-	// The keyboard path: add buttons, then type the name and purpose.
-	for (const piece of pieces)
-	{
-		await window.getByTestId(`add-piece-${piece.kind}`).click();
-		await window.getByTestId("piece-label").fill(piece.label);
-		await window.getByTestId("piece-purpose").fill(piece.purpose);
-	}
+	await addDashPieces();
 
 	await expect(window.getByTestId("piece-node")).toHaveCount(5);
 
@@ -308,7 +313,7 @@ test("a breakdown: plan on the board, submit, compare with a reference, revise w
 	await arrows.getByLabel("Arrow to").selectOption({ label: "CooldownComponent" });
 	await arrows.getByRole("button", { name: "Add arrow" }).click();
 	await expect(window.getByTestId("arrow-item")).toHaveCount(1);
-	await saveScreenshot(testInfo, "breakdown-plan");
+	await saveScreenshot("breakdown-plan");
 
 	await window.getByTestId("submit-plan").click();
 	await expect(workspace).toHaveAttribute("data-step", "compare");
@@ -326,18 +331,43 @@ test("a breakdown: plan on the board, submit, compare with a reference, revise w
 	await window.getByTestId("piece-label").fill("HUD cooldown wedge");
 	await window.getByTestId("piece-purpose").fill("Widget that listens to the events and refills while the cooldown runs");
 	await window.getByTestId("revision-note").fill("The reference made me add the movement lock and the wall stop as their own steps, and a HUD wedge that listens to the events.");
-	await saveScreenshot(testInfo, "breakdown-compare");
+	await saveScreenshot("breakdown-compare");
 
 	await window.getByTestId("grade-revision").click();
 	await expect(window.getByTestId("screen-loot")).toBeVisible();
 	await expect(window.getByTestId("breakdown-grade")).toBeVisible();
 	await expect(window.locator('[data-testid="required-pieces"] li[data-covered="true"]')).not.toHaveCount(0);
-	await saveScreenshot(testInfo, "breakdown-loot");
+	await saveScreenshot("breakdown-loot");
 	await window.getByTestId("breakdown-grade").scrollIntoViewIfNeeded();
-	await saveScreenshot(testInfo, "breakdown-loot-grade");
+	await saveScreenshot("breakdown-loot-grade");
 });
 
-test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Submit with a review retry, loot, see it run", async ({}, testInfo) =>
+test("the breakdown compare step stays readable at 1100x700: boards at a usable zoom and the reference as text", async () =>
+{
+	await setViewport(1100, 700);
+	await openFake("#/quest?id=f1-dash-with-cooldown");
+	await addDashPieces();
+	await window.getByTestId("submit-plan").click();
+	await expect(window.getByTestId("breakdown-quest")).toHaveAttribute("data-step", "compare");
+
+	// Both boards are drawn at about 0.6 zoom or more, so a card's text can be read without zooming.
+	for (const board of ["learner-board", "reference-board"])
+	{
+		await expect(window.getByTestId(board).getByTestId("piece-node").first()).toBeVisible();
+		await expect.poll(() => boardZoom(board), { message: `${board} zoom` }).toBeGreaterThanOrEqual(0.6);
+	}
+
+	// The reference plan is also there as text: every piece and every arrow in words.
+	await expect(window.getByTestId("reference-piece")).toHaveCount(8);
+	await expect(window.getByTestId("reference-edge")).toHaveCount(8);
+	await expectNoSidewaysScroll("breakdown compare at 1100x700");
+	await window.evaluate("document.querySelector('main').scrollTo({ top: 0 })");
+	await saveScreenshot("breakdown-compare-1100x700");
+	await window.getByTestId("reference-text").scrollIntoViewIfNeeded();
+	await saveScreenshot("breakdown-compare-text-1100x700");
+});
+
+test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Submit with a review retry, loot, see it run", async () =>
 {
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
 
@@ -366,10 +396,10 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 
 	for (let index = 0; index < count; index++) await explanations.nth(index).fill("This line lets the engine see and use the class safely");
 
-	await saveScreenshot(testInfo, "build-gate");
+	await saveScreenshot("build-gate");
 	await window.getByTestId("open-gaps").click();
 	await expect(window.getByTestId("self-explanation-gate")).toHaveAttribute("data-open", "true");
-	await saveScreenshot(testInfo, "build-gate-open");
+	await saveScreenshot("build-gate-open");
 	await window.getByTestId("toggle-reasons").click();
 
 	await expect(window.getByTestId("brief-column")).toHaveCount(0);
@@ -379,12 +409,12 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await window.keyboard.press(`${SHORTCUT_MODIFIER}+Enter`);
 	await expect(window.getByTestId("run-result")).toHaveAttribute("data-ok", "false", { timeout: 20_000 });
 	await expect(window.locator('[data-testid="test-row"][data-passed="false"]').first()).toBeVisible();
-	await saveScreenshot(testInfo, "build-run-fails");
+	await saveScreenshot("build-run-fails");
 
 	// A hint spell.
 	await window.getByTestId("reveal-hint").click();
 	await expect(window.getByTestId("hint-text")).toHaveCount(1);
-	await saveScreenshot(testInfo, "build-hint");
+	await saveScreenshot("build-hint");
 
 	// Fill both gaps by typing in Monaco.
 	const editor = build.getByTestId("code-editor");
@@ -393,20 +423,20 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await selectInEditor(editor, "void Strike();");
 	await typeInEditor('UFUNCTION(BlueprintCallable, Category = "Dummy")\nvoid Strike();');
 	await expect.poll(() => visibleEditorText()).toMatch(/\n\s*UFUNCTION\(BlueprintCallable, Category = "Dummy"\)\n\s*void Strike\(\);\n/);
-	await saveScreenshot(testInfo, "build-editing-header");
+	await saveScreenshot("build-editing-header");
 
 	await window.getByTestId("file-tab").filter({ hasText: "DojoF1TrainingDummy.cpp" }).click();
 	await expect(editor.locator(".view-lines")).toContainText("CreateDefaultSubobject");
 	await selectInEditor(editor, "// Your code: do nothing if the dummy is already down; otherwise count the strike and refresh the label.");
 	await typeInEditor("if (IsKnockedDown()) return;\nHitsTaken++;\nRefreshLabel();");
 	await expect.poll(() => visibleEditorText()).toMatch(/\{\n\s*if \(IsKnockedDown\(\)\) return;\n\s*HitsTaken\+\+;\n\s*RefreshLabel\(\);\n\}/);
-	await saveScreenshot(testInfo, "build-editing-source");
+	await saveScreenshot("build-editing-source");
 
 	// Run again from inside the editor: every test passes.
 	await window.keyboard.press(`${SHORTCUT_MODIFIER}+Enter`);
 	await expect(window.getByTestId("run-result")).toHaveAttribute("data-ok", "true", { timeout: 20_000 });
 	await expect(window.locator('[data-testid="test-row"][data-passed="false"]')).toHaveCount(0);
-	await saveScreenshot(testInfo, "build-run-passes");
+	await saveScreenshot("build-run-passes");
 
 	// Submit: the review times out into tests-only with Retry review; the retry gets the mentor's review.
 	await window.getByTestId("submit-button").click();
@@ -426,9 +456,9 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await expect(window.getByTestId("reflection-grade")).toBeVisible();
 	await expect(window.getByTestId("loot-alternative")).toBeVisible();
 	await window.evaluate("document.querySelector('main').scrollTo({ top: 0 })");
-	await saveScreenshot(testInfo, "build-loot");
+	await saveScreenshot("build-loot");
 	await window.getByTestId("code-review").scrollIntoViewIfNeeded();
-	await saveScreenshot(testInfo, "build-loot-review");
+	await saveScreenshot("build-loot-review");
 
 	await window.getByTestId("see-it-run").click();
 	await expect(window.getByTestId("see-it-run")).toBeEnabled();
@@ -438,7 +468,7 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await expect(window.getByTestId("last-submit")).toHaveAttribute("data-passed", "true");
 });
 
-test("two failed submits offer the Parsons fallback, which opens a one-item drill", async ({}, testInfo) =>
+test("two failed submits offer the Parsons fallback, which opens a one-item drill", async () =>
 {
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
 	await openFake("#/quest?id=f1-score-keeper");
@@ -464,7 +494,7 @@ test("two failed submits offer the Parsons fallback, which opens a one-item dril
 		await window.getByTestId("seer-stone-offer").hover();
 		await expect(window.getByRole("tooltip")).toContainText("Seer Stone", { timeout: 1_500 });
 	}).toPass({ timeout: 10_000 });
-	await saveScreenshot(testInfo, "build-failed-submit-offers");
+	await saveScreenshot("build-failed-submit-offers");
 
 	await window.getByTestId("parsons-fallback").click();
 	await expect(window.getByTestId("screen-drill")).toHaveAttribute("data-kind", "parsons-fallback");
@@ -472,7 +502,7 @@ test("two failed submits offer the Parsons fallback, which opens a one-item dril
 	await expect(window.getByTestId("parsons")).toBeVisible();
 });
 
-test("every quest screen fits at 1100x700 and 1440x900 without sideways scroll", async ({}, testInfo) =>
+test("every quest screen fits at 1100x700 and 1440x900 without sideways scroll", async () =>
 {
 	const routes = [
 		{ hash: "#/quest?id=f1-uproperty-specifiers", ready: "predict-step", file: "concept" },
@@ -498,7 +528,7 @@ test("every quest screen fits at 1100x700 and 1440x900 without sideways scroll",
 			if (route.file === "breakdown") expect((await window.getByTestId("learner-board").boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(450);
 
 			await expectNoSidewaysScroll(`${route.file} at ${size.width}x${size.height}`);
-			await saveScreenshot(testInfo, `${route.file}-${size.width}x${size.height}`);
+			await saveScreenshot(`${route.file}-${size.width}x${size.height}`);
 		}
 	}
 });

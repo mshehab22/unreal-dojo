@@ -509,6 +509,93 @@ exit code 0
 
 - Decisions made: none new; the pointer rule is a bug fix under A240's data layer and A390's path layout.
 
+## M1.8b Verifier follow-ups (content-engine, builder-content-engine)
+- What changed:
+  - **Bare-name includes:** a quest that includes another quest's header by its bare file name, which compiles because every quest folder is on the include path, must now declare that quest on its "Compiles against earlier quests:" line just like a path include. Two quests sharing a file name is reported, since such an include would pick one of them silently.
+  - **Ctrl+C:** stopping an engine run with Ctrl+C or SIGTERM now kills the running build or editor and keeps the sandbox copy for inspection.
+  - **Template copy:** build products in the sandbox template are no longer copied.
+  - **Starter checks:** each starter is now checked in the sandbox a learner would have at that quest. It holds that quest's starter, everything the quest builds on (including a boss's extended pieces when the quest comes after the boss), and nothing later. This lets a World 2 quest rely on the World 1 boss's additions.
+- How to see it: `npx tsx tools/verify-content.ts --engine ~/Applications/UE_5.8`, then press Ctrl+C during the build. It prints where it stopped and where the sandbox is kept, and exits with code 130.
+- Proof:
+  - typecheck passes.
+  - `npm test`: 51 files, 601 tests passed.
+  - The verifier on main's content reports no problems and 5 warnings: coverage, plus two bosses without integrations.
+  - Ctrl+C on the real engine 25 s into the first build: the verifier reported "cancelled during the first build" and exited 130. The sandbox's `Build.sh`, UnrealBuildTool, and clang processes, alive before the interrupt, were gone 5 s after it. The only Unreal process left was another session's editor.
+  - `--engine` with the new per-check sandbox, started once no other Unreal work had run for 30 s: all 9 reference solutions pass and all 9 starters fail, in 515 s (first build 50 s, tests 42 s, starter checks 422 s).
+- Decisions made: A440 (Ctrl+C and exit code 130), A441 (bare includes are dependencies), A442 (no shared file names), A443 (per-check sandbox).
+- Not done or left for later:
+  - no boss integration is on main yet, so the boss override path has only been tested with the fake sandbox
+  - the run has not been done on Windows
+
+### Follow-up: clearer inconclusive starter checks
+- What changed: author-foundations saw five "inconclusive" starter checks on World 2 and could not see why, because the sandbox had been deleted. An inconclusive check now quotes its first three build errors in the report, and the sandbox and its build logs are kept whenever any check is inconclusive.
+- Proof: 106 content tests pass, including the quoted errors and the kept sandbox.
+
+
+
+## QA harness and engine smoke (qa-and-ci, tester)
+- What changed: every end-to-end test now starts its own copy of the app with an empty, throwaway settings folder, so no test can see what another one saved and none touch the real settings. Tests can now answer the app's folder pickers and message boxes without a real dialog popping up. Any failing test leaves a picture of the window as it was, and proof pictures for this file are only refreshed by tests that passed. The two existing test files were moved onto this shared setup without changing what they check. A new engine check copies the sandbox template, builds it with Unreal, runs its sample test with no editor window, and prints how long each step took.
+- How to see it: `npm run build` then `npm run test:e2e` (add `SAVE_PROOF=1` to refresh the proof pictures). For the engine check: `npx tsx tools/qa/engine-smoke.ts` (add `--keep` to keep the build and test logs, `--engine <folder>` to pick an engine).
+- What went wrong and how it was solved: the first harness check failed because macOS reports the temp folder through its real path (`/private/var/...`) while the test expected the short one; the harness now resolves the real path first (A280). The first failure-picture version only fired for tests that used the screenshot helper; it moved into the app fixture so every failing test gets one (A282).
+- Proof: typecheck passes; unit tests 11 files, 132 tests passed; content verifier exit 0 (10 files, no problems); build passes; end-to-end 8 passed in 4.8 s (4 harness checks, the smoke test, the 3 ui-core tests). Failure path: a copy of the smoke test with a wrong expected version, run with `SAVE_PROOF=1`, failed as intended, wrote `test-results/.../failure.png`, and left `docs/iterations/m0-1-window.png` untouched; the same smoke test passing with `SAVE_PROOF=1` copied its picture into `docs/iterations/` (that refresh was then reverted, as the picture had not changed).
+- Engine smoke on the MacBook Air M5, UE 5.8.3 (launcher install), from `main` plus this branch (the template is unchanged from `main`):
+
+```
+step                          seconds  result
+copy template                       0  ok
+build DojoEditor                 19.1  exit 0
+headless Dojo.Sample.Health      21.2  exit 0
+total                            40.3  PASSED
+
+report: 1 passed (0 with warnings), 0 failed, 0 not run, engine-reported test time 0.012 s
+  Success                Dojo.Sample.Health.TakesDamage (0.012 s, 0 errors, 0 warnings)
+```
+
+  An earlier run the same hour (before a small cleanup of the report reader) also passed: build 22.5 s, headless run 34.7 s, total 57.2 s, while other sessions were busy on the machine. Both match the cold-build and headless timings in `docs/systems/unreal-pipeline.md`.
+- Decisions made: A280 to A285 in `docs/decisions.md`.
+- Not done or left for later: save dialogs are not stubbed yet (no screen uses one). I ran the engine check only against the passing template; the reviewer later exercised its failure path (see Fix round 1). Unverified on Windows: the `--user-data-dir` switch, the dialog stubs, and the engine check's `Build.bat` call through `cmd.exe`. The engine check now uses SandboxProjectService (see "Moved onto M1.3" below).
+
+
+### Fix round 1
+- What the reviewer asked for: (1) on Windows, the engine check would break on any folder with a space in it, such as the default `C:\Program Files\Epic Games`, because of how the command was handed to the Windows command prompt; (2) when a Windows build timed out, only the command prompt was stopped, not the build it started; (3) leftovers: the engine check did not say where its temp folder was when it stopped with an error, a failed app launch in the harness left its temp folder behind, and the second harness check only worked if it ran right after the first. The reviewer also corrected this entry: they did run the engine check's failure path (a failing test gave exit code 3 from the editor, FAILED in the table, and exit 1 from the check).
+- What changed: the engine check now writes the whole Windows command line itself, with every path in quotes, the way Node does it for its own shell mode (A286), and a unit test checks the line for an engine and a project that both live in folders with spaces. A timeout on Windows now stops the build and everything it started. The engine check prints its temp folder if it stops with an error; a failed app launch deletes its temp folder; and the folder-isolation check now launches the app twice inside one test, so it passes on its own or in any order.
+- Proof: typecheck passes; unit tests 12 files, 134 tests passed (2 new, for the Windows command line); content verifier exit 0; build passes; end-to-end 8 passed, and the folder-isolation check also passed run alone; no harness temp folders were left behind. Engine check rerun on the Mac, UE 5.8.3: build 22.2 s, headless run 36 s, total 58.2 s, PASSED, `Dojo.Sample.Health.TakesDamage` Success.
+- Not verified here: the Windows command line and the tree kill on a real Windows machine; the "print the temp folder on an error" path and the failed-launch cleanup were not forced to happen.
+- Follow-up decided by the Lead after this round: only the app's Unreal services may start Unreal, so the Windows command line and tree kill written here are temporary. When M1.3 merges, the engine check moves onto those services, reruns under the engine lock, and this code is removed.
+
+### Moved onto M1.3
+- What changed: after M1.3 merged, the engine check stopped starting Unreal itself. It now asks the app's own sandbox service to copy and build the sandbox and the app's own test runner to run the sample test, so the Windows command line, timeouts, and stopping a stuck build are handled in one place for the whole project (A63). The Windows quoting code and its test from fix round 1 are deleted (A286 and A284 marked superseded). The branch was rebased onto `main`, and the newer ui-core tokens test from `main` was moved onto the harness again.
+- Proof: typecheck passes; unit tests 47 files passed and 1 skipped, 522 tests passed and 7 skipped; content verifier: 24 files (1 pack, 1 world, 12 quests), no problems; build passes; end-to-end 18 passed. Engine check on the MacBook Air M5, UE 5.8.3, run under the shared engine lock:
+
+```
+step                                     seconds  result
+create and build sandbox                    20.0  ok
+headless Dojo.Sample.Health.TakesDamage     19.2  exit 0
+total                                       39.2  PASSED
+
+  passed  Dojo.Sample.Health.TakesDamage (0.012 s in the engine)
+```
+
+  An earlier run under the lock, before the table's column width was fixed, also passed: 27.5 s, 28.5 s, 56.0 s total.
+- Not done or left for later: `e2e/ui-core-screens.spec.ts` arrived on `main` after the harness and still launches the app its own way; ui-core is changing it right now, so moving it onto the harness is left as a follow-up. The engine check's failure path was not rerun after the switch. Unverified on Windows.
+
+### Fix round 2
+- What the reviewer asked for: (1) the smoke test's exact window-height check failed about a third of runs on this MacBook Air, because macOS reports the usable screen height as 858 or 859 between launches and can fit the window to the other value; (2) with real settings coming (M0.2c), every test file still launching the app its own way must move onto the shared setup, so no test run uses the learner's real settings.
+- What changed: when the screen is what limits the window's height, the check now allows 1 point either way; a window that gets its full 1440x900 is still checked exactly (A118). The ui-core screens test file moved onto the shared setup, so now every test file uses it and every test gets its own empty settings folder. Moving it exposed one test that failed about 2 runs in 5: a fresh window opens under the mouse pointer, and the Codex search highlights whichever result appears under the pointer, so Enter opened Save Game instead of UPROPERTY. The test now moves the mouse to the corner first; the real fix (highlight only when the mouse actually moves) belongs to ui-core, because a learner resting the pointer there would hit it too. The screenshot helper learned to save ui-core's smaller JPG proof pictures.
+- Proof: the smoke test run 20 times: 18 passed and 2 failed in the first batch, whose error text I did not capture; then 15 of 15 and a second batch of 20 of 20, recording errors, with the machine heavily loaded by other sessions. The Codex search test alone: 2 of 5 failed before the pointer fix, 10 of 10 passed after. Full checks after rebasing onto `main`: typecheck passes; unit tests 51 files passed and 1 skipped, 593 passed and 7 skipped; content verifier no problems (5 warnings, all in content); build passes; end-to-end 18 passed.
+- Not done or left for later: the cause of the 2 smoke failures in the first batch is unknown (no error text was kept); the 35 runs after them all passed. The Codex palette's mouse-enter highlight is for ui-core to fix in `src/`.
+
+### Fix round 3
+- What the reviewer asked for: the 1 point allowance on the window height was not enough. In 5 of 25 launches the usable screen height was 853 when macOS sized the window and 858 a moment later, because the Dock grows and shrinks as other sessions' Electron icons come and go; the window stays 853.
+- What changed: when the screen is what limits the height, the smoke test now only checks that the window fits: at least 700 and no taller than the screen allows (and never above 900). A window that gets its full 900 is still checked exactly, and the width is still exact (A118, now naming the Dock as the cause).
+- Proof: the smoke test 30 times in a row: 30 passed, with the machine loaded by other sessions (load average about 13). Typecheck and build pass; unit tests 593 passed and 7 skipped; end-to-end 18 passed.
+- Not done or left for later: the Codex palette's resting-pointer highlight is with ui-core (M2.1d).
+
+### Fix round 4
+- What the reviewer asked for: the height range from round 3 was too loose, so a window wrongly set to 1440x800 or 1440x720 would still pass. Also, `main` had new ui-core screen tests (two World Map checks and the resting-pointer test) that launched the app the old way.
+- What changed: when the screen limits the height, the window must now be within 12 points of the screen's limit (and never below 700); 12 covers the 1 point rounding and the Dock's 5 point change, and nothing more (A118). The full 900 and the width are still checked exactly. After rebasing onto `main`, the ui-core screens file was moved onto the shared setup again with its new tests, and the mouse-parking workaround from round 2 is gone because ui-core fixed the palette.
+- Proof: a temporary copy of the smoke test that forces the window to 1440x800 failed ("height 800 against a screen limit of 851", 51 points off), and one forced to 1440x720 failed (129 points off); the copy was then deleted. The real smoke test passed 30 of 30 with the machine heavily loaded (load average 15 to 20). Full end-to-end suite twice: 19 passed both times. Typecheck passes; unit tests 622 passed and 7 skipped; content verifier no problems (5 warnings, all in content).
+
 
 ## M2.2 Quest screens (ui-quests, builder-ui-quests)
 - What changed: every quest can now be played. Clicking an open stage on the World Map, Studio's Continue, Start drill, or a world's Test out opens the matching screen. All of it runs on built-in sample data for now, and that sample data is the real Pack 1 World 1 (the training yard), so what you see is the actual content.
@@ -607,3 +694,16 @@ exit code 0
 *Build at 1280 wide after two failed submits: the right column's buttons wrap, nothing scrolls sideways.*
 
 - Decisions made: fix round notes under A351, A352, A355, A356, and A360.
+
+### Fix round 2
+- What the reviewer and the Lead asked for: the breakdown compare step was unreadable below 1300 wide (the stacked boards drew their cards 4 to 5 pixels tall), and World 1's Test out reason in the quest sample data still said every quest was passed.
+- What changed: below 1300 wide each board now takes the full width, one above the other, and the revise panel follows (the page scrolls). Each board picks its columns from its own shape, so eight pieces lay out four by two in a wide box. The revise panel lists the reference plan as text: every piece with its kind, and every arrow in words, so it can be read at any size and by a screen reader. The Test out reason now follows the world's real standing in the sample data. The quest flow tests now run on the QA harness: each test gets a freshly launched app with its own settings folder.
+- Proof (merged with main at 55a2b80): `npm run typecheck` passes; `npm test` 54 files, 660 passed, 7 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (5 warnings from content); `npm run test:e2e` 26 passed, three runs in a row.
+
+![[m2-2-breakdown-compare-1100x700.jpg|800]]
+*Breakdown compare at 1100x700: both boards full width and readable.*
+
+![[m2-2-breakdown-compare-text-1100x700.jpg|800]]
+*The reference plan as text in the revise panel.*
+
+- Decisions made: fix round 2 note under A355.

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { declaredTestNames } from "../../../src/main/services/unreal/TestFilter";
 import type { ContentProblem } from "../../../src/shared/types/content";
 import { readBossSolution } from "../bossSolution";
+import { declaredDependencyIds } from "../checks/dependencyCheck";
 import { errorAt } from "../checks/checkHelpers";
 import type { QuestRecord } from "../ContentCheck";
 
@@ -25,6 +26,48 @@ interface EngineQuest
 	testNames: string[];
 }
 
+/** One quest's files as the sandbox should hold them for a step. */
+interface InstalledQuest
+{
+	quest: EngineQuest["quest"];
+	files: SandboxFile[];
+}
+
+/** Every quest a record needs before it: its prerequisites, the quests its "Compiles against earlier quests:" line names, and a boss's pieces. */
+function directRequirements(record: QuestRecord): string[]
+{
+	const quest = record.quest;
+	const prose = quest.kind === "build" || quest.kind === "refactor" ? quest.brief : quest.kind === "boss" ? quest.spec : "";
+	const pieces = quest.kind === "boss" ? quest.pieces : [];
+
+	return [...new Set([...quest.prerequisites, ...declaredDependencyIds(prose), ...pieces])];
+}
+
+/** Every quest `questId` needs, followed through every kind of quest (a concept prerequisite still leads to the build quests before it). */
+function requirementClosure(questId: string, requirementsOf: ReadonlyMap<string, readonly string[]>): Set<string>
+{
+	const closure = new Set<string>();
+	const pending = [...(requirementsOf.get(questId) ?? [])];
+
+	while (pending.length > 0)
+	{
+		const next = pending.pop() ?? "";
+
+		if (closure.has(next) || next === questId) continue;
+
+		closure.add(next);
+		pending.push(...(requirementsOf.get(next) ?? []));
+	}
+
+	return closure;
+}
+
+/** A short fingerprint of a file set, so unchanged quests are not rewritten (a rewrite would force UBT to recompile them). */
+function fingerprint(files: readonly SandboxFile[]): string
+{
+	return files.map((file) => `${file.name}\u0000${file.text}`).join("\u0001");
+}
+
 /** Seconds spent in each step, for the report and the docs. */
 export interface EngineTimings
 {
@@ -42,6 +85,9 @@ export interface EngineReport
 
 	/** The sandbox copy, kept when anything failed so it can be inspected; undefined when it was removed. */
 	keptSandbox?: string;
+
+	/** True when the run was interrupted (Ctrl+C or SIGTERM) before it finished. */
+	cancelled?: boolean;
 }
 
 /** The sandbox operations the verifier uses; `EngineSandbox` is the real one, tests pass a fake. */
@@ -66,11 +112,17 @@ export interface EngineVerifierOptions
 	log: (line: string) => void;
 
 	/** Makes the sandbox; defaults to a real copy of the template. */
-	createSandbox?: (templateFolder: string, target: EngineTarget) => Promise<VerifierSandbox>;
+	createSandbox?: (templateFolder: string, target: EngineTarget, signal: AbortSignal) => Promise<VerifierSandbox>;
+
+	/** Aborting stops the run: the builder and test runner kill their process trees, and no further step starts. */
+	signal?: AbortSignal;
 }
 
 /** Build output lines worth showing: compiler errors and the failure summary. */
 const BUILD_ERROR_PATTERN = /(?:\berror\b|Result: Failed|BUILD FAILED)/i;
+
+/** Build error lines quoted in an inconclusive starter check. */
+const QUOTED_INCONCLUSIVE_LINES = 3;
 
 /** Most build error lines quoted per quest. */
 const MAXIMUM_QUOTED_LINES = 8;
@@ -156,6 +208,63 @@ async function engineQuests(records: readonly QuestRecord[], solutionsFolder: st
 	return { quests, problems };
 }
 
+/**
+ * The sandbox contents for one step: every engine quest in `included` on its solution, with the piece overrides of every
+ * included boss applied over those pieces, and `starterFor` (when given) on its starter instead.
+ */
+function desiredState(quests: readonly EngineQuest[], included: ReadonlySet<string>, starterFor?: EngineQuest): Map<string, InstalledQuest>
+{
+	const desired = new Map<string, InstalledQuest>();
+
+	for (const entry of quests)
+	{
+		if (entry === starterFor) desired.set(entry.quest.id, { quest: entry.quest, files: entry.starter ?? [] });
+		else if (included.has(entry.quest.id)) desired.set(entry.quest.id, { quest: entry.quest, files: entry.solution });
+	}
+
+	for (const entry of quests)
+	{
+		if (!included.has(entry.quest.id) || entry === starterFor) continue;
+
+		for (const [pieceId, overrideFiles] of entry.overrides ?? [])
+		{
+			const piece = desired.get(pieceId);
+
+			if (piece === undefined || piece.quest.id === starterFor?.quest.id) continue;
+
+			const merged = new Map(piece.files.map((file) => [file.name, file]));
+
+			for (const file of overrideFiles) merged.set(file.name, file);
+
+			desired.set(pieceId, { quest: piece.quest, files: [...merged.values()] });
+		}
+	}
+
+	return desired;
+}
+
+/** Brings the sandbox to `desired`: removes quests not in it and writes only quests whose files changed, tracking what is in place in `installed`. */
+async function install(sandbox: VerifierSandbox, desired: ReadonlyMap<string, InstalledQuest>, installed: Map<string, string>): Promise<void>
+{
+	for (const id of [...installed.keys()])
+	{
+		if (desired.has(id)) continue;
+
+		await sandbox.removeQuest(id);
+		installed.delete(id);
+	}
+
+	for (const [id, entry] of desired)
+	{
+		const print = fingerprint(entry.files);
+
+		if (installed.get(id) === print) continue;
+
+		await sandbox.writeQuest(entry.quest, entry.files);
+		installed.set(id, print);
+	}
+}
+
 /** Runs the engine stage for the given quests. Never throws for content problems; engine failures become problems too. */
 export class EngineVerifier
 {
@@ -184,14 +293,26 @@ export class EngineVerifier
 
 		if (judged.length === 0) return { problems, questsChecked: 0, timings };
 
-		const createSandbox = this.options.createSandbox ?? ((templateFolder, target) => EngineSandbox.create(templateFolder, target));
-		const sandbox = await createSandbox(this.options.templateFolder, this.options.target);
+		const signal = this.options.signal ?? new AbortController().signal;
+		const createSandbox = this.options.createSandbox ?? ((templateFolder, target, abortSignal) => EngineSandbox.create(templateFolder, target, abortSignal));
+		const sandbox = await createSandbox(this.options.templateFolder, this.options.target, signal);
+
+		/** The report for a run interrupted at `step`: what was found so far, plus one problem saying it stopped. */
+		const stopped = (step: string): EngineReport => ({
+			problems: [...problems, errorAt("(engine)", `cancelled during ${step}; the sandbox copy is kept at ${sandbox.folder}`)],
+			questsChecked: judged.length,
+			timings,
+			keptSandbox: sandbox.folder,
+			cancelled: true,
+		});
 
 		log(`engine: sandbox copy at ${sandbox.folder}`);
 
-		for (const entry of quests) await sandbox.writeQuest(entry.quest, entry.solution);
+		// Every solution goes in, with every boss's piece overrides over its pieces' solutions (A215).
+		const installed = new Map<string, string>();
+		const requirementsOf = new Map(records.map((record) => [record.quest.id, directRequirements(record)]));
 
-		const overridden = await this.writeBossOverrides(sandbox, quests);
+		await install(sandbox, desiredState(quests, new Set(quests.map((entry) => entry.quest.id))), installed);
 
 		log(`engine: building ${quests.length} reference solutions`);
 
@@ -199,6 +320,8 @@ export class EngineVerifier
 		const build = await sandbox.build();
 
 		timings.firstBuildSeconds = secondsSince(buildStarted);
+
+		if (signal.aborted) return stopped("the first build");
 
 		if (!build.succeeded)
 		{
@@ -222,6 +345,8 @@ export class EngineVerifier
 
 		timings.solutionTestsSeconds = secondsSince(testsStarted);
 
+		if (signal.aborted) return stopped("the solution tests");
+
 		const solutionFailed = new Set<string>();
 
 		for (const entry of judged)
@@ -235,63 +360,37 @@ export class EngineVerifier
 
 		const startersStarted = performance.now();
 
-		// Starters are judged without bosses: a boss calls members its piece overrides add, so a piece starter would always break it.
-		await this.removeBosses(sandbox, quests, overridden);
 
 		for (const entry of judged)
 		{
 			// A starter can only be judged against a solution that passes; otherwise "the starter fails" proves nothing.
 			if (entry.starter === undefined) continue;
+			if (signal.aborted) return stopped(`the starter checks (before ${entry.quest.id})`);
 
 			if (solutionFailed.has(entry.quest.id)) problems.push(inconclusive(entry.file, "the reference solution fails, so the starter was not checked"));
-			else problems.push(...(await this.checkStarter(sandbox, entry)));
+			else
+			{
+				// The sandbox holds what a learner has at this quest (A443): its starter, the solutions of everything it needs,
+				// and the piece overrides of any boss it needs; later quests and unneeded bosses are taken out.
+				const needed = requirementClosure(entry.quest.id, requirementsOf);
+
+				await install(sandbox, desiredState(quests, needed, entry), installed);
+				problems.push(...(await this.checkStarter(sandbox, entry)));
+			}
 		}
 
 		timings.starterChecksSeconds = secondsSince(startersStarted);
 
-		const failed = problems.some((problem) => problem.severity !== "warning");
+		if (signal.aborted) return stopped("the last starter check");
+
+		// An inconclusive starter check also keeps the sandbox, so its build log in Saved/VerifierLogs can be read.
+		const failed = problems.some((problem) => problem.severity !== "warning" || problem.message.startsWith("starter check inconclusive"));
 
 		if (failed) return { problems, questsChecked: judged.length, timings, keptSandbox: sandbox.folder };
 
 		await sandbox.remove();
 
 		return { problems, questsChecked: judged.length, timings };
-	}
-
-	/** Writes each boss's piece overrides over those pieces' solutions (override files replace same-named files). Returns the overridden piece ids. */
-	private async writeBossOverrides(sandbox: VerifierSandbox, quests: readonly EngineQuest[]): Promise<Set<string>>
-	{
-		const byId = new Map(quests.map((entry) => [entry.quest.id, entry]));
-		const overridden = new Set<string>();
-
-		for (const entry of quests)
-		{
-			for (const [pieceId, files] of entry.overrides ?? [])
-			{
-				const piece = byId.get(pieceId);
-
-				if (piece === undefined) continue;
-
-				const merged = new Map(piece.solution.map((file) => [file.name, file]));
-
-				for (const file of files) merged.set(file.name, file);
-
-				await sandbox.writeQuest(piece.quest, [...merged.values()]);
-				overridden.add(pieceId);
-			}
-		}
-
-		return overridden;
-	}
-
-	/** Takes every boss out of the sandbox and puts overridden pieces back on their own solutions. */
-	private async removeBosses(sandbox: VerifierSandbox, quests: readonly EngineQuest[], overridden: ReadonlySet<string>): Promise<void>
-	{
-		for (const entry of quests)
-		{
-			if (entry.starter === undefined) await sandbox.removeQuest(entry.quest.id);
-			else if (overridden.has(entry.quest.id)) await sandbox.writeQuest(entry.quest, entry.solution);
-		}
 	}
 
 	/** Every declared test of a quest must appear in the report and pass. */
@@ -314,23 +413,22 @@ export class EngineVerifier
 		return problems;
 	}
 
-	/** Swaps in the starter, builds, runs the quest's tests, reports a starter that already passes, and restores the solution. */
+	/** Builds with the quest's starter in place (see `desiredState`), runs its tests, and reports a starter that already passes. */
 	private async checkStarter(sandbox: VerifierSandbox, entry: EngineQuest): Promise<ContentProblem[]>
 	{
 		const { log } = this.options;
 		const problems: ContentProblem[] = [];
-		const starter = entry.starter ?? [];
-
 		log(`engine: starter check ${entry.quest.id}`);
-
-		await sandbox.writeQuest(entry.quest, starter);
 
 		const build = await sandbox.build();
 
 		// A starter that does not compile is fine only when the errors are in its own files; anything else means it broke other quests' code.
 		if (!build.succeeded && buildErrors(build, entry.quest.id).length === 0)
 		{
-			problems.push(inconclusive(entry.file, "the starter broke other quests' code (no build error points into its own files)"));
+			// Quote the first errors so the reason is visible even after the sandbox is gone.
+			const quoted = buildErrors(build).slice(0, QUOTED_INCONCLUSIVE_LINES);
+
+			problems.push(inconclusive(entry.file, `the starter broke other quests' code (no build error points into its own files)${quoted.length > 0 ? `:\n${quoted.join("\n")}` : ""}`));
 		}
 
 		if (build.succeeded)
@@ -347,8 +445,6 @@ export class EngineVerifier
 				problems.push(errorAt(entry.file, "the starter already passes its tests; the learner would have nothing to do", "engine"));
 			}
 		}
-
-		await sandbox.writeQuest(entry.quest, entry.solution);
 
 		return problems;
 	}

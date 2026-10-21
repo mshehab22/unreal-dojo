@@ -43,14 +43,37 @@ export function newPiece(kind: PieceKind, plan: BreakdownPlan): BreakdownPiece
 	return { id: `piece-${number}`, kind, label: "", purpose: "" };
 }
 
-/** Width and height of one grid slot, in board units. */
-const COLUMN_WIDTH = 240;
-const ROW_HEIGHT = 130;
+/** Width and height of one grid slot, in board units (a piece card is 208 wide). */
+export const COLUMN_WIDTH = 232;
+export const ROW_HEIGHT = 150;
 
-/** A starting position for every piece: a grid about twice as tall as wide, pieces sorted by kind (steps first), so a board fits a half-width view at a readable zoom. Positions the learner dragged are kept. */
-export function layoutPositions(plan: BreakdownPlan, kept: Readonly<Record<string, BoardPosition>> = {}): Record<string, BoardPosition>
+/** The column count that shows `count` pieces largest in a box of this size: each count is tried and the one whose grid fits at the highest zoom wins. Without a box, a grid about twice as tall as wide. */
+export function columnsForBox(count: number, box?: { width: number; height: number }): number
 {
-	const columns = Math.max(1, Math.ceil(Math.sqrt(plan.pieces.length / 2)));
+	if (count <= 1) return 1;
+	if (!box || box.width <= 0 || box.height <= 0) return Math.max(1, Math.ceil(Math.sqrt(count / 2)));
+
+	let best = 1;
+	let bestZoom = 0;
+
+	for (let columns = 1; columns <= count; columns++)
+	{
+		const rows = Math.ceil(count / columns);
+		const zoom = Math.min(box.width / (columns * COLUMN_WIDTH), box.height / (rows * ROW_HEIGHT));
+
+		if (zoom > bestZoom)
+		{
+			bestZoom = zoom;
+			best = columns;
+		}
+	}
+
+	return best;
+}
+
+/** A starting position for every piece on a grid of `columns`, pieces sorted by kind (steps first). Positions the learner dragged are kept. */
+export function layoutPositions(plan: BreakdownPlan, kept: Readonly<Record<string, BoardPosition>> = {}, columns = columnsForBox(plan.pieces.length)): Record<string, BoardPosition>
+{
 	const ordered = [...plan.pieces].sort((first, second) => PIECE_KINDS.indexOf(first.kind) - PIECE_KINDS.indexOf(second.kind));
 	const positions: Record<string, BoardPosition> = {};
 

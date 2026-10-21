@@ -9,6 +9,9 @@ import { addProblems, runVerifier } from "./verifier/runVerifier";
 /** Exit code for content problems. */
 const EXIT_PROBLEMS = 1;
 
+/** Exit code when `--engine` was interrupted (128 plus SIGINT's number, as shells report it). */
+const EXIT_CANCELLED = 130;
+
 /** Exit code for a bad command line. */
 const EXIT_USAGE = 2;
 
@@ -31,17 +34,19 @@ async function main(): Promise<void>
 	}
 
 	let result = await runVerifier(parsed.options);
+	let cancelled = false;
 
 	if (parsed.options.enginePath !== undefined)
 	{
 		const engine = await runEngineStage(parsed.options.enginePath, parsed.options, result, (line) => console.error(line));
 
 		result = addProblems(result, engine.problems);
+		cancelled = engine.report?.cancelled === true;
 	}
 
 	for (const line of formatReport(result)) console.log(line);
 
-	process.exitCode = result.problemCount === 0 ? 0 : EXIT_PROBLEMS;
+	process.exitCode = cancelled ? EXIT_CANCELLED : result.problemCount === 0 ? 0 : EXIT_PROBLEMS;
 }
 
 void main();

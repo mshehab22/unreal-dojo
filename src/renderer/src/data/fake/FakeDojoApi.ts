@@ -313,22 +313,23 @@ export class FakeDojoApi implements DojoClient
 		return answer(this.availability());
 	}
 
-	/** Test-out eligibility by world id. */
+	/** Test-out eligibility by world id, with each reason taken from the world's standing in this scenario. */
 	getTestOutStatus(): Promise<Record<string, WorldTestOutStatus>>
 	{
 		const isFresh = Object.keys(this.state.progress.quests).length === 0;
+		const availability = this.availability();
 		const statuses: Record<string, WorldTestOutStatus> = {};
 
+		// The reason follows the world's real standing in this scenario: all passed, or terms still short of proficient.
 		for (const world of this.state.map.flatMap((pack) => pack.worlds))
 		{
-			statuses[world.id] = { eligible: false, testedOut: false, reason: "Some terms in this world are not proficient yet." };
+			const testedOut = this.state.progress.testedOutWorldIds.includes(world.id);
+			const allPassed = world.stages.every((stage) => availability[stage.id]?.status === "passed");
+
+			statuses[world.id] = { eligible: false, testedOut, reason: allPassed ? "Every quest here is passed already." : "Some terms in this world are not proficient yet." };
 		}
 
-		if (!isFresh)
-		{
-			statuses["objects-and-reflection"] = { eligible: false, testedOut: false, reason: "Every quest here is passed already." };
-			statuses["foundations.memory"] = { eligible: true, testedOut: false };
-		}
+		if (!isFresh) statuses["foundations.memory"] = { eligible: true, testedOut: false };
 
 		return answer(statuses);
 	}

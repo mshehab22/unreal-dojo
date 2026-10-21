@@ -6,6 +6,8 @@ import type { ReferencePlan } from "@shared/types/content";
 import { PatternChips } from "@/components/quests/PatternChips";
 import { Button } from "@/components/ui/button";
 
+import { ReferencePlanList } from "./ReferencePlanList";
+
 /** Props for RevisionPanel. */
 interface RevisionPanelProps
 {
@@ -36,6 +38,12 @@ export function RevisionPanel({ reference, patternIds, note, onNoteChange, onGra
 				<span className="text-sm font-medium text-paper">{reference.title}</span>
 			</div>
 			<PatternChips patternIds={patternIds} />
+			<details data-testid="reference-text" open className="group rounded-md border border-line bg-raised p-3">
+				<summary className="cursor-pointer text-xs text-paper-muted outline-none focus-visible:ring-2 focus-visible:ring-ring">The reference plan as text</summary>
+				<div className="pt-3">
+					<ReferencePlanList reference={reference} />
+				</div>
+			</details>
 			<p className="text-xs text-paper-muted">Compare the two boards. Change yours if the reference shows you something, then say what you changed and why. Most of the grade comes from this revision.</p>
 			<label className="flex flex-col gap-1">
 				<span className="text-xs text-paper-faint">Revision note: at least one sentence</span>

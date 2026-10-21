@@ -6,8 +6,9 @@ import { useMemo } from "react";
 
 import type { BreakdownEdgeKind, BreakdownPlan } from "@shared/types/progress";
 
-import { edgeKindLabel, layoutPositions, withEdge, withoutPiece, type BoardPosition } from "./boardModel";
+import { columnsForBox, edgeKindLabel, layoutPositions, withEdge, withoutPiece, type BoardPosition } from "./boardModel";
 import { PieceNode, type PieceFlowNode } from "./PieceNode";
+import { useElementSize } from "./useElementSize";
 
 /** The custom node types. Defined once, outside render, as React Flow asks. */
 const NODE_TYPES = { piece: PieceNode };
@@ -32,7 +33,9 @@ interface BreakdownBoardProps
 /** A board for one plan. Read-only boards (the reference plan) can be panned but not changed. */
 export function BreakdownBoard({ plan, positions, onPositionsChange, onPlanChange, selectedPieceId = null, onSelectPiece, newEdgeKind = "then", readOnly = false, ariaLabel, testId }: BreakdownBoardProps)
 {
-	const laidOut = useMemo(() => layoutPositions(plan, positions), [plan, positions]);
+	const [boxReference, box] = useElementSize<HTMLDivElement>();
+	const columns = columnsForBox(plan.pieces.length, box);
+	const laidOut = useMemo(() => layoutPositions(plan, positions, columns), [plan, positions, columns]);
 
 	const nodes: PieceFlowNode[] = plan.pieces.map((piece) => ({
 		id: piece.id,
@@ -79,16 +82,16 @@ export function BreakdownBoard({ plan, positions, onPositionsChange, onPlanChang
 	};
 
 	return (
-		<div data-testid={testId} aria-label={ariaLabel} role="group" className="h-full min-h-0 w-full overflow-hidden rounded-lg border border-line bg-ink">
-			{/* Keyed by the piece count, so the view fits again whenever a piece is added or removed. */}
+		<div ref={boxReference} data-testid={testId} data-columns={columns} aria-label={ariaLabel} role="group" className="h-full min-h-0 w-full overflow-hidden rounded-lg border border-line bg-ink">
+			{/* Keyed by the piece count and the grid's columns, so the view fits again whenever a piece is added or the box changes shape. */}
 			<ReactFlow
-				key={plan.pieces.length}
+				key={`${plan.pieces.length}-${columns}`}
 				nodes={nodes}
 				edges={edges}
 				nodeTypes={NODE_TYPES}
 				colorMode="dark"
 				fitView
-				fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
+				fitViewOptions={{ padding: 0.06, maxZoom: 1 }}
 				minZoom={0.3}
 				maxZoom={1.5}
 				proOptions={{ hideAttribution: true }}

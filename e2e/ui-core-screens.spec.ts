@@ -1,10 +1,11 @@
 // ui-core M2.1: every core screen against the typed fake DojoApi (A240), at 1100x700 and 1440x900, plus the first-run flow,
 // a failing first build with retry, Codex search, a locked stage's reason, Settings actions, and the real bridge's error view.
 // Page scripts are passed as strings because e2e is typechecked without the DOM library.
-// Saves screenshots to test-results/; SAVE_PROOF=1 also writes them to docs/iterations/m2-1-*.jpg at one pixel per CSS pixel.
-import { resolve } from "node:path";
+// Saves screenshots to test-results/; with SAVE_PROOF=1 a passing test also writes them to docs/iterations/m2-1-*.jpg at one pixel per CSS pixel.
+import type { Page } from "@playwright/test";
 
-import { _electron as electron, expect, test, type ElectronApplication, type Page, type TestInfo } from "@playwright/test";
+import { expect, test } from "./support/dojoTest";
+import type { ProofCamera } from "./support/ProofCamera";
 
 /** The two sizes every screen must work at (docs/systems/ui-core.md). */
 const SIZES = [
@@ -24,19 +25,14 @@ const SCREENS = [
 
 const SHORTCUT_MODIFIER = process.platform === "darwin" ? "Meta" : "Control";
 
-let electronApp: ElectronApplication;
-let window: Page;
-
-/** Screenshots the page into test-results/, and as a JPG at CSS pixel size into docs/iterations/ when SAVE_PROOF=1. */
-async function saveScreenshot(testInfo: TestInfo, name: string): Promise<void>
+/** Screenshots the page into test-results/, and as a JPG at CSS pixel size into docs/iterations/ when the test passes with SAVE_PROOF=1. */
+async function saveScreenshot(camera: ProofCamera, window: Page, name: string): Promise<void>
 {
-	await window.screenshot({ path: testInfo.outputPath(`m2-1-${name}.png`) });
-
-	if (process.env["SAVE_PROOF"] === "1") await window.screenshot({ path: resolve(`docs/iterations/m2-1-${name}.jpg`), type: "jpeg", quality: 82, scale: "css" });
+	await camera.capture(window, `m2-1-${name}.png`, { proofFileName: `m2-1-${name}.jpg`, proofFormat: "jpeg" });
 }
 
 /** Forces the page to render at an exact size, independent of how large the OS lets the window be (A90). */
-async function setViewport(width: number, height: number): Promise<void>
+async function setViewport(window: Page, width: number, height: number): Promise<void>
 {
 	const session = await window.context().newCDPSession(window);
 
@@ -44,7 +40,7 @@ async function setViewport(width: number, height: number): Promise<void>
 }
 
 /** Switches the data source ("fake:<scenario>" or "bridge") and reloads, which also resets the fake's state. */
-async function useDataSource(value: string, hash = "#/"): Promise<void>
+async function useDataSource(window: Page, value: string, hash = "#/"): Promise<void>
 {
 	await window.evaluate(`localStorage.setItem("dojo.dataSource", ${JSON.stringify(value)}); location.hash = ${JSON.stringify(hash)}`);
 	await window.reload();
@@ -52,7 +48,7 @@ async function useDataSource(value: string, hash = "#/"): Promise<void>
 }
 
 /** Moves the app to a route hash and waits for its screen, its data (and the given element, when named), and fonts. */
-async function goTo(hash: string, testId: string, ready?: string): Promise<void>
+async function goTo(window: Page, hash: string, testId: string, ready?: string): Promise<void>
 {
 	await window.evaluate(`location.hash = ${JSON.stringify(hash)}`);
 	await expect(window.getByTestId(testId)).toBeVisible();
@@ -64,44 +60,37 @@ async function goTo(hash: string, testId: string, ready?: string): Promise<void>
 }
 
 /** Fails when the stage scrolls sideways. */
-async function expectNoSidewaysScroll(label: string): Promise<void>
+async function expectNoSidewaysScroll(window: Page, label: string): Promise<void>
 {
 	const overflows = await window.evaluate<boolean>("(() => { const stage = document.querySelector('main'); return stage ? stage.scrollWidth > stage.clientWidth : true; })()");
 
 	expect(overflows, label).toBe(false);
 }
 
-test.beforeAll(async () =>
+// Each test gets a fresh app and userData folder, so the data-source choice in localStorage never leaks into the next test.
+test.beforeEach(async ({ dojo }) =>
 {
-	electronApp = await electron.launch({ args: [resolve(".")] });
-	window = await electronApp.firstWindow();
-	await window.waitForLoadState("domcontentloaded");
-
 	// Reduced motion zeroes every duration token, so screenshots never catch a transition halfway.
-	await window.emulateMedia({ reducedMotion: "reduce" });
+	await dojo.window.emulateMedia({ reducedMotion: "reduce" });
 });
 
-test.afterAll(async () =>
+test("every core screen renders for a returning learner at both sizes", async ({ dojo, camera }) =>
 {
-	await window.evaluate(`localStorage.removeItem("dojo.dataSource")`);
-	await electronApp.close();
-});
+	const { window } = dojo;
 
-test("every core screen renders for a returning learner at both sizes", async ({}, testInfo) =>
-{
-	await useDataSource("fake:returning");
+	await useDataSource(window, "fake:returning");
 
 	for (const size of SIZES)
 	{
-		await setViewport(size.width, size.height);
+		await setViewport(window, size.width, size.height);
 
 		for (const screen of SCREENS)
 		{
-			await goTo(screen.hash, screen.testId, screen.ready);
+			await goTo(window, screen.hash, screen.testId, screen.ready);
 			await expect(window.getByRole("heading", { level: 1 })).toHaveCount(1);
 			await expect(window.getByTestId("app-error")).toHaveCount(0);
-			await expectNoSidewaysScroll(`${screen.file} at ${size.width}x${size.height}`);
-			await saveScreenshot(testInfo, `${screen.file}-${size.width}x${size.height}`);
+			await expectNoSidewaysScroll(window, `${screen.file} at ${size.width}x${size.height}`);
+			await saveScreenshot(camera, window, `${screen.file}-${size.width}x${size.height}`);
 		}
 	}
 
@@ -109,36 +98,40 @@ test("every core screen renders for a returning learner at both sizes", async ({
 	await expect(window.getByTestId("title-bar-drag-region")).toHaveCSS("-webkit-app-region", "drag");
 });
 
-test("the long screens in full at 1440 wide", async ({}, testInfo) =>
+test("the long screens in full at 1440 wide", async ({ dojo, camera }) =>
 {
-	await useDataSource("fake:returning");
+	const { window } = dojo;
+
+	await useDataSource(window, "fake:returning");
 
 	for (const screen of SCREENS.filter((candidate) => candidate.file !== "title"))
 	{
-		await setViewport(1440, 900);
-		await goTo(screen.hash, screen.testId, screen.ready);
+		await setViewport(window, 1440, 900);
+		await goTo(window, screen.hash, screen.testId, screen.ready);
 
 		// The stage scrolls inside the frame, so grow the viewport to the content's height for one full-length picture.
 		const contentHeight = await window.evaluate<number>("(document.querySelector('main')?.scrollHeight ?? 0) + 48");
-		await setViewport(1440, Math.max(900, contentHeight));
-		await saveScreenshot(testInfo, `${screen.file}-full-1440`);
+		await setViewport(window, 1440, Math.max(900, contentHeight));
+		await saveScreenshot(camera, window, `${screen.file}-full-1440`);
 	}
 
-	await setViewport(1440, 900);
+	await setViewport(window, 1440, 900);
 });
 
-test("screens show the returning learner's real numbers", async () =>
+test("screens show the returning learner's real numbers", async ({ dojo }) =>
 {
-	await useDataSource("fake:returning");
-	await setViewport(1440, 900);
+	const { window } = dojo;
 
-	await goTo("#/", "screen-title");
+	await useDataSource(window, "fake:returning");
+	await setViewport(window, 1440, 900);
+
+	await goTo(window, "#/", "screen-title");
 	await expect(window.getByTestId("chip-engine")).toContainText("UE 5.8.3");
 
 	// The Mac never gets the fast loop promise (A45).
 	if (process.platform === "darwin") await expect(window.getByTestId("chip-loop")).toContainText("Headless loop");
 
-	await goTo("#/studio", "screen-studio");
+	await goTo(window, "#/studio", "screen-studio");
 	await expect(window.getByRole("heading", { level: 1 })).toHaveText("Night Owl Studio");
 	await expect(window.getByTestId("xp-bar")).toContainText("Level 4");
 	await expect(window.getByTestId("daily-offer")).toHaveCount(3);
@@ -149,52 +142,56 @@ test("screens show the returning learner's real numbers", async () =>
 	await window.getByTestId("daily-offer").nth(1).getByRole("button", { name: "Pick this one" }).click();
 	await expect(window.getByTestId("daily-offer").nth(1)).toHaveAttribute("data-chosen", "true");
 
-	await goTo("#/world-map", "screen-worldMap", "test-out");
+	await goTo(window, "#/world-map", "screen-worldMap", "test-out");
 	await expect(window.locator('[data-testid="stage-node"][data-rematch="true"]')).toHaveCount(1);
 	await expect(window.locator('[data-testid="stage-node"][data-status="in_progress"]')).toHaveCount(1);
 
 	// The first world is shaped like the real World 1: 12 stages. At 1100 wide they wrap into rows instead of scrolling sideways (A390).
 	const firstWorld = window.locator('[data-testid="contract-card"][data-world="objects-and-reflection"]');
 	await expect(firstWorld.getByTestId("stage-node")).toHaveCount(12);
-	await setViewport(1100, 700);
+	await setViewport(window, 1100, 700);
 	await expect(firstWorld.getByTestId("stage-path")).not.toHaveAttribute("data-rows", "1");
 	await expect(firstWorld.getByTestId("path-turn")).toHaveCount(1);
 	await expect(firstWorld.getByTestId("stage-node").last()).toContainText("The training yard");
-	await expectNoSidewaysScroll("world map with 12 stages at 1100x700");
-	await setViewport(1440, 900);
+	await expectNoSidewaysScroll(window, "world map with 12 stages at 1100x700");
+	await setViewport(window, 1440, 900);
 
 	// Test out opens the drill screen since M2.2.
 	await expect(window.getByTestId("test-out")).toBeEnabled();
 
-	await goTo("#/character", "screen-character");
+	await goTo(window, "#/character", "screen-character");
 	await expect(window.locator('[data-testid="pattern-card"][data-tier]')).toHaveCount(3);
 	await expect(window.getByTestId("skill-node").first()).toBeVisible();
 });
 
-test("a locked stage explains why on hover", async ({}, testInfo) =>
+test("a locked stage explains why on hover", async ({ dojo, camera }) =>
 {
-	await useDataSource("fake:returning");
-	await setViewport(1440, 900);
-	await goTo("#/world-map", "screen-worldMap", "test-out");
+	const { window } = dojo;
+
+	await useDataSource(window, "fake:returning");
+	await setViewport(window, 1440, 900);
+	await goTo(window, "#/world-map", "screen-worldMap", "test-out");
 
 	const locked = window.locator('[data-testid="stage-node"][data-status="locked"]').first();
 	await locked.scrollIntoViewIfNeeded();
 	await locked.hover();
 	await expect(window.getByRole("tooltip")).toContainText("first");
-	await saveScreenshot(testInfo, "world-map-locked-reason-1440x900");
+	await saveScreenshot(camera, window, "world-map-locked-reason-1440x900");
 });
 
-test("Cmd/Ctrl+K searches the glossary and opens the term in the Codex", async ({}, testInfo) =>
+test("Cmd/Ctrl+K searches the glossary and opens the term in the Codex", async ({ dojo, camera }) =>
 {
-	await useDataSource("fake:returning");
-	await setViewport(1100, 700);
-	await goTo("#/studio", "screen-studio");
+	const { window } = dojo;
+
+	await useDataSource(window, "fake:returning");
+	await setViewport(window, 1100, 700);
+	await goTo(window, "#/studio", "screen-studio");
 
 	await window.keyboard.press(`${SHORTCUT_MODIFIER}+K`);
 	await expect(window.getByTestId("codex-search")).toBeVisible();
 	await window.keyboard.type("uprop");
 	await expect(window.getByTestId("codex-search-results")).toContainText("UPROPERTY");
-	await saveScreenshot(testInfo, "codex-search-1100x700");
+	await saveScreenshot(camera, window, "codex-search-1100x700");
 
 	await window.keyboard.press("Enter");
 	await expect(window.getByTestId("codex-search")).toBeHidden();
@@ -209,11 +206,13 @@ test("Cmd/Ctrl+K searches the glossary and opens the term in the Codex", async (
 	await window.keyboard.press("Escape");
 });
 
-test("a pointer resting where results appear does not steal the keyboard highlight", async () =>
+test("a pointer resting where results appear does not steal the keyboard highlight", async ({ dojo }) =>
 {
-	await useDataSource("fake:returning");
-	await setViewport(1100, 700);
-	await goTo("#/studio", "screen-studio");
+	const { window } = dojo;
+
+	await useDataSource(window, "fake:returning");
+	await setViewport(window, 1100, 700);
+	await goTo(window, "#/studio", "screen-studio");
 
 	// With motion on, the palette rises into place under a resting pointer, which is when the learner and the tester hit this.
 	await window.emulateMedia({ reducedMotion: "no-preference" });
@@ -254,11 +253,13 @@ test("a pointer resting where results appear does not steal the keyboard highlig
 	}
 });
 
-test("Settings: test Claude Code, store an API key masked, and confirm before a reset", async ({}, testInfo) =>
+test("Settings: test Claude Code, store an API key masked, and confirm before a reset", async ({ dojo, camera }) =>
 {
-	await useDataSource("fake:returning");
-	await setViewport(1100, 700);
-	await goTo("#/settings", "screen-settings", "review-providers");
+	const { window } = dojo;
+
+	await useDataSource(window, "fake:returning");
+	await setViewport(window, 1100, 700);
+	await goTo(window, "#/settings", "screen-settings", "review-providers");
 	await expect(window.getByTestId("review-providers").getByRole("listitem")).toHaveCount(3);
 
 	await window.getByRole("button", { name: "Test Claude Code" }).click();
@@ -270,42 +271,44 @@ test("Settings: test Claude Code, store an API key masked, and confirm before a 
 
 	await window.getByRole("button", { name: "Reset progress" }).click();
 	await expect(window.getByTestId("reset-confirm")).toBeVisible();
-	await saveScreenshot(testInfo, "settings-reset-confirm-1100x700");
+	await saveScreenshot(camera, window, "settings-reset-confirm-1100x700");
 	await window.getByRole("button", { name: "Reset everything" }).click();
 	await expect(window.getByTestId("reset-confirm")).toBeHidden();
 
-	await goTo("#/character", "screen-character");
+	await goTo(window, "#/character", "screen-character");
 	await expect(window.locator('[data-testid="pattern-card"][data-tier]')).toHaveCount(0);
 });
 
-test("first run: name, engine, sandbox folder, full build with progress, editor, into the Studio", async ({}, testInfo) =>
+test("first run: name, engine, sandbox folder, full build with progress, editor, into the Studio", async ({ dojo, camera }) =>
 {
-	await useDataSource("fake:fresh");
-	await setViewport(1100, 700);
-	await goTo("#/", "screen-title");
+	const { window } = dojo;
+
+	await useDataSource(window, "fake:fresh");
+	await setViewport(window, 1100, 700);
+	await goTo(window, "#/", "screen-title");
 
 	await expect(window.getByTestId("fresh-start")).toBeVisible();
 	await expect(window.getByTestId("chip-engine")).toContainText("Not set");
-	await saveScreenshot(testInfo, "title-fresh-1100x700");
+	await saveScreenshot(camera, window, "title-fresh-1100x700");
 	await window.getByRole("textbox", { name: "What should your studio call you?" }).fill("Mohammad");
 	await window.getByRole("button", { name: "Set up your studio" }).click();
 
-	await goTo("#/first-run", "screen-firstRun");
+	await goTo(window, "#/first-run", "screen-firstRun");
 	await expect(window.getByTestId("engine-option")).toHaveCount(2);
 	await expect(window.getByTestId("toolchain-ok")).toBeVisible();
-	await saveScreenshot(testInfo, "first-run-engine-1100x700");
+	await saveScreenshot(camera, window, "first-run-engine-1100x700");
 	await window.getByRole("button", { name: "Use this engine" }).click();
 
 	await window.getByRole("button", { name: "Choose a folder" }).click();
 	await expect(window.getByTestId("sandbox-folder")).toBeVisible();
-	await saveScreenshot(testInfo, "first-run-sandbox-1100x700");
+	await saveScreenshot(camera, window, "first-run-sandbox-1100x700");
 	await window.getByRole("button", { name: "Use this folder" }).click();
 
 	await window.getByRole("button", { name: "Start the build" }).click();
 	await expect(window.getByTestId("build-progress")).toHaveAttribute("data-phase", "building");
-	await saveScreenshot(testInfo, "first-run-build-progress-1100x700");
+	await saveScreenshot(camera, window, "first-run-build-progress-1100x700");
 	await expect(window.getByTestId("build-succeeded")).toBeVisible({ timeout: 15_000 });
-	await saveScreenshot(testInfo, "first-run-build-done-1100x700");
+	await saveScreenshot(camera, window, "first-run-build-done-1100x700");
 	await window.getByRole("button", { name: "Continue" }).click();
 
 	await window.getByRole("button", { name: "Open the editor" }).click();
@@ -313,25 +316,27 @@ test("first run: name, engine, sandbox folder, full build with progress, editor,
 	await window.getByRole("button", { name: "Continue" }).click();
 
 	await expect(window.getByTestId("first-run-done")).toBeVisible();
-	await saveScreenshot(testInfo, "first-run-done-1100x700");
+	await saveScreenshot(camera, window, "first-run-done-1100x700");
 	await window.getByRole("button", { name: "Enter your studio" }).click();
 
 	await expect(window.getByTestId("screen-studio")).toBeVisible();
 	await expect(window.getByTestId("studio-lead")).toContainText("Mohammad");
 	await expect(window.getByTestId("studio-lead")).toContainText("Apprentice");
-	await saveScreenshot(testInfo, "studio-fresh-1100x700");
+	await saveScreenshot(camera, window, "studio-fresh-1100x700");
 
 	// Setup stored the engine through updateSettings and the sandbox through createSandbox.
-	await goTo("#/settings", "screen-settings", "review-providers");
+	await goTo(window, "#/settings", "screen-settings", "review-providers");
 	await expect(window.getByTestId("settings-engine")).toContainText("UE 5.8.3");
 	await expect(window.getByTestId("settings-engine")).toContainText("DojoSandbox");
 });
 
-test("a failing first build explains itself in plain English and the retry works", async ({}, testInfo) =>
+test("a failing first build explains itself in plain English and the retry works", async ({ dojo, camera }) =>
 {
-	await useDataSource("fake:first-build-fails", "#/first-run");
-	await setViewport(1100, 700);
-	await goTo("#/first-run", "screen-firstRun");
+	const { window } = dojo;
+
+	await useDataSource(window, "fake:first-build-fails", "#/first-run");
+	await setViewport(window, 1100, 700);
+	await goTo(window, "#/first-run", "screen-firstRun");
 
 	await window.getByRole("button", { name: "Use this engine" }).click();
 	await window.getByRole("button", { name: "Choose a folder" }).click();
@@ -342,17 +347,19 @@ test("a failing first build explains itself in plain English and the retry works
 	await expect(window.getByTestId("build-failed")).toContainText("not in anything you wrote");
 	await expect(window.getByTestId("build-progress")).toHaveAttribute("data-outcome", "failed");
 	await window.getByRole("button", { name: "Show the compiler output" }).click();
-	await saveScreenshot(testInfo, "first-run-build-failed-1100x700");
+	await saveScreenshot(camera, window, "first-run-build-failed-1100x700");
 
 	await window.getByRole("button", { name: "Build again" }).click();
 	await expect(window.getByTestId("build-succeeded")).toBeVisible({ timeout: 15_000 });
 });
 
-test("a cancelled first build is calm, and starting again works", async () =>
+test("a cancelled first build is calm, and starting again works", async ({ dojo }) =>
 {
-	await useDataSource("fake:fresh", "#/first-run");
-	await setViewport(1100, 700);
-	await goTo("#/first-run", "screen-firstRun");
+	const { window } = dojo;
+
+	await useDataSource(window, "fake:fresh", "#/first-run");
+	await setViewport(window, 1100, 700);
+	await goTo(window, "#/first-run", "screen-firstRun");
 
 	await window.getByRole("button", { name: "Use this engine" }).click();
 	await window.getByRole("button", { name: "Choose a folder" }).click();
@@ -369,10 +376,12 @@ test("a cancelled first build is calm, and starting again works", async () =>
 	await expect(window.getByTestId("build-succeeded")).toBeVisible({ timeout: 15_000 });
 });
 
-test("against the real bridge, the title works and the Studio shows real data or the AppError view", async ({}, testInfo) =>
+test("against the real bridge, the title works and the Studio shows real data or the AppError view", async ({ dojo, camera }) =>
 {
-	await useDataSource("bridge");
-	await setViewport(1100, 700);
+	const { window } = dojo;
+
+	await useDataSource(window, "bridge");
+	await setViewport(window, 1100, 700);
 
 	await expect(window.getByRole("heading", { name: "Unreal Dojo" })).toBeVisible();
 	await expect(window.getByTestId("app-version")).not.toBeEmpty();
@@ -383,5 +392,5 @@ test("against the real bridge, the title works and the Studio shows real data or
 	await window.evaluate(`location.hash = "#/studio"`);
 	await expect(window.getByTestId("screen-studio")).toBeVisible();
 	await expect(window.getByTestId("app-error").or(window.getByTestId("studio-lead")).first()).toBeVisible();
-	await saveScreenshot(testInfo, "studio-bridge-1100x700");
+	await saveScreenshot(camera, window, "studio-bridge-1100x700");
 });

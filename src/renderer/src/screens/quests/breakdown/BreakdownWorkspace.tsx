@@ -120,19 +120,19 @@ export function BreakdownWorkspace({ quest, initialPlan }: BreakdownWorkspacePro
 					</aside>
 				</div>
 			) : (
-				<div className="grid min-h-[30rem] flex-1 grid-cols-[minmax(0,1fr)_minmax(14rem,16rem)] gap-4 min-[1300px]:grid-cols-[minmax(0,1fr)_minmax(15rem,18rem)]">
-					{/* Side by side from 1300 wide; stacked below that, so neither board gets narrow. */}
-					<div className="grid min-h-0 grid-rows-2 gap-4 min-[1300px]:grid-cols-2 min-[1300px]:grid-rows-1">
-						<div className="flex min-h-0 flex-col gap-2">
+				// Below 1300 wide the boards take the full width, one above the other, and the revise panel follows them (the page scrolls); from 1300 they sit side by side beside the panel.
+				<div data-testid="compare-layout" className="flex flex-col gap-4 min-[1300px]:grid min-[1300px]:min-h-[30rem] min-[1300px]:flex-1 min-[1300px]:grid-cols-[minmax(0,1fr)_minmax(15rem,18rem)]">
+					<div className="flex flex-col gap-4 min-[1300px]:grid min-[1300px]:min-h-0 min-[1300px]:grid-cols-2">
+						<div className="flex h-80 min-h-0 flex-col gap-2 min-[1300px]:h-auto">
 							<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Your plan</span>
 							<BreakdownBoard plan={plan} positions={positions} onPositionsChange={setPositions} onPlanChange={setPlan} selectedPieceId={selectedPieceId} onSelectPiece={setSelectedPieceId} newEdgeKind={edgeKind} ariaLabel="Your plan" testId="learner-board" />
 						</div>
-						<div className="flex min-h-0 flex-col gap-2">
+						<div className="flex h-80 min-h-0 flex-col gap-2 min-[1300px]:h-auto">
 							<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Reference: {reference.title}</span>
 							<BreakdownBoard plan={referenceAsPlan(reference)} positions={referencePositions} onPositionsChange={setReferencePositions} readOnly ariaLabel={`Reference plan: ${reference.title}`} testId="reference-board" />
 						</div>
 					</div>
-					<aside aria-label="Revise" className="flex min-h-0 flex-col gap-4 overflow-x-hidden overflow-y-auto rounded-lg border border-line bg-surface p-4">
+					<aside aria-label="Revise" className="flex flex-col gap-4 overflow-x-hidden rounded-lg border border-line bg-surface p-4 min-[1300px]:min-h-0 min-[1300px]:overflow-y-auto">
 						<RevisionPanel reference={reference} patternIds={quest.patterns} note={note} onNoteChange={setNote} onGrade={() => void grade()} isGrading={revise.isPending} blockers={problems} />
 						<div className="flex flex-col gap-4 border-t border-line pt-3">{editing}</div>
 					</aside>
