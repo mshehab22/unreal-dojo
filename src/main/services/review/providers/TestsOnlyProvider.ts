@@ -11,6 +11,24 @@ const SET_UP_AI_NOTE = "An AI reviewer can check this for you once Claude Code o
 /** Score the explain grader gives when nothing can judge the sentence. The learner self-checks; the scheduler treats it as a plain pass. */
 const SELF_CHECK_SCORE = 70;
 
+/** Shortest learner label that may match as part of a longer required label, so "A" or "UI" never covers every piece (A158). */
+const MINIMUM_PARTIAL_LABEL_LENGTH = 4;
+
+/** True when a learner label names a required piece: it contains the required label, or it is a long enough part of it ("Door" for "DoorActor"). */
+export function labelMatches(learnerKey: string, requiredKey: string): boolean
+{
+	if (learnerKey.length === 0 || requiredKey.length === 0) return false;
+	if (learnerKey.includes(requiredKey)) return true;
+
+	return learnerKey.length >= MINIMUM_PARTIAL_LABEL_LENGTH && requiredKey.includes(learnerKey);
+}
+
+/** Adds the fallback reason to a tests-only answer when there is one. */
+function withReason<Answer extends object>(answer: Answer, fallbackReason?: string): Answer & { fallbackReason?: string }
+{
+	return fallbackReason ? { ...answer, fallbackReason } : answer;
+}
+
 /** Counts the labels two plans share, after normalizing. */
 function sharedLabelCount(left: BreakdownPlan, right: BreakdownPlan): number
 {
@@ -32,7 +50,7 @@ export class TestsOnlyProvider
 	}
 
 	/** Turns the test results into findings and each rubric line into a self-check. Score is the share of tests passed, as the rules expect (review = tests). */
-	reviewCode(input: CodeReviewInput): CodeReview
+	reviewCode(input: CodeReviewInput, fallbackReason?: string): CodeReview
 	{
 		const { run } = input;
 		const score = run.testsTotal > 0 ? Math.round((run.testsPassed / run.testsTotal) * 100) : (run.ok ? 100 : 0);
@@ -48,7 +66,7 @@ export class TestsOnlyProvider
 
 		const testSentence = run.testsTotal > 0 ? `${run.testsPassed} of ${run.testsTotal} tests passed.` : "No tests ran.";
 
-		return {
+		return withReason({
 			score,
 			summary: `${testSentence} No AI reviewer checked the code, so the rubric lines are yours to check.`,
 			rubric: [],
@@ -56,18 +74,18 @@ export class TestsOnlyProvider
 			reflectionQuestion: "Which rubric line was hardest to meet, and what did you do about it?",
 			alternativeHint: "Read the quest's alternative after you pass and compare it with your approach.",
 			provider: this.id,
-		};
+		}, fallbackReason);
 	}
 
-	/** Matches required pieces to the learner's pieces by label and picks the reference plan that differs most from theirs. */
-	gradeBreakdown(input: BreakdownGradeInput): BreakdownGrade
+	/** Matches required pieces to the learner's pieces by label (see `labelMatches`) and picks the reference plan that differs most from theirs. */
+	gradeBreakdown(input: BreakdownGradeInput, fallbackReason?: string): BreakdownGrade
 	{
 		const learnerPieces = input.revisedPlan.pieces.map((piece) => ({ label: piece.label, key: normalizeLabel(piece.label) }));
 
 		const coverage = input.requiredPieces.map((required) =>
 		{
 			const requiredKey = normalizeLabel(required.label);
-			const match = learnerPieces.find((piece) => piece.key.length > 0 && (piece.key.includes(requiredKey) || requiredKey.includes(piece.key)));
+			const match = learnerPieces.find((piece) => labelMatches(piece.key, requiredKey));
 
 			return match ? { label: required.label, covered: true, matchedTo: match.label } : { label: required.label, covered: false };
 		});
@@ -83,7 +101,7 @@ export class TestsOnlyProvider
 			if (current && sharedLabelCount(input.revisedPlan, plan) < sharedLabelCount(input.revisedPlan, current)) alternativeToShow = index;
 		});
 
-		return {
+		return withReason({
 			score,
 			summary: `${coveredCount} of ${input.requiredPieces.length} required pieces matched by name. No AI grader checked the plan, so pieces named differently may not have matched. ${SET_UP_AI_NOTE}`,
 			requiredPiecesCovered: coverage,
@@ -92,15 +110,15 @@ export class TestsOnlyProvider
 			revisionQuality: input.revisionNote.trim().length > 0 ? score : 0,
 			alternativeToShow,
 			provider: this.id,
-		};
+		}, fallbackReason);
 	}
 
 	/** Shows the model answer for the learner to compare against, since nothing can judge the sentence. */
-	gradeExplain(input: ExplainGradeInput): ExplainGrade
+	gradeExplain(input: ExplainGradeInput, fallbackReason?: string): ExplainGrade
 	{
 		const comparison = input.modelAnswer ? `Self-check against the model answer: ${input.modelAnswer}` : "Self-check: reread your sentence against the question and your code.";
 
-		return { score: SELF_CHECK_SCORE, verdict: "partly", note: comparison, provider: this.id };
+		return withReason<ExplainGrade>({ score: SELF_CHECK_SCORE, verdict: "partly", note: comparison, provider: this.id }, fallbackReason);
 	}
 
 	/** Repeats the finding's own detail, since there is no AI to ask. */

@@ -28,8 +28,8 @@ const PROVIDER_NAME = "The Anthropic API";
 /** Sends one Messages API request. Replaced in tests; the default builds an SDK client per key. */
 export type CreateMessage = (apiKey: string, parameters: Anthropic.Beta.MessageCreateParamsNonStreaming, signal?: AbortSignal) => Promise<Anthropic.Beta.BetaMessage>;
 
-/** Waits a number of milliseconds. Replaced in tests so a retry does not slow them down. */
-export type Wait = (milliseconds: number) => Promise<void>;
+/** Waits a number of milliseconds, ending early when the signal aborts. Replaced in tests so a retry does not slow them down. */
+export type Wait = (milliseconds: number, signal?: AbortSignal) => Promise<void>;
 
 /** The real SDK call. Retries are off because the provider does its own single 429 retry. */
 export function createSdkMessageSender(): CreateMessage
@@ -51,10 +51,33 @@ export function createSdkMessageSender(): CreateMessage
 	};
 }
 
-/** Waits with a real timer. */
-function waitWithTimer(milliseconds: number): Promise<void>
+/** Waits with a real timer, resolving at once when the signal aborts so a cancel during a 429 wait is not held up. */
+export function waitUnlessAborted(milliseconds: number, signal?: AbortSignal): Promise<void>
 {
-	return new Promise((resolve) => setTimeout(resolve, milliseconds));
+	return new Promise((resolve) =>
+	{
+		if (signal?.aborted)
+		{
+			resolve();
+
+			return;
+		}
+
+		/** Ends the wait early on cancel. */
+		const onAbort = (): void =>
+		{
+			clearTimeout(timer);
+			resolve();
+		};
+
+		const timer = setTimeout(() =>
+		{
+			signal?.removeEventListener("abort", onAbort);
+			resolve();
+		}, milliseconds);
+
+		signal?.addEventListener("abort", onAbort, { once: true });
+	});
 }
 
 /** Reads the seconds in a 429's `retry-after` header, or null when it is missing (the spend cap 429 has none and must not be retried). */
@@ -75,7 +98,7 @@ export class AnthropicApiProvider implements IReviewProvider
 	readonly id = "anthropic-api" as const;
 
 	/** Keeps the settings and the request function, which tests replace. */
-	constructor(private readonly settings: IReviewSettings, private readonly createMessage: CreateMessage = createSdkMessageSender(), private readonly wait: Wait = waitWithTimer)
+	constructor(private readonly settings: IReviewSettings, private readonly createMessage: CreateMessage = createSdkMessageSender(), private readonly wait: Wait = waitUnlessAborted)
 	{
 	}
 
@@ -107,7 +130,9 @@ export class AnthropicApiProvider implements IReviewProvider
 			const seconds = retryAfterSeconds(error);
 			if (seconds === null || seconds > MAXIMUM_RETRY_WAIT_SECONDS) throw this.translateError(error);
 
-			await this.wait(seconds * 1000);
+			if (request.signal?.aborted) throw cancelledError();
+
+			await this.wait(seconds * 1000, request.signal);
 			if (request.signal?.aborted) throw cancelledError();
 
 			try

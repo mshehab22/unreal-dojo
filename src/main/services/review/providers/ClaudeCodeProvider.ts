@@ -34,6 +34,9 @@ const resultEnvelopeSchema = z.looseObject({
 	terminal_reason: z.string().nullable().optional(),
 });
 
+/** Variables removed from the CLI's environment so a key set in a terminal never bills a review instead of the learner's subscription (D11, A155). */
+export const STRIPPED_ENVIRONMENT_VARIABLES = ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"] as const;
+
 /** Options the app normally leaves at their defaults; tests shorten them. */
 export interface ClaudeCodeProviderOptions
 {
@@ -42,6 +45,32 @@ export interface ClaudeCodeProviderOptions
 
 	/** Folder the per-review temp folders are made in. */
 	temporaryRoot: string;
+
+	/** The environment the CLI starts from, before the API key variables are removed. */
+	environment: Record<string, string | undefined>;
+}
+
+/** Copies an environment without the variables that would switch Claude Code to API billing. */
+export function reviewEnvironment(environment: Record<string, string | undefined>): Record<string, string | undefined>
+{
+	const copy = { ...environment };
+
+	for (const name of STRIPPED_ENVIRONMENT_VARIABLES) delete copy[name];
+
+	return copy;
+}
+
+/** Removes a review's temp folder. A failure here (a virus scanner holding a file on Windows) is ignored so it never replaces the review's own result. */
+async function removeQuietly(folder: string): Promise<void>
+{
+	try
+	{
+		await rm(folder, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+	}
+	catch
+	{
+		// The folder is in the system temp folder, which the operating system cleans up.
+	}
 }
 
 /** Splits a version like "2.1.304" into numbers and compares it with another. Negative when `left` is older. */
@@ -103,7 +132,7 @@ export class ClaudeCodeProvider implements IReviewProvider
 	/** Keeps the locator and the process runner, which tests replace. */
 	constructor(private readonly locator: ClaudeCodeLocator, private readonly processRunner: IProcessRunner, options: Partial<ClaudeCodeProviderOptions> = {})
 	{
-		this.options = { timeoutMs: REVIEW_TIMEOUT_MS, temporaryRoot: tmpdir(), ...options };
+		this.options = { timeoutMs: REVIEW_TIMEOUT_MS, temporaryRoot: tmpdir(), environment: process.env, ...options };
 	}
 
 	/** Finds the CLI and reads its version. Available only when found and new enough. */
@@ -143,7 +172,7 @@ export class ClaudeCodeProvider implements IReviewProvider
 		}
 		finally
 		{
-			await rm(reviewFolder, { recursive: true, force: true });
+			await removeQuietly(reviewFolder);
 		}
 	}
 
@@ -153,7 +182,7 @@ export class ClaudeCodeProvider implements IReviewProvider
 		this.commandPath = this.locator.locate();
 		if (this.commandPath === null) return { id: this.id, available: false, reason: "Claude Code was not found on PATH or in the usual install folders." };
 
-		const result = await this.processRunner.run(this.commandPath, ["--version"], { cwd: this.options.temporaryRoot, timeoutMs: VERSION_TIMEOUT_MS });
+		const result = await this.processRunner.run(this.commandPath, ["--version"], { cwd: this.options.temporaryRoot, timeoutMs: VERSION_TIMEOUT_MS, env: reviewEnvironment(this.options.environment) });
 		const version = /(\d+\.\d+\.\d+)/.exec(result.stdout)?.[1];
 
 		if (result.exitCode !== 0 || version === undefined) return { id: this.id, available: false, reason: "Claude Code was found but did not report its version." };
@@ -174,7 +203,7 @@ export class ClaudeCodeProvider implements IReviewProvider
 
 		const runArguments = buildClaudeCodeArguments(systemPromptFile, request.jsonSchema, this.textMode);
 
-		return this.processRunner.run(this.commandPath as string, runArguments, { cwd: workFolder, stdin: request.userMessage, timeoutMs: this.options.timeoutMs, signal: request.signal });
+		return this.processRunner.run(this.commandPath as string, runArguments, { cwd: workFolder, stdin: request.userMessage, timeoutMs: this.options.timeoutMs, signal: request.signal, env: reviewEnvironment(this.options.environment) });
 	}
 
 	/** Turns the finished process into the model's reply, or the right AppError. */

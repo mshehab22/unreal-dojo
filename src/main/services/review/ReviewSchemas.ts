@@ -17,7 +17,8 @@ export const codeReviewOutputSchema = z.strictObject({
 		title: requiredTextSchema,
 		detail: requiredTextSchema,
 		file: z.string().optional(),
-		line: z.number().int().min(1).optional(),
+		// Any integer: a line below 1 or past the file is dropped by the code reviewer instead of failing the whole review.
+		line: z.number().int().optional(),
 	})),
 	reflectionQuestion: requiredTextSchema,
 	alternativeHint: z.string(),

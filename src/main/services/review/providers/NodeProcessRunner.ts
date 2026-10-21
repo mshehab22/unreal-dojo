@@ -1,5 +1,5 @@
 // Runs a child process with Node's spawn: stdin in, stdout and stderr collected, with a timeout and a cancel that ask nicely before forcing.
-import { spawn } from "node:child_process";
+import { spawn as nodeSpawn, type ChildProcess } from "node:child_process";
 
 import type { IProcessRunner, ProcessRunOptions, ProcessRunResult } from "./IProcessRunner";
 
@@ -12,13 +12,21 @@ function quoteForWindowsShell(argument: string): string
 	return `"${argument.replace(/"/g, "\"\"")}"`;
 }
 
-/** Runs real processes. On Windows a `.cmd` or `.bat` command goes through the shell with every argument quoted. */
+/** Node's spawn, replaceable in tests. */
+export type SpawnFunction = typeof nodeSpawn;
+
+/** Runs real processes. On Windows a `.cmd` or `.bat` command goes through the shell with every argument quoted, and stopping kills the whole process tree. */
 export class NodeProcessRunner implements IProcessRunner
 {
+	/** Keeps the platform and the spawn function, which tests replace to check the Windows path on any machine. */
+	constructor(private readonly platform: NodeJS.Platform = process.platform, private readonly spawn: SpawnFunction = nodeSpawn)
+	{
+	}
+
 	/** Spawns the process and resolves with its output once it exits, times out, or is cancelled. */
 	run(command: string, args: string[], options: ProcessRunOptions): Promise<ProcessRunResult>
 	{
-		const needsShell = process.platform === "win32" && /\.(cmd|bat)$/i.test(command);
+		const needsShell = this.platform === "win32" && /\.(cmd|bat)$/i.test(command);
 		const spawnCommand = needsShell ? quoteForWindowsShell(command) : command;
 		const spawnArguments = needsShell ? args.map(quoteForWindowsShell) : args;
 
@@ -31,11 +39,18 @@ export class NodeProcessRunner implements IProcessRunner
 			let settled = false;
 			let forceKillTimer: NodeJS.Timeout | undefined;
 
-			const child = spawn(spawnCommand, spawnArguments, { cwd: options.cwd, env: options.env ?? process.env, shell: needsShell, windowsHide: true });
+			const child = this.spawn(spawnCommand, spawnArguments, { cwd: options.cwd, env: options.env ?? process.env, shell: needsShell, windowsHide: true });
 
-			/** Asks the process to stop, then kills it if it has not exited a few seconds later. */
+			/** Asks the process to stop, then kills it if it has not exited a few seconds later. Windows has no SIGINT for a console child, so it kills the tree at once. */
 			const stop = (): void =>
 			{
+				if (this.platform === "win32")
+				{
+					this.killTree(child);
+
+					return;
+				}
+
 				child.kill("SIGINT");
 				forceKillTimer = setTimeout(() => child.kill("SIGKILL"), FORCE_KILL_DELAY_MS);
 			};
@@ -85,5 +100,21 @@ export class NodeProcessRunner implements IProcessRunner
 			child.stdin.on("error", () => undefined);
 			child.stdin.end(options.stdin ?? "");
 		});
+	}
+
+	/** Kills a Windows process and everything it started (`cmd.exe` and the `node` it runs for `claude.cmd`) with `taskkill /T /F`, spawned without a shell. */
+	private killTree(child: ChildProcess): void
+	{
+		if (child.pid === undefined)
+		{
+			child.kill();
+
+			return;
+		}
+
+		const killer = this.spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" });
+
+		// If taskkill itself cannot start, fall back to killing the direct child.
+		killer.on("error", () => child.kill());
 	}
 }

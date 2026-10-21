@@ -49,13 +49,13 @@ export class ReviewService
 	{
 	}
 
-	/** Every provider and whether it is available, for Settings and the Title chip. */
+	/** Every provider and whether it is available, for Settings and the Title chip. Uses cached checks; the Settings test button refreshes Claude Code (A154). */
 	getProviderStatuses(): Promise<ReviewProviderStatus[]>
 	{
-		return this.selector.statuses(true);
+		return this.selector.statuses();
 	}
 
-	/** Checks Claude Code again and sends it one tiny request, so "not signed in" shows in Settings instead of on the first submit. */
+	/** Checks Claude Code again and sends it one tiny request, so "not signed in" shows in Settings instead of on the first submit. The answer also updates what the selector picks. */
 	async testClaudeCode(): Promise<ReviewProviderStatus>
 	{
 		const status = await this.claudeCode.status(true);
@@ -65,12 +65,14 @@ export class ReviewService
 		{
 			const reply = await this.claudeCode.complete(CONNECTION_CHECK_REQUEST);
 			parseModelOutput("connection check", connectionCheckOutputSchema, reply);
+			this.selector.clearMark(this.claudeCode.id);
 
 			return status;
 		}
 		catch (error)
 		{
 			const reason = error instanceof AppErrorException ? `${error.appError.message} ${error.appError.suggestedAction}` : "The connection check failed.";
+			this.selector.markUnavailable(this.claudeCode.id, reason);
 
 			return { ...status, available: false, reason };
 		}
@@ -81,37 +83,50 @@ export class ReviewService
 	{
 		if (!input.run.compiled) return undefined;
 
-		const selection = await this.selector.select();
-		if (selection.kind === "tests-only") return selection.provider.reviewCode(input);
-
-		return this.graders.codeReviewer.review(selection.provider, input, signal);
+		return this.withProvider((provider) => this.graders.codeReviewer.review(provider, input, signal), (reason) => this.testsOnly.reviewCode(input, reason));
 	}
 
 	/** Grades a revised breakdown plan. */
-	async gradeBreakdown(input: BreakdownGradeInput, signal?: AbortSignal): Promise<BreakdownGrade>
+	gradeBreakdown(input: BreakdownGradeInput, signal?: AbortSignal): Promise<BreakdownGrade>
 	{
-		const selection = await this.selector.select();
-		if (selection.kind === "tests-only") return selection.provider.gradeBreakdown(input);
-
-		return this.graders.breakdownGrader.grade(selection.provider, input, signal);
+		return this.withProvider((provider) => this.graders.breakdownGrader.grade(provider, input, signal), (reason) => this.testsOnly.gradeBreakdown(input, reason));
 	}
 
 	/** Grades one sentence: an explain item or a reflection answer. Always free for the learner. */
-	async gradeExplain(input: ExplainGradeInput, signal?: AbortSignal): Promise<ExplainGrade>
+	gradeExplain(input: ExplainGradeInput, signal?: AbortSignal): Promise<ExplainGrade>
 	{
-		const selection = await this.selector.select();
-		if (selection.kind === "tests-only") return selection.provider.gradeExplain(input);
-
-		return this.graders.explainGrader.grade(selection.provider, input, signal);
+		return this.withProvider((provider) => this.graders.explainGrader.grade(provider, input, signal), (reason) => this.testsOnly.gradeExplain(input, reason));
 	}
 
 	/** Explains a finding in plain English. Free, no XP effect, cached per finding. */
-	async explainFinding(input: FindingExplanationInput, signal?: AbortSignal): Promise<string>
+	explainFinding(input: FindingExplanationInput, signal?: AbortSignal): Promise<string>
 	{
-		const selection = await this.selector.select();
-		if (selection.kind === "tests-only") return this.testsOnly.explainFinding(input);
+		return this.withProvider((provider) => this.graders.findingExplainer.explain(provider, input, signal), () => this.testsOnly.explainFinding(input));
+	}
 
-		return this.graders.findingExplainer.explain(selection.provider, input, signal);
+	/**
+	 * Runs one grader on the selected provider. When the provider cannot review (review-unavailable, for example Claude Code is not signed in),
+	 * it is marked unavailable and the next pick runs: in `auto` the next AI provider, otherwise tests only with the reason. Cancel, refusal,
+	 * and invalid output are not provider problems and are thrown as they are. Each failure removes one provider, so the loop ends.
+	 */
+	private async withProvider<Result>(useProvider: (provider: IReviewProvider) => Promise<Result>, useTestsOnly: (reason?: string) => Result): Promise<Result>
+	{
+		for (;;)
+		{
+			const selection = await this.selector.select();
+			if (selection.kind === "tests-only") return useTestsOnly(selection.reason);
+
+			try
+			{
+				return await useProvider(selection.provider);
+			}
+			catch (error)
+			{
+				if (!(error instanceof AppErrorException) || error.appError.code !== "review-unavailable") throw error;
+
+				this.selector.markUnavailable(selection.provider.id, `${error.appError.message} ${error.appError.suggestedAction}`);
+			}
+		}
 	}
 }
 

@@ -45,7 +45,7 @@ function cleanFinding(finding: CodeReviewOutput["findings"][number], files: Reco
 	if (content === undefined) return cleaned;
 
 	cleaned.file = finding.file;
-	if (finding.line !== undefined && finding.line <= lineCount(content)) cleaned.line = finding.line;
+	if (finding.line !== undefined && finding.line >= 1 && finding.line <= lineCount(content)) cleaned.line = finding.line;
 
 	return cleaned;
 }
