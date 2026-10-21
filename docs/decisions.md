@@ -6,6 +6,36 @@ Newest first inside each section. A decision names the options considered, the c
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A109 2026-10-21 Hand-written field readers instead of a schema library (M0.4, builder-content-engine)
+Options: zod or valibot schemas; JSON Schema with ajv; a small `ObjectReader` written for this. Chosen: `ObjectReader`. It reports every wrong, missing, and unknown field in one pass in plain words with a path (`Questions[2].answerIndex: expected a whole number, 0 to 3`), needs no new dependency, and the TypeScript types stay the single source of truth. Reverse cost: medium; the readers are about 300 lines.
+
+### A108 2026-10-21 Verifier edge behavior: empty folder, missing files, exit codes, filters (M0.4, builder-content-engine)
+A content folder with no `glossary.json`, `patterns.json`, or `packs/` passes cleanly (the M0.4 proof); a content folder that does not exist is an error. Exit 0 clean, 1 on content problems, 2 on a bad command line. `--engine` exits 2 with "arrives in M1.8" instead of pretending to run. `--pack` reads only that pack (glossary and patterns are always read); `--quest` parses everything (duplicates need the whole set) but reports only that quest's file, and says so when the id did not parse. Options considered for the missing glossary: error now; error at release (M1.8 rule). Chosen: not an error until M1.8 adds the release checks. Reverse cost: none.
+
+### A107 2026-10-21 Folder naming rules the parser enforces (M0.4, builder-content-engine)
+A pack folder name must equal its `pack.json` id. A world folder is `<nn>-<world-id>`: the number is the world order and the rest must equal `world.json`'s id, so `world.json` has no `order`. A world folder holds only `world.json` and `<nn>-<slug>.md` files; anything else is reported. Quest order comes from front matter `order`, unique inside a world; the file number is for humans and not checked against it. Options: derive everything from names; keep everything in manifests. Chosen: names for packs and worlds (the spec already names folders that way), front matter for quests (authors renumber files less often than they reorder). Reverse cost: low.
+
+### A106 2026-10-21 What the parser rejects versus what M1.8's verifier checks (M0.4, builder-content-engine)
+Parser (blocks loading): wrong or missing fields, unknown front matter fields (typos), sections missing, repeated, unknown, or out of order, hints not exactly 3 (the type is a 3-tuple), a brief without `## See it in the editor`, plan `covers` ids and edges that point nowhere, ids repeated inside a quest, duplicate ids across files. A file with any problem is left out; the rest still loads. Verifier in M1.8 (content rules, not shape): rubric sizes, non-empty `concepts`, terms and patterns existing, prerequisites, reachability, fade ladder, every required piece in each plan. Reverse cost: low; moving a rule is a few lines.
+
+### A105 2026-10-21 Question shapes match author-foundations' `patterns.json`; every question has an id (M0.4, builder-content-engine)
+author-foundations had already written 22 pattern cards on branch `m0-5-glossary`. Options: define shapes from the spec and ask them to change; adopt their shapes. Chosen: adopt theirs exactly (`acceptedAnswers` on fill-blank, `distractorNotes` on which-pattern, `bugLine` and `fix` on spot-the-bug, `modelAnswer` and `rubric` on explain-in-one-sentence), so their files parse as they are: all 191 glossary entries and 22 pattern cards pass. Every question needs an `id` so the drill scheduler can log reviews per item. `DrillQuest` is in the `Quest` union with the common front matter plus `items` (tagged with their source), built at runtime only. Reverse cost: low.
+
+### A104 2026-10-21 YAML parser: `yaml` 2.9.1 (M0.4, builder-content-engine)
+Options: `yaml` (eemeli, no dependencies, exact error positions), `js-yaml`, `gray-matter` (wraps js-yaml and adds little). Chosen: `yaml` 2.9.1, the newest release older than 14 days (3.0 is a prerelease), in `dependencies` because main uses it (A12). Repeated keys are rejected. Reverse cost: low.
+
+### A103 2026-10-21 Format examples are not compiled and have no reference solutions (M0.4, builder-content-engine)
+CLAUDE.md says every build quest ships a reference solution. Options: write solutions for the 5 code examples and compile them with `--engine`; treat them as format references only. Chosen: format references. They are not in any pack, their ids start with `example-`, and the verifier only parses them. Their tests use the sandbox's `FDojoTestWorld` and the `Dojo.` test naming from M1.2a so authors copy the right shape. If the Lead wants them compiled, M1.8 can add solutions and run them with `--engine`. Reverse cost: one task.
+
+### A102 2026-10-21 Marked lines for the self-explanation gate use an `// @explain:` comment (M0.4, builder-content-engine)
+Options: a `markedLines` list of line numbers in front matter (breaks whenever a line is added above); a marker comment at the end of the line. Chosen: the comment `// @explain: <model reason>`. The parser strips it from the starter and records `{ line, reason }`, so the learner never sees it and the numbers never drift. Reverse cost: low.
+
+### A101 2026-10-21 Examples live in `content/examples/` and the verifier parses them (M0.4, builder-content-engine)
+The spec put the examples in `docs/systems/content-authoring.md`, and the task put them in `content/examples/`. Chosen: files in `content/examples/`, listed by name in content-authoring.md and parsed on every verifier run through `ContentLoader.loadExamples()`, so the examples authors copy can never stop parsing. They ship inside `content/` in the installer (a few KB) but the app never loads them. Reverse cost: none.
+
+### A100 2026-10-21 Structured data inside sections is one fenced YAML block (M0.4, builder-content-engine)
+Options: all structured data (questions, pieces, plans, Parsons) in front matter; a JSON file next to each quest; one ` ```yaml ` block per data section; custom Markdown conventions. Chosen: a YAML block per section. Front matter stays short and scannable, each kind's data sits in its fixed section order, YAML allows multi-line text and code (`|`), and errors point to the section and file line. Prose sections are plain Markdown, code sections are one ` ```cpp ` block, and hints and rubrics are bullet lists because authors write those as lists anyway. Reverse cost: medium once packs exist; a converter script would do it.
+
 ### A19 2026-10-21 npm install scripts left unapproved; Electron downloads its binary on first use (M0.1, builder-shell)
 npm 11.19 blocks package install scripts until they are approved. Options: approve them in `package.json`; leave them. Chosen: leave them. Electron 44 fetches its binary on first run when it is missing, esbuild and fsevents ship prebuilt binaries, and electron-winstaller is only for Squirrel (not used). Everything passed without them. Reverse cost: one `npm install-scripts approve` line if a later package needs it.
 

@@ -20,7 +20,16 @@ Predict question before every concept card. Scaffold fades inside each world: wo
 
 ## File formats
 
-One complete example per kind lives in `content/examples/` (concept, breakdown, build at each scaffold level, refactor, boss) and parses under the verifier; copy from those. Section order per kind is in `docs/systems/content-engine.md`.
+One complete example per kind lives in `content/examples/` (concept, breakdown, build at each scaffold level, refactor, boss) and parses under the verifier; copy from those:
+
+- `01-concept-uproperty.md`: concept, with every question type.
+- `02-build-worked-lantern.md`: build at worked level, with `// @explain:` marked lines and two Parsons blocks.
+- `03-build-faded-flicker.md`, `04-build-stub-lantern-switch.md`, `05-build-blank-proximity-lantern.md`: build at faded, stub, and blank.
+- `06-refactor-lantern-tick.md`: refactor.
+- `07-breakdown-campfire.md`: breakdown with two reference plans.
+- `08-boss-lighthouse.md`: boss with build pieces and an 8 bullet integration rubric.
+
+The examples are format references: they are not in a pack, have no reference solution in `tools/solutions/`, and are not compiled by `--engine` (A103). Their tests use the sandbox's `FDojoTestWorld` helper the way real quests do. Section order per kind, the front matter fields, and every data shape are in `docs/systems/content-engine.md` under "Markdown format". Run `npx tsx tools/verify-content.ts --quest <id>` to check one quest while writing it.
 
 ## Pack briefs
 
