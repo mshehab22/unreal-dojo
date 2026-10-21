@@ -69,13 +69,13 @@ Reviewers are spawned fresh per task; they do not own systems.
 
 | Task | System | Owner | Worktree | Stage | Notes |
 | --- | --- | --- | --- | --- | --- |
-| M0.1 Scaffold the app | app-shell | builder-shell (agent) | m0-1-scaffold | review | Lead re-ran typecheck, test, build, e2e: all pass. Fresh reviewer running. First; M0.2, M0.3, M0.4, M0.6 start when it merges |
-| M0.5 Glossary and pattern cards | content-foundations | author-foundations (agent) | m0-5-glossary | building | Content only; parse check waits for M0.4 |
-| M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (agent) | m1-2a-sandbox-template | building | Started early (A04); UE 5.8.3 at ~/Applications/UE_5.8 |
-| M0.2 Typed IPC contract | app-shell | builder-shell | | waiting on M0.1 | |
-| M0.3 Design tokens and frame | ui-core | builder-ui-core | | waiting on M0.1 | |
-| M0.4 Content types, parser, verifier | content-engine | builder-content-engine | | waiting on M0.1 | |
-| M0.6 CI matrix | qa | tester | | waiting on M0.1 | Green run needs a private GitHub repo (A05) |
+| M0.1 Scaffold the app | app-shell | builder-shell (agent) | m0-1-scaffold | fixes | Review round 1: 5 fixes (e2e overwrites proof PNG, no macOS drag region, missing radix-ui/gray-matter/zod/fast-xml-parser, sandboxed preload externalizes deps, spec lines contradict A13). A duplicate run in session "M0.1 Scaffold the Electron app" (branch claude/m0-1-scaffold-de80f2) is parked, not merged. |
+| M0.5 Glossary and pattern cards | content-foundations | author-foundations (session) | claude/m0-5-glossary-50e7f9 | building | Parse check waits for M0.4 |
+| M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | claude/m1-2a-sandbox-template-d9043b | building | Started early (A04) |
+| M0.2 Typed IPC contract | app-shell | shell-ipc (session) | from m0-1-scaffold | building | Rebases onto main after M0.1 merges; content methods may split to M0.2b after M0.4 |
+| M0.3 Design tokens and frame | ui-core | ui-core (session) | from m0-1-scaffold | building | Rebases onto main after M0.1 merges |
+| M0.4 Content types, parser, verifier | content-engine | content-engine (session) | from m0-1-scaffold | building | Owns src/shared/types/content.ts |
+| M0.6 CI matrix | qa | tester (session) | from m0-1-scaffold | building | Green run needs a private GitHub repo (A05) |
 
 Stages: waiting, building, review, fixes, testing, merged. Only the Lead edits this board (A06).
 
