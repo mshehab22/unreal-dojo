@@ -115,7 +115,7 @@ Checks, all with file names in the output. Errors unless marked as warnings:
 5. Starter check (build and refactor quests only; a boss has none). First every boss is removed from the sandbox and overridden pieces go back to their own solutions, because a boss calls members its overrides add and a piece starter would always break it. Then, one quest at a time, only for quests whose solution passed: write the starter files in place of the solution, build, and run that quest's tests. A starter that does not compile is fine when a build error points into its own files; a build failure anywhere else, a starter that builds but whose tests do not run, and a skipped check (the solution failed) are "inconclusive" warnings (A212); a starter whose tests all pass is an error. Then put the solution back, more than a second after the last build so UBT sees the rewrite.
 6. Remove the sandbox when everything passed. Otherwise keep it and print its path; build and test logs are in `Saved/VerifierLogs/`.
 
-Measured on the MacBook Air, UE 5.8.3, 5 example quests: see "Measured timings" below. Status on 2026-10-21: three code examples pass every step; the two timer examples fail until the `FDojoTestWorld::Tick` frame counter fix lands (`docs/problems.md`).
+Measured on the MacBook Air, UE 5.8.3, 5 example quests: see "Measured timings" below. Status on 2026-10-21 (round 2, through M1.3's runners): all 5 code examples and all 4 Pack 1 World 1 build quests pass; every reference solution builds and passes its tests, and every starter fails. Neither boss has a reference integration yet (warnings, A215).
 
 ## Measured timings
 
@@ -126,6 +126,8 @@ MacBook Air M5 (10 cores, 24 GB), UE 5.8.3, 2026-10-21 (M1.8):
 | Content checks, repo content (8 examples, 191 glossary entries, 22 pattern cards) | 29 ms checking, about 0.3 s for the command | |
 | Content checks, generated 300-quest pack plus the real glossary and patterns (323 files) | 75 to 101 ms checking, 0.47 to 0.55 s for the command | three runs; the budget is 3 s |
 | `--engine`, 5 code examples | 195 to 258 s in all | first build 25 to 30 s, one headless run of all tests 23 to 35 s, starter checks 143 to 193 s (about 30 to 40 s per quest: an incremental build plus one headless run) |
+
+| `--engine`, 5 examples plus Pack 1 World 1's 4 build quests, through M1.3's runners (round 2) | 472 s in all | first build 48 s, one headless run of all 9 quests' tests 30 s, nine starter checks 393 s (about 44 s each); nothing else was using the engine |
 
 Starter checks dominate. For a full pack, M2 or later can cut this with one batched starter build, falling back to one quest at a time only when that build fails (see A208).
 

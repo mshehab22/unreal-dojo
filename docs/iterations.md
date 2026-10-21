@@ -404,3 +404,18 @@ exit code 0
   - build passes.
   - The verifier on main's content: 24 files, no problems, 3 coverage warnings.
 
+### Fix round 2, part 2 (M1.3's runners, bosses)
+- What the Lead asked for: run Unreal only through the app's own builder and test runner from M1.3 (A211). Build and test every boss's reference integration, and warn when a boss has none (A67).
+- What changed:
+  - The verifier's own process code is deleted. It writes quest files with the app's file writer, builds with the app's builder, and runs tests with the app's test runner, so the verifier and the Build screen now drive Unreal in exactly the same way.
+  - A boss's folder in `tools/solutions/` holds its integration code, its test files, and, as author-foundations proposed, extended versions of piece quests' files that replace them while the boss is built.
+  - Before checking the piece quests' starters, the verifier takes the boss out again, so a piece starter is judged on its own.
+  - A boss with no folder is a warning until the Pack 1 World 1 boss's integration lands (A215).
+- Proof:
+  - `--engine ~/Applications/UE_5.8`, run when nothing else was using the engine: all 9 reference solutions (5 examples, 4 Pack 1 World 1 build quests) build and pass their tests, and all 9 starters fail. Total 472 s.
+  - The two timer examples now pass with M1.3's test world fix.
+  - typecheck passes and the content tests pass. The new tests cover bosses with no starter check, a boss folder with no tests, piece overrides being written and then removed, and the override folder rules.
+- Not done or left for later:
+  - neither boss has an integration yet (the World 1 one is being written by author-foundations; the example lighthouse has none)
+  - `--engine` has not been run on Windows
+
