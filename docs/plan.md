@@ -94,7 +94,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
 | M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | merged 2e29c7c | merged | 4 rounds; World 1 boss reference integration (A67) |
 | M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | merged 2e29c7c | merged | 2 rounds plus boss round; 24 of 24 on UE 5.8.3; main --engine clean |
-| M4.P1.3 Pack 1 World 3 "Containers and strings" | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-world3 @ 34b7f6d | re-review | All six items; 35 of 35; every mutation caught |
+| M4.P1.3 Pack 1 World 3 "Containers and strings" | content-foundations | author-foundations (session "M0.5 Glossary...") | merged | merged | 1 fix round; 35 of 35; all mutations caught |
+| M4.P1.4 Pack 1 World 4 | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-world4 | building | Same process |
 | M1.8c Missing boss integration is an error | content-engine | content-engine (session "M0.4 Content types...") | merged | merged | Lead checked the small diff; --engine 18 of 18 by the builder; example boss stays a warning (A520) |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | merged 07794f5 | merged | 4 fix rounds; at 1100x700 the revision note starts below the fold (accepted) |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
