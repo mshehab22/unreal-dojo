@@ -80,7 +80,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | merged | merged | 2 fix rounds; rematch farming closed, proven with randomized sequences |
 | M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | merged 4bff33b | merged | 2 fix rounds; merge conflicts with M1.3 resolved keeping both |
 | M2.1c World Map overflow with real content | ui-core | ui-core (session "M0.3 Design tokens...") | merged 8798d5d | merged | Passed first review |
-| M2.1d Codex palette hover and map polish | ui-core | ui-core (session "M0.3 Design tokens...") | m2-1d-palette-hover @ 0c728cd | review | Highlight on real pointer movement; resting-pointer e2e test |
+| M2.1d Codex palette hover and map polish | ui-core | ui-core (session "M0.3 Design tokens...") | merged | merged | Passed first review. Follow-up: the resting-pointer test uses a fixed pointer spot; read the row position at runtime so it keeps proving the fix |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 8665386 | merged | 1 fix round plus a test fix; includes the GFrameCounter timer fix |

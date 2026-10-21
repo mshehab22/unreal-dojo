@@ -18,8 +18,6 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 
 - 2026-10-21, qa: under heavy machine load (load average about 21 with several Unreal builds running), single end-to-end tests fail on timing (Cmd+K glossary search, the smoke window-height check) and pass on rerun. Owner: tester, to raise waits on the slow steps and keep engine runs serialized.
 
-- 2026-10-21, ui-core: in the Cmd/Ctrl+K palette, a result row that appears under a resting pointer becomes highlighted, so Enter can open the wrong term. Owner: ui-core (M2.1d), with an e2e test for the resting-pointer case. The QA harness parks the pointer at (0, 0) meanwhile.
-
 ## Unverified on a platform
 
 (The Lead lists here anything that passed on one machine and could not be run on the other.)
@@ -34,6 +32,8 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 - 2026-10-21, unreal-pipeline: M1.2a sandbox template, headless build and test, and the MCP calls passed on the Mac (UE 5.8.3). Unverified on Windows. Also unverified on UE 5.4 to 5.7: that `L_Sandbox.umap`, saved by 5.8, opens there, and that the C++ APIs used by `FDojoTestWorld` (`UWorld::SetBegunPlay`, `UWorld::CreateWorld` with its 5.8 signature, `FWorldContext::SetCurrentWorld`) exist with the same signatures.
 
 ## Solved
+
+- 2026-10-21, ui-core: Cmd/Ctrl+K palette highlighted rows under a resting pointer. Fixed in M2.1d (highlight on real pointer movement, with a resting-pointer e2e test).
 
 - 2026-10-21, unreal-pipeline (found by content-engine M1.8): `FDojoTestWorld::Tick` advanced timers only on its first frame. Solved in M1.3 (`++GFrameCounter` before each `World->Tick`); `--engine` passed both timer examples through M1.3's runners on 2026-10-21.
 
