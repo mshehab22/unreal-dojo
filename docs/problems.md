@@ -18,6 +18,8 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 
 - 2026-10-21, qa: under heavy machine load (load average about 21 with several Unreal builds running), single end-to-end tests fail on timing (Cmd+K glossary search, the smoke window-height check) and pass on rerun. Owner: tester, to raise waits on the slow steps and keep engine runs serialized.
 
+- 2026-10-21, ui-core: in the Cmd/Ctrl+K palette, a result row that appears under a resting pointer becomes highlighted, so Enter can open the wrong term. Owner: ui-core (M2.1d), with an e2e test for the resting-pointer case. The QA harness parks the pointer at (0, 0) meanwhile.
+
 ## Unverified on a platform
 
 (The Lead lists here anything that passed on one machine and could not be run on the other.)

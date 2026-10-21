@@ -48,7 +48,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 - [ ] M2.4 qa: the end-to-end learner flow (set up sandbox, hover a term, predict and pass a concept quest, do a drill, submit a breakdown and revise, fail then pass a build with a hint, loot screen, next quest unlocked, restart and persist) recorded as a GIF. Add to "Ready to playtest".
 
 ### M3 Patterns, mechanics, economy
-- [ ] M3.1 content-patterns: Pack 2 lesson zero (architecture lens) and the Observer mini-arc (predict and card, recognize, two use cases, refactor, when-not). Proof: verifier green with `--engine`.
+- [x] M3.1 content-patterns: Pack 2 lesson zero (architecture lens) and the Observer mini-arc (predict and card, recognize, two use cases, refactor, when-not). Proof: verifier green with `--engine`.
 - [ ] M3.2 content-mechanics: Pack 3 World 6 (delegates) with the Quest System boss (two reference breakdowns, pieces, integration rubric). Proof: verifier green with `--engine`.
 - [ ] M3.3 progress-and-rules + ui: daily quest with chests, Seer Stone flow, spree and armor display, streak celebrations, test-out drill per world. Proof: unit tests plus Playwright screenshots.
 - [ ] M3.4 ai-review: alternative-after-pass surfacing, free "why is this a finding" follow-up, reflection question answer flow. Proof: Playwright.
@@ -93,10 +93,11 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
 | M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c1b7533) | fixes (round 4) | Boss integration 10 of 10 with main template; add a test for hits cleared in round 2 and the A340 layout paragraph. Branch merges whole with World 2 once all parts pass |
-| M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c3c9c14) | re-review; boss waits on A67 | All 11 items; 20 of 20 on UE 5.8.3 with the World 1 boss pieces |
-| M2.2 Quest screens | ui-quests | builder-ui-quests (session) | m2-2-quest-screens | building | Concept, Drill, Breakdown, Build, Loot on the M2.1 data layer and fake |
-| M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | claude/m3-1-patterns-observer-0943eb @ 06ba8af | fixes (one sentence) | Re-review: all fixed, zero book matches; one lambda lifetime sentence and a glossary example left; Lead checks the diff |
-| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 14cb005 | re-review | Height tolerance A118; every spec on the harness |
+| M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c3c9c14) | fixes (one rubric line); boss waits on A67 | 20 of 20 on UE 5.8.3; new rack test proven |
+| M2.2 Quest screens | ui-quests | builder-ui-quests (session) | claude/m2-2-quest-screens-a21151 @ 214f85c | review | 485 unit, 20 e2e x3; follow-ups: retryReview, hint texts, viewSolution, boss picker |
+| M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
+| M4.x Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | from the M3.1 branch | building | Next pattern in Part 3 order |
+| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 14cb005 | fixes (round 3) | Height varies 5 points as the Dock resizes; bound the check instead of matching |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
 Queued for unreal-pipeline (from the M0.2c review, A426): `docs/systems/unreal-pipeline.md` lines 29 and 84 still name `ElectronStoreSandboxPathStore`; the class is unused once settings land.
