@@ -6,6 +6,24 @@ Newest first inside each section. A decision names the options considered, the c
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A06 2026-10-21 The Lead owns the board; builders own their iterations entry and spec
+Options: every session edits `docs/plan.md`; only the Lead edits it. Chosen: only the Lead edits `docs/plan.md`. Builders append their own entry to `docs/iterations.md` and update their own `docs/systems/<system>.md` on their branch. Why: several worktrees editing one board table conflict on every merge. Reverse cost: none.
+
+### A05 2026-10-21 M0.6 CI: workflow written and run locally now; the green GitHub run waits for a private repo
+Options: create a private GitHub repo now; write the workflow and prove each step locally, push later. Chosen: the second. There is no `gh` CLI or GitHub login on this Mac, and creating the repo needs your account. A private repo is not publishing, so once you log in (`gh auth login`) the Lead creates it as private and pushes. Reverse cost: none.
+
+### A04 2026-10-21 Start the sandbox template (part of M1.2) during M0, on the Mac
+Options: wait for M0 to finish; start now. Chosen: start now as task M1.2a. It only touches `resources/sandbox-template/` and needs no Node code, and it proves the riskiest unknown (does the template build with UE 5.8 and the MCP toolset plugins) early. Reverse cost: none.
+
+### A03 2026-10-21 UE 5.8.3 found on the Mac; the Mac becomes the first engine verification machine
+Found at `~/Applications/UE_5.8` (launcher install, 5.8.3, with `ModelContextProtocol`, `AutomationTestToolset`, `LiveCodingToolset` under `Engine/Plugins/Experimental/`). Xcode 27.1 is selected. Options: keep Windows first (D16); verify on the Mac first because the Lead and builders run here. Chosen: Mac first, Windows second, logged as "unverified on Windows" until run there. Reverse cost: none; both stay required.
+
+### A02 2026-10-21 Git repository created on `main`; `PLAN.md` deleted
+The folder was not a repository. Initialized with `main`, a `.gitignore` for node, build, and Unreal output, and repo-local author Mohammad. `PLAN.md` said it could be deleted, so it was. Reverse cost: none.
+
+### A01 2026-10-21 Node.js 24.22.1 LTS installed in your home folder
+Options: Homebrew (not installed, needs admin), the official `.pkg` (needs admin), nvm, the official tarball unpacked to `~/.local/node`. Chosen: the official arm64 tarball from nodejs.org, SHA-256 checked against `SHASUMS256.txt`, unpacked to `~/.local/node`, with one PATH line added to `~/.zprofile`. Node 24 is the current LTS (26 is not LTS yet). Reverse cost: delete the folder and the line.
+
 ## Decided during planning (2026-10-21)
 
 ### D01 App shell: Electron 44 + electron-vite 6

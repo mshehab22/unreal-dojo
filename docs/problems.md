@@ -7,7 +7,8 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 ## Open
 
 
-- 2026-10-21, unreal-pipeline: nothing has been verified against a real engine yet. The exact commands come from Epic's docs and forum posts in `research/tooling-and-stack.md` section 9; the first task on the board proves them.
+- 2026-10-21, unreal-pipeline: nothing has been verified against a real engine yet. UE 5.8.3 is now found on the Mac at `~/Applications/UE_5.8` (A03); task M1.2a proves the template build there first.
+- 2026-10-21, qa: no GitHub remote and no `gh` CLI on the Mac, so M0.6 cannot show a green Actions run. Workaround: the workflow is written and each step run locally (A05). Owner: Lead, after Mohammad runs `gh auth login`.
 - 2026-10-21, unreal-pipeline: a UE 5.8.3 on macOS forum report says Game-target builds can fail because UBA launches xcodebuild with a closed stdin. Spawn UBT with stdin set to ignore.
 
 ## Unverified on a platform

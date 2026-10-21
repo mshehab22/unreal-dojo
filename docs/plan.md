@@ -69,9 +69,15 @@ Reviewers are spawned fresh per task; they do not own systems.
 
 | Task | System | Owner | Worktree | Stage | Notes |
 | --- | --- | --- | --- | --- | --- |
-| (the Lead fills this as tasks start) | | | | | |
+| M0.1 Scaffold the app | app-shell | builder-shell | m0-1-scaffold | building | First; M0.2, M0.3, M0.4, M0.6 start when it merges |
+| M0.5 Glossary and pattern cards | content-foundations | author-foundations | m0-5-glossary | building | Content only; parse check waits for M0.4 |
+| M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal | m1-2a-sandbox-template | building | Started early (A04); UE 5.8.3 at ~/Applications/UE_5.8 |
+| M0.2 Typed IPC contract | app-shell | builder-shell | | waiting on M0.1 | |
+| M0.3 Design tokens and frame | ui-core | builder-ui-core | | waiting on M0.1 | |
+| M0.4 Content types, parser, verifier | content-engine | builder-content-engine | | waiting on M0.1 | |
+| M0.6 CI matrix | qa | tester | | waiting on M0.1 | Green run needs a private GitHub repo (A05) |
 
-Stages: building, review, fixes, testing, merged.
+Stages: waiting, building, review, fixes, testing, merged. Only the Lead edits this board (A06).
 
 ## Ready to playtest
 
