@@ -3,9 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import type { GlossaryEntry } from "@shared/types/content";
 
-import { formatDue, formatElapsed, formatMonth, humanizeId } from "../../src/renderer/src/lib/formatting";
+import { formatDue, formatElapsed, formatMonth, humanizeId, withoutBossPrefix } from "../../src/renderer/src/lib/formatting";
 import { levelStanding, xpToNextLevel } from "../../src/renderer/src/lib/levels";
 import { describeLoop } from "../../src/renderer/src/lib/loopDescription";
+import { hasPointerMoved } from "../../src/renderer/src/lib/pointerMovement";
 import { balancedRows, stagesPerRow } from "../../src/renderer/src/lib/pathRows";
 import { explainSandboxFailure } from "../../src/renderer/src/lib/sandboxFailure";
 import { groupSkills, skillPrefix } from "../../src/renderer/src/lib/skillGroups";
@@ -77,6 +78,12 @@ describe("formatting", () =>
 	it("turns ids into words", () =>
 	{
 		expect(humanizeId("night-market-lighting")).toBe("Night market lighting");
+	});
+
+	it("drops the boss prefix and starts with a capital", () =>
+	{
+		expect(withoutBossPrefix("Boss: the training yard")).toBe("The training yard");
+		expect(withoutBossPrefix("Plan a dash")).toBe("Plan a dash");
 	});
 
 	it("writes months out", () =>
@@ -166,5 +173,19 @@ describe("path rows", () =>
 		expect(balancedRows(stages, 12).map((row) => row.length)).toEqual([12]);
 		expect(balancedRows(stages, 5).map((row) => row.length)).toEqual([4, 4, 4]);
 		expect(balancedRows([], 5)).toEqual([]);
+	});
+});
+
+describe("hasPointerMoved", () =>
+{
+	it("never counts the first position, which only records where the pointer rests", () =>
+	{
+		expect(hasPointerMoved(null, { x: 10, y: 20 })).toBe(false);
+	});
+
+	it("ignores events from content moving under a still pointer and counts real moves", () =>
+	{
+		expect(hasPointerMoved({ x: 10, y: 20 }, { x: 10, y: 20 })).toBe(false);
+		expect(hasPointerMoved({ x: 10, y: 20 }, { x: 11, y: 20 })).toBe(true);
 	});
 });

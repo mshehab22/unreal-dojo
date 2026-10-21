@@ -449,3 +449,15 @@ exit code 0
 - Proof: typecheck passes. Unit tests: 40 files, 490 passed, including a new one: 30 items due, twelve drills in a row, and only the first 20 had their schedule moved today, with 10 still waiting for tomorrow. It fails on the round 1 code. Build passes. End-to-end: 14 of 14 passed.
 - Not done or left for later: nothing new; the M1.6b list still stands.
 
+## M2.1d Codex search keeps the keyboard's choice (ui-core, builder-ui-core)
+- What changed: in the Cmd+K search, a result row that appeared under a pointer resting over the panel took the highlight, so Enter opened that row instead of the top match (the tester saw "Save Game" open instead of "UPROPERTY" in 2 of 5 runs). The highlight now follows the pointer only when the pointer itself moves; rows that appear or slide under a still pointer (while typing, or while the panel rises into place) leave the keyboard's choice alone. The arrow keys and typing stay in charge. Each time the panel opens, the pointer's resting place is forgotten, so a pointer moved while the panel was closed does not count either. Two small World Map touches from the last review: a boss stage reads "The training yard" with a capital once its "Boss:" prefix is dropped (also on the Studio's shipped titles), and a small turn mark shows where a wrapped path continues on the next row.
+- How it was checked: a new screen test rests the pointer where the fourth result will appear, turns animation on (the panel's rise is what slides rows under the pointer), and opens the search five times, typing and pressing Enter each time. On the old code it failed on the second or third opening; with the fix it passed three runs in a row (15 openings). The same test checks that moving the pointer onto a row still highlights it.
+- Checks: `npm run typecheck` passes; `npm test` 596 passed, 7 skipped by their own suites (new: the pointer-moved rule and the boss title wording); `npx tsx tools/verify-content.ts` no problems; `npm run build` passes; `npm run test:e2e` 15 passed. The `m2-1-*.jpg` proofs were saved again.
+
+![[m2-1-world-map-1100x700.jpg|800]]
+*At the minimum size the 12-stage world wraps after six stages; the small turn mark under the end of the first row shows the path continues below.*
+
+![[m2-1-codex-search-1100x700.jpg|800]]
+*Codex search: the top match stays highlighted until the keyboard or a real pointer movement changes it.*
+
+- Decisions made: none new; the pointer rule is a bug fix under A240's data layer and A390's path layout.

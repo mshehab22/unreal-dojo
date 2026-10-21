@@ -1,6 +1,6 @@
 // The Cmd/Ctrl+K Codex search panel: type, move with the arrow keys, Enter opens the term in the Codex.
 import { SearchIcon } from "lucide-react";
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 
 import { useNavigate } from "@/app/router/useRoute";
 import { useCodexStore } from "@/app/useCodexStore";
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Kbd } from "@/components/ui/kbd";
 import { QUERY_KEYS } from "@/data/queryKeys";
 import { useDojoQuery } from "@/data/useDojoQuery";
+import { hasPointerMoved, type PointerPosition } from "@/lib/pointerMovement";
 import { searchGlossary } from "@/lib/searchGlossary";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,13 @@ export function CodexSearchPalette()
 	const glossary = useDojoQuery(QUERY_KEYS.glossary, (client) => client.getGlossary());
 	const [query, setQuery] = useState("");
 	const [activeIndex, setActiveIndex] = useState(0);
+	const lastPointer = useRef<PointerPosition | null>(null);
+
+	// Each opening starts fresh: wherever the pointer rests now, it has not moved inside this palette yet.
+	useEffect(() =>
+	{
+		lastPointer.current = null;
+	}, [isOpen]);
 
 	const results = useMemo(() => (query.trim() ? searchGlossary(glossary.data ?? [], query).slice(0, RESULT_LIMIT) : []), [glossary.data, query]);
 
@@ -37,6 +45,20 @@ export function CodexSearchPalette()
 		setOpen(false);
 		setQuery("");
 		navigate("codex");
+	};
+
+	/**
+	 * Moves the highlight to a row only when the pointer itself moved. Rows that appear or slide under a still pointer (typing, the
+	 * panel's rise-in) send enter and move events too; those must not steal the keyboard's highlight.
+	 */
+	const onRowPointerMove = (event: MouseEvent, index: number): void =>
+	{
+		const position = { x: event.clientX, y: event.clientY };
+		const moved = hasPointerMoved(lastPointer.current, position);
+
+		lastPointer.current = position;
+
+		if (moved) setActiveIndex(index);
 	};
 
 	/** Arrow keys move the highlight; Enter opens it. */
@@ -78,7 +100,7 @@ export function CodexSearchPalette()
 								<button
 									type="button"
 									onClick={() => open(entry.id)}
-									onMouseEnter={() => setActiveIndex(index)}
+									onMouseMove={(event) => onRowPointerMove(event, index)}
 									className={cn("flex w-full flex-col gap-0.5 rounded-md px-3 py-2 text-left", index === activeIndex ? "bg-raised" : "")}
 								>
 									<span className="flex items-baseline gap-2">

@@ -49,3 +49,11 @@ export function formatMonth(yearMonth: string): string
 
 	return new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
+
+/** A quest title without its "Boss: " prefix, starting with a capital: "Boss: the training yard" reads "The training yard". */
+export function withoutBossPrefix(title: string): string
+{
+	const stripped = title.replace(/^Boss:\s*/, "");
+
+	return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+}

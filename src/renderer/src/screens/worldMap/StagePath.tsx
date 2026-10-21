@@ -1,4 +1,6 @@
-// A world's quests as a path of stages that wraps into balanced rows to fit the card, each row on its own line (A390).
+// A world's quests as a path of stages that wraps into balanced rows to fit the card, each row on its own line, with a turn mark where it wraps (A390).
+import { CornerDownLeftIcon } from "lucide-react";
+
 import type { QuestOutline } from "@shared/types/catalog";
 import type { QuestAvailability } from "@shared/types/progress";
 
@@ -24,9 +26,10 @@ export function StagePath({ quests, availability, rematchShare }: StagePathProps
 
 	return (
 		<div ref={reference} data-testid="stage-path" data-rows={rows.length} className="flex min-w-0 flex-col gap-5">
-			{rows.map((row) =>
+			{rows.map((row, rowIndex) =>
 			{
 				const columnShare = 100 / columns;
+				const isLastRow = rowIndex === rows.length - 1;
 
 				return (
 					<div key={row[0]?.id} className="relative grid justify-items-center" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
@@ -40,6 +43,16 @@ export function StagePath({ quests, availability, rematchShare }: StagePathProps
 						{row.map((quest) => (
 							<StageNode key={quest.id} quest={quest} availability={availability[quest.id]} rematchShare={rematchShare} />
 						))}
+						{!isLastRow && (
+							// The turn mark: the path continues on the next row, from its first stage.
+							<CornerDownLeftIcon
+								aria-hidden="true"
+								data-testid="path-turn"
+								className="absolute -bottom-4 size-4 -translate-x-1/2 text-line-strong"
+								style={{ left: `${columnShare * (row.length - 0.5)}%` }}
+								strokeWidth={2}
+							/>
+						)}
 					</div>
 				);
 			})}

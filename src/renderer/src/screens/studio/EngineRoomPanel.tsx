@@ -4,7 +4,7 @@ import { BoxIcon } from "lucide-react";
 import type { AttemptRecord, PlayerProgress } from "@shared/types/progress";
 
 import { Panel } from "@/components/Panel";
-import { formatShortDate, humanizeId } from "@/lib/formatting";
+import { formatShortDate, humanizeId, withoutBossPrefix } from "@/lib/formatting";
 import type { QuestLocation } from "@/lib/questIndex";
 
 /** Props for EngineRoomPanel. */
@@ -29,7 +29,7 @@ function shippedTitles(attempts: readonly AttemptRecord[], quests: ReadonlyMap<s
 		{
 			const location = quests.get(attempt.questId);
 
-			return { title: location?.quest.title.replace(/^Boss: /, "") ?? attempt.questId, client: location?.world.title ?? "", at: attempt.at };
+			return { title: location ? withoutBossPrefix(location.quest.title) : attempt.questId, client: location?.world.title ?? "", at: attempt.at };
 		})
 		.reverse();
 }

@@ -159,6 +159,8 @@ test("screens show the returning learner's real numbers", async () =>
 	await expect(firstWorld.getByTestId("stage-node")).toHaveCount(12);
 	await setViewport(1100, 700);
 	await expect(firstWorld.getByTestId("stage-path")).not.toHaveAttribute("data-rows", "1");
+	await expect(firstWorld.getByTestId("path-turn")).toHaveCount(1);
+	await expect(firstWorld.getByTestId("stage-node").last()).toContainText("The training yard");
 	await expectNoSidewaysScroll("world map with 12 stages at 1100x700");
 	await setViewport(1440, 900);
 
@@ -207,6 +209,49 @@ test("Cmd/Ctrl+K searches the glossary and opens the term in the Codex", async (
 	await window.getByTestId("codex-category").selectOption("containers");
 	await expect(window.getByTestId("codex-list").getByRole("button")).toHaveCount(4);
 	await window.keyboard.press("Escape");
+});
+
+test("a pointer resting where results appear does not steal the keyboard highlight", async () =>
+{
+	await useDataSource("fake:returning");
+	await setViewport(1100, 700);
+	await goTo("#/studio", "screen-studio");
+
+	// With motion on, the palette rises into place under a resting pointer, which is when the learner and the tester hit this.
+	await window.emulateMedia({ reducedMotion: "no-preference" });
+
+	try
+	{
+		for (let run = 0; run < 5; run++)
+		{
+			// Rest the pointer where the fourth result row ends up (input 56 px, list padding 8 px, rows 56 px each).
+			await window.mouse.move(550, 126 + 56 + 8 + 56 * 3.5);
+			await window.keyboard.press(`${SHORTCUT_MODIFIER}+K`);
+			await window.keyboard.type("uprop");
+
+			await expect(window.getByTestId("codex-search-results").getByRole("option")).toHaveCount(4);
+			await window.waitForTimeout(250);
+			await expect(window.getByTestId("codex-search-results").getByRole("option").first(), `run ${run + 1}`).toHaveAttribute("aria-selected", "true");
+			await window.keyboard.press("Enter");
+			await expect(window.getByTestId("codex-entry"), `run ${run + 1}`).toHaveAttribute("data-term", "uproperty");
+		}
+
+		// A real pointer movement still moves the highlight.
+		await window.keyboard.press(`${SHORTCUT_MODIFIER}+K`);
+		await window.keyboard.type("uprop");
+		const secondRow = window.getByTestId("codex-search-results").getByRole("option").nth(1);
+		const rowBox = await secondRow.boundingBox();
+
+		if (!rowBox) throw new Error("the second row must have a box");
+
+		await window.mouse.move(rowBox.x + rowBox.width / 2, rowBox.y + rowBox.height / 2, { steps: 4 });
+		await expect(secondRow).toHaveAttribute("aria-selected", "true");
+		await window.keyboard.press("Escape");
+	}
+	finally
+	{
+		await window.emulateMedia({ reducedMotion: "reduce" });
+	}
 });
 
 test("Settings: test Claude Code, store an API key masked, and confirm before a reset", async ({}, testInfo) =>

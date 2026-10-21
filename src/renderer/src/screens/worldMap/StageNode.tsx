@@ -8,6 +8,7 @@ import type { QuestAvailability } from "@shared/types/progress";
 
 import { QUEST_KIND_DISPLAY } from "@/components/questKindIcons";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { withoutBossPrefix } from "@/lib/formatting";
 import { cn } from "@/lib/utils";
 
 /** Props for StageNode. */
@@ -89,7 +90,7 @@ export function StageNode({ quest, availability, rematchShare }: StageNodeProps)
 					>
 						{glyph()}
 					</span>
-					<span className={cn("line-clamp-2 text-2xs leading-tight", status === "locked" ? "text-paper-faint" : isRematch ? "text-warn" : "text-paper-muted group-hover:text-paper")}>{quest.title.replace(/^Boss: /, "")}</span>
+					<span className={cn("line-clamp-2 text-2xs leading-tight", status === "locked" ? "text-paper-faint" : isRematch ? "text-warn" : "text-paper-muted group-hover:text-paper")}>{withoutBossPrefix(quest.title)}</span>
 				</button>
 			</TooltipTrigger>
 			<TooltipContent className="max-w-64">
