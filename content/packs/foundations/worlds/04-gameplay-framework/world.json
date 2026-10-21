@@ -1,0 +1,5 @@
+{
+	"id": "gameplay-framework",
+	"title": "The gameplay framework",
+	"summary": "The yard grows into a real game: components that give any actor new behavior, a keeper who carries things, a registry every target joins, and a fence that builds itself. Learn who owns what in Unreal's framework: pawns and controllers, game modes and states, components, the actor lifecycle, worlds, and subsystems."
+}
