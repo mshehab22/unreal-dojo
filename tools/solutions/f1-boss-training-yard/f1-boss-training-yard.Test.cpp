@@ -177,6 +177,19 @@ bool FDojo_F1_TrainingYard_TwoRoundsPlayAlike::RunTest(const FString& Parameters
 			}
 			TestTrue(TEXT("R between rounds resets every target to lowered with no misses"), bAllReset);
 			TestFalse(TEXT("R between rounds stands every dummy up"), Yard.Dummies[0]->IsKnockedDown());
+			for (ADojoF1TrainingDummy* Dummy : Yard.Dummies)
+			{
+				TestEqual(TEXT("Every dummy's label reads 3 again"), Dummy->Label->Text.ToString(), FString(TEXT("3")));
+			}
+
+			// Every target ended round 1 broken, so one hit in round 2 must not break it again: its hits were cleared.
+			for (int32 Frame = 0; Frame < 60 * 3 && Yard.Director->CountRaised() == 0; ++Frame) TestWorld.Tick(1);
+			const int32 Risen = FindTarget(Yard, EDojoF1TargetState::ETS_Raised);
+			if (!TestTrue(TEXT("A target rises early in round 2"), Risen != INDEX_NONE)) return false;
+
+			Yard.Director->HitTarget(Risen);
+			TestEqual(TEXT("One hit in round 2 drops the target instead of breaking it"), Yard.Targets[Risen]->GetState(), EDojoF1TargetState::ETS_Lowered);
+			TestEqual(TEXT("Its label reads Down"), Yard.Targets[Risen]->Label->Text.ToString(), FString(TEXT("Down")));
 		}
 	}
 

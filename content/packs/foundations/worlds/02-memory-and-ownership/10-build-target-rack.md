@@ -220,7 +220,7 @@ bool FDojo_F2_TargetRack_CleansUpOnEndPlay::RunTest(const FString& Parameters)
 - A resting target is hidden with collision off; a lent target is visible, collidable, and raised; a recalled target is reset with ResetForRound, so nothing from its last use carries over.
 - The arrays holding the targets are UPROPERTYs, so the garbage collector sees the rack's references.
 - EndPlay destroys every target the rack owns, and calls Super::EndPlay last.
-- The rack refers to its targets; the pop-up target class is reused from World 1 without changes.
+- The rack refers to its targets; the pop-up target is reused as the training yard boss extended it, with no further changes.
 
 # Alternative
 
