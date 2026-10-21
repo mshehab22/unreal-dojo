@@ -6,7 +6,10 @@
     "problem": "A program that waits for input before doing anything cannot animate a torch, move an enemy, or count down a timer while the player sits still. The game needs its own heartbeat, and that heartbeat has to produce the same gameplay on a fast desktop and a slow laptop.",
     "unrealForm": "You do not write this loop in Unreal; the engine owns it. Each frame the engine ticks the world, which runs actors and components through tick groups (pre physics, during physics, post physics, post update work) while the render thread draws the previous frame. Your code receives DeltaSeconds and must scale motion by it. Fixed frame rate settings, physics substepping, and the async physics tick give fixed-step behavior when determinism matters.",
     "whenNot": "You never skip the loop itself; you skip writing your own. Building a second hand-rolled loop inside an Unreal actor (a while loop that blocks the game thread) freezes the editor. Only write a fixed-step accumulator when gameplay must be deterministic, such as replays or lockstep networking.",
-    "useCaseQuestIds": [],
+    "useCaseQuestIds": [
+      "p2-swinging-blade",
+      "p2-replay-ghost"
+    ],
     "recall": [
       {
         "id": "game-loop-recall-1",
@@ -44,6 +47,19 @@
           "Notes that frame delta varies by machine or by frame"
         ],
         "explanation": "Variable deltas make floating point results drift between runs; a fixed step removes that source of difference."
+      },
+      {
+        "id": "game-loop-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A fixed-step bank caps catch-up at four steps per frame. After a three-second hitch it has run its four steps. What should happen to the time still in the bank?",
+        "choices": [
+          "Keep it, so the next frames catch up",
+          "Drop it, so the game slows down for a moment instead of bursting",
+          "Spread it evenly over the next ten frames",
+          "Feed it into the simulation as one long step"
+        ],
+        "answerIndex": 1,
+        "explanation": "Kept time makes every following frame hit the cap again, and one long step breaks the fixed step. Dropping it costs a brief slowdown and nothing else."
       }
     ],
     "scenarios": [
@@ -100,6 +116,19 @@
           }
         ],
         "explanation": "Frame-time handling (time dilation, delta accumulation) belongs to the Game Loop pattern."
+      },
+      {
+        "id": "game-loop-scenario-3",
+        "type": "multiple-choice",
+        "prompt": "A health bar fades out over half a second after the player heals. A teammate wants to run the fade on a fixed 60 steps per second bank so it matches on every machine. What is the better call?",
+        "choices": [
+          "Use the bank, every animation should be deterministic",
+          "Scale the fade by DeltaSeconds; nobody compares fades across machines",
+          "Count 30 ticks",
+          "Use Use Fixed Frame Rate for the whole project"
+        ],
+        "answerIndex": 1,
+        "explanation": "A fade is a rate per second that only has to look right. A bank adds code to read for no requirement, and the other two make the game depend on the frame rate."
       }
     ]
   },

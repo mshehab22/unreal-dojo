@@ -479,3 +479,20 @@ exit code 0
 ### Fix round 2
 - The Observer card's lapsed-listener sentence is corrected: a plain `AddLambda` capturing the board does not keep it alive. Garbage collection never sees the binding, so the retired board keeps counting until it is freed, and the next broadcast then calls into freed memory.
 - The `multicast-delegate` glossary entry's example now uses this world's bounty board, crowd audio, and scoreboard instead of an achievement tracker (D13). Verifier `--pack patterns`: no problems. No code or tests changed, so the engine results from fix round 1 stand.
+
+## M4.x Pack 2 World 2, Time: the Game Loop arc (content-patterns, author-patterns)
+- What changed: the Patterns pack has a second world, "Time", with the full mini-arc for Game Loop (six quests). Unreal runs the outer loop itself, so the learner builds the part an Unreal programmer still writes by hand: a bank that spends each frame's real time in whole fixed steps, so a trap, a replay, or a rolling hazard plays the same at any frame rate. The pattern is named only after the first build (A473).
+- The quests and their observables:
+  - Every frame is a different length (concept): Tick, DeltaSeconds, tick groups, `stat fps` and `t.MaxFPS`, and why a "keep 98 percent" rule cannot be fixed by scaling.
+  - A blade that swings the same on every machine (build, worked): a damped swinging blade stepped 32 times a second. In the editor it swings and settles in the same time under `t.MaxFPS 20` as uncapped; in the tests, one second fed at 64, 8, and 4 frames per second leaves exactly the same angle, and the drawing sits halfway between steps when half a step is banked.
+  - The loop you never write, and the clock you do (concept): the Game Loop card and recognize items.
+  - A replay ghost that keeps its own clock (build, stub): a recorded four-second dash replayed by fixed steps. The label counts Step 0 / 64 up to DONE, double speed finishes in half the time at the same spot, and 0 pauses. Its deliberate failure: one three-second hitch must not turn into a sprint (A474).
+  - Take the boulder's drag off the frame rate (refactor): a boulder whose drag was applied per frame now stops at the same spot at 30, 60, and 120 frames per second, and rolls exactly as tuned at 60.
+  - When to leave the clock alone (concept): no second loop or sleeping on the game thread, DeltaSeconds for ordinary rates, timers and physics substepping first, and always cap a bank.
+- Also: a new `physics-substepping` glossary entry, the game-loop card's two use cases and two new items, `firstQuestId` on `tick`, `deltatime`, and `tick-groups` (A476).
+- Proof, UE 5.8.3 on the MacBook Air, fresh copies of the sandbox template, commands from the unreal-pipeline spec, under the shared engine lock:
+  - Reference solutions for both patterns worlds: build succeeded, 18 of 18 tests passed (9 new).
+  - Starters: all compile; 15 of 18 fail. On the World 2 side, every test fails except the boulder's 60 frames per second test, which passes on the working starter by design.
+  - The obvious replay ghost (no cap): only `HitchDoesNotTurnIntoASprint` fails, with "expected 4, was 32".
+  - Content verifier `--pack patterns` (full M1.8 checks on main): no problems.
+- Not done: no breakdown or boss for Time yet (A470); Update Method and Double Buffer come next in this world. No screenshots: the Mac's editor runs with `-NullRHI`. Windows unverified. Decisions A470 to A477.

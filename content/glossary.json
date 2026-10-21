@@ -1326,7 +1326,8 @@
       "tick-groups",
       "timer-manager",
       "delegate"
-    ]
+    ],
+    "firstQuestId": "p2-frame-time"
   },
   {
     "id": "deltatime",
@@ -1344,7 +1345,8 @@
       "tick",
       "fmath",
       "timer-manager"
-    ]
+    ],
+    "firstQuestId": "p2-frame-time"
   },
   {
     "id": "tick-groups",
@@ -1363,7 +1365,8 @@
       "tick",
       "primary-actor-tick",
       "physics-simulation"
-    ]
+    ],
+    "firstQuestId": "p2-frame-time"
   },
   {
     "id": "primary-actor-tick",
@@ -2173,6 +2176,26 @@
       "generate-overlap-events",
       "tick-groups"
     ]
+  },
+  {
+    "id": "physics-substepping",
+    "term": "Physics Substepping",
+    "aliases": [
+      "Substepping",
+      "substep",
+      "Max Substep Delta Time",
+      "Max Substeps"
+    ],
+    "category": "physics",
+    "short": "A project setting that splits one long frame into several smaller physics steps, so simulated bodies stay stable when the frame rate drops.",
+    "long": "A spring, a ragdoll, or a stack of crates is tuned for small physics updates; one long frame can make them jitter or fly apart. With substepping turned on in Project Settings under Physics, the engine runs several shorter physics steps inside that frame instead of one long one, up to a maximum count you set. It is the engine's built-in answer for simulated bodies. Gameplay code that must repeat exactly, such as a replay, still needs its own fixed step, because substepping keeps physics stable without making it identical across machines.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/physics-sub-stepping-in-unreal-engine?application_version=5.8",
+    "related": [
+      "physics-simulation",
+      "tick-groups",
+      "deltatime"
+    ],
+    "firstQuestId": "p2-game-loop-card"
   },
   {
     "id": "enhanced-input",
