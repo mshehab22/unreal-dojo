@@ -4,6 +4,24 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A285 2026-10-21 Engine smoke passes on the report, and requires the sample test by name (QA harness, tester)
+Options: trust the editor's exit code; read `index.json` and require no failures; also require `Dojo.Sample.Health.TakesDamage` to be present and passed. Chosen: the last. The pipeline spec already says the report decides (exit code 3 on a failed assertion, and a filter that matches nothing can still exit 0 with an empty report). "Succeeded with warnings" counts as passed, as in the spec. Reverse cost: one condition.
+
+### A284 2026-10-21 Engine smoke prepares the sandbox the way SandboxProjectService will, without importing it (QA harness, tester)
+SandboxProjectService is not on main yet. Options: wait for it; copy the template and write `EngineAssociation` and the plugin list in the script. Chosen: the script does it, following A41: `EngineAssociation` is the engine's major.minor (for example `5.8`), and the three 5.8 plugins are removed for older engines. It reuses `EngineLocator`, `createUnrealPlatform`, and `PlatformPaths` from `src/main/services/unreal/` read-only, so the paths match the app's. When SandboxProjectService lands, the script should call it instead. Reverse cost: low.
+
+### A283 2026-10-21 Dialog stubs replace methods on Electron's `dialog` object from the test (QA harness, tester)
+Options: an environment variable the app reads to skip dialogs (needs `src/` changes, and test code in the app); replacing `dialog.showOpenDialog`, `showOpenDialogSync`, `showMessageBox`, `showMessageBoxSync` through `electronApp.evaluate`, as research section 7 suggests. Chosen: the second. The app imports the same `dialog` object, so its calls hit the stub; nothing ships in the app. Save dialogs are not stubbed yet; add them when a screen uses one. Reverse cost: none.
+
+### A282 2026-10-21 One failure screenshot per failing test; proof pictures copied only after a pass (QA harness, tester)
+Options: keep each spec's own screenshot code (M0.6 smoke saved `window.png` in a `finally`; ui-core copied proofs the moment they were taken, even if a later check failed); move both into the harness. Chosen: the harness. The `dojo` fixture saves `failure.png` for any failing test, including tests that take no screenshots of their own; `ProofCamera` queues proof copies and makes them only when the test passed with `SAVE_PROOF=1`. This replaces the M0.6 smoke's "window.png on failure" with `failure.png`. Reverse cost: low.
+
+### A281 2026-10-21 Every e2e test gets its own app launch (QA harness, tester)
+The brief asks for a fresh userData folder per test, which needs a fresh launch per test. Options: one launch per spec file (the ui-core spec's old `beforeAll`); one per test. Chosen: per test, through a Playwright fixture. The ui-core spec goes from one launch to three; each launch costs about 0.4 s here, and the whole suite still runs in under 5 s. Tests can no longer leak state into each other. Reverse cost: a worker-scoped fixture.
+
+### A280 2026-10-21 Fresh userData through Chromium's `--user-data-dir` switch (QA harness, tester)
+Options: an app flag or environment variable that calls `app.setPath("userData", ...)` (needs `src/`, which this task may not touch); override `APPDATA` or `HOME` (works on Windows only, macOS ignores `HOME` for Application Support); pass `--user-data-dir=<temp folder>`. Chosen: the switch. Electron 44 points `app.getPath("userData")` at it, which `e2e/harness.spec.ts` checks. The folder path is resolved with `realpath` because the macOS temp folder is a symlink and Electron reports the resolved path. Unverified on Windows. Reverse cost: one line.
+
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
 ### A381 2026-10-21 One cross-pack prerequisite, and Pack 2 stays open from the start (author-patterns, M3.1)

@@ -508,3 +508,27 @@ exit code 0
 *Codex search: the top match stays highlighted until the keyboard or a real pointer movement changes it.*
 
 - Decisions made: none new; the pointer rule is a bug fix under A240's data layer and A390's path layout.
+
+
+
+## QA harness and engine smoke (qa-and-ci, tester)
+- What changed: every end-to-end test now starts its own copy of the app with an empty, throwaway settings folder, so no test can see what another one saved and none touch the real settings. Tests can now answer the app's folder pickers and message boxes without a real dialog popping up. Any failing test leaves a picture of the window as it was, and proof pictures for this file are only refreshed by tests that passed. The two existing test files were moved onto this shared setup without changing what they check. A new engine check copies the sandbox template, builds it with Unreal, runs its sample test with no editor window, and prints how long each step took.
+- How to see it: `npm run build` then `npm run test:e2e` (add `SAVE_PROOF=1` to refresh the proof pictures). For the engine check: `npx tsx tools/qa/engine-smoke.ts` (add `--keep` to keep the build and test logs, `--engine <folder>` to pick an engine).
+- What went wrong and how it was solved: the first harness check failed because macOS reports the temp folder through its real path (`/private/var/...`) while the test expected the short one; the harness now resolves the real path first (A280). The first failure-picture version only fired for tests that used the screenshot helper; it moved into the app fixture so every failing test gets one (A282).
+- Proof: typecheck passes; unit tests 11 files, 132 tests passed; content verifier exit 0 (10 files, no problems); build passes; end-to-end 8 passed in 4.8 s (4 harness checks, the smoke test, the 3 ui-core tests). Failure path: a copy of the smoke test with a wrong expected version, run with `SAVE_PROOF=1`, failed as intended, wrote `test-results/.../failure.png`, and left `docs/iterations/m0-1-window.png` untouched; the same smoke test passing with `SAVE_PROOF=1` copied its picture into `docs/iterations/` (that refresh was then reverted, as the picture had not changed).
+- Engine smoke on the MacBook Air M5, UE 5.8.3 (launcher install), from `main` plus this branch (the template is unchanged from `main`):
+
+```
+step                          seconds  result
+copy template                       0  ok
+build DojoEditor                 19.1  exit 0
+headless Dojo.Sample.Health      21.2  exit 0
+total                            40.3  PASSED
+
+report: 1 passed (0 with warnings), 0 failed, 0 not run, engine-reported test time 0.012 s
+  Success                Dojo.Sample.Health.TakesDamage (0.012 s, 0 errors, 0 warnings)
+```
+
+  An earlier run the same hour (before a small cleanup of the report reader) also passed: build 22.5 s, headless run 34.7 s, total 57.2 s, while other sessions were busy on the machine. Both match the cold-build and headless timings in `docs/systems/unreal-pipeline.md`.
+- Decisions made: A280 to A285 in `docs/decisions.md`.
+- Not done or left for later: save dialogs are not stubbed yet (no screen uses one). The engine check's failure path (a failing test or a broken build) was not exercised; it was only run against the passing template. Unverified on Windows: the `--user-data-dir` switch, the dialog stubs, and the engine check's `Build.bat` call through `cmd.exe`. When SandboxProjectService lands, the engine check should use it instead of preparing the sandbox itself (A284).
