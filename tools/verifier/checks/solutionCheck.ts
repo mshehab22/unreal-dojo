@@ -8,13 +8,13 @@ import type { ContentCheck, QuestRecord } from "../ContentCheck";
 import { errorAt, warningAt } from "./checkHelpers";
 
 /**
- * A boss with no integration folder is a warning while the first boss integrations are being written, and becomes an
- * error once the Pack 1 World 1 boss has one (A215). A folder that exists but has no code or no tests is always an error.
+ * A pack boss with no integration folder is an error now that the Pack 1 bosses have theirs (A215, A520). The format
+ * example boss stays a warning until it gets one. A folder that exists but has no code or no tests is always an error.
  */
-const MISSING_BOSS_INTEGRATION_IS_ERROR = false;
+const MISSING_BOSS_INTEGRATION_IS_ERROR = true;
 
 /** Problems with one boss's reference integration in `tools/solutions/<boss-id>/` (A67). */
-async function checkBossIntegration({ quest, file }: QuestRecord, solutionsFolder: string, questsById: ReadonlyMap<string, QuestRecord["quest"]>): Promise<ContentProblem[]>
+async function checkBossIntegration({ quest, file, packId }: QuestRecord, solutionsFolder: string, questsById: ReadonlyMap<string, QuestRecord["quest"]>): Promise<ContentProblem[]>
 {
 	const folder = `solutions/${quest.id}/`;
 	const integration = await readBossSolution(solutionsFolder, quest.id);
@@ -23,7 +23,9 @@ async function checkBossIntegration({ quest, file }: QuestRecord, solutionsFolde
 	{
 		const message = `no reference integration: add ${folder} with the integration's .h and .cpp files and a ${BOSS_TEST_SUFFIX} that plays two rounds (A67)`;
 
-		return [MISSING_BOSS_INTEGRATION_IS_ERROR ? errorAt(file, message, "Spec") : warningAt(file, message, "Spec")];
+		const isExample = packId === undefined;
+
+		return [MISSING_BOSS_INTEGRATION_IS_ERROR && !isExample ? errorAt(file, message, "Spec") : warningAt(file, `${message}${isExample ? " (format example: a warning, A520)" : ""}`, "Spec")];
 	}
 
 	const problems: ContentProblem[] = [];

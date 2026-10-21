@@ -31,6 +31,9 @@ Options: an app flag or environment variable that calls `app.setPath("userData",
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A520 2026-10-21 A missing boss integration is an error for pack bosses; the format example boss stays a warning (M1.8c, builder-content-engine)
+Both Pack 1 bosses now ship A67 integrations, so `MISSING_BOSS_INTEGRATION_IS_ERROR` is true (A215). The format example boss `example-boss-lighthouse` has none, and flipping the rule for it would fail every verifier run on main. Options: write a lighthouse integration now (about 500 to 700 lines of C++ and a two-round test, like the Pack 1 bosses, which is more than this small task); delete the example boss; keep the example as a warning. Chosen: the example stays a warning, marked "format example" in the message, until it gets an integration as its own follow-up. Pack bosses get no exemption. The A68 gate check is not part of M1.8c: builder-rules adds it in M1.6d. Reverse cost: none.
+
 ### A503 2026-10-21 Two small edits outside progress-and-rules for the revealed hints (M1.6c, builder-rules)
 The new required `QuestProgress.revealedHints` field broke the renderer's fake progress fixture, so `src/renderer/src/data/fake/fixtures/progressFixture.ts` gains one line (`[0]` where it set one hint revealed, else `[]`). The shared contract changed in three small places: `revealHint(questId, hintIndex?)` in `src/shared/ipc.ts`, `hintIndexSchema` (0 to 2, optional) in `src/main/ipc/requestSchemas.ts`, and the optional `revealedHints` on build and refactor `LearnerQuest` in `src/shared/types/catalog.ts`. `getQuest` and `getWorld` now answer through `ProgressContentService`, which reads the catalog and adds the revealed texts. Options: ask each owner first; make the edits and name them here. Chosen: the second, since each is a type ripple of this task. Reverse cost: none.
 
