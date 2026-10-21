@@ -110,7 +110,7 @@ void ADojoExTickLantern::Flicker()
 
 #if WITH_AUTOMATION_TESTS
 
-#include "DojoExTickLantern.h"
+#include "Quests/example-refactor-lantern-tick/DojoExTickLantern.h"
 #include "Support/DojoTestWorld.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_Examples_TickLantern_SameRhythmNoTick, "Dojo.Examples.TickLantern.SameRhythmNoTick", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)

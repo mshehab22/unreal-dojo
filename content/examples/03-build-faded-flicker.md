@@ -121,7 +121,7 @@ void ADojoExFlickerLantern::EndPlay(const EEndPlayReason::Type EndPlayReason)
 #if WITH_AUTOMATION_TESTS
 
 #include "Components/PointLightComponent.h"
-#include "DojoExFlickerLantern.h"
+#include "Quests/example-build-faded-flicker/DojoExFlickerLantern.h"
 #include "Support/DojoTestWorld.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_Examples_Flicker_DipsAndRestores, "Dojo.Examples.Flicker.DipsAndRestores", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)

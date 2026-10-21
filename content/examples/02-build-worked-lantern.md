@@ -92,7 +92,7 @@ void ADojoExLantern::BeginPlay()
 #if WITH_AUTOMATION_TESTS
 
 #include "Components/PointLightComponent.h"
-#include "DojoExLantern.h"
+#include "Quests/example-build-worked-lantern/DojoExLantern.h"
 #include "Support/DojoTestWorld.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_Examples_Lantern_StartsLit, "Dojo.Examples.Lantern.StartsLit", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)

@@ -1,14 +1,15 @@
-// Content verifier entry point: parses every content file and reports problems per file. Parse-only mode for now (M0.4).
+// Content verifier entry point: parses and checks every content file, optionally builds and tests reference solutions, and reports per file.
 import { resolve } from "node:path";
 
 import { formatReport } from "./verifier/formatReport";
 import { parseVerifierArguments, USAGE } from "./verifier/parseVerifierArguments";
-import { runVerifier } from "./verifier/runVerifier";
+import { runEngineStage } from "./verifier/engine/runEngineStage";
+import { addProblems, runVerifier } from "./verifier/runVerifier";
 
 /** Exit code for content problems. */
 const EXIT_PROBLEMS = 1;
 
-/** Exit code for a bad command line or a mode that does not exist yet. */
+/** Exit code for a bad command line. */
 const EXIT_USAGE = 2;
 
 /** Reads the command line, runs the verifier, prints the report, and sets the exit code. */
@@ -29,14 +30,14 @@ async function main(): Promise<void>
 		return;
 	}
 
+	let result = await runVerifier(parsed.options);
+
 	if (parsed.options.enginePath !== undefined)
 	{
-		console.error("verify-content: --engine (compile and test reference solutions) arrives in M1.8; nothing was checked.");
-		process.exitCode = EXIT_USAGE;
-		return;
-	}
+		const engine = await runEngineStage(parsed.options.enginePath, parsed.options, result, (line) => console.error(line));
 
-	const result = await runVerifier(parsed.options);
+		result = addProblems(result, engine.problems);
+	}
 
 	for (const line of formatReport(result)) console.log(line);
 

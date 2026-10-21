@@ -71,7 +71,7 @@ private:
 #include "DojoExLanternSwitch.h"
 
 #include "Components/PointLightComponent.h"
-#include "DojoExLantern.h"
+#include "Quests/example-build-worked-lantern/DojoExLantern.h"
 
 ADojoExLanternSwitch::ADojoExLanternSwitch()
 {
@@ -103,8 +103,8 @@ void ADojoExLanternSwitch::ApplyToAll()
 #if WITH_AUTOMATION_TESTS
 
 #include "Components/PointLightComponent.h"
-#include "DojoExLantern.h"
-#include "DojoExLanternSwitch.h"
+#include "Quests/example-build-worked-lantern/DojoExLantern.h"
+#include "Quests/example-build-stub-lantern-switch/DojoExLanternSwitch.h"
 #include "Support/DojoTestWorld.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_Examples_Switch_TogglesAll, "Dojo.Examples.Switch.TogglesAll", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)

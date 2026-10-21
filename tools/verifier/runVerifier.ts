@@ -167,3 +167,17 @@ export async function runVerifier(options: VerifierOptions, checks: readonly Con
 
 	return { reports, problemCount: errors, warningCount: warnings, counts, elapsedMilliseconds: performance.now() - started, input };
 }
+
+/** Adds later problems (the engine stage) to a result: each lands under its file, and the counts are redone. */
+export function addProblems(result: VerifierResult, problems: readonly ContentProblem[]): VerifierResult
+{
+	const reports = groupByFile([], [...result.reports.flatMap((report) => report.problems), ...problems]);
+
+	for (const report of result.reports) if (!reports.some((existing) => existing.file === report.file)) reports.push({ file: report.file, problems: [] });
+
+	reports.sort((first, second) => first.file.localeCompare(second.file));
+
+	const { errors, warnings } = countProblems(reports);
+
+	return { ...result, reports, problemCount: errors, warningCount: warnings };
+}
