@@ -80,13 +80,13 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | merged | merged | 2 fix rounds; rematch farming closed, proven with randomized sequences |
 | M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | merged 4bff33b | merged | 2 fix rounds; merge conflicts with M1.3 resolved keeping both |
 | M2.1c World Map overflow with real content | ui-core | ui-core (session "M0.3 Design tokens...") | merged 8798d5d | merged | Passed first review |
-| M2.1d Codex palette hover and map polish | ui-core | ui-core (session "M0.3 Design tokens...") | m2-1d-palette-hover | building | Highlight on pointer move, not enter |
+| M2.1d Codex palette hover and map polish | ui-core | ui-core (session "M0.3 Design tokens...") | m2-1d-palette-hover @ 0c728cd | review | Highlight on real pointer movement; resting-pointer e2e test |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 8665386 | merged | 1 fix round plus a test fix; includes the GFrameCounter timer fix |
 | M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring @ 99a6796 | review | Plus reference solutions shipped as solutions/ in the app bundle |
 | M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged 742676e | merged | 1 fix round; probes verified in a packaged build |
-| M1.7c submitQuest and review IPC wiring | ai-review | builder-review (session) | m1-7c-submit-wiring | building | Provider IPC and real graders now; submitQuest finishes after M1.3b merges |
+| M1.7c submitQuest and review IPC wiring | ai-review | builder-review (session) | m1-7c-submit-wiring | building | Lead: review and capped submitted files stored on the attempt (edited by builder-review in ProgressService); tests-only review counts tests only |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | merged b06a722 | merged | 2 rounds; --engine 9 of 9 on UE 5.8.3 through M1.3 runners |
 | M1.8b Verifier follow-ups | content-engine | content-engine (session "M0.4 Content types...") | m1-8b-verifier-followups | building | Bare-name cross-quest includes, Ctrl+C cancel, template copy skips build folders |
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
