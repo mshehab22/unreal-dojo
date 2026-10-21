@@ -84,7 +84,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop @ 3891f21 | fixes | Reviewer reran 7 of 7 on UE 5.8.3; timer fix confirmed. Round 1: test filter matches other quests (confirmed), Windows argv0 unquoted on spaced engine path, orphaned runs on quit, long-path warning not sent |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | m1-8-verifier @ 5ac6787 | fixes | Reviewer confirmed 3 of 5 and the timer diagnosis (5 of 5 with the M1.3 fix). Round 1: starter check edge cases, report layout, tests, comments. Round 2 after M1.3 merges: reuse M1.3 runners (A63), rerun --engine |
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
-| M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | m2-1-core-screens @ d71b79d | fixes | Re-review PASS. Merge reverted: the typed fake no longer matches the M1.6 types; rebasing and updating fixtures |
+| M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3-pack1-world1 @ 5928451 | fixes | Reviewer built all solutions on UE 5.8.3 (7 of 7). Round 1: score keeper observable wrong with ke *, boss cannot lower targets and rule never triggers, boss input unnamed, two tests miss observables, glossary dash wording, A64 to A66 |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 8b6e368 | fixes | Round 1: cleanup and test order now; after M1.3 merges the smoke reuses M1.3 runners (A63) |
 
@@ -99,6 +99,15 @@ Stages: waiting, building, review, fixes, testing, merged. Only the Lead edits t
 ## Ready to playtest
 
 (What Mohammad can try now, with exact steps. Nothing waits on this.)
+
+### Core screens with sample data (M2.1, merged 2026-10-21)
+What is new: Title, First-run setup, Studio, World Map, Character, Codex, and Settings. They run on built-in sample data because quests, drills, builds, and reviews are not connected yet.
+1. In the project folder on the Mac: `npm install`, then `VITE_DOJO_FAKE=returning npm run dev`. The rail shows a "Fake data" badge.
+2. Walk the rail: Studio, World Map, Character, Codex, Settings. On the World Map, hover a locked stage to see why it is locked; hover "Test out" to see why it is disabled.
+3. Press Cmd+K and search the glossary (for example "UPROPERTY"); open an entry and its Epic docs link.
+4. For a first-time learner, quit and run `VITE_DOJO_FAKE=fresh npm run dev`: go through First-run (engine pick, sandbox folder, a simulated full build). `VITE_DOJO_FAKE=first-build-fails npm run dev` shows the failure and retry path.
+5. Resize the window down to its minimum (1100x700).
+Look for: does it feel like a game studio you want to come back to, is anything hard to read, anything confusing in First-run, and does the skill tree on Character make your mastery clear at a glance.
 
 ## Handoff notes
 
