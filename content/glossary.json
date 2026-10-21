@@ -1081,7 +1081,8 @@
       "isvalid",
       "destroy",
       "uobject"
-    ]
+    ],
+    "firstQuestId": "f2-garbage-collection"
   },
   {
     "id": "tobjectptr",
@@ -1100,7 +1101,8 @@
       "tweakobjectptr",
       "tsoftobjectptr",
       "coding-standard"
-    ]
+    ],
+    "firstQuestId": "f1-uproperty-specifiers"
   },
   {
     "id": "tweakobjectptr",
@@ -1118,7 +1120,8 @@
       "garbage-collection",
       "isvalid",
       "tsharedptr"
-    ]
+    ],
+    "firstQuestId": "f2-weak-and-soft-references"
   },
   {
     "id": "tsoftobjectptr",
@@ -1138,7 +1141,8 @@
       "tsubclassof",
       "data-asset",
       "primary-data-asset"
-    ]
+    ],
+    "firstQuestId": "f2-weak-and-soft-references"
   },
   {
     "id": "tsubclassof",
@@ -1157,7 +1161,8 @@
       "blueprint-class",
       "constructor-helpers",
       "tsoftobjectptr"
-    ]
+    ],
+    "firstQuestId": "f2-tsubclassof-and-spawning"
   },
   {
     "id": "tsharedptr",
@@ -1177,7 +1182,8 @@
       "tuniqueptr",
       "tweakobjectptr",
       "garbage-collection"
-    ]
+    ],
+    "firstQuestId": "f2-smart-pointers"
   },
   {
     "id": "tuniqueptr",
@@ -1194,7 +1200,8 @@
     "related": [
       "tsharedptr",
       "garbage-collection"
-    ]
+    ],
+    "firstQuestId": "f2-smart-pointers"
   },
   {
     "id": "newobject",
@@ -1211,7 +1218,8 @@
       "createdefaultsubobject",
       "uobject",
       "garbage-collection"
-    ]
+    ],
+    "firstQuestId": "f2-creating-objects"
   },
   {
     "id": "spawnactor",
@@ -1231,7 +1239,8 @@
       "actor",
       "object-pool",
       "destroy"
-    ]
+    ],
+    "firstQuestId": "f2-tsubclassof-and-spawning"
   },
   {
     "id": "createdefaultsubobject",
@@ -1249,7 +1258,8 @@
       "root-component",
       "newobject",
       "visibleanywhere"
-    ]
+    ],
+    "firstQuestId": "f2-creating-objects"
   },
   {
     "id": "isvalid",
@@ -1268,7 +1278,8 @@
       "cast",
       "check-macro",
       "destroy"
-    ]
+    ],
+    "firstQuestId": "f2-destroy-and-lifetime"
   },
   {
     "id": "beginplay",
@@ -1307,6 +1318,7 @@
       "timer-manager"
     ],
     "firstQuestId": "p1-multicast-delegates"
+    "firstQuestId": "f2-destroy-and-lifetime"
   },
   {
     "id": "tick",
@@ -1676,7 +1688,8 @@
       "object-pool",
       "spawnactor"
     ],
-    "linkMode": "code-only"
+    "linkMode": "code-only",
+    "firstQuestId": "f2-destroy-and-lifetime"
   },
   {
     "id": "on-construction",
@@ -3491,7 +3504,8 @@
       "cdo",
       "blueprint-class",
       "default-pawn-class"
-    ]
+    ],
+    "firstQuestId": "f2-tsubclassof-and-spawning"
   },
   {
     "id": "forceinline",
@@ -3565,7 +3579,8 @@
       "primary-actor-tick",
       "tarray",
       "garbage-collection"
-    ]
+    ],
+    "firstQuestId": "f2-clay-thrower"
   },
   {
     "id": "console-command",
