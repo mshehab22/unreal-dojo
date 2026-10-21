@@ -1,7 +1,7 @@
 // Picks what is due today (cap 20, overflow slides), puts hovered terms and "Drill me" items first, and composes one 6 to 10 item drill.
 import type { DrillSummary, PlayerProgress } from "@shared/types/progress";
 
-import { endOfLocalDay } from "./calendarDays";
+import { endOfLocalDay, startOfLocalDay } from "./calendarDays";
 import { MasteryRules } from "./MasteryRules";
 import type { RandomSource } from "./RandomSource";
 import { DAILY_DUE_CAP, DRILL_SIZE, HOVER_INJECTION_THRESHOLD } from "./rules";
@@ -23,6 +23,9 @@ export interface DrillCandidate
 
 	/** The topic (skill prefix or world) used to mix items across topics. */
 	topic: string;
+
+	/** Identifies the question or block shown, so one question asked about two items appears once per drill. */
+	contentId?: string;
 }
 
 /** Due-today rules and drill composition. Pure: time and randomness come in as arguments. */
@@ -31,19 +34,29 @@ export class DrillScheduler
 	/** Reads mastery for the hover injection rule. */
 	private readonly mastery = new MasteryRules();
 
-	/** Builds the Studio home summary: due today capped at 20, the overflow that slides to tomorrow, and the next due time. */
+	/** Builds the Studio home summary: due today within what is left of the daily cap, the overflow that slides to tomorrow, and the next due time. */
 	summary(progress: PlayerProgress, now: Date): DrillSummary
 	{
 		const due = this.allDueIds(progress, now);
 		const nextDueAt = Object.values(progress.schedule).sort()[0] ?? null;
+		const remaining = this.remainingCap(progress, now);
 
-		return { dueToday: Math.min(DAILY_DUE_CAP, due.length), overflow: Math.max(0, due.length - DAILY_DUE_CAP), nextDueAt };
+		return { dueToday: Math.min(remaining, due.length), overflow: Math.max(0, due.length - remaining), nextDueAt };
 	}
 
-	/** Today's due items in priority order, capped at 20: "Drill me" items, then terms hovered 3+ times that are not yet familiar, then scheduled items oldest due first. */
+	/** Today's due items in priority order, within what is left of the daily cap: "Drill me" items, then terms hovered 3+ times that are not yet familiar, then scheduled items oldest due first. */
 	dueToday(progress: PlayerProgress, now: Date): string[]
 	{
-		return this.allDueIds(progress, now).slice(0, DAILY_DUE_CAP);
+		return this.allDueIds(progress, now).slice(0, this.remainingCap(progress, now));
+	}
+
+	/** What is left of today's cap of 20: the cap minus the distinct items already reviewed since local midnight, so a backlog spreads over days however many drills run. */
+	remainingCap(progress: PlayerProgress, now: Date): number
+	{
+		const midnight = startOfLocalDay(now).getTime();
+		const reviewedToday = new Set(progress.reviewLog.filter((entry) => new Date(entry.at).getTime() >= midnight).map((entry) => entry.itemId));
+
+		return Math.max(0, DAILY_DUE_CAP - reviewedToday.size);
 	}
 
 	/** Terms hovered at least 3 times that the learner has not reached familiar on. */
@@ -60,34 +73,38 @@ export class DrillScheduler
 	 * a required format or the minimum size. Holds 6 to 10 items, at least one of each required format when any exists,
 	 * mixed across topics, in a shuffled order.
 	 */
-	compose(priority: DrillCandidate[], pool: DrillCandidate[], random: RandomSource): DrillCandidate[]
+	compose<Candidate extends DrillCandidate>(priority: Candidate[], pool: Candidate[], random: RandomSource): Candidate[]
 	{
-		const chosen: DrillCandidate[] = [];
+		const chosen: Candidate[] = [];
 		const chosenIds = new Set<string>();
-		const take = (candidate: DrillCandidate): void =>
+		const chosenContent = new Set<string>();
+		const isFree = (candidate: Candidate): boolean => !chosenIds.has(candidate.itemId) && (candidate.contentId === undefined || !chosenContent.has(candidate.contentId));
+		const take = (candidate: Candidate): void =>
 		{
 			chosen.push(candidate);
 			chosenIds.add(candidate.itemId);
+			if (candidate.contentId !== undefined) chosenContent.add(candidate.contentId);
 		};
 
 		for (const format of REQUIRED_DRILL_FORMATS)
 		{
-			const fromPriority = priority.find((candidate) => candidate.format === format && !chosenIds.has(candidate.itemId));
-			const poolOfFormat = pool.filter((candidate) => candidate.format === format && !chosenIds.has(candidate.itemId));
+			const fromPriority = priority.find((candidate) => candidate.format === format && isFree(candidate));
+			const poolOfFormat = pool.filter((candidate) => candidate.format === format && isFree(candidate));
 			const pick = fromPriority ?? this.pickRandom(poolOfFormat, random);
 
 			if (pick) take(pick);
 		}
 
-		for (const candidate of this.interleaveByTopic(priority.filter((candidate) => !chosenIds.has(candidate.itemId))))
+		for (const candidate of this.interleaveByTopic(priority.filter(isFree)))
 		{
 			if (chosen.length >= DRILL_SIZE.max) break;
+			if (!isFree(candidate)) continue;
 			take(candidate);
 		}
 
 		while (chosen.length < DRILL_SIZE.min)
 		{
-			const pick = this.pickRandom(pool.filter((candidate) => !chosenIds.has(candidate.itemId)), random);
+			const pick = this.pickRandom(pool.filter(isFree), random);
 			if (!pick) break;
 			take(pick);
 		}
@@ -126,9 +143,9 @@ export class DrillScheduler
 	}
 
 	/** Round-robin across topics in order of first appearance, keeping each topic's own order. */
-	private interleaveByTopic(candidates: DrillCandidate[]): DrillCandidate[]
+	private interleaveByTopic<Candidate extends DrillCandidate>(candidates: Candidate[]): Candidate[]
 	{
-		const byTopic = new Map<string, DrillCandidate[]>();
+		const byTopic = new Map<string, Candidate[]>();
 
 		for (const candidate of candidates)
 		{
@@ -138,7 +155,7 @@ export class DrillScheduler
 		}
 
 		const queues = [...byTopic.values()];
-		const interleaved: DrillCandidate[] = [];
+		const interleaved: Candidate[] = [];
 
 		while (queues.some((queue) => queue.length > 0))
 		{

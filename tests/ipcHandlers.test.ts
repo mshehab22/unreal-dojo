@@ -9,6 +9,7 @@ import { createHandlers, type ContentCatalogService, type HandlerDependencies } 
 import type { HandlerDefinition } from "../src/main/ipc/HandlerDefinition";
 import { idSchema, playerNameSchema } from "../src/main/ipc/requestSchemas";
 import { registerHandlers, wrapHandler, type IpcHandleRegistrar, type WrappedHandler } from "../src/main/ipc/registerHandlers";
+import { createTestProgressContent } from "./support/contentFixture";
 import { createTestProgressService } from "./support/progressFixtures";
 import { RunRegistry } from "../src/main/services/unreal/RunRegistry";
 
@@ -55,6 +56,7 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 	}),
 	runRegistry: new RunRegistry(),
 	sendProgress: () => undefined,
+	progressContentService: createTestProgressContent().content,
 };
 
 /** A stand-in for ipcMain that records each registered channel. */
@@ -182,13 +184,14 @@ describe("registerHandlers", () =>
 		expectError(await invoke(IPC_CHANNELS.getQuest, "missing-quest"), "quest-not-found");
 	});
 
-	it("checks startDrill's request and then answers not-implemented until progress-and-rules builds it", async () =>
+	it("checks startDrill's request and then answers from progress-and-rules (M1.6b)", async () =>
 	{
 		const invoke = createInvoker();
 
-		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "test-out", worldId: "objects" }), "not-implemented");
-		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "parsons-fallback", questId: "w1-health" }), "not-implemented");
-		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "due" }), "not-implemented");
+		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "test-out", worldId: "objects" }), "world-not-found");
+		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "parsons-fallback", questId: "w1-health" }), "quest-not-found");
+		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "due" }), "quest-locked");
+		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "lucky" }), "invalid-payload");
 	});
 
 	it("answers a stub with a not-implemented AppError that names when it arrives", async () =>

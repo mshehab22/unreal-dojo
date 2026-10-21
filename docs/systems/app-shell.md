@@ -86,18 +86,18 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Runs | `submitQuest(request)` | `SubmitOutcome` (run, review, loot), streams progress | M1.3 to M1.7 |
 | Runs | `checkSnippetSyntax(request)` | `SyntaxCheckResult` for the concept scratch buffer | M1.3 |
 | Runs | `cancelRun(runId)` | nothing | M1.3 |
-| Progress | `getProgress()`, `resetProgress()` | `PlayerProgress` | M1.6 |
-| Progress | `getRules()` | `RulesSnapshot` (every rule constant the UI shows) | M1.6 |
-| Progress | `getQuestAvailability()` | status and locked reason per quest id | M1.6 |
-| Progress | `getTestOutStatus()` | test-out eligibility per world id | M1.6 |
-| Progress | `setPlayerName(name)` | `PlayerProgress` | M1.6 |
-| Progress | `saveQuestDraft(draft)`, `resetQuest(questId)` | nothing, `QuestProgress` (drafts hold files, board, and worked-level self-explanations) | M1.6 |
-| Progress | `revealHint(questId)` | `HintReveal` (text and XP cost) | M1.6 |
-| Progress | `submitConcept(submission)` | `ConceptOutcome` | M1.6 |
-| Progress | `submitBreakdown(submission)` | `BreakdownReferenceChoice` (which reference plan to show) | M1.6 |
-| Progress | `reviseBreakdown(revision)` | `BreakdownOutcome` (grade and loot) | M1.6, M1.7 |
-| Progress | `recordTermHover(termId)`, `queueDrillItem(itemId)` | nothing | M1.6 |
-| Progress | `getDailyQuest()`, `chooseDailyOffer(index)` | `DailyQuestState` | M1.6 |
+| Progress | `getProgress()`, `resetProgress()` | `PlayerProgress` | done (M1.6) |
+| Progress | `getRules()` | `RulesSnapshot` (every rule constant the UI shows) | done (M1.6) |
+| Progress | `getQuestAvailability()` | status and locked reason per quest id | done (M1.6b) |
+| Progress | `getTestOutStatus()` | test-out eligibility per world id | done (M1.6b) |
+| Progress | `setPlayerName(name)` | `PlayerProgress` | done (M1.6) |
+| Progress | `saveQuestDraft(draft)`, `resetQuest(questId)` | nothing, `QuestProgress` (drafts hold files, board, and worked-level self-explanations) | done (M1.6) |
+| Progress | `revealHint(questId)` | `HintReveal` (text and XP cost) | done (M1.6b) |
+| Progress | `submitConcept(submission)` | `ConceptOutcome` | done (M1.6b) |
+| Progress | `submitBreakdown(submission)` | `BreakdownReferenceChoice` (which reference plan to show) | done (M1.6b) |
+| Progress | `reviseBreakdown(revision)` | `BreakdownOutcome` (grade and loot) | done (M1.6b; AI grading when the review service is wired, A318) |
+| Progress | `recordTermHover(termId)`, `queueDrillItem(itemId)` | nothing | done (M1.6) |
+| Progress | `getDailyQuest()`, `chooseDailyOffer(index)` | `DailyQuestState` | done (M1.6b) |
 | Content | `getContentStatus()` | `ContentStatus` (root, counts, every problem) | done (M0.2b) |
 | Content | `listPacks()` | `PackOutline[]`: packs, worlds, quest outlines, in order | done (M0.2b) |
 | Content | `getWorld(worldId)` | `LearnerWorld` with full quests, or `world-not-found` | done (M0.2b) |
@@ -105,10 +105,10 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Content | `getGlossary()` | `GlossaryEntry[]` | done (M0.2b) |
 | Content | `getGlossaryAliases()` | `GlossaryAlias[]`, longest text first, for Monaco and the TermLinker | done (M0.2b) |
 | Content | `getPatternCards()` | `PatternCard[]` | done (M0.2b) |
-| Drills | `startDrill(request)` | `DrillSession`; request is `{ kind: "due" }`, `{ kind: "test-out", worldId }`, or `{ kind: "parsons-fallback", questId }` | M1.6 |
-| Drills | `getDrillSummary()` | `DrillSummary` | M1.6 |
-| Drills | `answerDrillItem(answer)` | `DrillItemResult` | M1.6, M1.7 |
-| Drills | `finishDrill(sessionId)` | `DrillOutcome` | M1.6 |
+| Drills | `startDrill(request)` | `DrillSession`; request is `{ kind: "due" }`, `{ kind: "test-out", worldId }`, or `{ kind: "parsons-fallback", questId }` | done (M1.6b) |
+| Drills | `getDrillSummary()` | `DrillSummary` | done (M1.6) |
+| Drills | `answerDrillItem(answer)` | `DrillItemResult` | done (M1.6b; AI grading when the review service is wired, A318) |
+| Drills | `finishDrill(sessionId)` | `DrillOutcome` | done (M1.6b) |
 | Review | `getReviewProviders()`, `testClaudeCode()` | `ReviewProviderStatus[]`, `ReviewProviderStatus` | M1.7 |
 | Review | `explainFinding(request)` | plain-English text | M1.7 |
 | Review | `answerReflection(request)` | `ExplainGrade` | M1.7 |

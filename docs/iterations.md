@@ -356,3 +356,24 @@ exit code 0
 *The 12-stage first world at the minimum size: two rows of six, no sideways scroll.*
 
 - Decisions made: A390 in `docs/decisions.md`.
+
+## M1.6b Progress wiring (progress-and-rules, builder-rules)
+- What changed: the World Map, hints, concept quests, breakdowns, the daily quest, and drills now answer for real instead of saying "not built yet". The app reads the lessons it loaded at startup to know each quest's place, price, and prerequisites, and to find every question that can quiz each term, pattern, and code-reordering exercise. Answers are marked in the main process, terms enter the review schedule when a concept quest is finished, a breakdown keeps the first plan and shows the closest reference plan before grading the revision, and drills come in three kinds: today's review, a world's test-out, and the reorder exercise offered after two failed submits.
+- What was found and solved: taken literally, the unlock rule would have locked every concept quest forever, because it asks for a quest's terms to be familiar before the quest that teaches them; now only terms some concept quest teaches can lock a quest, and never the quest that teaches them (A312). A world's test-out now happens only in that world's test-out drill, not after any drill (A313).
+- How to see it: no new screen yet (the quest screens are M2.2). Run `npm test`; `tests/progress/progressContentHandlers.test.ts` walks through every method on a small set of lessons, from a locked World Map to a passed test-out.
+- Proof: typecheck passes. Unit tests: 37 files, 454 passed; the progress tests are 198 of them (21 new for the mapper, the item bank, and the ten methods, including a full due drill, a test-out, and the reorder fallback). Build passes. End-to-end: 4 of 4 passed. Content verifier: no problems.
+- Decisions made: A310 to A319 in `docs/decisions.md`.
+- Not done or left for later: AI grading of explain items and breakdowns uses the self-check fallback until the review service is connected (it needs the settings service); the swap is one line (A318). The daily quest offers no short build until content can say a build adds no new class (A311, a content-engine follow-up). Drill sessions are not saved across a restart (answers are).
+
+### Fix round 1
+- What the reviewer asked for: (1) a drill with nothing due was filled with practice items and still paid 10 XP, so it could be repeated for XP; (2) the daily limit of 20 reviews applied per drill, so a large backlog could be cleared in one day; (3) a world whose quests named a term no concept quest teaches could never be tested out; (4) the test-out asked about patterns the learner had not built yet; (5) one concept question could appear twice in a drill when it quizzed two due terms; (6) mark the progress and drill rows done in the app-shell IPC table.
+- What changed: the branch was first rebased onto main (keeping both sides of the decisions and iterations). Practice drills still run, but XP, the streak, and the daily drill offer count only when the drill held at least one item that was actually due (A320). The daily limit now counts every item reviewed since midnight, across all drills (A321). A world's test-out uses only the terms some concept quest teaches, and only the patterns whose card is already unlocked (A322). A question already in a drill is not shown again for another term (A323). The IPC table rows are marked done.
+- Proof: typecheck passes. Unit tests: 40 files, 489 passed (482 after the rebase plus 7 new: practice drills pay nothing four times in a row and a real due drill the next day pays 10; a backlog of 25 spreads over two drills and leaves 5 for tomorrow; the cap counts distinct reviews since midnight; one question never repeats; a world with an untaught term tests out; patterns join a test-out only once their card is unlocked). The practice-drill test and the repeat-question test fail when their fixes are switched off. Build passes. End-to-end: 14 of 14 passed (with M2.1's screens now on main). Content verifier: no problems.
+- Not done or left for later: nothing new; the M1.6b list still stands.
+
+### Fix round 2
+- What the reviewer asked for: the daily limit still leaked. When a drill had room left, it filled up with other items the learner had met, and those could include items due today beyond the limit of 20, so they were reviewed early and moved past today.
+- What changed: the filler now skips every item due by the end of today. Items within the limit come in as due items; the rest wait for tomorrow.
+- Proof: typecheck passes. Unit tests: 40 files, 490 passed, including a new one: 30 items due, twelve drills in a row, and only the first 20 had their schedule moved today, with 10 still waiting for tomorrow. It fails on the round 1 code. Build passes. End-to-end: 14 of 14 passed.
+- Not done or left for later: nothing new; the M1.6b list still stands.
+

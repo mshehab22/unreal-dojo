@@ -42,6 +42,12 @@ export function addMinutes(moment: Date, minutes: number): Date
 	return new Date(moment.getTime() + minutes * 60 * 1000);
 }
 
+/** Returns the first moment (local midnight) of the local calendar day that holds `moment`. */
+export function startOfLocalDay(moment: Date): Date
+{
+	return new Date(moment.getFullYear(), moment.getMonth(), moment.getDate());
+}
+
 /** Returns the last moment of the local calendar day that holds `moment`. */
 export function endOfLocalDay(moment: Date): Date
 {
