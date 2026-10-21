@@ -113,7 +113,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.6d Pack 4 gate by world id (A68) | progress-and-rules | builder-rules (session) | merged 365d0b4 | merged | Passed first review; future world ids foundations/communication and patterns/component are conventions authors must use |
 | M1.6e Term gate by course order (A72) | progress-and-rules | builder-rules (session) | merged | merged | Passed; World 1 walkable on a fresh save, test-out still works |
 | M1.6f Test-out keys by pack and world | progress-and-rules | builder-rules (session) | merged | merged | Catalog collision closed by A73 (M1.8e) |
-| M1.8e World ids unique across packs (A73) | content-engine | content-engine (session "M0.4 Content types...") | m1-8e-unique-world-ids | building | Loader and verifier error |
+| M1.8e World ids unique across packs (A73) | content-engine | content-engine (session "M0.4 Content types...") | m1-8e-unique-world-ids | merged (a357833) | Loader and verifier error; Lead checked the small diff; 838 tests, 27 e2e |
 | M1.8d Verifier warns on later-taught terms (A72) | content-engine | content-engine (session "M0.4 Content types...") | merged | merged | Small diff checked by the Lead; 16 warnings on main |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
 
