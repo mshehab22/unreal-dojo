@@ -66,7 +66,7 @@ bool ADojoF2TargetRack::Recall(ADojoF1PopupTarget* Target)
 
 	Deployed.Remove(Target);
 
-	if (Target->GetState() == EDojoF1TargetState::ETS_Broken) Target->Repair();
+	Target->ResetForRound();
 
 	SetTargetActive(Target, false);
 	Available.Add(Target);

@@ -38,7 +38,7 @@ Plain `new` is never used for UObjects. There are three creators, and each has o
 - `NewObject<T>(Outer)` makes a UObject at run time that is not an actor: an item instance, a quest step, a component added later. The **outer** is the object it belongs to; it decides the object's full path, and an object made with a short-lived outer goes when that outer goes. Hold the result in a UPROPERTY, or the collector may free it.
 - `GetWorld()->SpawnActor<T>(Class, Location, Rotation)` makes an actor and places it in the world. Actors are never made with NewObject, because they need a level, a location, and BeginPlay.
 
-A component made with NewObject during play also needs `RegisterComponent()` before it works, which is the job CreateDefaultSubobject does for you in the constructor.
+A component made with NewObject during play also needs `RegisterComponent()` before it works. Components made with CreateDefaultSubobject are registered for you when the actor enters the world, spawned or loaded with its level.
 
 # Example
 
@@ -94,7 +94,7 @@ void ADojoF2Chest::Open()
     - It must be registered with RegisterComponent
     - The level must be reloaded
   answerIndex: 1
-  explanation: Registering hooks the component into the world, which CreateDefaultSubobject handles for constructor-made parts.
+  explanation: Registering hooks the component into the world; the engine does that for constructor-made parts when their actor is spawned or loaded.
 - id: explain-cds
   type: explain-in-one-sentence
   prompt: In one sentence, say why CreateDefaultSubobject only works in a constructor.

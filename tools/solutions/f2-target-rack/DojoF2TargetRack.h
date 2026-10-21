@@ -32,7 +32,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Rack")
 	ADojoF1PopupTarget* Deploy();
 
-	/** Takes back a target this rack lent out: hides it and repairs it if broken. Returns false for any other actor. */
+	/** Takes back a target this rack lent out: hides it and resets it for its next use. Returns false for any other actor. */
 	UFUNCTION(BlueprintCallable, Category = "Rack")
 	bool Recall(ADojoF1PopupTarget* Target);
 

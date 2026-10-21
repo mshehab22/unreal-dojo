@@ -156,7 +156,7 @@ bool FDojo_F2_Spotter_LosesDestroyedTarget::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F2_Spotter_WatchedFieldIsWeak, "Dojo.F2.Spotter.WatchedFieldIsWeak", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Checks through reflection that the spotter has no strong object reference that would keep a target alive. */
+/** Checks through reflection that the spotter holds its target through a weak reference, not a strong one that claims ownership. */
 bool FDojo_F2_Spotter_WatchedFieldIsWeak::RunTest(const FString& Parameters)
 {
 	for (TFieldIterator<FObjectPropertyBase> Property(ADojoF2Spotter::StaticClass(), EFieldIteratorFlags::ExcludeSuper); Property; ++Property)
@@ -164,7 +164,7 @@ bool FDojo_F2_Spotter_WatchedFieldIsWeak::RunTest(const FString& Parameters)
 		if (Property->GetName() == TEXT("Label")) continue;
 
 		const bool bIsWeak = Property->IsA<FWeakObjectProperty>() || Property->IsA<FSoftObjectProperty>();
-		TestTrue(FString::Printf(TEXT("%s does not keep its object alive"), *Property->GetName()), bIsWeak);
+		TestTrue(FString::Printf(TEXT("%s is a weak reference"), *Property->GetName()), bIsWeak);
 	}
 
 	return true;
@@ -190,7 +190,7 @@ bool FDojo_F2_Spotter_WatchedFieldIsWeak::RunTest(const FString& Parameters)
 
 # Alternative
 
-The spotter could hold a strong `UPROPERTY` TObjectPtr and check it with `IsValid` instead of against nullptr. That passes the first test, because IsValid also catches an actor being destroyed, but the strong reference keeps a destroyed actor's memory around until the spotter lets go, and a spotter that forgets to clear it holds dead objects for as long as it lives. A weak pointer says in its type that the spotter does not own what it watches, and it cleans up after itself.
+The spotter could hold a strong `UPROPERTY` TObjectPtr and check it with `IsValid` instead of against nullptr. For actors that works: IsValid catches a destroyed actor at once, and the next garbage collection sets the reflected pointer to null. The cost is in what the code claims and what it demands: a strong reference says the spotter owns its target, which it does not, and every read must remember IsValid or it acts on a ghost until the next collection. A weak pointer says "not mine" in its type, and its own validity check is the only way to read it.
 
 # Parsons
 

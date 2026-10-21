@@ -34,13 +34,13 @@ explanation: A weak pointer's validity check also answers false for an object ma
 
 There are three ways to point at a UObject, and the difference is ownership.
 
-A **strong** reference, a `UPROPERTY` `TObjectPtr<T>`, tells the garbage collector "I need this": the object stays alive as long as the holder is reachable. Use it for things you own or must keep, such as your own components and the targets in your own list.
+A **strong** reference, a `UPROPERTY` `TObjectPtr<T>`, tells the garbage collector "I need this": an object nobody destroyed stays alive as long as the holder is reachable. An actor that someone destroys is different: the strong reference does not save it, it only keeps pointing at a ghost until the next collection sets it to null. Use strong references for things you own or must keep, such as your own components and the targets in your own list.
 
 A **weak** reference, `TWeakObjectPtr<T>`, only watches. It never keeps the object alive, and `IsValid()` on it answers false as soon as the object is destroyed or collected; `Get()` then returns nullptr. Use it for things you do not own: a camera following an enemy, a turret's current target, a widget showing a pawn's health. It needs no UPROPERTY.
 
 A **soft** reference, `TSoftObjectPtr<T>` or `TSoftClassPtr<T>`, names an asset by its path and does not load it. A designer picks the asset in Details like any other; your code loads it only when needed, with `LoadSynchronous()` or the asynchronous streamable manager. Use it for big things you might never need, such as the mesh for every skin in a shop, so they do not all load with the level.
 
-Choosing wrong has costs that go both ways: a strong reference to something you do not own keeps dead objects around, and a weak reference to something you do own lets it vanish under you.
+Choosing wrong has costs that go both ways: a strong reference to something you do not own claims an ownership you do not have and needs an IsValid check on every read to avoid the ghost, and a weak reference to something you do own can let it be collected under you.
 
 # Example
 
@@ -84,7 +84,7 @@ public:
   explanation: LoadSynchronous blocks until the asset is loaded; for big assets the asynchronous streamable manager avoids the hitch.
 - id: spot-strong-watch
   type: spot-the-bug
-  prompt: Destroyed enemies are never freed while this camera exists, and the camera keeps following a ghost. Which line is wrong?
+  prompt: After an enemy is destroyed, this camera keeps following its ghost until the next garbage collection, because code checks Followed against nullptr. Which line is wrong?
   code: |
     UCLASS()
     class ADojoF2ChaseCamera : public AActor
@@ -95,7 +95,7 @@ public:
     };
   bugLine: 6
   fix: Make Followed a TWeakObjectPtr, without UPROPERTY, and check IsValid before using it.
-  explanation: A strong reflected reference keeps the destroyed enemy's memory alive and never turns null on its own.
+  explanation: A strong reflected reference is only set to null when the collector runs, so between Destroy and the next collection it still points at an enemy that has left play; a weak pointer reports it gone at once.
 - id: soft-use
   type: multiple-choice
   prompt: "Which case is the best fit for a soft reference?"

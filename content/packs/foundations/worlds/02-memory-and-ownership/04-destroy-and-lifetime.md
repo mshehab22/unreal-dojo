@@ -33,7 +33,7 @@ explanation: Destroy removes the crate from play and marks it as garbage, but no
 
 # Card
 
-`Destroy()` takes an actor out of play: it stops being part of the level, its components unregister, and it is marked as garbage. The memory itself is freed later by the garbage collector. Your pointers to it are not touched, so a destroyed actor's pointer is not null.
+`Destroy()` takes an actor out of play: it stops being part of the level, its components unregister, and it is marked as garbage. The memory itself is freed later by the garbage collector. Your pointers to it are not touched, so a destroyed actor's pointer is not null. When the next collection runs, the engine sets every reflected pointer to that actor (a `UPROPERTY` member, a `UPROPERTY` array entry) to null, while a raw pointer without the macro keeps the old address and now dangles. That is the second reason every UObject pointer member carries UPROPERTY.
 
 That is why Unreal code checks with `IsValid(Actor)` rather than `Actor != nullptr`. IsValid answers false for null and also for an object that is marked as garbage, the state a destroyed actor is in until it is collected. Use it on anything you did not just create yourself.
 
@@ -81,16 +81,16 @@ void ADojoF2Flare::EndPlay(const EEndPlayReason::Type EndPlayReason)
   prompt: "To have a shell casing remove itself 5 seconds after it spawns, call ___(5.f) in its BeginPlay."
   acceptedAnswers: [SetLifeSpan]
   explanation: SetLifeSpan schedules the actor's own Destroy.
-- id: spot-destructor-cleanup
-  type: spot-the-bug
-  prompt: This flare should remove its smoke when it goes, but the cleanup sometimes crashes during level changes. Which line is the problem?
+- id: destructor-cleanup
+  type: multiple-choice
+  prompt: This flare removes its smoke in its C++ destructor, and the cleanup sometimes crashes during level changes. Which function should hold the cleanup instead?
   code: |
     ADojoF2Flare::~ADojoF2Flare()
     {
     	if (Smoke) Smoke->Destroy();
     }
-  bugLine: 1
-  fix: Do the cleanup in an EndPlay override instead of the destructor, then call Super::EndPlay.
+  choices: [The constructor, BeginPlay, EndPlay, Tick]
+  answerIndex: 2
   explanation: The destructor runs during garbage collection, when the world may already be torn down.
 - id: endplay-reasons
   type: multiple-choice

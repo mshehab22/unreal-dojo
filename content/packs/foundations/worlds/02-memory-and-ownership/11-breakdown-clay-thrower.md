@@ -17,7 +17,7 @@ concepts:
 
 # Spec
 
-A trap house throws clay discs for the player to shoot. Pressing the throw button launches one disc in an arc: it travels 1200 units forward, peaks 400 units up, and lands 2.5 seconds later. No more than 3 discs may be in the air at once; a throw while 3 are up is refused. A disc that is shot shatters at once and counts as a hit; a disc that lands counts as a miss and leaves play. A spotter camera always follows the newest disc still in the air and moves to the next newest when its disc is gone. A small HUD counter shows hits and misses.
+A trap house throws clay discs for the player to shoot. Pressing the throw button launches one disc in an arc: it travels 1200 units forward, peaks 400 units up, and lands 2.5 seconds later (with normal gravity those three numbers cannot all hold, so the disc's gravity is scaled too). No more than 3 discs may be in the air at once; a throw while 3 are up is refused. A disc that is shot shatters at once and counts as a hit; a disc that lands counts as a miss and leaves play. A spotter camera always follows the newest disc still in the air and moves to the next newest when its disc is gone. A small HUD counter shows hits and misses.
 
 You are planning, not coding. Name every actor that comes and goes, who makes it, who holds a reference to it and of what kind, and who removes it.
 
@@ -75,8 +75,8 @@ Acceptance:
     - { id: thrower, kind: class, label: ADojoF2Thrower with Throw and a UPROPERTY array of discs in the air, covers: [thrower] }
     - { id: disc, kind: class, label: ADojoF2ArcDisc built on the clay disc with a lifespan equal to its flight time, covers: [disc] }
     - { id: spawn, kind: step, label: Throw spawns from a TSubclassOf disc class and the disc destroys itself when its lifespan ends or it is shot, covers: [disc-supply] }
-    - { id: arc, kind: step, label: A projectile movement component on the disc with launch speed worked out from distance and height, covers: [flight] }
-    - { id: check, kind: event, label: The thrower checks its array on a short timer and reads GetFate on each disc that is no longer valid before dropping it, covers: [outcome] }
+    - { id: arc, kind: step, label: A projectile movement component on the disc with launch velocity and gravity scale worked out from distance and height and flight time, covers: [flight] }
+    - { id: check, kind: event, label: Shots go through the thrower which records a hit before calling Shatter on the disc and a short timer counts every tracked disc that turned invalid without a recorded hit as a miss, covers: [outcome] }
     - { id: spotter, kind: step, label: The thrower tells the spotter to watch the newest valid disc and the spotter holds it in a TWeakObjectPtr, covers: [spotting] }
     - { id: settings, kind: data, label: Editable class and numbers on the thrower and flight time on the disc, covers: [tunables] }
     - { id: hud, kind: class, label: Counter widget that the thrower updates after each check, covers: [hud-counter] }

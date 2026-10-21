@@ -8,7 +8,7 @@ difficulty: 3
 patterns: [object-pool]
 skills: [memory, spawning]
 terms: [tsubclassof, spawnactor, tobjectptr, destroy, endplay, isvalid]
-prerequisites: [f2-spotter, f2-smart-pointers]
+prerequisites: [f2-spotter, f2-smart-pointers, f1-boss-training-yard]
 xp: 120
 estimatedMinutes: 30
 concepts:
@@ -20,20 +20,20 @@ concepts:
 
 When you press Play, the rack quietly makes 3 hidden pop-up targets; each `ke * Deploy` shows one more of them, raised and reading Up, and a fourth Deploy shows nothing because the rack never makes more than it owns.
 
-Write `ADojoF2TargetRack` from nothing. It reuses your pop-up target from World 1 unchanged. At the start of play it spawns `PoolSize` targets of `TargetClass` once, each in its own slot, hidden and with collision off. `Deploy` lends out one resting target: show it, turn its collision on, raise it, and return it. `Recall` takes back a target the rack lent out: hide it, turn collision off, repair it if it is broken, and make it available again; any actor the rack did not lend out is refused. When the rack leaves play, it destroys the targets it owns.
+Write `ADojoF2TargetRack` from nothing. It reuses your pop-up target from World 1, in the version your training yard boss extended: it needs `ResetForRound`. At the start of play it spawns `PoolSize` targets of `TargetClass` once, each in its own slot, hidden and with collision off. `Deploy` lends out one resting target: show it, turn its collision on, raise it, and return it. `Recall` takes back a target the rack lent out: hide it, turn collision off, call `ResetForRound` on it so no hits, misses, or raised state carry into its next use, and make it available again; any actor the rack did not lend out is refused. When the rack leaves play, it destroys the targets it owns.
 
 The tests use this public interface, so keep these names:
 
 - `UPROPERTY(EditAnywhere) TSubclassOf<ADojoF1PopupTarget> TargetClass;` defaulting to the C++ pop-up target class.
 - `UPROPERTY(EditAnywhere) int32 PoolSize = 3;` clamped at 1 or more.
-- `UPROPERTY(EditAnywhere) FVector SlotSpacing;` the gap between the rack and each slot.
+- `UPROPERTY(EditAnywhere) FVector SlotSpacing = FVector(0.f, 150.f, 0.f);` the gap between the rack and each slot.
 - `UFUNCTION(BlueprintCallable) ADojoF1PopupTarget* Deploy();` returning nullptr when every target is out.
 - `UFUNCTION(BlueprintCallable) bool Recall(ADojoF1PopupTarget* Target);`
 - `UFUNCTION(BlueprintPure) int32 GetAvailableCount() const;` and `int32 GetDeployedCount() const;`
 
 Dependency direction: the rack owns and refers to its targets; the targets know nothing about the rack.
 
-Compiles against earlier quests: f1-popup-target (`Quests/f1-popup-target/DojoF1PopupTarget.h`).
+Compiles against earlier quests: f1-popup-target as extended by f1-boss-training-yard (`Quests/f1-popup-target/DojoF1PopupTarget.h`, with `ResetForRound`).
 
 ## See it in the editor
 
@@ -115,7 +115,7 @@ bool FDojo_F2_TargetRack_LendsAFixedSet::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F2_TargetRack_RecallsAndReuses, "Dojo.F2.TargetRack.RecallsAndReuses", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Lends out every target, breaks one, recalls it, and checks the same target comes back repaired; refuses a stranger. */
+/** Lends out every target, breaks one, recalls it, and checks the same target comes back reset; refuses a stranger. */
 bool FDojo_F2_TargetRack_RecallsAndReuses::RunTest(const FString& Parameters)
 {
 	using namespace DojoF2TargetRackTest;
@@ -142,13 +142,43 @@ bool FDojo_F2_TargetRack_RecallsAndReuses::RunTest(const FString& Parameters)
 
 	TestTrue(TEXT("The rack takes back its own target"), Rack->Recall(Target));
 	TestTrue(TEXT("A recalled target is hidden"), Target->IsHidden());
-	TestEqual(TEXT("A recalled broken target is repaired"), Target->GetState(), EDojoF1TargetState::ETS_Lowered);
+	TestEqual(TEXT("A recalled broken target is lowered again"), Target->GetState(), EDojoF1TargetState::ETS_Lowered);
 	TestEqual(TEXT("One target resting after the recall"), Rack->GetAvailableCount(), 1);
 	TestFalse(TEXT("A target cannot be recalled twice"), Rack->Recall(Target));
 
 	TestTrue(TEXT("The only resting target, the recalled one, is lent out again"), Rack->Deploy() == Target);
 	TestEqual(TEXT("It comes back raised"), Target->GetState(), EDojoF1TargetState::ETS_Raised);
 	TestEqual(TEXT("Still three rack targets plus the stranger"), CountTargets(TestWorld.GetWorld()), 4);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F2_TargetRack_RecallForgetsLastUse, "Dojo.F2.TargetRack.RecallForgetsLastUse", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Hits a lent target once, recalls it, lends it again, and checks it needs two fresh hits to break. */
+bool FDojo_F2_TargetRack_RecallForgetsLastUse::RunTest(const FString& Parameters)
+{
+	FDojoTestWorld TestWorld;
+
+	ADojoF2TargetRack* Rack = TestWorld.SpawnActor<ADojoF2TargetRack>();
+	if (!TestNotNull(TEXT("Rack spawned"), Rack)) return false;
+
+	ADojoF1PopupTarget* Target = nullptr;
+	for (int32 Index = 0; Index < 3; ++Index) Target = Rack->Deploy();
+	if (!TestNotNull(TEXT("Deployed the last one"), Target)) return false;
+
+	TestTrue(TEXT("The first hit counts"), Target->Hit());
+	Target->Raise();
+	TestTrue(TEXT("The raised target is recalled"), Rack->Recall(Target));
+	TestEqual(TEXT("A recalled target rests lowered, not raised"), Target->GetState(), EDojoF1TargetState::ETS_Lowered);
+
+	TestTrue(TEXT("It is the one lent out again"), Rack->Deploy() == Target);
+	TestTrue(TEXT("The first hit of its new use counts"), Target->Hit());
+	TestEqual(TEXT("One hit no longer breaks it; the old hit was forgotten"), Target->GetState(), EDojoF1TargetState::ETS_Lowered);
+
+	Target->Raise();
+	Target->Hit();
+	TestEqual(TEXT("The second hit of its new use breaks it"), Target->GetState(), EDojoF1TargetState::ETS_Broken);
 
 	return true;
 }
@@ -187,7 +217,7 @@ bool FDojo_F2_TargetRack_CleansUpOnEndPlay::RunTest(const FString& Parameters)
 
 - Targets are spawned once in BeginPlay from TargetClass, never in Deploy.
 - Deploy and Recall move targets between resting and lent-out sets, and Recall refuses anything the rack did not lend out.
-- A resting target is hidden with collision off; a lent target is visible, collidable, and raised; a recalled broken target is repaired.
+- A resting target is hidden with collision off; a lent target is visible, collidable, and raised; a recalled target is reset with ResetForRound, so nothing from its last use carries over.
 - The arrays holding the targets are UPROPERTYs, so the garbage collector sees the rack's references.
 - EndPlay destroys every target the rack owns, and calls Super::EndPlay last.
 - The rack refers to its targets; the pop-up target class is reused from World 1 without changes.

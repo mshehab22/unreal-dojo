@@ -189,7 +189,7 @@ bool FDojo_F2_ClayDisc_ShatterIsImmediate::RunTest(const FString& Parameters)
 	TestEqual(TEXT("A shattered disc says so"), Disc->GetFate(), EDojoF2DiscFate::EDF_Shattered);
 
 	Disc->Shatter();
-	TestEqual(TEXT("A second Shatter changes nothing"), Disc->GetFate(), EDojoF2DiscFate::EDF_Shattered);
+	TestEqual(TEXT("The fate is still Shattered after a second Shatter"), Disc->GetFate(), EDojoF2DiscFate::EDF_Shattered);
 
 	return true;
 }
