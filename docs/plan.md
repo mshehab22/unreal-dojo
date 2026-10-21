@@ -84,7 +84,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 8665386 | merged | 1 fix round plus a test fix; includes the GFrameCounter timer fix |
-| M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring @ 638febc | fixes (round 2) | Round 1 held. Round 2: syntax-check timeout hangs and leaves clang running; recursive dependency fill (boss needs the practice bell) |
+| M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring @ b58c49d | re-review | Tree kill on timeout; transitive fill; 11 of 11 |
 | M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged 742676e | merged | 1 fix round; probes verified in a packaged build |
 | M1.7c submitQuest and review IPC wiring | ai-review | builder-review (session) | m1-7c-submit-wiring @ 2efbe9e | building | Provider IPC, graders, stored review and files done; the run inside Submit waits for M1.3b |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | merged b06a722 | merged | 2 rounds; --engine 9 of 9 on UE 5.8.3 through M1.3 runners |
@@ -94,13 +94,13 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
 | M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | merged 2e29c7c | merged | 4 rounds; World 1 boss reference integration (A67) |
 | M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | merged 2e29c7c | merged | 2 rounds plus boss round; 24 of 24 on UE 5.8.3; main --engine clean |
-| M4.P1.3 Pack 1 World 3 | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-world3 | building | Same process incl. A67 boss integration |
+| M4.P1.3 Pack 1 World 3 "Containers and strings" | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-world3 @ af0f154 | review | 12 quests; boss integration with mutations; main --engine clean |
 | M1.8c Missing boss integration is an error | content-engine | content-engine (session "M0.4 Content types...") | merged | merged | Lead checked the small diff; --engine 18 of 18 by the builder; example boss stays a warning (A520) |
-| M2.2 Quest screens | ui-quests | builder-ui-quests (session) | claude/m2-2-quest-screens-a21151 @ c62b6e6 | fixes (round 4) | Compare readable, hints verified on a real restart. Round 4: focus jump after Submit plan; fixture drift must not fail npm test on content edits |
+| M2.2 Quest screens | ui-quests | builder-ui-quests (session) | claude/m2-2-quest-screens-a21151 @ fccb063 | re-review | Compare opens at top; fake World 1 built from content; 27 e2e x3 |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
-| M4.P2.2 Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | claude/m3-patterns-world2-game-loop @ 92381be | fixes | 9 of 9; DeltaSeconds clamp, Pow decay, D13 numbers, ghost brief and rubric |
-| M4.P2.3 Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | claude/m4-patterns-world3-update-method @ 0edd88f | fixes | 9 of 9; D13: mirrors the book's crypt example, move to the arena; product.md world list |
-| M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop @ 7fa6c10 | fixes | Timings reproduced (4.2 s, 32 ms). Round 1: port ownership, close waits on queued call, quit closes editor, sandbox-write mark against false passes with the filler, rebase on M1.3b |
+| M4.P2.2 Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | claude/m3-patterns-world2-game-loop @ ca4950a | re-review | All six items |
+| M4.P2.3 Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | claude/m4-patterns-world3-update-method @ 7e9a328 | re-review | Moved out of the crypt; product.md world list |
+| M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop @ 2664a70 | re-review | All six items; rebase after M1.3b |
 | M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | merged | merged | 1 fix round; refused save safe; migration verified |
 | M1.6d Pack 4 gate by world id (A68) | progress-and-rules | builder-rules (session) | merged 365d0b4 | merged | Passed first review; future world ids foundations/communication and patterns/component are conventions authors must use |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
