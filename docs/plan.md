@@ -86,7 +86,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 8665386 | merged | 1 fix round plus a test fix; includes the GFrameCounter timer fix |
 | M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 6f585b3 | merged | 2 fix rounds; transitive fill proven on the engine |
 | M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged 742676e | merged | 1 fix round; probes verified in a packaged build |
-| M1.7c submitQuest and review IPC wiring | ai-review | builder-review (session) | m1-7c-submit-wiring @ 157831b | re-review | All seven items; A70; engine check passed |
+| M1.7c submitQuest and review IPC wiring | ai-review | builder-review (session) | merged 2fe42af | merged | 1 fix round plus renumbering to A600-A604 (A71); real Submit loop on UE 5.8.3 |
+| M2.4 End-to-end learner flow | qa | tester (session "M0.6 CI matrix workflow") | m2-4-learner-flow | building | Real bridge, real engine, opt-in spec; decisions A640-A649 |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | merged b06a722 | merged | 2 rounds; --engine 9 of 9 on UE 5.8.3 through M1.3 runners |
 | M1.8b Verifier follow-ups | content-engine | content-engine (session "M0.4 Content types...") | merged | merged | --engine 18 of 18 with both bosses; no inconclusive starters; Ctrl+C clean |
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
@@ -102,10 +103,10 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.P2.2 Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | merged 0e7060c | merged | 1 fix round |
 | M4.P2.3 Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | merged 0e7060c | merged | 1 fix round; moved to the arena (D13) |
 | M4.P2.4 Pack 2 World 4 (Double Buffer) | content-patterns | author-patterns (session) | merged | merged | Text fix round checked by the Lead; new game-thread glossary entry |
-| M4.P2.5 Pack 2 World 5 (Command) | content-patterns | author-patterns (session) | m4-p2-world5 @ a5efaa6 | fixes | Accurate, 9 of 9; D13: course planner mirrors the book's level-editor undo, move it into play |
+| M4.P2.5 Pack 2 World 5 (Command) | content-patterns | author-patterns (session) | m4-p2-world5 @ ffdb7cb | re-review | Planner moved into play |
 | M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged 2b31811 | merged | 2 fix rounds; fast re-run 65 ms to 2.4 s on the Mac |
 | M1.4b Fast loop wiring | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged | merged | Passed; real app open-editor and quit verified with Playwright |
-| M1.4c Reset and editor-engine follow-ups | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4c-followups | building | resetQuest never fails; openEditor reopens on engine change; engine tests one file at a time |
+| M1.4c Reset and editor-engine follow-ups | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4c-followups @ 6ee3fc8 | review | A610-A612 |
 | M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | merged | merged | 1 fix round; refused save safe; migration verified |
 | M1.6d Pack 4 gate by world id (A68) | progress-and-rules | builder-rules (session) | merged 365d0b4 | merged | Passed first review; future world ids foundations/communication and patterns/component are conventions authors must use |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
