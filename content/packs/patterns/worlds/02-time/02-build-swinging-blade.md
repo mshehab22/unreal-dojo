@@ -21,7 +21,7 @@ concepts:
 
 When you press Play, the blade swings down from 60 degrees and slowly settles, and it swings exactly the same at 30 frames per second as at 120: the same angle after the same number of seconds, to the last digit.
 
-The blade's swing has a damping rule: after every update it keeps 99 percent of its speed. Run that rule once per frame and a 120 frames per second machine damps the swing four times as often as a 30 frames per second one, so the blade settles faster on the better hardware. Scaling by `DeltaSeconds` does not save it, because a percentage applied per update is not a distance per second. The fix is to stop letting the frame decide how often the rule runs.
+The blade's swing has a damping rule: after every update it keeps 99 percent of its speed. Run that rule once per frame and a 120 frames per second machine damps the swing four times as often as a 30 frames per second one, so the blade settles faster on the better hardware. A lone decay could be rescued with a power of `DeltaSeconds`, but here the damping and the pull back toward the middle act together inside each update, so one long update never equals several short ones. The fix is to stop letting the frame decide how often the rules run.
 
 `ADojoP2SwingingBlade` banks the real time each frame hands it in `Lag`, and spends it in whole steps of `StepSeconds` (1/32 of a second). A frame that brings half a step runs nothing and saves the time; a frame that brings three steps runs three. Most of the class is written. First read the marked lines and say in a sentence why each one is there. Then fill the one gap in `Advance`: while at least a whole step of time is waiting, run `SimulateStep` and take one step's time out of `Lag`.
 

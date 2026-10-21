@@ -12,7 +12,7 @@ xp: 25
 estimatedMinutes: 6
 concepts:
   - You never write a second outer loop inside Unreal; a blocking loop freezes the game thread
-  - Plain DeltaSeconds is right for most gameplay; a fixed-step bank is for rules that compound or results that must repeat
+  - Plain DeltaSeconds is right for most gameplay; a fixed-step bank is for rules that interact within an update or results that must repeat
   - Physics already has substepping; a timer already handles periodic work
   - The fraction of a step is for drawing; the cap on catch-up steps belongs in every bank
 ---
@@ -46,7 +46,7 @@ Lesson zero said each layer is a bet. The fixed-step bank is a good bet in a few
 
 **When you do bank, cap it.** A bank without a limit on catch-up steps turns one long frame into a burst of steps, and if a step costs more time than it simulates, each frame owes more than the last until the game stalls. Cap the steps per frame and drop what the cap refuses.
 
-**Use a fixed step when the answer must repeat.** Replays, lockstep matches, deterministic tests, and rules that compound per update (damping, springs, cellular simulations) are where the bet pays.
+**Use a fixed step when the answer must repeat.** Replays, lockstep matches, deterministic tests, and rules that interact within an update (a damped spring, a simulation with thresholds) are where the bet pays. A lone decay does not need one: a power of DeltaSeconds handles it.
 
 # Example
 
@@ -113,7 +113,7 @@ void ADojoArenaHerald::BeginPlay()
   explanation: Sleeping on the game thread stops the engine's frame, so nothing is drawn until the loop ends and the player sees only the last number.
 - id: uncapped-bank
   type: multiple-choice
-  prompt: "A fixed-step crowd simulation sometimes takes 20 milliseconds per step of 16 milliseconds. Without a cap on catch-up steps, what happens after one slow frame?"
+  prompt: "A fixed-step crowd simulation steps 1/32 of a second at a time, but after a designer doubled the crowd, each step takes 40 milliseconds of real time to compute. Without a cap on catch-up steps, what happens after one slow frame?"
   choices:
     - Nothing, the bank sorts itself out
     - Each frame owes more steps than the last, and the game grinds to a stop
@@ -124,9 +124,9 @@ void ADojoArenaHerald::BeginPlay()
 - id: explain-when-bank
   type: explain-in-one-sentence
   prompt: In one sentence, say when a fixed-step bank is worth its cost.
-  modelAnswer: When a rule compounds per update or a result must repeat exactly across machines or runs, such as a replay or a lockstep match; otherwise DeltaSeconds is simpler and enough.
+  modelAnswer: When rules interact within an update or a result must repeat exactly across machines or runs, such as a replay or a lockstep match; otherwise DeltaSeconds is simpler and enough.
   rubric:
-    - Names compounding rules, stability, or exact repeatability as the reason
+    - Names interacting rules, stability, or exact repeatability as the reason
     - Says ordinary rates per second do not need it
   explanation: "The test is lesson zero's: does the extra machinery make a likely change or a real requirement cheaper?"
 ```

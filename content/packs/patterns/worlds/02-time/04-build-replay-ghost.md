@@ -19,16 +19,16 @@ concepts:
 
 # Brief
 
-When you press Play, the ghost runs its recorded four-second dash and its label counts Step 1 / 64 up to DONE; set its speed to 2 and it covers the same ground in two seconds, set it to 0 and it freezes, and the end point is identical every time.
+When you press Play, the ghost runs its recorded four-second dash and its label counts Step 0 / 64 up to DONE; set its speed to 2 and it covers the same ground in two seconds, set it to 0 and it freezes, and the end point is identical every time.
 
 This is the Game Loop's time policy again, in a different mechanic: a replay. The run was recorded as one speed per fixed step of 1/16 of a second (`RecordedSpeeds`). Playing it back means running those same steps in the same order, so the ghost ends at the same spot no matter how fast the machine draws. The declarations and the wiring (constructor, `BeginPlay`, `Tick`) are given; the rest is yours.
 
 - `Advance` banks the frame's real time, scaled by the playback rate, and plays whole recorded steps while a step's worth of time is waiting. It stops when the recording runs out.
 - `PlayStep` plays the step at `StepIndex`: the distance grows by that step's speed times `StepSeconds`, and the previous distance is kept for drawing.
-- `SetPlaybackRate` takes any rate of 0 or more; 2 plays twice as fast, 0 pauses.
+- `SetPlaybackRate` sets the rate: 2 plays twice as fast, 0 pauses, and a negative rate is treated as 0, since a replay of fixed steps cannot run backward.
 - `GetAlpha` and `GetDisplayDistance` blend the drawing between the last two steps, as the blade did.
 - `IsFinished` is true once every recorded step has played; the label then reads DONE, and before that "Step 5 / 64" (the next step to play, out of the total).
-- A hitch must not turn into a sprint: no single `Advance` may run more than `MaxStepsPerAdvance` steps, and after a hitch the ghost goes back to normal speed on the next frame.
+- A hitch must not turn into a sprint: no single `Advance` may run more than `MaxStepsPerAdvance` steps, and after a hitch the ghost goes back to normal speed on the next frame. (The world caps each frame at 0.4 seconds by default, Max Undilated Frame Time in World Settings, but `Advance` is public and a project can raise that cap, so the ghost guards itself.)
 
 Write the obvious version first and run the tests. One of them fails on purpose for most people. Read its name and message before you read the hints.
 
@@ -302,6 +302,10 @@ bool FDojo_P2_ReplayGhost_PlaybackRateScalesTime::RunTest(const FString& Paramet
 	Feed(Paused, 64, 1.f / 64.f);
 	TestEqual(TEXT("A paused replay plays no step"), Paused->GetStepIndex(), 0);
 
+	Paused->SetPlaybackRate(-1.f);
+	Feed(Paused, 64, 1.f / 64.f);
+	TestEqual(TEXT("A negative rate is treated as a pause"), Paused->GetStepIndex(), 0);
+
 	Paused->SetPlaybackRate(1.f);
 	Feed(Paused, 4, 1.f / 64.f);
 	TestEqual(TEXT("Resuming plays on from where it paused"), Paused->GetStepIndex(), 1);
@@ -311,7 +315,7 @@ bool FDojo_P2_ReplayGhost_PlaybackRateScalesTime::RunTest(const FString& Paramet
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P2_ReplayGhost_HitchDoesNotTurnIntoASprint, "Dojo.P2.ReplayGhost.HitchDoesNotTurnIntoASprint", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** A three-second hitch plays at most the capped steps, and the very next normal frame plays at normal speed. */
+/** One Advance call carrying three seconds (a direct call, or a project that raised the world's frame cap) plays at most the capped steps, and the very next normal frame plays at normal speed. */
 bool FDojo_P2_ReplayGhost_HitchDoesNotTurnIntoASprint::RunTest(const FString& Parameters)
 {
 	using namespace DojoP2ReplayGhostTest;
@@ -322,7 +326,7 @@ bool FDojo_P2_ReplayGhost_HitchDoesNotTurnIntoASprint::RunTest(const FString& Pa
 	if (!TestNotNull(TEXT("Ghost spawned"), Ghost)) return false;
 
 	Ghost->Advance(3.f);
-	TestEqual(TEXT("A three-second hitch plays only MaxStepsPerAdvance steps"), Ghost->GetStepIndex(), Ghost->MaxStepsPerAdvance);
+	TestEqual(TEXT("Three seconds in one Advance play only MaxStepsPerAdvance steps"), Ghost->GetStepIndex(), Ghost->MaxStepsPerAdvance);
 
 	Ghost->Advance(1.f / 16.f);
 	TestEqual(TEXT("The next normal frame plays one step, not another burst"), Ghost->GetStepIndex(), Ghost->MaxStepsPerAdvance + 1);
@@ -357,7 +361,7 @@ bool FDojo_P2_ReplayGhost_DrawsBetweenSteps::RunTest(const FString& Parameters)
 
 # Hints
 
-- The failing test feeds one enormous frame, then one normal frame. Count how many steps the second frame plays in your version, and ask where the hitch's extra time went.
+- The failing test feeds one enormous Advance, then one normal frame. Count how many steps the second frame plays in your version, and ask where the hitch's extra time went.
 - Capping the loop is half of it; the time the cap refused must also leave the bank, or every frame after the hitch hits the cap again. When the recording runs out, empty the bank too.
 - Nothing new from the engine is needed: `FMath::Max` and `FMath::Lerp` from `Math/UnrealMathUtility.h` are the only helpers, and the label uses `FString::Printf` as in the earlier quests.
 
@@ -367,7 +371,7 @@ bool FDojo_P2_ReplayGhost_DrawsBetweenSteps::RunTest(const FString& Parameters)
 - No single Advance plays more than MaxStepsPerAdvance steps, and time the cap refuses is dropped, so the ghost returns to normal speed on the next frame.
 - The replay stops cleanly at the end of the recording and never reads past it.
 - Display distance blends the last two steps by the alpha; the recorded distance never uses the alpha.
-- Rates below zero are refused by SetPlaybackRate, and 0 pauses without losing the place.
+- SetPlaybackRate treats a negative rate as 0, and 0 pauses without losing the place.
 - Tick only calls Advance and moves the actor; nothing else in the class reads the frame's delta.
 
 # Alternative

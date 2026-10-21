@@ -13,7 +13,7 @@ estimatedMinutes: 7
 concepts:
   - The engine moves the world forward once per frame and hands every ticking object that frame's real duration
   - Frames vary in length, so anything per frame must be scaled by DeltaSeconds to mean the same per second
-  - A rule applied once per update, such as a percentage, cannot be fixed by scaling and needs updates of a fixed length
+  - A lone decay per update can be made frame-rate independent with a power of DeltaSeconds; rules that interact, or results that must repeat, need updates of a fixed length
   - Tick groups order the work inside one frame; they do not change how long a frame is
 ---
 
@@ -36,11 +36,11 @@ explanation: Tick runs once per drawn frame, and the desktop draws four times as
 
 Nothing in an Unreal level waits for the player. Every frame, the engine reads input, moves the whole world forward a little, and draws the result, then does it again. Your actors and components join in through **Tick**: once per frame, if `PrimaryActorTick.bCanEverTick` is set, the engine calls `Tick(DeltaSeconds)`.
 
-**Frames are not equal.** `DeltaSeconds` is how much real time the last frame took. On a fast machine it might be 1/144 of a second, on a slow one 1/25, and on the same machine it jumps when a level streams in or a garbage collection pass runs. The engine does not smooth this over for you by default: each frame is as long as it was.
+**Frames are not equal.** `DeltaSeconds` is how much real time the last frame took. On a fast machine it might be 1/144 of a second, on a slow one 1/25, and on the same machine it jumps when a level streams in or a garbage collection pass runs. Two things shape it before your Tick sees it: the world's time dilation scales it (slow motion), and it is capped by Max Undilated Frame Time in World Settings, 0.4 seconds by default, so a three-second stall reaches Tick as 0.4 seconds and the game simply loses the rest. Inside that cap, each frame is as long as it was; the engine does not smooth it.
 
 **Scale what is per second.** A speed, a turn rate, a countdown: each is "so much per second", so each frame should add that amount times `DeltaSeconds`. Counting ticks, or moving a fixed amount per tick, makes the game faster on better hardware.
 
-**Some rules cannot be scaled.** "Keep 98 percent of your speed" applied once per update does not become frame-rate independent by multiplying by `DeltaSeconds`. Neither does a spring that is stable at small updates and explodes at large ones, or any simulation that must give the same answer twice. These need updates that are always the same length, whatever the frame does. The next quest builds that.
+**Some rules need more than a multiply.** "Keep 98 percent of your speed" applied once per update does not become frame-rate independent by multiplying by `DeltaSeconds`. On its own it can be fixed with a power instead: `Speed *= FMath::Pow(0.98f, DeltaSeconds * 60.f)` keeps the same share per second at any frame rate. That trick stops working once rules interact within an update (a spring pulling while damping slows, a stop threshold, a collision), because one long update no longer equals many short ones, and it never makes results repeat to the digit. Interacting rules and results that must give the same answer twice need updates that are always the same length, whatever the frame does. The next quest builds that.
 
 **Order inside a frame.** **Tick groups** (`TG_PrePhysics`, `TG_DuringPhysics`, `TG_PostPhysics`, and others) decide whether your Tick runs before or after physics in that frame. They solve "I read the position before physics moved it", never "the frame was long".
 
@@ -93,7 +93,7 @@ void ADojoArenaBrazier::Tick(float DeltaSeconds)
     - Speed *= 0.98
     - Angle += TurnRate
   answerIndex: 2
-  explanation: The other three are amounts per second and scale cleanly. Keeping a share of the speed per update compounds, so its effect depends on how many updates happen, not on how long they are.
+  explanation: The other three are amounts per second and scale cleanly. Keeping a share of the speed per update compounds, so its effect depends on how many updates happen; on its own it needs a power of DeltaSeconds, not a multiply.
 - id: tick-groups-purpose
   type: multiple-choice
   prompt: "What does moving an actor's tick to TG_PostPhysics change?"

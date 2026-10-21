@@ -51,7 +51,7 @@
       {
         "id": "game-loop-recall-4",
         "type": "multiple-choice",
-        "prompt": "A fixed-step bank caps catch-up at four steps per frame. After a three-second hitch it has run its four steps. What should happen to the time still in the bank?",
+        "prompt": "A fixed-step bank caps catch-up at four steps per call. A direct Advance call (or a project that raised the world's 0.4 second frame cap) hands it three seconds at once, and it runs its four steps. What should happen to the time still in the bank?",
         "choices": [
           "Keep it, so the next frames catch up",
           "Drop it, so the game slows down for a moment instead of bursting",
