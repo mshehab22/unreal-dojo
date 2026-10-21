@@ -5,6 +5,7 @@ import type { MasteryLevel, QuestProgress } from "@shared/types/progress";
 
 import { createNewQuestProgress } from "../../src/main/services/progress/createNewProgress";
 import { RematchSelector } from "../../src/main/services/progress/RematchSelector";
+import { testOutTermsOf } from "../../src/main/services/progress/taughtTerms";
 import { TestOutRules } from "../../src/main/services/progress/TestOutRules";
 import { UnlockGraph, type UnlockState } from "../../src/main/services/progress/UnlockGraph";
 import { makeQuest } from "../support/progressFixtures";
@@ -30,7 +31,8 @@ function state(passedIds: string[] = [], mastery: Record<string, MasteryLevel> =
 const first = makeQuest({ id: "first", title: "Hello Actor", order: 1, terms: ["term.actor"] });
 const second = makeQuest({ id: "second", title: "Health Component", order: 2, prerequisites: ["first"], terms: ["term.component"], scaffold: "worked" });
 const third = makeQuest({ id: "third", title: "Damage", order: 3, prerequisites: ["second"], scaffold: "stub" });
-const teacher = makeQuest({ id: "teacher", title: "Components", kind: "concept", packId: "pack-2", packOrder: 2, worldId: "world-9", terms: ["term.component"] });
+// Taught in an earlier pack, so it gates the world 1 quests that use it (A72).
+const teacher = makeQuest({ id: "teacher", title: "Components", kind: "concept", packId: "pack-0", packOrder: 0, worldId: "world-0", terms: ["term.component"] });
 const boss = makeQuest({ id: "boss", title: "Arena Boss", kind: "boss", order: 4, prerequisites: ["second"] });
 
 describe("UnlockGraph", () =>
@@ -170,3 +172,49 @@ describe("RematchSelector", () =>
 		expect(selector.select("unknown", "world-1", [worldOne, worldTwo], passedBoth)).toBeNull();
 	});
 });
+
+describe("terms gate only when taught earlier in course order (A72, A660)", () =>
+{
+	const lesson = makeQuest({ id: "w1-lesson", title: "Actors", kind: "concept", worldId: "world-1", order: 1, terms: ["term.actor"] });
+	const firstBuild = makeQuest({ id: "w1-build", title: "Training Dummy", worldId: "world-1", order: 2, prerequisites: ["w1-lesson"], terms: ["term.actor", "term.subobject"] });
+	const laterLesson = makeQuest({ id: "w2-lesson", title: "Subobjects", kind: "concept", worldId: "world-2", worldOrder: 2, order: 1, terms: ["term.subobject"] });
+	const quests = [lesson, firstBuild, laterLesson];
+
+	it("opens World 1's first build after its earlier concept with no drill, even though it names a term World 2 teaches", () =>
+	{
+		const availability = new UnlockGraph(quests).availability(state(["w1-lesson"], { "term.actor": "familiar" }));
+
+		expect(availability["w1-build"]?.status).toBe("available");
+	});
+
+	it("still gates on a term taught earlier in the same world", () =>
+	{
+		const availability = new UnlockGraph(quests).availability(state(["w1-lesson"], { "term.actor": "attempted" }));
+
+		expect(availability["w1-build"]).toMatchObject({ status: "locked", lockedReason: "Get term.actor to Familiar in a drill first." });
+	});
+
+	it("never gates on a term taught later, in a later world or later in the same world", () =>
+	{
+		const sameWorldLater = makeQuest({ id: "w1-late-lesson", kind: "concept", worldId: "world-1", order: 3, terms: ["term.late"] });
+		const build = makeQuest({ id: "w1-build-late", worldId: "world-1", order: 2, prerequisites: ["w1-lesson"], terms: ["term.late", "term.subobject"] });
+
+		expect(new UnlockGraph([lesson, build, sameWorldLater, laterLesson]).availability(state(["w1-lesson"]))["w1-build-late"]?.status).toBe("available");
+	});
+
+	it("counts the earliest teacher when two concept quests teach the same term", () =>
+	{
+		const reteach = makeQuest({ id: "w2-reteach", kind: "concept", worldId: "world-2", worldOrder: 2, order: 2, terms: ["term.actor"] });
+		const availability = new UnlockGraph([...quests, reteach]).availability(state(["w1-lesson"], { "term.actor": "attempted" }));
+
+		expect(availability["w1-build"]?.status).toBe("locked");
+	});
+
+	it("leaves a term taught in a later world out of a world's test-out, and keeps terms taught in that world or earlier", () =>
+	{
+		expect(testOutTermsOf(quests, "world-1")).toEqual(["term.actor"]);
+		expect(testOutTermsOf([teacher, ...quests, makeQuest({ id: "w1-uses", worldId: "world-1", order: 4, terms: ["term.component"] })], "world-1")).toEqual(["term.actor", "term.component"]);
+		expect(testOutTermsOf(quests, "world-2")).toEqual(["term.subobject"]);
+	});
+});
+

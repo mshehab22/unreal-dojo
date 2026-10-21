@@ -35,7 +35,7 @@ import type { RandomSource } from "./RandomSource";
 import type { RuleQuest } from "./RuleQuest";
 import { FAILED_SUBMITS_BEFORE_OFFERS } from "./rules";
 import { Sm2Scheduler } from "./Sm2Scheduler";
-import { taughtTermsOf } from "./taughtTerms";
+import { testOutTermsOf } from "./taughtTerms";
 import { toRuleQuests } from "./toRuleQuests";
 
 /** The part of the content catalog this service reads. ContentCatalog meets it. */
@@ -476,12 +476,10 @@ export class ProgressContentService
 		return this.graders.gradeExplain({ prompt, modelAnswer, rubric: [...rubric], answer });
 	}
 
-	/** A world's test-out terms: the terms its quests list that some concept quest teaches (A322). */
+	/** A world's test-out terms: the terms its quests list that a concept quest teaches in that world or an earlier one (A322, A660). */
 	private testOutTerms(quests: RuleQuest[], worldId: string): string[]
 	{
-		const taught = taughtTermsOf(quests);
-
-		return [...new Set(quests.filter((quest) => quest.worldId === worldId).flatMap((quest) => quest.terms))].filter((term) => taught.has(term));
+		return testOutTermsOf(quests, worldId);
 	}
 
 	/** The quest facts and drill bank for the current content load, built once per load. */
