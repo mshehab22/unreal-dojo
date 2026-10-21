@@ -102,7 +102,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.P2.3 Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | claude/m4-patterns-world3-update-method @ 0edd88f | fixes | 9 of 9; D13: mirrors the book's crypt example, move to the arena; product.md world list |
 | M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop @ 7fa6c10 | fixes | Timings reproduced (4.2 s, 32 ms). Round 1: port ownership, close waits on queued call, quit closes editor, sandbox-write mark against false passes with the filler, rebase on M1.3b |
 | M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | merged | merged | 1 fix round; refused save safe; migration verified |
-| M1.6d Pack 4 gate by world id (A68) | progress-and-rules | builder-rules (session) | m1-6d-pack-gate-by-id @ 0aeef53 | review | foundations/communication and patterns/component; verifier warns on missing worlds |
+| M1.6d Pack 4 gate by world id (A68) | progress-and-rules | builder-rules (session) | merged 365d0b4 | merged | Passed first review; future world ids foundations/communication and patterns/component are conventions authors must use |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
