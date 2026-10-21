@@ -169,8 +169,9 @@ describe("RunRegistry and trackRun", () =>
 		const registry = new RunRegistry();
 		const endsOnAbort = (_onProgress: unknown, signal: AbortSignal): Promise<void> => new Promise((resolve) => signal.addEventListener("abort", () => setTimeout(resolve, 5)));
 
-		const first = trackRun("build-1", registry, () => undefined, endsOnAbort);
-		const second = trackRun("test-2", registry, () => undefined, endsOnAbort);
+		// Handlers are attached at once: both runs reject together, and a promise left waiting would be an unhandled rejection.
+		const first = expect(trackRun("build-1", registry, () => undefined, endsOnAbort)).rejects.toMatchObject({ appError: { code: "run-cancelled" } });
+		const second = expect(trackRun("test-2", registry, () => undefined, endsOnAbort)).rejects.toMatchObject({ appError: { code: "run-cancelled" } });
 		expect(registry.hasRuns()).toBe(true);
 
 		const startedAt = Date.now();
@@ -178,8 +179,8 @@ describe("RunRegistry and trackRun", () =>
 
 		expect(Date.now() - startedAt).toBeLessThan(1000);
 		expect(registry.hasRuns()).toBe(false);
-		await expect(first).rejects.toMatchObject({ appError: { code: "run-cancelled" } });
-		await expect(second).rejects.toMatchObject({ appError: { code: "run-cancelled" } });
+		await first;
+		await second;
 	});
 
 	it("cancelAll stops waiting after the limit when a run never ends, and answers at once with nothing running", async () =>
