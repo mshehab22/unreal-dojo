@@ -294,11 +294,14 @@
   {
     "id": "observer",
     "title": "Observer",
-    "intent": "Let a gameplay object shout \"this just happened\" into a delegate and move on, while the HUD, audio, and achievements each decide for themselves whether to listen.",
-    "problem": "When the player picks up the hundredth coin, the achievement system, the HUD, and the audio system all want to know. If the coin pickup code calls each of them directly, gameplay code ends up depending on every system that cares, and every new listener means editing the pickup.",
+    "intent": "Let a gameplay object announce \"this just happened\" through a delegate and carry on, while the bounty boards, the crowd, and the scoreboard each decide for themselves whether to listen.",
+    "problem": "When an arena foe falls, a bounty board counts it, the crowd cheers, and the scoreboard adds points. If the foe calls each of them, the foe depends on every system that reacts, and each new reaction means opening and editing the foe.",
     "unrealForm": "Delegates are Unreal's observer lists. DECLARE_MULTICAST_DELEGATE for C++ listeners, DECLARE_DYNAMIC_MULTICAST_DELEGATE for events Blueprints can bind. Built-in subjects include OnComponentBeginOverlap, OnTakeAnyDamage, and OnDestroyed. AddUObject and AddDynamic bind safely to UObjects, FDelegateHandle lets a listener unsubscribe, and Broadcast notifies everyone.",
     "whenNot": "Inside one small feature where both ends live in the same class, a direct call is easier to read and debug. Avoid it when the sender needs an answer back, when the listener must run later (use Event Queue), or in tight loops where broadcasting to many listeners per element costs too much.",
-    "useCaseQuestIds": [],
+    "useCaseQuestIds": [
+      "p1-bounty-board",
+      "p1-tutorial-sign"
+    ],
     "recall": [
       {
         "id": "observer-recall-1",
@@ -332,7 +335,17 @@
           "Mentions a list of bound callbacks or listeners",
           "Does not claim the subject calls specific systems by name"
         ],
-        "explanation": "That ignorance is the whole point: the coin does not depend on the achievement system."
+        "explanation": "That ignorance is the whole point: the foe does not depend on the bounty board, so a new board never touches the foe."
+      },
+      {
+        "id": "observer-recall-4",
+        "type": "fill-blank",
+        "prompt": "A listener that may be wired twice binds to a dynamic multicast delegate with ___ so the second bind adds nothing.",
+        "acceptedAnswers": [
+          "AddUniqueDynamic",
+          "AddUniqueDynamic()"
+        ],
+        "explanation": "AddDynamic would add a second copy of the same binding, so the handler would run twice per broadcast; the unique form checks the list first."
       }
     ],
     "scenarios": [
@@ -366,7 +379,7 @@
       {
         "id": "observer-scenario-2",
         "type": "which-pattern",
-        "prompt": "Your achievement listener reacts to an enemy death by spawning a reward actor, which triggers another death event, which recurses deeply in the same frame and blows the stack. Which pattern would let you defer handling to a safe point?",
+        "prompt": "Your crowd listener reacts to a foe falling by spawning a fresh foe, which lands on a spike trap, falls at once, and announces again; the chain recurses deeper and deeper in the same frame until the stack overflows. Which pattern would let you defer handling to a safe point?",
         "choices": [
           "dirty-flag",
           "event-queue",
@@ -385,10 +398,23 @@
           },
           {
             "choice": "object-pool",
-            "why": "Pooling reward actors saves spawn cost but does not break the recursion."
+            "why": "Pooling the spawned foes saves spawn cost but does not break the recursion."
           }
         ],
         "explanation": "Queuing the events and draining them later turns deep recursion into a flat loop. This is where Observer hands off to Event Queue."
+      },
+      {
+        "id": "observer-scenario-3",
+        "type": "multiple-choice",
+        "prompt": "A turret's barrel and its heat gauge are two components of one turret, written by one person, and nothing else will ever care about the gauge. The barrel must update the gauge after each shot. What is the best link between them?",
+        "choices": [
+          "A dynamic multicast delegate on the barrel that the gauge binds to",
+          "A global event bus both components can reach",
+          "A direct call from the barrel to the gauge",
+          "The gauge polls the barrel every tick"
+        ],
+        "answerIndex": 2,
+        "explanation": "Both ends belong to one feature and change together, so a delegate would only hide a link a reader must follow anyway; a direct call is plain and shows up in find references."
       }
     ]
   },

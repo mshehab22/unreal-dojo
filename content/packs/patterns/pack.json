@@ -1,0 +1,6 @@
+{
+	"id": "patterns",
+	"title": "Patterns in Unreal",
+	"summary": "The game programming patterns in the form Unreal already gives them: when each one pays for itself, how to build it in UE C++, how to refactor messy code into it, and when to leave it out.",
+	"order": 2
+}
