@@ -15,6 +15,9 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 
 (The Lead lists here anything that passed on one machine and could not be run on the other.)
 
+- 2026-10-21, app-shell M0.1: the Windows nsis installer and the e2e smoke test have only run on the Mac. Covered by the CI matrix (M0.6) once the GitHub repo exists, or by a manual run on the Windows desktop.
+- 2026-10-21, app-shell M0.1: the Intel (x64) dmg is configured but was not launched on an Intel Mac.
+
 ## Solved
 
 (Move entries here with the fix in one line.)

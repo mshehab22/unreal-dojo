@@ -24,7 +24,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 ## Milestones
 
 ### M0 Foundations (everything else depends on this)
-- [ ] M0.1 app-shell: scaffold on the chosen stack (Electron 44, electron-vite 6, React 19, TS strict, Tailwind v4, shadcn, Motion, Monaco, Zustand, vitest, Playwright, electron-builder). Scripts in CLAUDE.md work. Empty window opens. Proof: `npm run typecheck`, `npm test`, screenshot of the window.
+- [x] M0.1 app-shell: scaffold on the chosen stack (Electron 44, electron-vite 6, React 19, TS strict, Tailwind v4, shadcn, Motion, Monaco, Zustand, vitest, Playwright, electron-builder). Scripts in CLAUDE.md work. Empty window opens. Proof: `npm run typecheck`, `npm test`, screenshot of the window.
 - [ ] M0.2 app-shell: typed IPC contract (`src/shared/ipc.ts`) covering every method in the system specs, preload bridge, progress event channel. Proof: unit test that every channel has a handler.
 - [ ] M0.3 ui-core: design tokens, app frame, navigation, dark theme, two accent sets, typography. Proof: Storybook-free gallery route `/dev/tokens` screenshot.
 - [ ] M0.4 content-engine: shared types for every quest kind, glossary, packs; parser with malformed-file errors naming file and problem; `tools/verify-content.ts` parse-only mode. Proof: unit tests, verifier runs on an empty content folder.
@@ -69,7 +69,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 
 | Task | System | Owner | Worktree | Stage | Notes |
 | --- | --- | --- | --- | --- | --- |
-| M0.1 Scaffold the app | app-shell | builder-shell (agent) | m0-1-scaffold | fixes | Review round 1: 5 fixes (e2e overwrites proof PNG, no macOS drag region, missing radix-ui/gray-matter/zod/fast-xml-parser, sandboxed preload externalizes deps, spec lines contradict A13). A duplicate run in session "M0.1 Scaffold the Electron app" (branch claude/m0-1-scaffold-de80f2) is parked, not merged. |
+| M0.1 Scaffold the app | app-shell | builder-shell (agent) | merged | merged | Review round 1 fixed 5 issues; re-review PASS. On main: typecheck, test, verifier, build, e2e green. Parked duplicate branch claude/m0-1-scaffold-de80f2 not merged. |
 | M0.5 Glossary and pattern cards | content-foundations | author-foundations (session) | claude/m0-5-glossary-50e7f9 | building | Parse check waits for M0.4 |
 | M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | claude/m1-2a-sandbox-template-d9043b | building | Started early (A04) |
 | M0.2 Typed IPC contract | app-shell | shell-ipc (session) | from m0-1-scaffold | building | Rebases onto main after M0.1 merges; content methods may split to M0.2b after M0.4 |
