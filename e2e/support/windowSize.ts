@@ -31,10 +31,7 @@ export function expectedWindowSize(workArea: WindowSize): WindowSize
 	};
 }
 
-/** How far the height may differ when the screen limits it: macOS reports the work area 1 point off between launches (858 or 859 on the M5 Air, A118). */
-export const WORK_AREA_HEIGHT_TOLERANCE = 1;
-
-/** True when the screen, not the spec, sets the height, so the tolerance applies. */
+/** True when the screen, not the spec, sets the height. The work area can change after macOS sizes the window (the Dock resizing, A118), so only a range can be checked then. */
 export function heightIsLimitedByScreen(workArea: WindowSize): boolean
 {
 	return workArea.height < SPEC_WINDOW_SIZE.height && workArea.height > MINIMUM_WINDOW_SIZE.height;
