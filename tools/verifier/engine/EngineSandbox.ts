@@ -1,7 +1,7 @@
 // A throwaway copy of the sandbox template the verifier writes quest code into, then builds and tests through M1.3's runners (A211).
 import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 
 import type { AutomationTestRunner } from "../../../src/main/services/unreal/AutomationTestRunner";
 import type { PlatformPaths } from "../../../src/main/services/unreal/PlatformPaths";
@@ -16,6 +16,17 @@ const TIMESTAMP_GAP_MILLISECONDS = 1_100;
 
 /** Plugins only 5.8 and later ship; removed from the copy for older engines (A41). */
 const PLUGINS_FROM_5_8 = new Set(["ModelContextProtocol", "AutomationTestToolset", "LiveCodingToolset"]);
+
+/** Build products a template may contain on a developer's machine; never copied, like SandboxProjectService (A184). */
+const BUILD_OUTPUT_FOLDERS = new Set(["Binaries", "Intermediate", "Saved", "DerivedDataCache"]);
+
+/** Whether `source` is (or is inside) a build output folder at the template's top level. */
+function isBuildOutput(templateFolder: string, source: string): boolean
+{
+	const first = relative(templateFolder, source).split(sep)[0] ?? "";
+
+	return BUILD_OUTPUT_FOLDERS.has(first);
+}
 
 /** The app's Unreal services the sandbox drives: the same builder, test runner, and file writer the Build screen uses (A211). */
 export interface UnrealTools
@@ -79,24 +90,26 @@ export class EngineSandbox
 {
 	readonly folder: string;
 	private readonly target: EngineTarget;
+	private readonly signal: AbortSignal;
 	private runNumber = 0;
 	private lastBuildEnded = 0;
 
 	/** Use `EngineSandbox.create`. */
-	private constructor(folder: string, target: EngineTarget)
+	private constructor(folder: string, target: EngineTarget, signal: AbortSignal)
 	{
 		this.folder = folder;
 		this.target = target;
+		this.signal = signal;
 	}
 
-	/** Copies `templateFolder` to a new temp folder and points its `.uproject` at the engine version, as SandboxProjectService does. */
-	static async create(templateFolder: string, target: EngineTarget): Promise<EngineSandbox>
+	/** Copies `templateFolder` to a new temp folder and points its `.uproject` at the engine version, as SandboxProjectService does. Aborting `signal` kills a running build or test run. */
+	static async create(templateFolder: string, target: EngineTarget, signal: AbortSignal = new AbortController().signal): Promise<EngineSandbox>
 	{
 		// The real path matters on macOS: the temp folder is reached through the /var -> /private/var link, and Unreal's
 		// build accelerator refuses to write outputs when the two spellings of one folder disagree.
 		const folder = await realpath(await mkdtemp(join(tmpdir(), "dojo-verify-")));
 
-		await cp(templateFolder, folder, { recursive: true });
+		await cp(templateFolder, folder, { recursive: true, filter: (source) => !isBuildOutput(templateFolder, source) });
 
 		const projectFile = join(folder, "Dojo.uproject");
 		const project = JSON.parse(await readFile(projectFile, "utf8")) as { EngineAssociation?: string; Plugins?: { Name: string }[] };
@@ -108,7 +121,7 @@ export class EngineSandbox
 
 		await writeFile(projectFile, `${JSON.stringify(project, null, "\t")}\n`, "utf8");
 
-		return new EngineSandbox(folder, target);
+		return new EngineSandbox(folder, target, signal);
 	}
 
 	/** Writes a quest's files to `Source/Dojo/Quests/<quest-id>/` and its tests to `Source/Dojo/Tests/<quest-id>.Test.cpp` with QuestFileWriter. */
@@ -132,7 +145,7 @@ export class EngineSandbox
 		const outcome = await this.target.tools.builder.build({
 			engineRoot: this.target.root,
 			projectFile: this.projectFile(),
-			signal: new AbortController().signal,
+			signal: this.signal,
 			onLine: (line) => allLines.push(line),
 		});
 
@@ -159,7 +172,7 @@ export class EngineSandbox
 			projectFile: this.projectFile(),
 			testNames: [...testNames],
 			reportFolder,
-			signal: new AbortController().signal,
+			signal: this.signal,
 			onLine: (line) => allLines.push(line),
 		});
 

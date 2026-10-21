@@ -62,8 +62,23 @@ export async function runEngineStage(enginePath: string, options: VerifierOption
 		testRunner: new AutomationTestRunner(platform.paths, launcher, SYSTEM_TIMER, fileSystem),
 		writer: new QuestFileWriter(platform.paths, fileSystem),
 	};
-	const verifier = new EngineVerifier({ target: { root: engine.path, version: engine.version, tools }, templateFolder: TEMPLATE_FOLDER, solutionsFolder: options.solutionsFolder, log });
-	const report = await verifier.verify(result.input.quests, scopeOf(options, result));
+	const controller = new AbortController();
+	const stopOnSignal = (): void =>
+	{
+		if (!controller.signal.aborted) log("engine: stopping; killing the build or editor and keeping the sandbox copy");
+		controller.abort();
+	};
+
+	// Ctrl+C or a SIGTERM aborts the run, which kills UBT or the editor through the runners' tree kill (A440).
+	process.on("SIGINT", stopOnSignal);
+	process.on("SIGTERM", stopOnSignal);
+
+	const verifier = new EngineVerifier({ target: { root: engine.path, version: engine.version, tools }, templateFolder: TEMPLATE_FOLDER, solutionsFolder: options.solutionsFolder, log, signal: controller.signal });
+	const report = await verifier.verify(result.input.quests, scopeOf(options, result)).finally(() =>
+	{
+		process.off("SIGINT", stopOnSignal);
+		process.off("SIGTERM", stopOnSignal);
+	});
 
 	log(`engine: ${report.questsChecked} quests; first build ${report.timings.firstBuildSeconds} s, solution tests ${report.timings.solutionTestsSeconds} s, starter checks ${report.timings.starterChecksSeconds} s`);
 

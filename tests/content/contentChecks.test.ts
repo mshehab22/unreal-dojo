@@ -328,6 +328,37 @@ describe("cross-quest dependencies (A268)", () =>
 	});
 });
 
+describe("bare-name cross-quest includes (A181)", () =>
+{
+	/** Quest a owns A.h; quest b's starter includes it by bare name, with the given brief line and prerequisites. */
+	function pair(declaration: string, prerequisites: string[]): BuildQuest[]
+	{
+		const owner = { ...build("a", "worked"), files: [{ name: "A.h", starter: "#pragma once" }] };
+		const user = build("b", "faded", prerequisites);
+
+		return [owner, { ...user, brief: `${user.brief}\n\n${declaration}`, files: [{ name: "B.cpp", starter: "#include \"B.h\"\n#include \"A.h\"\n#include \"CoreMinimal.h\"" }] }];
+	}
+
+	it("reports a bare include of another quest's file that the brief does not declare", async () =>
+	{
+		expect(await messages(dependencyCheck, inputWith([pair("", ["a"])]))).toEqual([
+			"the code includes \"A.h\", a file of \"a\", but the \"Compiles against earlier quests:\" line does not name a with its path",
+		]);
+	});
+
+	it("accepts a bare include once the brief declares the quest", async () =>
+	{
+		expect(await messages(dependencyCheck, inputWith([pair("Compiles against earlier quests: a (`Quests/a/A.h`).", ["a"])]))).toEqual([]);
+	});
+
+	it("reports a file name two quests share, since a bare include of it is ambiguous", async () =>
+	{
+		const found = await messages(dependencyCheck, inputWith([[build("a", "worked"), build("b", "stub", ["a"])]]), true);
+
+		expect(found).toContain("packs/p1/worlds/01-w1/02-b.md: DojoExLantern.h is also a file of \"a\"; every quest folder is on the include path (A181), so a bare #include \"DojoExLantern.h\" would be ambiguous. Rename one");
+	});
+});
+
 describe("concept questions and required piece labels", () =>
 {
 	it("needs a concept question that is not explain-in-one-sentence", async () =>

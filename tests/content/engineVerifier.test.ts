@@ -1,5 +1,5 @@
 // Checks the --engine stage without Unreal: sandbox setup through M1.3's file writer, and the verifier's decisions with a fake sandbox.
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -79,6 +79,9 @@ class FakeSandbox implements VerifierSandbox
 	/** Quests whose tests are missing from the report while their starter is in place. */
 	starterTestsMissing = new Set<string>();
 
+	/** When set, the first build aborts this controller, as Ctrl+C would mid-build. */
+	abortOnBuild: AbortController | undefined;
+
 	/** Every write, removal, and build in order, for checking the sequence. */
 	readonly operations: string[] = [];
 
@@ -100,6 +103,7 @@ class FakeSandbox implements VerifierSandbox
 	async build(): Promise<SandboxBuild>
 	{
 		this.operations.push("build");
+		this.abortOnBuild?.abort();
 
 		const broken = [...this.written].find(([, files]) => files.some((file) => file.text.includes("BROKEN")));
 		const breaker = [...this.starterBreaks.keys()].find((id) => this.holdsStarter(id));
@@ -178,7 +182,7 @@ async function writeBossSolution(id: string, withTests: boolean): Promise<string
 }
 
 /** Runs the verifier over the quests with a fake sandbox. */
-async function verifyWith(sandbox: FakeSandbox, quests: (BuildQuest | BossQuest)[], solutionsFolder: string, scope?: Set<string>): Promise<Awaited<ReturnType<EngineVerifier["verify"]>>>
+async function verifyWith(sandbox: FakeSandbox, quests: (BuildQuest | BossQuest)[], solutionsFolder: string, scope?: Set<string>, signal?: AbortSignal): Promise<Awaited<ReturnType<EngineVerifier["verify"]>>>
 {
 	const verifier = new EngineVerifier({
 		target: macTarget("5.8.3"),
@@ -186,6 +190,7 @@ async function verifyWith(sandbox: FakeSandbox, quests: (BuildQuest | BossQuest)
 		solutionsFolder,
 		log: () => undefined,
 		createSandbox: async () => sandbox,
+		...(signal === undefined ? {} : { signal }),
 	});
 	const records: QuestRecord[] = quests.map((entry) => ({ quest: entry, file: `examples/${entry.id}.md` }));
 
@@ -231,7 +236,17 @@ describe("EngineVerifier", () =>
 		expect(report.problems).toEqual([]);
 		expect(report.questsChecked).toBe(2);
 		expect(sandbox.removed).toBe(true);
-		expect(sandbox.written.get("a")?.[0]?.text).toBe("SOLUTION");
+		expect(sandbox.operations).toEqual([
+			"write a: a.cpp=SOLUTION",
+			"write b: b.cpp=SOLUTION",
+			"build",
+			"remove b",
+			"write a: a.cpp=STARTER",
+			"build",
+			"remove a",
+			"write b: b.cpp=STARTER",
+			"build",
+		]);
 	});
 
 	it("reports a starter that already passes, and keeps the sandbox", async () =>
@@ -301,7 +316,7 @@ describe("EngineVerifier", () =>
 
 		expect(report.problems).toEqual([]);
 		expect(report.questsChecked).toBe(1);
-		expect(sandbox.operations).toEqual(["write yard: DojoBoss.cpp=SOLUTION", "build", "remove yard"]);
+		expect(sandbox.operations).toEqual(["write yard: DojoBoss.cpp=SOLUTION", "build"]);
 		expect(report.timings.starterChecksSeconds).toBeLessThan(1);
 	});
 
@@ -312,7 +327,7 @@ describe("EngineVerifier", () =>
 		expect(report.problems.map((problem) => problem.message)).toEqual(["no IMPLEMENT_SIMPLE_AUTOMATION_TEST found, so the engine has nothing to run"]);
 	});
 
-	it("writes a boss's piece overrides over the piece solution, then removes the boss and restores the piece before starter checks", async () =>
+	it("builds the solutions with the boss's piece overrides, and checks the piece's starter without the boss", async () =>
 	{
 		const sandbox = new FakeSandbox();
 		const solutions = await writeSolutions({ a: "SOLUTION" });
@@ -325,16 +340,115 @@ describe("EngineVerifier", () =>
 
 		expect(report.problems).toEqual([]);
 		expect(sandbox.operations).toEqual([
-			"write a: a.cpp=SOLUTION",
-			"write yard: DojoBoss.cpp=SOLUTION",
 			"write a: a.cpp=EXTENDED",
+			"write yard: DojoBoss.cpp=SOLUTION",
 			"build",
-			"write a: a.cpp=SOLUTION",
 			"remove yard",
 			"write a: a.cpp=STARTER",
 			"build",
-			"write a: a.cpp=SOLUTION",
 		]);
+	});
+
+	it("stops after the step a Ctrl+C interrupts, keeps the sandbox, and reports the cancel", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const controller = new AbortController();
+
+		sandbox.abortOnBuild = controller;
+
+		const report = await verifyWith(sandbox, [quest("a")], await writeSolutions({ a: "SOLUTION" }), undefined, controller.signal);
+
+		expect(report.cancelled).toBe(true);
+		expect(report.keptSandbox).toBe("/fake/sandbox");
+		expect(report.problems.map((problem) => `${problem.file}: ${problem.message}`)).toEqual(["(engine): cancelled during the first build; the sandbox copy is kept at /fake/sandbox"]);
+		expect(sandbox.operations).toEqual(["write a: a.cpp=SOLUTION", "build"]);
 	});
 });
 
+describe("EngineVerifier with quests after a boss (A443)", () =>
+{
+	it("keeps a boss and its piece overrides in place for the starter check of a later quest that requires the boss", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "SOLUTION", c: "SOLUTION" });
+
+		await writeBossSolution("yard", true);
+		await mkdir(join(solutions, "yard", "a"), { recursive: true });
+		await writeFile(join(solutions, "yard", "a", "a.cpp"), "EXTENDED");
+
+		const later = { ...quest("c"), prerequisites: ["yard"] };
+		const report = await verifyWith(sandbox, [quest("a"), { ...boss("yard"), pieces: ["a"], prerequisites: ["a"] }, later], solutions);
+
+		expect(report.problems).toEqual([]);
+		expect(sandbox.operations).toEqual([
+			"write a: a.cpp=EXTENDED",
+			"write yard: DojoBoss.cpp=SOLUTION",
+			"write c: c.cpp=SOLUTION",
+			"build",
+			// a's starter: nothing after a is in the sandbox, so the boss and c go and a is checked on its own.
+			"remove yard",
+			"remove c",
+			"write a: a.cpp=STARTER",
+			"build",
+			// c's starter: c needs the boss, so the boss and the extended a come back.
+			"write a: a.cpp=EXTENDED",
+			"write yard: DojoBoss.cpp=SOLUTION",
+			"write c: c.cpp=STARTER",
+			"build",
+		]);
+	});
+
+	it("also counts a boss named only on the Compiles against earlier quests line", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "SOLUTION", c: "SOLUTION" });
+
+		await writeBossSolution("yard", true);
+		await mkdir(join(solutions, "yard", "a"), { recursive: true });
+		await writeFile(join(solutions, "yard", "a", "a.cpp"), "EXTENDED");
+
+		const later = { ...quest("c"), brief: "Compiles against earlier quests: yard (`Quests/yard/DojoBoss.h`)." };
+
+		await verifyWith(sandbox, [quest("a"), { ...boss("yard"), pieces: ["a"] }, later], solutions);
+
+		expect(sandbox.operations.slice(-4)).toEqual(["write a: a.cpp=EXTENDED", "write yard: DojoBoss.cpp=SOLUTION", "write c: c.cpp=STARTER", "build"]);
+	});
+});
+
+describe("EngineSandbox wiring", () =>
+{
+	it("passes its abort signal to M1.3's builder and test runner", async () =>
+	{
+		const controller = new AbortController();
+		const seen: AbortSignal[] = [];
+		const target = macTarget("5.8.3");
+		const fakeTools = {
+			...target.tools,
+			builder: { build: async (request: { signal: AbortSignal }) => { seen.push(request.signal); return { succeeded: true, filteredOutput: "", exitCode: 0, timedOut: false, cancelled: false, durationMs: 1 }; } },
+			testRunner: { run: async (request: { signal: AbortSignal }) => { seen.push(request.signal); return { tests: [], cancelled: false, exitCode: 0, durationMs: 1 }; } },
+		} as unknown as EngineTarget["tools"];
+		const sandbox = await EngineSandbox.create(resolve("resources/sandbox-template"), { ...target, tools: fakeTools }, controller.signal);
+
+		await sandbox.build();
+		await sandbox.runTests(["Dojo.A"]);
+		await sandbox.remove();
+
+		expect(seen).toEqual([controller.signal, controller.signal]);
+	});
+
+	it("never copies Binaries, Intermediate, Saved, or DerivedDataCache from the template (A184)", async () =>
+	{
+		const template = join(scratch, "template");
+
+		for (const folder of ["Binaries", "Intermediate", "Saved", "DerivedDataCache", "Source/Dojo"]) await mkdir(join(template, folder), { recursive: true });
+		for (const file of ["Binaries/old.dylib", "Intermediate/old.o", "Saved/old.log", "DerivedDataCache/old.ddc", "Source/Dojo/Dojo.cpp"]) await writeFile(join(template, file), "x");
+		await writeFile(join(template, "Dojo.uproject"), JSON.stringify({ FileVersion: 3, EngineAssociation: "", Plugins: [] }));
+
+		const sandbox = await EngineSandbox.create(template, macTarget("5.8.3"));
+		const copied = await readdir(sandbox.folder);
+
+		await sandbox.remove();
+
+		expect(copied.sort()).toEqual(["Dojo.uproject", "Source"]);
+	});
+});
