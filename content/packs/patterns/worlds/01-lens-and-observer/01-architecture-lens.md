@@ -6,13 +6,13 @@ kind: concept
 difficulty: 1
 patterns: []
 skills: [architecture]
-terms: [forward-declaration, coding-standard]
+terms: [forward-declaration]
 prerequisites: []
 xp: 20
 estimatedMinutes: 6
 concepts:
   - A design is good when the next change is cheap, and most of that price is reading
-  - Two pieces are coupled when you cannot understand or change one without the other
+  - One class depends on another when a reader has to open the other's files to understand it
   - Every layer of flexibility is a bet that a change is coming; an unused layer is pure cost
   - Iteration speed, frame speed, and today's feature speed pull against each other
 ---
@@ -36,7 +36,7 @@ explanation: Architecture is judged by how cheaply the game takes the changes it
 
 Every pattern in this pack is judged through one question: **when the design changes, how much does it cost to change the code?** If nobody will ever touch a piece of code again, its structure does not matter. Games are the opposite case: a designer plays a build, changes their mind, and the code has to follow, again and again.
 
-**The price of a change is mostly reading.** Before you can move a door's alarm from the gate to the pressure plate, you have to load the gate, the plate, the alarm, and whatever calls them into your head. Typing the change is quick; finding out what it will break is slow. So the useful definition of **coupling** is about reading: two pieces of code are coupled when you cannot understand or change one without also understanding the other. Decoupling shrinks the amount of code you must load before you can act. In Unreal you can often see coupling in the headers: every `#include` of another system's header is a piece of that system a reader, and the compiler, must now load. A **forward declaration** (`class ADojoArenaGate;`) is the small, cheap version of that dependency.
+**The price of a change is mostly reading.** Before you can move a door's alarm from the gate to the pressure plate, you open the gate, the plate, the alarm, and everything that calls them, and work out what each one expects. Typing the change is quick; finding out what it will break is slow. So in this pack, a **dependency** is measured in reading: the gate depends on the alarm when a reader has to open the alarm's files to understand what the gate does, or to change it safely. The more files a change makes you open, the more it costs. Removing a dependency means the next reader can stop at the gate. In Unreal you can often see dependencies in the headers: every `#include` of another system's header is a piece of that system a reader, and the compiler, must now load. A **forward declaration** (`class ADojoArenaGate;`) is the small, cheap version of that dependency.
 
 **Flexibility is a bet.** An interface, an extra delegate, a registry, a data table: each one says "I expect this to change." When the change comes, the bet pays. When it never comes, the layer is a tax on every future reader, who has to walk through it to find the code that does the work. Codebases full of abstract managers with nothing behind them are what happens when every bet is placed and none pays. The counterweight has a name: "you aren't going to need it". Add a layer when a change is planned or has already happened twice, not because it might.
 
@@ -95,11 +95,11 @@ public:
     - The code with the fewest classes
   answerIndex: 2
   explanation: Interfaces, speed, and class counts are means. The test is the price of the next real change, and most of that price is reading.
-- id: fill-coupled
+- id: fill-depends
   type: fill-blank
-  prompt: "Two pieces of code are ___ when you cannot understand or change one without also loading the other into your head."
-  acceptedAnswers: [coupled, tightly coupled]
-  explanation: Coupling defined by reading cost is the one that matters for change, because reading is the slow part.
+  prompt: "The gate ___ on the alarm when a reader has to open the alarm's files to understand what the gate does."
+  acceptedAnswers: [depends, relies]
+  explanation: In this pack a dependency is counted in files a reader must open, because reading is the slow part of every change.
 - id: spot-heavy-include
   type: spot-the-bug
   prompt: This header only stores a pointer to the scoreboard and never calls it inline. Which line makes every reader and every file that includes it pay for the scoreboard too?
@@ -111,7 +111,7 @@ public:
     #include "DojoArenaCrate.generated.h"
   bugLine: 4
   fix: Replace the include with a forward declaration of the scoreboard class and include its header in the crate's source file instead.
-  explanation: A pointer member only needs the name of the class. The full include drags the scoreboard into every file that includes the crate, which is coupling you can measure in compile time and in reading.
+  explanation: A pointer member only needs the name of the class. The full include drags the scoreboard into every file that includes the crate, which is a dependency you can measure in compile time and in reading.
 - id: three-speeds
   type: multiple-choice
   prompt: "A designer wants a new trap in tonight's build. You write it as a quick hack inside the player character. Which of the three speeds did you buy, and which did you pay with?"

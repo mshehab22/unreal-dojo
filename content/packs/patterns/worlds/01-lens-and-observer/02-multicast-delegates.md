@@ -44,7 +44,7 @@ A dynamic one goes through reflection, so Blueprint can bind to it when the memb
 
 `DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDojoArenaOnGateForcedDynamic, ADojoArenaGate*, Gate);`
 
-**Binding.** For a native delegate, `AddUObject(this, &UMyClass::HandleGateForced)` binds a member function and returns an `FDelegateHandle`. The binding holds the object weakly, so a destroyed listener is skipped rather than crashing the broadcast. For a dynamic delegate, `AddDynamic(this, &UMyClass::HandleGateForced)` binds by function name through reflection, so the handler must be a `UFUNCTION`; without the macro the bind compiles and then fails when the delegate fires. `AddUniqueDynamic` does the same but refuses a second copy of the same binding.
+**Binding.** For a native delegate, `AddUObject(this, &UMyClass::HandleGateForced)` binds a member function and returns an `FDelegateHandle`. The binding holds the object weakly, so a destroyed listener is skipped rather than crashing the broadcast. For a dynamic delegate, `AddDynamic(this, &UMyClass::HandleGateForced)` binds by function name through reflection, so the handler must be a `UFUNCTION`. Without the macro the bind still compiles and nothing crashes: the engine logs an ensure ("Unable to bind delegate") at the moment you bind, the delegate still reports itself bound, and every broadcast silently skips the handler. It looks wired and never runs. `AddUniqueDynamic` does the same but refuses a second copy of the same binding.
 
 **Unbinding.** Every binding needs an exit, or a listener that is gone, or reset, keeps a stale entry in the list. Native: `Remove(Handle)` or `RemoveAll(this)`. Dynamic: `RemoveDynamic(this, &UMyClass::HandleGateForced)`. The usual place is the listener's **EndPlay**, which runs when the actor is destroyed or its level unloads.
 
@@ -120,20 +120,21 @@ void ADojoArenaCrowd::EndPlay(const EEndPlayReason::Type EndPlayReason)
   prompt: "Inside ForceOpen, after setting bOpen, the gate notifies every listener with OnGateForced.___(this);"
   acceptedAnswers: [Broadcast]
   explanation: Broadcast walks the list and calls every bound function with the given arguments.
-- id: spot-missing-ufunction
-  type: spot-the-bug
-  prompt: This listener binds to a dynamic multicast delegate. The bind compiles, and the game stops with an error the first time the delegate fires. Which line causes it?
+- id: missing-ufunction
+  type: multiple-choice
+  prompt: "The crowd binds HandleGateForced to a dynamic multicast delegate with AddDynamic, but HandleGateForced has no UFUNCTION macro. What happens?"
   code: |
-    UCLASS()
-    class ADojoArenaCrowd : public AActor
+    void ADojoArenaCrowd::WatchGate(ADojoArenaGate* Gate)
     {
-    	GENERATED_BODY()
-    public:
-    	void HandleGateForced(ADojoArenaGate* Gate);
-    };
-  bugLine: 6
-  fix: Put UFUNCTION() above HandleGateForced so reflection can find it by name.
-  explanation: AddDynamic stores the function's name, and the broadcast looks that name up through reflection; a plain C++ function is not in the table.
+    	Gate->OnGateForcedDynamic.AddDynamic(this, &ADojoArenaCrowd::HandleGateForced);
+    }
+  choices:
+    - The code does not compile
+    - The game crashes the first time the gate is forced
+    - The bind logs an ensure, and every broadcast silently skips the crowd's handler
+    - It works, only slower than a native delegate
+  answerIndex: 2
+  explanation: AddDynamic binds by function name through reflection, and a plain C++ function is not in the reflection table. The engine warns once at bind time; after that the binding sits in the list doing nothing, which is why the handler needs UFUNCTION().
 - id: direction
   type: multiple-choice
   prompt: "The gate announces OnGateForced and the crowd reacts. Which file includes which?"

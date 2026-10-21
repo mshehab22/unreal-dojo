@@ -1305,7 +1305,8 @@
       "destroy",
       "unbinding-delegates",
       "timer-manager"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "tick",

@@ -24,7 +24,7 @@ When you press Play and run `ke * Pull` twice, the sign beside the lever goes fr
 This is Observer again, in a different mechanic and in the form Blueprint can join. The declarations are given; every body is yours.
 
 - `ADojoP1PracticeLever` is the subject. `Pull` counts the pull, refreshes the lever's own label ("Pulled 2"), and then announces it through `OnPulled` with the lever and the new count. The delegate is dynamic and its property is `BlueprintAssignable`, so a level Blueprint can bind to it like any event dispatcher.
-- `ADojoP1TutorialSign` is an observer. `Watch` binds the sign's `HandleLeverPulled` to a lever's `OnPulled` with `AddDynamic`. `BeginPlay` watches the lever a designer picked in the Details panel (it may be empty) and shows the instruction. Each heard pull counts toward `PullsToFinish`; once the step is finished the sign removes its own binding, right there inside the handler. `EndPlay` removes the binding too, in case the sign goes first.
+- `ADojoP1TutorialSign` is an observer. `Watch` binds the sign's `HandleLeverPulled` to a lever's `OnPulled` with `AddDynamic`. `BeginPlay` watches the lever a designer picked in the Details panel (it may be empty) and shows the instruction. `Watch` does nothing for an empty lever or once the step is finished, and if it is handed a different lever the sign drops its old binding first, so it never listens to two levers. Each heard pull counts toward `PullsToFinish`; once the step is finished the sign removes its own binding, right there inside the handler. `EndPlay` removes the binding too, in case the sign goes first.
 
 Dependency direction: the sign depends on the lever. The sign's source file includes the lever's header and binds itself; the lever never mentions the sign, so a second tutorial step, a door, or a sound can listen to the same lever without touching it.
 
@@ -390,7 +390,7 @@ bool FDojo_P1_TutorialSign_LeavesOnEndPlay::RunTest(const FString& Parameters)
 - The sign binds a UFUNCTION handler with AddUniqueDynamic (or checks before AddDynamic), so wiring it twice still hears each pull once.
 - The finished sign removes its own binding with RemoveDynamic, and EndPlay removes it too.
 - Dependency direction: the sign includes the lever's header; the lever's files never mention the sign.
-- Watch ignores an empty lever and switching to another lever drops the old binding first.
+- Watch ignores an empty lever or a finished step, and handing it a different lever drops the old binding first.
 - Pulls to finish come from the editable PullsToFinish property; nothing ticks.
 
 # Alternative

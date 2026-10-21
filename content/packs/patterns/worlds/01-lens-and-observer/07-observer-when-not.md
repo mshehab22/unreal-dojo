@@ -87,7 +87,7 @@ void ADojoArenaCrowd::HandleScoreChanged(int32 NewScore)
   type: multiple-choice
   prompt: "Which of these is the weakest reason to add a delegate?"
   choices:
-    - The HUD, the music, and the achievements all react to a boss phase change
+    - The bounty boards, the crowd, and the scoreboard all react when the arena champion falls
     - A level Blueprint needs to react to a lever without new C++
     - The weapon's own reload component tells the weapon's own ammo component it finished, and nothing else will ever care
     - A pickup must not include the quest system's header

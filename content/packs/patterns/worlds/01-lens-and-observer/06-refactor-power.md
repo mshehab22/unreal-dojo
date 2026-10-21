@@ -26,7 +26,7 @@ The starter works. Every behavior test passes on it. Read it first and count wha
 Refactor it into Observer:
 
 - The generator announces every change of state through a dynamic multicast delegate in a `BlueprintAssignable` property named `OnPowerChanged`, carrying the new running state. Its lists of devices and its includes of their headers go away.
-- Each device binds its own reaction in `ConnectTo` and removes it in `EndPlay`. The rule "the alarm sounds when power drops" moves into the alarm.
+- Each device binds its own reaction in `ConnectTo` and removes it in `EndPlay`. Connecting the same device twice must still leave one binding, as it leaves one entry in the starter's lists. The rule "the alarm sounds when power drops" moves into the alarm.
 - The public functions keep their names and meaning, so the behavior tests still read the same results.
 
 Dependency direction after the refactor: the lamp and the alarm include the generator's header and bind themselves; the generator includes neither, and adding the fan touches only the fan.
@@ -524,7 +524,7 @@ bool FDojo_P1_PowerRefactor_DestroyedDeviceLeaves::RunTest(const FString& Parame
 - The generator declares OnPowerChanged as a dynamic multicast delegate in a BlueprintAssignable UPROPERTY and broadcasts it once per real change, after updating its state.
 - The generator has no device lists and includes neither device header; dependency direction runs from each device to the generator.
 - The alarm's "sound when power drops" rule lives in the alarm's handler, not in the generator.
-- Each device binds a UFUNCTION handler with AddUniqueDynamic in ConnectTo and removes it in EndPlay; reconnecting to another generator drops the old binding.
+- Each device binds a UFUNCTION handler with AddUniqueDynamic in ConnectTo, so connecting twice binds once, and removes it in EndPlay.
 - Behavior is unchanged: the same public functions give the same results, and a lamp connected while running lights at once.
 - No dead code is left behind: the old lists, loops, and includes are deleted, not commented out.
 

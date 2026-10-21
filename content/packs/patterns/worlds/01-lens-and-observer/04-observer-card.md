@@ -42,7 +42,7 @@ The shape you built in the bounty board is the **Observer** pattern. One object,
 
 **It runs now.** `Broadcast` calls every observer before it returns, on the same thread. A slow observer slows the subject. An observer that triggers the same event again from inside its handler recurses. When the reaction must happen later or somewhere else, a queue is the right tool, and a later world builds one.
 
-**Lifetime is the observer's job.** The subject can outlive any observer. A listener that never unbinds leaves a stale entry; in a garbage-collected engine the reverse also happens: a strong reference in the list keeps a dead screen alive and reacting, the lapsed listener. Unreal's weak bindings (`AddUObject`, `AddWeakLambda`, dynamic bindings) skip a destroyed object, but the clean exit is still yours: remove the binding in `EndPlay`.
+**Lifetime is the observer's job.** The subject can outlive any observer. Picture the arena removing a bounty board at the end of each round and spawning a fresh one. If the old board never unbinds, the foe's list gains a stale entry every round. If the binding held the board strongly (a plain lambda that captured it, for example), the old board would even keep counting defeats for a round that is over: a lapsed listener. Unreal's weak bindings (`AddUObject`, `AddWeakLambda`, dynamic bindings) skip a destroyed object, but the clean exit is still yours: remove the binding in `EndPlay`.
 
 **The Unreal forms.** Native multicast delegates for C++ listeners; dynamic multicast delegates, `BlueprintAssignable`, for listeners in Blueprint, at the price of a reflection lookup per call and `UFUNCTION` handlers. The engine is full of subjects already: `OnComponentBeginOverlap`, `OnTakeAnyDamage`, `OnDestroyed`, and every Blueprint event dispatcher. Spotting them is half the skill.
 
@@ -117,21 +117,21 @@ void ADojoArenaDoor::HandleTriggerEntered(UPrimitiveComponent* OverlappedCompone
   explanation: The subject announces; the observers react. In the bounty board the foe was the subject.
 - id: spot-lapsed
   type: spot-the-bug
-  prompt: A pause menu widget listens to the game's OnPaused delegate. Menus are created and destroyed many times. Which line leaves a stale binding behind each time?
+  prompt: The arena removes its round bounty board at the end of every round and spawns a fresh one, while the champion foe lives on. Which line leaves a stale binding on the champion every round?
   code: |
-    void UDojoPauseMenu::NativeConstruct()
+    void ADojoRoundBoard::BeginPlay()
     {
-    	Super::NativeConstruct();
-    	PauseState->OnPaused.AddUObject(this, &UDojoPauseMenu::HandlePaused);
+    	Super::BeginPlay();
+    	Champion->OnDefeated.AddUObject(this, &ADojoRoundBoard::HandleChampionDefeated);
     }
-    void UDojoPauseMenu::NativeDestruct()
+    void ADojoRoundBoard::EndPlay(const EEndPlayReason::Type EndPlayReason)
     {
-    	PauseState->OnPaused.RemoveAll(PauseState);
-    	Super::NativeDestruct();
+    	Champion->OnDefeated.RemoveAll(Champion);
+    	Super::EndPlay(EndPlayReason);
     }
   bugLine: 8
-  fix: Pass the menu itself to RemoveAll, so the bindings the menu owns are the ones removed.
-  explanation: RemoveAll removes the bindings that belong to the object you pass. The pause state owns none, so every closed menu leaves its entry in the list.
+  fix: Pass the board itself to RemoveAll, so the bindings the board owns are the ones removed.
+  explanation: RemoveAll removes the bindings that belong to the object you pass. The champion owns none of them, so every retired board leaves its entry in the list.
 - id: explain-synchronous
   type: explain-in-one-sentence
   prompt: In one sentence, say what it means for the subject that Broadcast is synchronous.
