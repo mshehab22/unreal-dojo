@@ -19,6 +19,7 @@ import type {
 	QuestAvailability,
 	WorldTestOutStatus,
 } from "@shared/types/progress";
+import { worldKeyOf } from "@shared/types/progress";
 import type { ExplainGrade } from "@shared/types/review";
 
 import { AppErrorException } from "../../errors/AppErrorException";
@@ -127,16 +128,17 @@ export class ProgressContentService
 		const progress = this.progress.getProgress();
 		const result: Record<string, WorldTestOutStatus> = {};
 
-		for (const worldId of new Set(quests.map((quest) => quest.worldId)))
+		for (const quest of this.firstQuestOfEachWorld(quests))
 		{
-			const terms = this.testOutTerms(quests, worldId);
+			const worldKey = worldKeyOf(quest.packId, quest.worldId);
+			const terms = testOutTermsOf(quests, quest.packId, quest.worldId);
 			const weak = terms.filter((term) => !this.mastery.isAtLeast(progress.memory[term]?.mastery, "proficient"));
-			const status: WorldTestOutStatus = { eligible: terms.length > 0 && weak.length === 0, testedOut: progress.testedOutWorldIds.includes(worldId) };
+			const status: WorldTestOutStatus = { eligible: terms.length > 0 && weak.length === 0, testedOut: progress.testedOutWorldIds.includes(worldKey) };
 
 			if (terms.length === 0) status.reason = "This world has no terms to test.";
 			else if (weak.length > 0) status.reason = weak.length === 1 ? "1 term is not proficient yet." : `${weak.length} terms are not proficient yet.`;
 
-			result[worldId] = status;
+			result[worldKey] = status;
 		}
 
 		return result;
@@ -331,7 +333,9 @@ export class ProgressContentService
 
 		const { quests } = await this.view();
 
-		return this.progress.finishDrill(totals, { rewarded: stored.rewarded, testOut: { worldId: request.worldId, termIds: this.testOutTerms(quests, request.worldId) } });
+		const worldKey = worldKeyOf(request.packId, request.worldId);
+
+		return this.progress.finishDrill(totals, { rewarded: stored.rewarded, testOut: { worldKey, termIds: testOutTermsOf(quests, request.packId, request.worldId) } });
 	}
 
 	/** Adds `revealedHints` (texts in reveal order) to a build or refactor quest; other kinds are returned as they are. */
@@ -366,14 +370,15 @@ export class ProgressContentService
 
 		if (request.kind === "test-out")
 		{
-			const status = (await this.getTestOutStatus())[request.worldId];
-			if (!status) throw new AppErrorException("world-not-found", "That world does not exist.", "Open the World Map again.", request.worldId);
+			const worldKey = worldKeyOf(request.packId, request.worldId);
+			const status = (await this.getTestOutStatus())[worldKey];
+			if (!status) throw new AppErrorException("world-not-found", "That world does not exist.", "Open the World Map again.", worldKey);
 			if (!status.eligible) throw new AppErrorException("quest-locked", `This world's test-out is not open yet. ${status.reason ?? ""}`.trim(), "Drill its terms until each is Proficient.");
 
 			// Taught terms plus only the patterns whose card is unlocked, so a test-out never names a pattern before it is built (A64, A322).
 			const cards = this.progress.getProgress().patternCards;
-			const patterns = quests.filter((quest) => quest.worldId === request.worldId).flatMap((quest) => quest.patterns).filter((pattern) => cards[pattern] !== undefined);
-			const keys = [...new Set([...this.testOutTerms(quests, request.worldId), ...patterns])];
+			const patterns = quests.filter((quest) => quest.packId === request.packId && quest.worldId === request.worldId).flatMap((quest) => quest.patterns).filter((pattern) => cards[pattern] !== undefined);
+			const keys = [...new Set([...testOutTermsOf(quests, request.packId, request.worldId), ...patterns])];
 			const variants = this.drillScheduler.compose(keys.flatMap((key) => this.shuffle(bank.variantsOf(key))), [], this.random);
 
 			if (variants.length === 0) throw new AppErrorException("quest-locked", "This world has nothing to test yet.", "Come back once its quests have questions.");
@@ -476,10 +481,19 @@ export class ProgressContentService
 		return this.graders.gradeExplain({ prompt, modelAnswer, rubric: [...rubric], answer });
 	}
 
-	/** A world's test-out terms: the terms its quests list that a concept quest teaches in that world or an earlier one (A322, A660). */
-	private testOutTerms(quests: RuleQuest[], worldId: string): string[]
+	/** One quest per world (the first in map order), to visit every world of every pack once. */
+	private firstQuestOfEachWorld(quests: RuleQuest[]): RuleQuest[]
 	{
-		return testOutTermsOf(quests, worldId);
+		const seen = new Set<string>();
+
+		return quests.filter((quest) =>
+		{
+			const worldKey = worldKeyOf(quest.packId, quest.worldId);
+			if (seen.has(worldKey)) return false;
+			seen.add(worldKey);
+
+			return true;
+		});
 	}
 
 	/** The quest facts and drill bank for the current content load, built once per load. */
@@ -506,7 +520,24 @@ export class ProgressContentService
 		const worlds = await Promise.all(worldIdsOf(packs).map((worldId) => this.content.getWorld(worldId)));
 		const patternCards = await this.content.getPatternCards();
 
-		return { quests: toRuleQuests(packs), bank: new DrillItemBank(worlds, patternCards) };
+		const quests = toRuleQuests(packs);
+
+		await this.progress.qualifyLegacyTestOuts(this.worldKeysById(quests));
+
+		return { quests, bank: new DrillItemBank(worlds, patternCards) };
+	}
+
+	/** Every loaded world's key by bare world id, for qualifying test-outs saved before world keys. */
+	private worldKeysById(quests: RuleQuest[]): Map<string, string[]>
+	{
+		const keysById = new Map<string, string[]>();
+
+		for (const quest of this.firstQuestOfEachWorld(quests))
+		{
+			keysById.set(quest.worldId, [...(keysById.get(quest.worldId) ?? []), worldKeyOf(quest.packId, quest.worldId)]);
+		}
+
+		return keysById;
 	}
 
 	/** A shuffled copy, so each drill asks a due item a different way. */

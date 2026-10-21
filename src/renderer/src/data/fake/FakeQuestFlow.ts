@@ -26,6 +26,7 @@ import type {
 	RulesSnapshot,
 	SubmitOutcome,
 } from "@shared/types/progress";
+import { worldKeyOf } from "@shared/types/progress";
 import type { ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest } from "@shared/types/review";
 import type { BuildProgressEvent, RunRequest, RunResult, SyntaxCheckRequest, SyntaxCheckResult } from "@shared/types/run";
 import type { Settings } from "@shared/types/settings";
@@ -359,7 +360,7 @@ export class FakeQuestFlow
 			if (progress.streak.lastActivityAt?.slice(0, 10) !== new Date().toISOString().slice(0, 10)) progress.streak = { ...progress.streak, count: progress.streak.count + 1, lastActivityAt: new Date().toISOString() };
 		}
 
-		const testedOut = session.request.kind === "test-out" && answeredAll && correctCount === session.items.length ? [session.request.worldId] : [];
+		const testedOut = session.request.kind === "test-out" && answeredAll && correctCount === session.items.length ? [worldKeyOf(session.request.packId, session.request.worldId)] : [];
 		progress.testedOutWorldIds = [...new Set([...progress.testedOutWorldIds, ...testedOut])];
 
 		const nextDueAt = Object.values(progress.schedule).filter((dueAt) => new Date(dueAt).getTime() > Date.now()).sort()[0] ?? null;

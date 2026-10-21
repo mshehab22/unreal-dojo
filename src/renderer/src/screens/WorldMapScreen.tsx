@@ -1,6 +1,8 @@
 // World Map: packs as regions, worlds as client contracts, quests as stages on a path with the boss at the end.
 import { useState } from "react";
 
+import { worldKeyOf } from "@shared/types/progress";
+
 import { AppErrorView } from "@/components/AppErrorView";
 import { LoadingBlock } from "@/components/LoadingBlock";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -35,7 +37,7 @@ export function WorldMapScreen()
 					<div data-pack={selected.id} role="tabpanel" aria-label={selected.title} className="flex flex-col gap-4">
 						<p className="text-sm text-paper-muted">{selected.summary}</p>
 						{selected.worlds.map((world) => (
-							<ContractCard key={world.id} world={world} availability={availability.data ?? {}} testOut={testOut.data?.[world.id]} rematchShare={rematchShare} />
+							<ContractCard key={world.id} packId={selected.id} world={world} availability={availability.data ?? {}} testOut={testOut.data?.[worldKeyOf(selected.id, world.id)]} rematchShare={rematchShare} />
 						))}
 					</div>
 					<MapLegend />

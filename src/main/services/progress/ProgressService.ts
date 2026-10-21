@@ -90,7 +90,7 @@ export interface DrillFinishOptions
 	rewarded: boolean;
 
 	/** For a test-out drill: the world and the taught terms that must all still be proficient. */
-	testOut?: { worldId: string; termIds: string[] };
+	testOut?: { worldKey: string; termIds: string[] };
 }
 
 /** Drill totals the drill session hands over when it finishes. */
@@ -537,7 +537,7 @@ export class ProgressService
 
 			const testOut = options.testOut;
 			const passedTestOut = testOut !== undefined && this.testOutRules.passes(testOut.termIds, (itemId) => next.memory[itemId]?.mastery);
-			const testedOutWorldIds = passedTestOut && !next.testedOutWorldIds.includes(testOut.worldId) ? [testOut.worldId] : [];
+			const testedOutWorldIds = passedTestOut && !next.testedOutWorldIds.includes(testOut.worldKey) ? [testOut.worldKey] : [];
 			next.testedOutWorldIds = [...next.testedOutWorldIds, ...testedOutWorldIds];
 
 			await this.commit(() => next);
@@ -563,6 +563,23 @@ export class ProgressService
 		this.ensureAvailable();
 
 		return this.drillScheduler.scheduledDueToday(this.progress, this.clock.now());
+	}
+
+	/**
+	 * Qualifies test-outs saved before world keys (a bare world id, A700) with their pack, once content is loaded: a bare id
+	 * becomes the key of every loaded world with that id (what it meant before), and ids no loaded world has are kept as they are.
+	 */
+	qualifyLegacyTestOuts(worldKeysById: Map<string, string[]>): Promise<void>
+	{
+		return this.enqueue(async () =>
+		{
+			const legacy = this.progress.testedOutWorldIds.filter((entry) => !entry.includes("/") && worldKeysById.has(entry));
+			if (legacy.length === 0) return;
+
+			const qualified = this.progress.testedOutWorldIds.flatMap((entry) => (legacy.includes(entry) ? worldKeysById.get(entry) ?? [] : [entry]));
+
+			await this.commit((progress) => ({ ...progress, testedOutWorldIds: [...new Set(qualified)] }));
+		});
 	}
 
 	/** Scheduled items due by the end of today, within what is left of the daily cap. Only these make a drill rewarded (A320). */

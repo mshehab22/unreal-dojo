@@ -127,10 +127,10 @@ describe("getQuestAvailability and getTestOutStatus", () =>
 		const proficient = { ease: 2.5, intervalDays: 8, repetitions: 3, mastery: "proficient" as const, lastReviewedAt: "2026-10-20T09:00:00.000Z" };
 		const { handlers } = setup({ prepare: (progress) => { progress.memory["term.a"] = proficient; } });
 
-		expect((await handlers.getTestOutStatus.handle())["world-1"]).toEqual({ eligible: false, testedOut: false, reason: "1 term is not proficient yet." });
+		expect((await handlers.getTestOutStatus.handle())["pack-1/world-1"]).toEqual({ eligible: false, testedOut: false, reason: "1 term is not proficient yet." });
 
 		const ready = setup({ prepare: (progress) => { progress.memory["term.a"] = proficient; progress.memory["term.b"] = proficient; } });
-		expect((await ready.handlers.getTestOutStatus.handle())["world-1"]).toEqual({ eligible: true, testedOut: false });
+		expect((await ready.handlers.getTestOutStatus.handle())["pack-1/world-1"]).toEqual({ eligible: true, testedOut: false });
 	});
 });
 
@@ -324,20 +324,20 @@ describe("drills", () =>
 	{
 		const proficient = { ease: 2.5, intervalDays: 8, repetitions: 3, mastery: "proficient" as const, lastReviewedAt: "2026-10-01T09:00:00.000Z" };
 		const blocked = setup();
-		await expect(blocked.handlers.startDrill.handle({ kind: "test-out", worldId: "world-1" })).rejects.toMatchObject({ appError: { code: "quest-locked" } });
-		await expect(blocked.handlers.startDrill.handle({ kind: "test-out", worldId: "nowhere" })).rejects.toMatchObject({ appError: { code: "world-not-found" } });
+		await expect(blocked.handlers.startDrill.handle({ kind: "test-out", packId: "pack-1", worldId: "world-1" })).rejects.toMatchObject({ appError: { code: "quest-locked" } });
+		await expect(blocked.handlers.startDrill.handle({ kind: "test-out", packId: "pack-1", worldId: "nowhere" })).rejects.toMatchObject({ appError: { code: "world-not-found" } });
 
 		const { handlers, service } = setup({ prepare: (progress) => { progress.memory["term.a"] = proficient; progress.memory["term.b"] = proficient; } });
-		const session = await handlers.startDrill.handle({ kind: "test-out", worldId: "world-1" });
+		const session = await handlers.startDrill.handle({ kind: "test-out", packId: "pack-1", worldId: "world-1" });
 
 		// Observer's card is not unlocked yet, so the test-out does not name it (A64, A322).
 		expect(session.items.map((item) => item.itemId).sort()).toEqual(["term.a", "term.b"]);
 
 		for (const sessionItem of session.items) await handlers.answerDrillItem.handle({ sessionId: session.sessionId, itemId: sessionItem.itemId, response: rightAnswerFor(sessionItem.item) });
 
-		expect((await handlers.finishDrill.handle(session.sessionId)).testedOutWorldIds).toEqual(["world-1"]);
-		expect((await handlers.getTestOutStatus.handle())["world-1"]?.testedOut).toBe(true);
-		expect(service.getProgress().testedOutWorldIds).toEqual(["world-1"]);
+		expect((await handlers.finishDrill.handle(session.sessionId)).testedOutWorldIds).toEqual(["pack-1/world-1"]);
+		expect((await handlers.getTestOutStatus.handle())["pack-1/world-1"]?.testedOut).toBe(true);
+		expect(service.getProgress().testedOutWorldIds).toEqual(["pack-1/world-1"]);
 	});
 
 	it("opens the Parsons fallback after two failed submits, grades the order, and pays nothing", async () =>
@@ -428,13 +428,13 @@ describe("M1.6b fix round 1", () =>
 
 		const { handlers } = setup({ content, prepare: (progress) => { progress.memory["term.a"] = proficient; progress.memory["term.b"] = proficient; } });
 
-		expect((await handlers.getTestOutStatus.handle())["world-1"]).toEqual({ eligible: true, testedOut: false });
+		expect((await handlers.getTestOutStatus.handle())["pack-1/world-1"]).toEqual({ eligible: true, testedOut: false });
 
-		const session = await handlers.startDrill.handle({ kind: "test-out", worldId: "world-1" });
+		const session = await handlers.startDrill.handle({ kind: "test-out", packId: "pack-1", worldId: "world-1" });
 		expect(session.items.map((item) => item.itemId)).not.toContain("term.untaught");
 
 		for (const item of session.items) await handlers.answerDrillItem.handle({ sessionId: session.sessionId, itemId: item.itemId, response: rightAnswerFor(item.item) });
-		expect((await handlers.finishDrill.handle(session.sessionId)).testedOutWorldIds).toEqual(["world-1"]);
+		expect((await handlers.finishDrill.handle(session.sessionId)).testedOutWorldIds).toEqual(["pack-1/world-1"]);
 	});
 
 	it("includes a world's pattern in its test-out only once that pattern's card is unlocked (A64, A322)", async () =>
@@ -446,7 +446,7 @@ describe("M1.6b fix round 1", () =>
 			progress.patternCards["observer"] = { tier: "bronze", useCasesPassed: ["w1-build"] };
 		} });
 
-		const session = await handlers.startDrill.handle({ kind: "test-out", worldId: "world-1" });
+		const session = await handlers.startDrill.handle({ kind: "test-out", packId: "pack-1", worldId: "world-1" });
 
 		expect(session.items.map((item) => item.itemId).sort()).toEqual(["observer", "term.a", "term.b"]);
 	});

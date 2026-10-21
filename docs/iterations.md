@@ -1104,3 +1104,10 @@ total                                       39.2  PASSED
 - Decisions made: A660 (how A72 is built).
 - Not done or left for later: nothing.
 
+## M1.6f Test-out keyed by pack and world (progress-and-rules, builder-rules)
+- What changed: a world's test-out used to be remembered by the world's name alone, but two packs may give a world the same name, so testing out of one could have counted for the other. Test-outs are now remembered as "pack / world". Learners who tested out before this keep it: the first time the lessons load, each old entry is matched to its world and rewritten. The World Map and the drill screen ask for test-outs with the pack as well.
+- How to see it: on the World Map, a world's Test out button and its "Tested out" badge work as before. `npm test` runs the new checks.
+- Proof: typecheck passes. Unit tests: 836 passed and 24 skipped (they need Unreal); 7 new (two packs sharing a world id get separate test-out status, testing out one leaves the other alone, a world id in the wrong pack is refused, only the tested-out pack's quests become skippable, an old bare entry is rewritten to its pack once content loads, an old entry matching two packs becomes both and an unknown one is kept, and nothing is written when there is nothing to rewrite). Build passes. End-to-end: 27 of 27 passed.
+- Decisions made: A700 (the key and how old saves are kept) and A701 (the test-out request names the pack, and the renderer lines that changed with it).
+- Not done or left for later: the content catalog's `getWorld(worldId)` is still looked up by world id alone (app-shell), so two packs sharing a world id would collide there too; that is a follow-up for app-shell before any world id is reused.
+

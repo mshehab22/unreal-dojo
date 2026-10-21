@@ -37,11 +37,11 @@ export function gatingTermsOf(quest: RuleQuest, teachers: Map<string, RuleQuest>
 	});
 }
 
-/** The terms of a world's quests that a concept quest teaches in that world or an earlier one: the world's test-out terms (A322, A660). */
-export function testOutTermsOf(quests: RuleQuest[], worldId: string): string[]
+/** The terms of a world's quests (world `worldId` of pack `packId`) that a concept quest teaches in that world or an earlier one: the world's test-out terms (A322, A660, A700). */
+export function testOutTermsOf(quests: RuleQuest[], packId: string, worldId: string): string[]
 {
 	const teachers = firstTeachersOf(quests);
-	const worldQuests = quests.filter((quest) => quest.worldId === worldId);
+	const worldQuests = quests.filter((quest) => quest.packId === packId && quest.worldId === worldId);
 	const anchor = worldQuests[0];
 	if (!anchor) return [];
 

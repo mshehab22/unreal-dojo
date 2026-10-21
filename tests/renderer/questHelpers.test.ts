@@ -148,12 +148,13 @@ describe("quest routes", () =>
 
 	it("round-trip every drill request", () =>
 	{
-		for (const request of [{ kind: "due" }, { kind: "test-out", worldId: "w" }, { kind: "parsons-fallback", questId: "q" }] as const)
+		for (const request of [{ kind: "due" }, { kind: "test-out", packId: "p", worldId: "w" }, { kind: "parsons-fallback", questId: "q" }] as const)
 		{
 			expect(drillRequestFromRoute(routeForDrillRequest(request))).toEqual(request);
 		}
 
 		expect(drillRequestFromRoute({ kind: "test-out" })).toEqual({ kind: "due" });
+		expect(drillRequestFromRoute({ kind: "test-out", world: "w" })).toEqual({ kind: "due" });
 	});
 });
 

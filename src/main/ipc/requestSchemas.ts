@@ -189,7 +189,7 @@ export const breakdownRevisionSchema: z.ZodType<BreakdownRevision> = z.strictObj
 /** `DrillRequest`: today's due items, a world's test-out, or the Parsons fallback for a quest. */
 export const drillRequestSchema: z.ZodType<DrillRequest> = z.discriminatedUnion("kind", [
 	z.strictObject({ kind: z.literal("due") }),
-	z.strictObject({ kind: z.literal("test-out"), worldId: idSchema }),
+	z.strictObject({ kind: z.literal("test-out"), packId: idSchema, worldId: idSchema }),
 	z.strictObject({ kind: z.literal("parsons-fallback"), questId: idSchema }),
 ]);
 

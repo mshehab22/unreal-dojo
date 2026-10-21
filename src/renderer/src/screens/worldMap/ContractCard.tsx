@@ -14,6 +14,7 @@ import { StagePath } from "./StagePath";
 /** Props for ContractCard. */
 interface ContractCardProps
 {
+	readonly packId: string;
 	readonly world: WorldOutline;
 	readonly availability: Readonly<Record<string, QuestAvailability>>;
 	readonly testOut: WorldTestOutStatus | undefined;
@@ -21,7 +22,7 @@ interface ContractCardProps
 }
 
 /** A world's contract card. Bosses can never be tested out of. */
-export function ContractCard({ world, availability, testOut, rematchShare }: ContractCardProps)
+export function ContractCard({ packId, world, availability, testOut, rematchShare }: ContractCardProps)
 {
 	const navigate = useNavigate();
 	const passed = world.quests.filter((quest) => availability[quest.id]?.status === "passed").length;
@@ -44,7 +45,7 @@ export function ContractCard({ world, availability, testOut, rematchShare }: Con
 				</div>
 				<div className="flex shrink-0 flex-col items-end gap-1">
 					{testOut?.eligible && !testOut.testedOut && (
-						<Button variant="outline" size="sm" data-testid="test-out" onClick={() => navigate("drill", { kind: "test-out", world: world.id })}>
+						<Button variant="outline" size="sm" data-testid="test-out" onClick={() => navigate("drill", { kind: "test-out", pack: packId, world: world.id })}>
 							<GraduationCapIcon />
 							Test out
 						</Button>

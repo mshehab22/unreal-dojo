@@ -221,7 +221,7 @@ describe("registerHandlers", () =>
 	{
 		const invoke = createInvoker();
 
-		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "test-out", worldId: "objects" }), "world-not-found");
+		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "test-out", packId: "foundations", worldId: "objects" }), "world-not-found");
 		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "parsons-fallback", questId: "w1-health" }), "quest-not-found");
 		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "due" }), "quest-locked");
 		expectError(await invoke(IPC_CHANNELS.startDrill, { kind: "lucky" }), "invalid-payload");
