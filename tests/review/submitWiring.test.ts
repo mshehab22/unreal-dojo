@@ -175,9 +175,9 @@ describe("CodeAttemptRecorder", () =>
 	{
 		const { recorder, inputs } = recorderCapturing();
 
-		await recorder.record({ questId: "w1.health", run: allPassed, review: codeReview("claude-code", 50), files: {} });
+		await recorder.record({ questId: "w1.health", run: allPassed, review: codeReview("claude-code", 50), files: { "Health.cpp": "// code" } });
 
-		expect(inputs[0]).toMatchObject({ quest: { id: "w1.health" }, score: 80, passed: true, compiled: true, isSubmit: true });
+		expect(inputs[0]).toMatchObject({ quest: { id: "w1.health" }, score: 80, passed: true, compiled: true, isSubmit: true, review: codeReview("claude-code", 50), files: { "Health.cpp": "// code" } });
 	});
 
 	it("counts a tests-only review as no review score, so the score is the tests alone", async () =>

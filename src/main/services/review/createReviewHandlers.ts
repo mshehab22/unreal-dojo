@@ -74,8 +74,8 @@ export function createReviewHandlers(sources: ReviewHandlerSources): ReviewHandl
 		{
 			attempts: () => progress.getProgress().attempts,
 
-			// The submitted files are not kept on the attempt yet, so the quest's saved draft stands in (A463).
-			submittedFiles: (attempt) => progress.getProgress().quests[attempt.questId]?.savedFiles ?? {},
+			// Only the files stored on the attempt itself, never the draft, which can change after Submit (A467).
+			submittedFiles: (attempt) => attempt.files ?? {},
 			questBrief: async (questId) => briefOf(await content.getAuthoredQuest(questId)),
 		},
 		reviewService,

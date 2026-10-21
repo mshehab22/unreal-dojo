@@ -2,6 +2,7 @@
 import type { AppError } from "@shared/types/errors";
 import type {
 	AttemptOutcome,
+	AttemptRecord,
 	BreakdownPlan,
 	ChestReward,
 	DailyQuestState,
@@ -16,8 +17,10 @@ import type {
 	QuestProgress,
 	RulesSnapshot,
 } from "@shared/types/progress";
+import type { CodeReview } from "@shared/types/review";
 
 import { AppErrorException } from "../../errors/AppErrorException";
+import { AttemptFileRules } from "./AttemptFileRules";
 import { addMinutes } from "./calendarDays";
 import { ChestRules } from "./ChestRules";
 import type { Clock } from "./Clock";
@@ -60,6 +63,12 @@ export interface AttemptInput
 	/** True for a Submit of a build, refactor, or boss integration (the only attempts that can move the spree). */
 	isSubmit: boolean;
 
+	/** The code review of a Submit, stored on the attempt record for "why is this a finding?" and the reflection answer (A466). */
+	review?: CodeReview;
+
+	/** The files of a Submit, stored on the attempt record within the caps of `AttemptFileRules` (A467). Ignored when `isSubmit` is false. */
+	files?: Record<string, string>;
+
 	/** Items to review in the same step before the attempt is priced, for example a concept quest's terms, so unlocks they cause appear in the outcome. */
 	itemReviews?: { itemId: string; quality: number; context?: ReviewContext }[];
 }
@@ -99,6 +108,9 @@ export class ProgressService
 {
 	/** XP pricing. */
 	private readonly xpRules = new XpRules();
+
+	/** Caps and prunes the files stored on Submit attempts. */
+	private readonly attemptFileRules = new AttemptFileRules();
 
 	/** Levels and roles. */
 	private readonly levelRules = new LevelRules();
@@ -446,8 +458,10 @@ export class ProgressService
 			const levelAfter = this.levelRules.levelForXp(next.xp);
 			next.role = this.levelRules.roleForLevel(levelAfter);
 
-			const attempt = { attemptId: `attempt-${before.attempts.length + 1}`, questId: quest.id, at: now.toISOString(), score: input.score, passed: input.passed, xpGained: xp.total };
-			next.attempts = [...next.attempts, attempt];
+			const attempt: AttemptRecord = { attemptId: `attempt-${before.attempts.length + 1}`, questId: quest.id, at: now.toISOString(), score: input.score, passed: input.passed, xpGained: xp.total };
+			if (input.review) attempt.review = structuredClone(input.review);
+			if (input.isSubmit && input.files) attempt.files = this.attemptFileRules.capFiles(input.files);
+			next.attempts = this.attemptFileRules.pruneOlderFiles([...next.attempts, attempt], quest.id);
 
 			const unlockedQuestIds = new UnlockGraph(allQuests).newlyUnlocked(this.unlockState(unlockBaseline), this.unlockState(next));
 

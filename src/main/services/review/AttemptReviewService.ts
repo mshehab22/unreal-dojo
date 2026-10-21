@@ -11,7 +11,7 @@ export interface AttemptReviewSources
 	/** Every graded attempt in the save (`ProgressService.getProgress().attempts`). */
 	attempts: () => readonly AttemptRecord[];
 
-	/** The files the learner submitted for an attempt: the attempt's own copy when the save keeps one, otherwise the quest's saved draft (A463). */
+	/** The files stored on the attempt (A467); empty when they were pruned or never stored. Never the quest's draft. */
 	submittedFiles: (attempt: AttemptRecord) => Record<string, string>;
 
 	/** A quest's brief (markdown), or an empty string when the quest is no longer in the content. */

@@ -30,7 +30,7 @@ export class CodeAttemptRecorder
 	{
 	}
 
-	/** Scores and records one Submit. A tests-only review counts as no review score, so the score is the tests alone (review = tests, A462). */
+	/** Scores and records one Submit with its review and files. A tests-only review counts as no review score, so the score is the tests alone (review = tests, A462). */
 	async record(submission: CodeAttemptSubmission): Promise<AttemptOutcome>
 	{
 		const quests = toRuleQuests(await this.sources.listPacks());
@@ -41,6 +41,7 @@ export class CodeAttemptRecorder
 		const reviewScore = review && review.provider !== "tests-only" ? review.score : null;
 		const result = { compiled: run.compiled, testsPassed: run.testsPassed, testsTotal: run.testsTotal, reviewScore };
 
-		return this.sources.recordAttempt({ quest, score: this.passRules.codeScore(result), passed: this.passRules.isCodePass(result), compiled: run.compiled, isSubmit: true }, quests);
+		// The review and the files are stored on the attempt record for the follow-ups (A466, A467).
+		return this.sources.recordAttempt({ quest, score: this.passRules.codeScore(result), passed: this.passRules.isCodePass(result), compiled: run.compiled, isSubmit: true, review, files: submission.files }, quests);
 	}
 }
