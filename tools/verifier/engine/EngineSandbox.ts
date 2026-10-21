@@ -1,18 +1,12 @@
-// A throwaway copy of the sandbox template that the verifier writes quest code into, builds, and tests headless.
+// A throwaway copy of the sandbox template the verifier writes quest code into, then builds and tests through M1.3's runners (A211).
 import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import type { AutomationTestRunner } from "../../../src/main/services/unreal/AutomationTestRunner";
 import type { PlatformPaths } from "../../../src/main/services/unreal/PlatformPaths";
-
-import { readAutomationReport, type AutomationTestOutcome } from "./readAutomationReport";
-import { runProcess, type ProcessResult } from "./runProcess";
-
-/** Build timeout from the unreal-pipeline spec. */
-const BUILD_TIMEOUT_MILLISECONDS = 15 * 60_000;
-
-/** Headless test timeout from the unreal-pipeline spec. */
-const TEST_TIMEOUT_MILLISECONDS = 10 * 60_000;
+import type { QuestFileWriter, QuestForWriting } from "../../../src/main/services/unreal/QuestFileWriter";
+import type { UnrealBuilder } from "../../../src/main/services/unreal/UnrealBuilder";
 
 /**
  * Gap kept between a build finishing and the next write. UBT rebuilds a file only when it is newer than its output,
@@ -23,7 +17,16 @@ const TIMESTAMP_GAP_MILLISECONDS = 1_100;
 /** Plugins only 5.8 and later ship; removed from the copy for older engines (A41). */
 const PLUGINS_FROM_5_8 = new Set(["ModelContextProtocol", "AutomationTestToolset", "LiveCodingToolset"]);
 
-/** Which engine to drive and how to reach its tools. */
+/** The app's Unreal services the sandbox drives: the same builder, test runner, and file writer the Build screen uses (A211). */
+export interface UnrealTools
+{
+	paths: PlatformPaths;
+	builder: UnrealBuilder;
+	testRunner: AutomationTestRunner;
+	writer: QuestFileWriter;
+}
+
+/** Which engine to drive and the tools to drive it with. */
 export interface EngineTarget
 {
 	/** Engine root (the folder that contains `Engine/`). */
@@ -31,7 +34,7 @@ export interface EngineTarget
 
 	/** For example `5.8.3`. */
 	version: string;
-	paths: PlatformPaths;
+	tools: UnrealTools;
 }
 
 /** One file to place in a quest folder. */
@@ -41,13 +44,34 @@ export interface SandboxFile
 	text: string;
 }
 
+/** The result of one build. */
+export interface SandboxBuild
+{
+	succeeded: boolean;
+
+	/** The builder's filtered output (errors, warnings, quest and test lines), one entry per line. */
+	lines: string[];
+
+	/** Why the build program itself failed (could not start, timed out), separate from compile errors. */
+	pipelineError?: string;
+}
+
+/** The outcome of one test. */
+export interface SandboxTestOutcome
+{
+	passed: boolean;
+	state: string;
+	messages: string[];
+}
+
 /** The result of one headless test run. */
 export interface SandboxTestRun
 {
-	process: ProcessResult;
+	/** Outcome per full test name, or undefined when the run produced no usable report. */
+	outcomes: Map<string, SandboxTestOutcome> | undefined;
 
-	/** Outcome per full test name, or undefined when no report was written. */
-	outcomes: Map<string, AutomationTestOutcome> | undefined;
+	/** Why the run produced no results, when it did not. */
+	pipelineError?: string;
 }
 
 /** Owns one temporary sandbox project. Create it with `EngineSandbox.create`, and `remove()` it when done. */
@@ -87,66 +111,70 @@ export class EngineSandbox
 		return new EngineSandbox(folder, target);
 	}
 
-	/** Replaces a quest's code folder `Source/Dojo/Quests/<quest-id>/` with `files`, written fresh so the build sees new times. */
-	async writeQuestFiles(questId: string, files: readonly SandboxFile[]): Promise<void>
+	/** Writes a quest's files to `Source/Dojo/Quests/<quest-id>/` and its tests to `Source/Dojo/Tests/<quest-id>.Test.cpp` with QuestFileWriter. */
+	async writeQuest(quest: QuestForWriting, files: readonly SandboxFile[]): Promise<void>
 	{
 		await this.waitPastLastBuild();
-
-		const questFolder = join(this.folder, "Source", "Dojo", "Quests", questId);
-
-		await rm(questFolder, { recursive: true, force: true });
-		await mkdir(questFolder, { recursive: true });
-
-		for (const file of files) await writeFile(join(questFolder, file.name), file.text, "utf8");
+		await this.target.tools.writer.write(this.folder, quest, Object.fromEntries(files.map((file) => [file.name, file.text])));
 	}
 
-	/** Writes a quest's tests to `Source/Dojo/Tests/<quest-id>.Test.cpp` with a header comment naming the quest. */
-	async writeQuestTests(questId: string, source: string): Promise<void>
+	/** Removes a quest's folder and test file with QuestFileWriter. */
+	async removeQuest(questId: string): Promise<void>
 	{
 		await this.waitPastLastBuild();
-
-		await writeFile(join(this.folder, "Source", "Dojo", "Tests", `${questId}.Test.cpp`), `// Quest test: ${questId} (written by the content verifier).\n${source}\n`, "utf8");
+		await this.target.tools.writer.remove(this.folder, questId);
 	}
 
-	/** Runs the editor target build (`Build.sh` or `Build.bat`), the exact command from the unreal-pipeline spec. The output is saved under `Saved/VerifierLogs/`. */
-	async build(onLine?: (line: string) => void): Promise<ProcessResult>
+	/** Builds the editor target with UnrealBuilder. The full output is saved under `Saved/VerifierLogs/`. */
+	async build(): Promise<SandboxBuild>
 	{
-		const { paths, root } = this.target;
-		const editorTarget = "DojoEditor";
-		const result = await runProcess(paths.buildScript(root), [editorTarget, paths.buildPlatform, "Development", `-Project=${this.projectFile()}`, "-WaitMutex", "-Progress"], BUILD_TIMEOUT_MILLISECONDS, onLine);
+		const allLines: string[] = [];
+		const outcome = await this.target.tools.builder.build({
+			engineRoot: this.target.root,
+			projectFile: this.projectFile(),
+			signal: new AbortController().signal,
+			onLine: (line) => allLines.push(line),
+		});
 
 		this.lastBuildEnded = Date.now();
-		await this.saveLog(`build-${++this.runNumber}.log`, result);
+		await this.saveLog(`build-${++this.runNumber}.log`, allLines, `exit code: ${String(outcome.exitCode)}${outcome.timedOut ? " (timed out)" : ""}`);
 
-		return result;
+		const build: SandboxBuild = { succeeded: outcome.succeeded, lines: outcome.filteredOutput.split("\n").filter((line) => line.trim() !== "") };
+
+		if (outcome.pipelineError !== undefined) build.pipelineError = outcome.pipelineError;
+
+		return build;
 	}
 
-	/** Runs the named tests headless with UnrealEditor-Cmd and reads the report. Names are joined with `+`, which RunTests accepts. */
-	async runTests(testNames: readonly string[], onLine?: (line: string) => void): Promise<SandboxTestRun>
+	/** Runs exactly these tests headless with AutomationTestRunner (anchored names) and maps its results by name. */
+	async runTests(testNames: readonly string[]): Promise<SandboxTestRun>
 	{
-		const { paths, root } = this.target;
 		const reportFolder = join(this.folder, "Saved", "VerifierReports", `run-${++this.runNumber}`);
+		const allLines: string[] = [];
 
 		await mkdir(reportFolder, { recursive: true });
 
-		const args = [
-			this.projectFile(),
-			`-ExecCmds=Automation RunTests ${testNames.join("+")}; Quit`,
-			"-Unattended",
-			"-NoPause",
-			"-NullRHI",
-			"-NoSplash",
-			"-NoSound",
-			"-stdout",
-			"-FullStdOutLogOutput",
-			`-ReportExportPath=${reportFolder}`,
-			"-log",
-		];
-		const process = await runProcess(paths.editorCmdBinary(root), args, TEST_TIMEOUT_MILLISECONDS, onLine);
+		const outcome = await this.target.tools.testRunner.run({
+			engineRoot: this.target.root,
+			projectFile: this.projectFile(),
+			testNames: [...testNames],
+			reportFolder,
+			signal: new AbortController().signal,
+			onLine: (line) => allLines.push(line),
+		});
 
-		await this.saveLog(`tests-${this.runNumber}.log`, process);
+		await this.saveLog(`tests-${this.runNumber}.log`, allLines, `exit code: ${String(outcome.exitCode)}${outcome.pipelineError === undefined ? "" : ` (${outcome.pipelineError})`}`);
 
-		return { process, outcomes: await readAutomationReport(reportFolder) };
+		const run: SandboxTestRun = { outcomes: undefined };
+
+		if (outcome.tests.length > 0)
+		{
+			run.outcomes = new Map(outcome.tests.map((test) => [test.name, { passed: test.passed, state: test.passed ? "Success" : "Fail", messages: test.message === undefined ? [] : [test.message] }]));
+		}
+
+		if (outcome.pipelineError !== undefined) run.pipelineError = outcome.pipelineError;
+
+		return run;
 	}
 
 	/** Deletes the whole temporary project. */
@@ -163,13 +191,13 @@ export class EngineSandbox
 		if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
 	}
 
-	/** Writes a process's output to `Saved/VerifierLogs/<name>` for anyone inspecting a kept sandbox. */
-	private async saveLog(name: string, result: ProcessResult): Promise<void>
+	/** Writes a run's full output to `Saved/VerifierLogs/<name>` for anyone inspecting a kept sandbox. */
+	private async saveLog(name: string, lines: readonly string[], footer: string): Promise<void>
 	{
 		const folder = join(this.folder, "Saved", "VerifierLogs");
 
 		await mkdir(folder, { recursive: true });
-		await writeFile(join(folder, name), `${result.lines.join("\n")}\nexit code: ${String(result.exitCode)}${result.timedOut ? " (timed out)" : ""}\n`, "utf8");
+		await writeFile(join(folder, name), `${lines.join("\n")}\n${footer}\n`, "utf8");
 	}
 
 	/** The copy's `.uproject`. */

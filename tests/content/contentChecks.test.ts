@@ -365,3 +365,55 @@ describe("concept questions and required piece labels", () =>
 	});
 });
 
+describe("boss reference integrations (A67)", () =>
+{
+	it("warns when a boss has no integration folder, and errors when the folder has no tests or stray files", async () =>
+	{
+		const folder = await mkdtemp(join(tmpdir(), "dojo-boss-"));
+		const lighthouse = { ...example<AuthoredQuest>("08-boss-lighthouse.md"), id: "yard", prerequisites: [], pieces: [] } as AuthoredQuest;
+
+		const missing = await solutionCheck.run(inputWith([[lighthouse]], { solutionsFolder: folder }));
+
+		await mkdir(join(folder, "yard"));
+		await writeFile(join(folder, "yard", "DojoYard.cpp"), "// code");
+		await writeFile(join(folder, "yard", "notes.txt"), "scratch");
+
+		const noTests = await messages(solutionCheck, inputWith([[lighthouse]], { solutionsFolder: folder }));
+
+		await writeFile(join(folder, "yard", "DojoYard.Test.cpp"), "// tests");
+		await rm(join(folder, "yard", "notes.txt"));
+
+		const complete = await messages(solutionCheck, inputWith([[lighthouse]], { solutionsFolder: folder }));
+
+		await rm(folder, { recursive: true, force: true });
+
+		expect(missing.map((problem) => [problem.severity, problem.message])).toEqual([["warning", "no reference integration: add solutions/yard/ with the integration's .h and .cpp files and a .Test.cpp that plays two rounds (A67)"]]);
+		expect(noTests).toEqual(["solutions/yard/ has no .Test.cpp automation tests", "solutions/yard/notes.txt is not a .h or .cpp file"]);
+		expect(complete).toEqual([]);
+	});
+
+	it("accepts a piece override folder with that piece's file names, and rejects other folders and file names", async () =>
+	{
+		const folder = await mkdtemp(join(tmpdir(), "dojo-boss-"));
+		const yard = { ...example<AuthoredQuest>("08-boss-lighthouse.md"), id: "yard", prerequisites: ["lamp"], pieces: ["lamp"] } as AuthoredQuest;
+		const lamp = build("lamp", "worked");
+
+		await mkdir(join(folder, "yard", "lamp"), { recursive: true });
+		await mkdir(join(folder, "yard", "stranger"), { recursive: true });
+		await writeFile(join(folder, "yard", "DojoYard.cpp"), "// code");
+		await writeFile(join(folder, "yard", "DojoYard.Test.cpp"), "// tests");
+		await writeFile(join(folder, "yard", "lamp", "DojoExLantern.h"), "// extended");
+		await writeFile(join(folder, "yard", "lamp", "DojoExtra.cpp"), "// new file");
+		await writeFile(join(folder, "yard", "stranger", "X.cpp"), "// x");
+
+		const found = await messages(solutionCheck, inputWith([[lamp, yard]], { solutionsFolder: folder }));
+
+		await rm(folder, { recursive: true, force: true });
+
+		expect(found.filter((message) => message.includes("yard/"))).toEqual([
+			"solutions/yard/lamp/DojoExtra.cpp is not one of lamp's files",
+			"solutions/yard/stranger/ is not named after one of this boss's pieces",
+		]);
+	});
+});
+

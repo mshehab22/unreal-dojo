@@ -1,21 +1,27 @@
-// The `--engine` stage: builds every reference solution in a sandbox copy, runs its tests, and checks starters fail.
+// The `--engine` stage: builds every reference solution (bosses included) in a sandbox copy, runs its tests, and checks starters fail.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { BuildQuest, ContentProblem, RefactorQuest } from "../../../src/shared/types/content";
-import type { QuestRecord } from "../ContentCheck";
+import { declaredTestNames } from "../../../src/main/services/unreal/TestFilter";
+import type { ContentProblem } from "../../../src/shared/types/content";
+import { readBossSolution } from "../bossSolution";
 import { errorAt } from "../checks/checkHelpers";
+import type { QuestRecord } from "../ContentCheck";
 
-import { EngineSandbox, type EngineTarget, type SandboxFile, type SandboxTestRun } from "./EngineSandbox";
-import type { ProcessResult } from "./runProcess";
-import { testNamesIn } from "./testNamesIn";
+import { EngineSandbox, type EngineTarget, type SandboxBuild, type SandboxFile, type SandboxTestRun } from "./EngineSandbox";
 
-/** A build or refactor quest ready for the engine: its file, solution files, and declared test names. */
+/** A quest ready for the engine: what QuestFileWriter needs, the solution files, the starter (none for a boss), and declared test names. */
 interface EngineQuest
 {
-	quest: BuildQuest | RefactorQuest;
+	quest: { id: string; title: string; tests: string };
 	file: string;
 	solution: SandboxFile[];
+
+	/** Build and refactor quests only; a boss has no starter to check (A67). */
+	starter?: SandboxFile[];
+
+	/** Bosses only: extended files of piece quests that replace those files while the boss is built (A215). */
+	overrides?: Map<string, SandboxFile[]>;
 	testNames: string[];
 }
 
@@ -42,9 +48,9 @@ export interface EngineReport
 export interface VerifierSandbox
 {
 	readonly folder: string;
-	writeQuestFiles(questId: string, files: readonly SandboxFile[]): Promise<void>;
-	writeQuestTests(questId: string, source: string): Promise<void>;
-	build(): Promise<ProcessResult>;
+	writeQuest(quest: { id: string; title: string; tests: string }, files: readonly SandboxFile[]): Promise<void>;
+	removeQuest(questId: string): Promise<void>;
+	build(): Promise<SandboxBuild>;
 	runTests(testNames: readonly string[]): Promise<SandboxTestRun>;
 	remove(): Promise<void>;
 }
@@ -76,10 +82,12 @@ function secondsSince(started: number): number
 }
 
 /** Build error lines; when `questId` is given, only the lines that point into that quest's code or tests. */
-function buildErrors(result: ProcessResult, questId?: string): string[]
+function buildErrors(result: SandboxBuild, questId?: string): string[]
 {
 	const errors = result.lines.filter((line) => BUILD_ERROR_PATTERN.test(line) && !/\b0 error/i.test(line));
-	const scoped = questId === undefined ? errors : errors.filter((line) => line.includes(`Quests/${questId}/`) || line.includes(`Tests/${questId}.Test.cpp`));
+
+	// Windows compilers print backslashes; compare with forward slashes on every platform.
+	const scoped = questId === undefined ? errors : errors.filter((line) => { const path = line.replace(/\\/g, "/"); return path.includes(`Quests/${questId}/`) || path.includes(`Tests/${questId}.Test.cpp`); });
 
 	return scoped.slice(0, MAXIMUM_QUOTED_LINES).map((line) => line.trim());
 }
@@ -90,6 +98,37 @@ function inconclusive(file: string, reason: string): ContentProblem
 	return { ...errorAt(file, `starter check inconclusive: ${reason}`, "engine"), severity: "warning" };
 }
 
+/** Reads a build or refactor quest's solution; undefined when a file is missing (the solution check reports it). */
+async function codeQuestEntry(quest: QuestRecord["quest"] & { kind: "build" | "refactor" }, file: string, solutionsFolder: string): Promise<EngineQuest | undefined>
+{
+	const solution: SandboxFile[] = [];
+
+	for (const questFile of quest.files)
+	{
+		const text = await readFile(join(solutionsFolder, quest.id, questFile.name), "utf8").catch(() => undefined);
+
+		if (text !== undefined) solution.push({ name: questFile.name, text });
+	}
+
+	if (solution.length !== quest.files.length) return undefined;
+
+	const starter = quest.files.map((questFile) => ({ name: questFile.name, text: questFile.starter }));
+
+	return { quest: { id: quest.id, title: quest.title, tests: quest.tests }, file, solution, starter, testNames: declaredTestNames(quest.tests) };
+}
+
+/** Reads a boss's reference integration: its code files become the quest files, its `*.Test.cpp` files the tests (A67, A215). */
+async function bossEntry(quest: QuestRecord["quest"] & { kind: "boss" }, file: string, solutionsFolder: string): Promise<EngineQuest | undefined>
+{
+	const integration = await readBossSolution(solutionsFolder, quest.id);
+
+	if (integration === undefined || integration.code.length === 0) return undefined;
+
+	const tests = integration.tests.map((testFile) => testFile.text).join("\n");
+
+	return { quest: { id: quest.id, title: quest.title, tests }, file, solution: integration.code, overrides: integration.overrides, testNames: declaredTestNames(tests) };
+}
+
 /** Turns quest records into engine quests, reading each reference solution; quests without one are skipped (the solution check reports them). */
 async function engineQuests(records: readonly QuestRecord[], solutionsFolder: string): Promise<{ quests: EngineQuest[]; problems: ContentProblem[] }>
 {
@@ -98,28 +137,20 @@ async function engineQuests(records: readonly QuestRecord[], solutionsFolder: st
 
 	for (const { quest, file } of records)
 	{
-		if (quest.kind !== "build" && quest.kind !== "refactor") continue;
+		let entry: EngineQuest | undefined;
 
-		const solution: SandboxFile[] = [];
+		if (quest.kind === "build" || quest.kind === "refactor") entry = await codeQuestEntry(quest, file, solutionsFolder);
+		else if (quest.kind === "boss") entry = await bossEntry(quest, file, solutionsFolder);
 
-		for (const questFile of quest.files)
+		if (entry === undefined) continue;
+
+		if (entry.testNames.length === 0)
 		{
-			const text = await readFile(join(solutionsFolder, quest.id, questFile.name), "utf8").catch(() => undefined);
-
-			if (text !== undefined) solution.push({ name: questFile.name, text });
-		}
-
-		if (solution.length !== quest.files.length) continue;
-
-		const testNames = testNamesIn(quest.tests);
-
-		if (testNames.length === 0)
-		{
-			problems.push(errorAt(file, "no IMPLEMENT_SIMPLE_AUTOMATION_TEST found, so the engine has nothing to run", "Tests"));
+			problems.push(errorAt(file, "no IMPLEMENT_SIMPLE_AUTOMATION_TEST found, so the engine has nothing to run", quest.kind === "boss" ? "engine" : "Tests"));
 			continue;
 		}
 
-		quests.push({ quest, file, solution, testNames });
+		quests.push(entry);
 	}
 
 	return { quests, problems };
@@ -158,11 +189,9 @@ export class EngineVerifier
 
 		log(`engine: sandbox copy at ${sandbox.folder}`);
 
-		for (const entry of quests)
-		{
-			await sandbox.writeQuestFiles(entry.quest.id, entry.solution);
-			await sandbox.writeQuestTests(entry.quest.id, entry.quest.tests);
-		}
+		for (const entry of quests) await sandbox.writeQuest(entry.quest, entry.solution);
+
+		const overridden = await this.writeBossOverrides(sandbox, quests);
 
 		log(`engine: building ${quests.length} reference solutions`);
 
@@ -171,16 +200,16 @@ export class EngineVerifier
 
 		timings.firstBuildSeconds = secondsSince(buildStarted);
 
-		if (build.exitCode !== 0)
+		if (!build.succeeded)
 		{
-			const general = buildErrors(build);
+			const general = build.pipelineError === undefined ? buildErrors(build) : [build.pipelineError];
 
 			for (const entry of judged)
 			{
 				const own = buildErrors(build, entry.quest.id);
 				const quoted = own.length > 0 ? own : general;
 
-				problems.push(errorAt(entry.file, `the reference solution did not build${build.timedOut ? " (timed out)" : ""}${quoted.length > 0 ? `:\n${quoted.join("\n")}` : ""}`, "engine"));
+				problems.push(errorAt(entry.file, `the reference solution did not build${quoted.length > 0 ? `:\n${quoted.join("\n")}` : ""}`, "engine"));
 			}
 
 			return { problems, questsChecked: judged.length, timings, keptSandbox: sandbox.folder };
@@ -197,7 +226,7 @@ export class EngineVerifier
 
 		for (const entry of judged)
 		{
-			const found = this.judgeSolution(entry, run.outcomes);
+			const found = this.judgeSolution(entry, run);
 
 			if (found.length > 0) solutionFailed.add(entry.quest.id);
 
@@ -206,9 +235,14 @@ export class EngineVerifier
 
 		const startersStarted = performance.now();
 
+		// Starters are judged without bosses: a boss calls members its piece overrides add, so a piece starter would always break it.
+		await this.removeBosses(sandbox, quests, overridden);
+
 		for (const entry of judged)
 		{
 			// A starter can only be judged against a solution that passes; otherwise "the starter fails" proves nothing.
+			if (entry.starter === undefined) continue;
+
 			if (solutionFailed.has(entry.quest.id)) problems.push(inconclusive(entry.file, "the reference solution fails, so the starter was not checked"));
 			else problems.push(...(await this.checkStarter(sandbox, entry)));
 		}
@@ -224,10 +258,48 @@ export class EngineVerifier
 		return { problems, questsChecked: judged.length, timings };
 	}
 
-	/** Every declared test of a quest must appear in the report and pass. */
-	private judgeSolution(entry: EngineQuest, outcomes: Map<string, { passed: boolean; state: string; messages: string[] }> | undefined): ContentProblem[]
+	/** Writes each boss's piece overrides over those pieces' solutions (override files replace same-named files). Returns the overridden piece ids. */
+	private async writeBossOverrides(sandbox: VerifierSandbox, quests: readonly EngineQuest[]): Promise<Set<string>>
 	{
-		if (outcomes === undefined) return [errorAt(entry.file, "the headless test run wrote no report", "engine")];
+		const byId = new Map(quests.map((entry) => [entry.quest.id, entry]));
+		const overridden = new Set<string>();
+
+		for (const entry of quests)
+		{
+			for (const [pieceId, files] of entry.overrides ?? [])
+			{
+				const piece = byId.get(pieceId);
+
+				if (piece === undefined) continue;
+
+				const merged = new Map(piece.solution.map((file) => [file.name, file]));
+
+				for (const file of files) merged.set(file.name, file);
+
+				await sandbox.writeQuest(piece.quest, [...merged.values()]);
+				overridden.add(pieceId);
+			}
+		}
+
+		return overridden;
+	}
+
+	/** Takes every boss out of the sandbox and puts overridden pieces back on their own solutions. */
+	private async removeBosses(sandbox: VerifierSandbox, quests: readonly EngineQuest[], overridden: ReadonlySet<string>): Promise<void>
+	{
+		for (const entry of quests)
+		{
+			if (entry.starter === undefined) await sandbox.removeQuest(entry.quest.id);
+			else if (overridden.has(entry.quest.id)) await sandbox.writeQuest(entry.quest, entry.solution);
+		}
+	}
+
+	/** Every declared test of a quest must appear in the report and pass. */
+	private judgeSolution(entry: EngineQuest, run: SandboxTestRun): ContentProblem[]
+	{
+		const outcomes = run.outcomes;
+
+		if (outcomes === undefined) return [errorAt(entry.file, `the headless test run gave no results: ${run.pipelineError ?? "no report"}`, "engine")];
 
 		const problems: ContentProblem[] = [];
 
@@ -247,21 +319,21 @@ export class EngineVerifier
 	{
 		const { log } = this.options;
 		const problems: ContentProblem[] = [];
-		const starter = entry.quest.files.map((questFile) => ({ name: questFile.name, text: questFile.starter }));
+		const starter = entry.starter ?? [];
 
 		log(`engine: starter check ${entry.quest.id}`);
 
-		await sandbox.writeQuestFiles(entry.quest.id, starter);
+		await sandbox.writeQuest(entry.quest, starter);
 
 		const build = await sandbox.build();
 
 		// A starter that does not compile is fine only when the errors are in its own files; anything else means it broke other quests' code.
-		if (build.exitCode !== 0 && buildErrors(build, entry.quest.id).length === 0)
+		if (!build.succeeded && buildErrors(build, entry.quest.id).length === 0)
 		{
 			problems.push(inconclusive(entry.file, "the starter broke other quests' code (no build error points into its own files)"));
 		}
 
-		if (build.exitCode === 0)
+		if (build.succeeded)
 		{
 			const run = await sandbox.runTests(entry.testNames);
 			const outcomes = entry.testNames.map((name) => run.outcomes?.get(name));
@@ -276,7 +348,7 @@ export class EngineVerifier
 			}
 		}
 
-		await sandbox.writeQuestFiles(entry.quest.id, entry.solution);
+		await sandbox.writeQuest(entry.quest, entry.solution);
 
 		return problems;
 	}

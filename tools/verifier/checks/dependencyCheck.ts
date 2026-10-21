@@ -44,7 +44,7 @@ async function sourcesOf(quest: AuthoredQuest, solutionsFolder: string): Promise
 		return { prose: quest.brief, section: "Brief", code: `${starters}\n${quest.tests}\n${await solutionText(solutionsFolder, quest.id)}` };
 	}
 
-	if (quest.kind === "boss") return { prose: quest.spec, section: "Spec", code: "" };
+	if (quest.kind === "boss") return { prose: quest.spec, section: "Spec", code: await solutionText(solutionsFolder, quest.id) };
 
 	return undefined;
 }

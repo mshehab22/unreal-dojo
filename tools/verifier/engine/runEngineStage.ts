@@ -5,10 +5,17 @@ import { resolve } from "node:path";
 import type { ContentProblem } from "../../../src/shared/types/content";
 import { createEngineLocator } from "../../../src/main/services/unreal/createEngineLocator";
 import { createUnrealPlatform } from "../../../src/main/services/unreal/createUnrealPlatform";
+import { AutomationTestRunner } from "../../../src/main/services/unreal/AutomationTestRunner";
 import { NodeCommandRunner } from "../../../src/main/services/unreal/NodeCommandRunner";
+import { NodeProcessLauncher } from "../../../src/main/services/unreal/NodeProcessLauncher";
+import { NodeSandboxFileSystem } from "../../../src/main/services/unreal/NodeSandboxFileSystem";
+import { QuestFileWriter } from "../../../src/main/services/unreal/QuestFileWriter";
+import { SYSTEM_TIMER } from "../../../src/main/services/unreal/SupervisedProcess";
+import { UnrealBuilder } from "../../../src/main/services/unreal/UnrealBuilder";
 import type { VerifierOptions } from "../parseVerifierArguments";
 import type { VerifierResult } from "../runVerifier";
 
+import type { UnrealTools } from "./EngineSandbox";
 import { EngineVerifier, type EngineReport } from "./EngineVerifier";
 
 /** The sandbox template the app ships (unreal-pipeline spec). */
@@ -46,7 +53,16 @@ export async function runEngineStage(enginePath: string, options: VerifierOption
 
 	log(`engine: Unreal Engine ${engine.version} at ${engine.path}`);
 
-	const verifier = new EngineVerifier({ target: { root: engine.path, version: engine.version, paths: platform.paths }, templateFolder: TEMPLATE_FOLDER, solutionsFolder: options.solutionsFolder, log });
+	// Wired the way createUnrealServices wires them for the app, so the verifier and the Build screen run Unreal identically (A211).
+	const fileSystem = new NodeSandboxFileSystem();
+	const launcher = new NodeProcessLauncher(platform.processTreeKiller);
+	const tools: UnrealTools = {
+		paths: platform.paths,
+		builder: new UnrealBuilder(platform.paths, launcher, SYSTEM_TIMER),
+		testRunner: new AutomationTestRunner(platform.paths, launcher, SYSTEM_TIMER, fileSystem),
+		writer: new QuestFileWriter(platform.paths, fileSystem),
+	};
+	const verifier = new EngineVerifier({ target: { root: engine.path, version: engine.version, tools }, templateFolder: TEMPLATE_FOLDER, solutionsFolder: options.solutionsFolder, log });
 	const report = await verifier.verify(result.input.quests, scopeOf(options, result));
 
 	log(`engine: ${report.questsChecked} quests; first build ${report.timings.firstBuildSeconds} s, solution tests ${report.timings.solutionTestsSeconds} s, starter checks ${report.timings.starterChecksSeconds} s`);
