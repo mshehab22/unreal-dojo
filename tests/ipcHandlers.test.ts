@@ -56,6 +56,16 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 			return { ok: true, sandboxPath: `${pickedFolder}/DojoSandbox`, durationMs: 5, compilerOutput: "" };
 		},
 	}),
+	getQuestRunService: () => ({
+		runQuest: async (questId, files, onProgress) =>
+		{
+			onProgress({ phase: "writing", lastLine: `Writing ${Object.keys(files).length} file(s) for ${questId}` });
+
+			return { ok: true, compiled: true, compilerOutput: "", tests: [{ name: "Dojo.F1.Dummy.Takes", passed: true }], testsPassed: 1, testsTotal: 1, durationMs: 9, loop: "headless" };
+		},
+		checkSnippetSyntax: async (code) => ({ ok: !code.includes("oops"), diagnostics: code.includes("oops") ? [{ line: 1, column: 1, severity: "error", message: "oops" }] : [] }),
+		rebuildSandbox: async () => ({ ok: true, sandboxPath: "/S/DojoSandbox", durationMs: 3, compilerOutput: "" }),
+	}),
 	runRegistry: new RunRegistry(),
 	sendProgress: () => undefined,
 	// The progress content service reads the same fake catalog, so getWorld and getQuest answer from it.
@@ -293,7 +303,7 @@ describe("payload validation", () =>
 	{
 		const invoke = createInvoker();
 
-		expectError(await invoke(IPC_CHANNELS.runQuest, { runId: "run-1", questId: "w1-health", files: { "DojoHealthComponent.h": "#pragma once" } }), "not-implemented");
+		expect(await invoke(IPC_CHANNELS.runQuest, { runId: "run-1", questId: "w1-health", files: { "DojoHealthComponent.h": "#pragma once" } })).toMatchObject({ ok: true, value: { ok: true, testsPassed: 1 } });
 		expectError(await invoke(IPC_CHANNELS.openEditor, null), "not-implemented");
 		expect(await invoke(IPC_CHANNELS.updateSettings, { loopMode: "fast", enginePath: null })).toMatchObject({ ok: true, value: { loopMode: "fast", enginePath: null } });
 	});
@@ -316,6 +326,23 @@ describe("payload validation", () =>
 		const invoke = createInvoker();
 
 		expect(await invoke(IPC_CHANNELS.pickSandboxFolder)).toEqual({ ok: true, value: { path: "/Picked/UE_5.8", warnings: ["long path"] } });
+	});
+
+	it("runs a quest under its run id, streaming stamped progress, and checks a snippet", async () =>
+	{
+		const { registrar, handlersByChannel } = createFakeRegistrar();
+		const events: unknown[] = [];
+		registerHandlers(registrar, createHandlers({ ...FAKE_DEPENDENCIES, runRegistry: new RunRegistry(), sendProgress: (event) => events.push(event) }));
+		const call = (channel: string, ...methodArguments: unknown[]) => handlersByChannel.get(channel)?.({} as Parameters<WrappedHandler>[0], ...methodArguments);
+
+		const run = await call(IPC_CHANNELS.runQuest, { runId: "run-7", questId: "f1-training-dummy", files: { "DojoF1TrainingDummy.h": "#pragma once" } });
+		const syntax = await call(IPC_CHANNELS.checkSnippetSyntax, { questId: "c1", code: "oops" });
+		const rebuild = await call(IPC_CHANNELS.rebuildSandbox, "rebuild-1");
+
+		expect(run).toMatchObject({ ok: true, value: { ok: true, loop: "headless" } });
+		expect(events).toEqual([expect.objectContaining({ runId: "run-7", phase: "writing", lastLine: "Writing 1 file(s) for f1-training-dummy" })]);
+		expect(syntax).toEqual({ ok: true, value: { ok: false, diagnostics: [{ line: 1, column: 1, severity: "error", message: "oops" }] } });
+		expect(rebuild).toMatchObject({ ok: true, value: { ok: true } });
 	});
 
 	it("answers cancelRun for an unknown run with run-not-found", async () =>

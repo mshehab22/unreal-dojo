@@ -81,12 +81,26 @@ Try it on a real machine: `npx tsx tools/locate-engine.ts [--pick <folder>]` pri
 | `Runner.ts` (`IRunner`, `RunnerContext`), `HeadlessRunner.ts`, `RunnerFactory.ts` | The loop; the factory returns `HeadlessRunner` until M1.4 |
 | `ProgressUpdate.ts` | A progress event without `runId` and `elapsedMs`; `src/main/ipc/trackRun.ts` stamps both (A185) |
 | `RunRegistry.ts` | Abort controller per run id, for `cancelRun`; `cancelAll` on `before-quit` stops every build and test (waits up to 5 s) |
-| `SandboxPathStore.ts`, `ElectronStoreSandboxPathStore.ts` | Where the sandbox path is saved until the settings service exists (A186) |
+| `SandboxPathStore.ts`, `UnrealSettingsStore.ts`, `ElectronStoreUnrealSettings.ts` | Where the sandbox and engine folders are saved (A186, A400) until the settings service exists (A186) |
 | `createUnrealServices.ts` | Builds the real sandbox service and runner factory; the composition root calls it on first use |
 
 `PlatformPaths` gained `buildProgram` (A182), `optionArgument`, `pathArgument`, `verbatimArguments` (A183), and `maximumSandboxPathLength` (100 on Windows).
 
-IPC: `createSandbox`, `cancelRun`, and `pickSandboxFolder` answer (A189). `runQuest` and `rebuildSandbox` wait for the settings service and the quest lookup.
+IPC: `createSandbox`, `cancelRun`, and `pickSandboxFolder` answer (A189); `runQuest`, `checkSnippetSyntax`, and `rebuildSandbox` answer from M1.3b (below). `openEditor` waits for M1.4 (A405).
+
+### Runs, prerequisites, and the snippet check (M1.3b)
+
+| File | Job |
+| --- | --- |
+| `QuestRunService.ts` | `runQuest`, `checkSnippetSyntax`, `rebuildSandbox` for the IPC handlers. Reads the engine and sandbox from settings (`sandbox-not-ready` before setup), the quest from the content catalog (`quest-not-found` for an unknown or non-code quest), fills prerequisites, then runs through `RunnerFactory` |
+| `QuestDependencies.ts` | Quest ids on the brief's "Compiles against earlier quests:" line (A268) |
+| `ReferenceSolutions.ts` | `<solutions>/<quest-id>/<FileName>`: `tools/solutions` in development, `<resources>/tools/solutions` when packaged (A404) |
+| `PrerequisiteFiller.ts` | Writes a prerequisite's whole reference solution when the learner has not passed it or its sandbox files are missing; one `writing` progress line per filled quest naming the files and why (A65, A401) |
+| `SnippetSyntaxChecker.ts`, `ClangSnippetSyntaxChecker.ts` | The scratch buffer check on macOS: UBT's `DojoTestActor.cpp.o.rsp` with the source swapped for the snippet, a prelude that blanks the reflection macros, `-fsyntax-only`, run as `xcrun clang++` from `Engine/Source`; about 0.5 s (A403). Windows answers `not-implemented` for now (A402) |
+
+`CommandRunner.run` takes an optional working folder (the snippet check needs `Engine/Source`).
+
+Real engine check: `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/integration/runQuest.test.ts` creates a sandbox through the `createSandbox` handler, runs `f1-score-keeper` with its reference solution through the `runQuest` handler (its two prerequisites filled from their reference solutions), and runs two snippet checks.
 
 Real engine check: `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/integration` creates a sandbox in a temp folder, builds it, writes the sample quest through `QuestFileWriter`, and runs it passing, with a failed assertion, with a compile error, and cancelled mid-build and mid-test (A187).
 

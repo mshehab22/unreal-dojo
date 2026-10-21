@@ -7,6 +7,9 @@ export class FakeCommandRunner implements CommandRunner
 	/** Every command line run, in order. */
 	readonly commandLines: string[] = [];
 
+	/** The working folder of every run that passed one, in order. */
+	readonly workingFolders: string[] = [];
+
 	private readonly script: Record<string, Partial<CommandResult>>;
 
 	/** Takes the scripted answers. Missing fields default to a clean exit with no output. */
@@ -16,8 +19,10 @@ export class FakeCommandRunner implements CommandRunner
 	}
 
 	/** Records the command line and returns its scripted answer. */
-	async run(command: string, commandArguments: string[]): Promise<CommandResult>
+	async run(command: string, commandArguments: string[], workingFolder?: string): Promise<CommandResult>
 	{
+		if (workingFolder !== undefined) this.workingFolders.push(workingFolder);
+
 		const commandLine = [command, ...commandArguments].join(" ");
 		this.commandLines.push(commandLine);
 

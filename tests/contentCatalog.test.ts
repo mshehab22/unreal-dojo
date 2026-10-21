@@ -193,7 +193,7 @@ describe("ContentCatalog load failures", () =>
 				getContentCatalog: () => catalog,
 				pickFolder: async () => null,
 				progressService: createTestProgressService().service,
-				getSandboxService: () => { throw new Error("not used"); },
+				getSandboxService: () => { throw new Error("not used"); }, getQuestRunService: () => { throw new Error("not used"); },
 				runRegistry: new RunRegistry(),
 				sendProgress: () => undefined,
 				progressContentService: createTestProgressContent().content,

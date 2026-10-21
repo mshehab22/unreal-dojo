@@ -1,0 +1,20 @@
+ ✓ tests/integration/runQuest.test.ts > runQuest against /Users/mshehab22/Applications/UE_5.8 > creates the sandbox through createSandbox, which saves the engine and sandbox folders 21268ms
+runQuest f1-score-keeper: 34849 ms
+Checking earlier quests this one compiles against: f1-training-dummy, f1-popup-target
+Using the reference solution for f1-training-dummy (DojoF1TrainingDummy.cpp, DojoF1TrainingDummy.h) because you have not passed it yourself (tested out or not done).
+Using the reference solution for f1-popup-target (DojoF1PopupTarget.cpp, DojoF1PopupTarget.h) because you have not passed it yourself (tested out or not done).
+  "ok": true,
+    "ok": true,
+    "compiled": true,
+        "name": "Dojo.F1.ScoreKeeper.ScoresMixedTargets",
+        "passed": true,
+        "durationMs": 13
+    "testsPassed": 1,
+    "testsTotal": 1,
+    "durationMs": 34818,
+    "loop": "headless"
+ ✓ tests/integration/runQuest.test.ts > runQuest against /Users/mshehab22/Applications/UE_5.8 > runs the score keeper through runQuest: prerequisites come from reference solutions, the build passes, its tests pass 34851ms
+two syntax checks: 584 ms {"ok":true,"value":{"ok":false,"diagnostics":[{"line":10,"column":2,"severity":"error","message":"unknown type name 'flot'; did you mean 'float'?"}]}}
+ ✓ tests/integration/runQuest.test.ts > runQuest against /Users/mshehab22/Applications/UE_5.8 > checks a scratch buffer with the compiler: a clean reflected class passes, a typo is reported on its line 585ms
+      Tests  3 passed (3)
+exit 0

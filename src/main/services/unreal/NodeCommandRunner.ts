@@ -10,7 +10,7 @@ const COMMAND_TIMEOUT_MS = 20_000;
 export class NodeCommandRunner implements CommandRunner
 {
 	/** Runs the command and resolves with its output; a program that cannot start resolves with `started: false`. */
-	run(command: string, commandArguments: string[]): Promise<CommandResult>
+	run(command: string, commandArguments: string[], workingFolder?: string): Promise<CommandResult>
 	{
 		return new Promise((resolve) =>
 		{
@@ -27,7 +27,7 @@ export class NodeCommandRunner implements CommandRunner
 				resolve(result);
 			};
 
-			const child = spawn(command, commandArguments, { shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+			const child = spawn(command, commandArguments, { shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"], ...(workingFolder ? { cwd: workingFolder } : {}) });
 
 			const timer = setTimeout(() => child.kill(), COMMAND_TIMEOUT_MS);
 

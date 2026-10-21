@@ -10,7 +10,7 @@ import { createTestProgressContent } from "../support/contentFixture";
 describe("progress IPC handlers", () =>
 {
 	const { service, content } = createTestProgressContent();
-	const handlers = createHandlers({ getAppVersion: () => "1.0.0", getEngineLocator: () => { throw new Error("not used"); }, getContentCatalog: () => { throw new Error("not used"); }, pickFolder: async () => null, progressService: service, progressContentService: content, getSandboxService: () => { throw new Error("not used"); }, runRegistry: new RunRegistry(), sendProgress: () => undefined, settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()), readEnvironmentStatus: () => { throw new Error("not used"); } });
+	const handlers = createHandlers({ getAppVersion: () => "1.0.0", getEngineLocator: () => { throw new Error("not used"); }, getContentCatalog: () => { throw new Error("not used"); }, pickFolder: async () => null, progressService: service, progressContentService: content, getSandboxService: () => { throw new Error("not used"); }, getQuestRunService: () => { throw new Error("not used"); }, runRegistry: new RunRegistry(), sendProgress: () => undefined, settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()), readEnvironmentStatus: () => { throw new Error("not used"); } });
 
 	it("answers getProgress, setPlayerName, and getRules from the service", async () =>
 	{
