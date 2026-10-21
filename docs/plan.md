@@ -92,7 +92,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
-| M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c1b7533) | re-review (round 3) | Round start and timer; World 1 boss reference integration with two-round tests, 10 of 10, mutation caught |
+| M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c1b7533) | fixes (round 4) | Boss integration 10 of 10 with main template; add a test for hits cleared in round 2 and the A340 layout paragraph. Branch merges whole with World 2 once all parts pass |
 | M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ c3c9c14) | re-review; boss waits on A67 | All 11 items; 20 of 20 on UE 5.8.3 with the World 1 boss pieces |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | m2-2-quest-screens | building | Concept, Drill, Breakdown, Build, Loot on the M2.1 data layer and fake |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | claude/m3-1-patterns-observer-0943eb @ 06ba8af | re-review | All five items fixed; rebased on the full verifier |
