@@ -6,6 +6,45 @@ Newest first inside each section. A decision names the options considered, the c
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A19 2026-10-21 npm install scripts left unapproved; Electron downloads its binary on first use (M0.1, builder-shell)
+npm 11.19 blocks package install scripts until they are approved. Options: approve them in `package.json`; leave them. Chosen: leave them. Electron 44 fetches its binary on first run when it is missing, esbuild and fsevents ship prebuilt binaries, and electron-winstaller is only for Squirrel (not used). Everything passed without them. Reverse cost: one `npm install-scripts approve` line if a later package needs it.
+
+### A18 2026-10-21 `npm run test:e2e` does not build first (M0.1, builder-shell)
+Options: make `test:e2e` run `electron-vite build` itself; keep it as plain `playwright test` against `out/`. Chosen: plain. CI already runs `npm run build` before it (research section 8), and rebuilding inside every e2e run doubles the time. The smoke test launches the project folder (not `out/main/index.js`) so Electron reads `package.json` like the packaged app does. Reverse cost: one script line.
+
+### A17 2026-10-21 Smoke test checks the window size against the screen (M0.1, builder-shell)
+On this MacBook Air the usable screen is 853 points tall, so macOS shrinks a 1440x900 window to 1440x853. Options: shrink the default size; assert exact 1440x900; assert 1440x900 capped by the work area plus the 1100x700 minimum. Chosen: the third. The spec's size stays and the test still catches a wrong size on a large screen. Reverse cost: none.
+
+### A16 2026-10-21 React Fast Refresh loaded as a module so the CSP stays `script-src 'self'` in dev (M0.1, builder-shell)
+The React Vite plugin normally adds an inline script in dev, which the CSP blocks. Options: loosen the CSP in dev with `'unsafe-inline'`; import the plugin's `@vitejs/plugin-react/preamble` module at the top of `main.tsx`. Chosen: the import; it is empty in production. The dev renderer was checked in Electron with no CSP errors. Reverse cost: one line.
+
+### A15 2026-10-21 CSP string (M0.1, builder-shell)
+Chosen: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self'`, as a meta tag in `src/renderer/index.html`. Inline styles are needed by Tailwind, Motion, and React Flow; `worker-src blob:` is for Monaco's workers. Rejected: a response header set from main (does not cover `file://` loads as simply). The renderer never calls the network; the AI and MCP calls run in main. Reverse cost: none.
+
+### A14 2026-10-21 Window code lives in `src/main/window/createMainWindow.ts` (M0.1, builder-shell)
+The spec layout put the window in `main/index.ts`. Options: keep it there; give it its own file. Chosen: own file, so `index.ts` stays a short composition root and the window rules (size, security, link handling) are in one readable place. Spec layout and architecture updated. Reverse cost: none.
+
+### A13 2026-10-21 `content/` and `resources/` ship as extraResources, outside the asar (M0.1, builder-shell)
+The spec said `files` should include `out/`, `content/`, `resources/`. Options: put all three inside the asar; put `out/` in the asar and copy `content/` and `resources/` next to it. Chosen: the second. The sandbox template must be copied to disk as real files, and the UE build tools cannot read inside an asar. Code reads them through `process.resourcesPath` when packaged and the project folder in dev. Reverse cost: low.
+
+### A12 2026-10-21 Renderer libraries are devDependencies (M0.1, builder-shell)
+Options: everything in `dependencies`; only main-process runtime packages in `dependencies`. Chosen: the second. Vite bundles React, Monaco, React Flow, Motion, and the rest into the renderer, so shipping their `node_modules` copies again is waste; `externalizeDeps` keeps `dependencies` external for main and preload. Result: the dmg went from 153 MB to 129 MB. Rule for later tasks: a package the main process imports goes in `dependencies`, a package only the renderer imports goes in `devDependencies`. Reverse cost: none.
+
+### A11 2026-10-21 Sandbox on from the start (M0.1, builder-shell)
+The spec said sandbox on "where Monaco workers allow it". Monaco's workers are ordinary web workers and do not need Node, so sandbox is on for the only window. If Monaco ever fails under it, the build-editor task logs it and turns it off for that window only. Reverse cost: one flag.
+
+### A10 2026-10-21 ESM app with a CommonJS preload (M0.1, builder-shell)
+Options: CommonJS everywhere and `await import('electron-store')`; `"type": "module"` for the whole package. Chosen: ESM (electron-store and many current packages are ESM only, as the research recommends). Sandboxed preload scripts must be CommonJS, so the preload alone is built as `out/preload/index.cjs`. Reverse cost: low.
+
+### A09 2026-10-21 electron-store 11.0.2 instead of 12.0.0 (M0.1, builder-shell)
+12.0.0 came out on 2026-10-12, under the two-week rule. 11.0.2 (2025-10-05) is also ESM, supports Electron 30+, and has the same API the settings service needs. Options: 12.0.0 now; 11.0.2 now and bump later. Chosen: 11.0.2; bump when the settings task starts after 2026-10-26. Reverse cost: a version bump.
+
+### A08 2026-10-21 Exact version pins, newest release that is at least 14 days old (M0.1, builder-shell)
+Options: caret ranges; exact pins. Chosen: exact pins (`--save-exact`) so every worktree and CI runner installs the same tree, choosing the newest release in the decided major line published on or before 2026-10-07. Versions: electron 44.7.0, vite 8.3.3, @vitejs/plugin-react 6.1.2, react and react-dom 19.3.0, typescript 5.9.3, tailwindcss and @tailwindcss/vite 4.3.3, motion 14.0.0, lucide-react 1.52.0, zustand 5.0.15, vitest 5.0.3, @playwright/test 1.63.0, electron-builder 26.17.0, tsx 4.23.15, monaco-editor 0.57.0, @monaco-editor/react 4.7.0, @xyflow/react 12.12.0, react-markdown 10.1.0, unified 11.0.5, unist-util-visit 5.1.0, remark-gfm 4.0.1, @modelcontextprotocol/sdk 1.32.1, @anthropic-ai/sdk 0.131.0, @types/node 24.19.1, @types/react and @types/react-dom 19.3.0, clsx 2.1.1, tailwind-merge 3.7.0, class-variance-authority 0.7.1. Several are older than the research's numbers (which were "latest" on 2026-10-21). Reverse cost: bump when needed.
+
+### A07 2026-10-21 electron-vite 6.0.0 pinned although it is only 7 days old (M0.1, builder-shell)
+D01 requires electron-vite 6 with Vite 8, and 6.0.0 (2026-10-14) is the only release that supports Vite 8; 5.0.0 supports Vite 5 to 7 only. Options: electron-vite 5 with Vite 7 (breaks D01 and the Vite 8 pin); 6.0.0 now. Chosen: 6.0.0, the one exception to the two-week rule. typecheck, test, build, e2e, and package all pass with it. Reverse cost: low; drop to 5.0.0 plus Vite 7 if a 6.0.0 bug appears.
+
 ### A06 2026-10-21 The Lead owns the board; builders own their iterations entry and spec
 Options: every session edits `docs/plan.md`; only the Lead edits it. Chosen: only the Lead edits `docs/plan.md`. Builders append their own entry to `docs/iterations.md` and update their own `docs/systems/<system>.md` on their branch. Why: several worktrees editing one board table conflict on every merge. Reverse cost: none.
 
