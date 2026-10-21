@@ -49,6 +49,13 @@
 				"filter": [
 					"**/*"
 				]
+			},
+			{
+				"from": "src/renderer/src/assets/fonts",
+				"to": "licenses/fonts",
+				"filter": [
+					"*-LICENSE.txt"
+				]
 			}
 		],
 		"asar": true,
