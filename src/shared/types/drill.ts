@@ -4,7 +4,7 @@ import type { DrillItem } from "./content";
 /** Which drill to start: today's due items, a world's test-out, or the Parsons fallback offered after two failed submits (A89). */
 export type DrillRequest =
 	| { kind: "due" }
-	| { kind: "test-out"; worldId: string }
+	| { kind: "test-out"; packId: string; worldId: string }
 	| { kind: "parsons-fallback"; questId: string };
 
 /** One item of a drill session, with the id `answerDrillItem` takes. */

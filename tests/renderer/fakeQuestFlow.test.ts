@@ -196,8 +196,8 @@ describe("the quests scenario and the fake breakdown grader", () =>
 		expect(progress.attempts.some((attempt) => attempt.questId.startsWith("f1-"))).toBe(false);
 		expect(Object.keys(progress.rematches).some((questId) => questId.startsWith("f1-"))).toBe(false);
 		expect(Object.values(progress.patternCards).flatMap((card) => card.useCasesPassed).some((questId) => questId.startsWith("f1-"))).toBe(false);
-		expect((await fake.getTestOutStatus())["objects-and-reflection"]?.reason).not.toContain("passed already");
-		expect((await new FakeDojoApi("returning").getTestOutStatus())["objects-and-reflection"]?.reason).toContain("passed already");
+		expect((await fake.getTestOutStatus())["foundations/objects-and-reflection"]?.reason).not.toContain("passed already");
+		expect((await new FakeDojoApi("returning").getTestOutStatus())["foundations/objects-and-reflection"]?.reason).toContain("passed already");
 	});
 
 	it("credits each learner piece to at most one required piece", async () =>

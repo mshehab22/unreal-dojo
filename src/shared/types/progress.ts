@@ -238,7 +238,7 @@ export interface PlayerProgress
 	/** Rematch due times (ISO 8601) by quest id: after a viewed solution, or when a due item surfaced the quest. */
 	rematches: Record<string, string>;
 
-	/** Worlds whose test-out the learner passed. Their worked and faded build quests may be skipped. */
+	/** World keys (`<packId>/<worldId>`, see `worldKeyOf`) whose test-out the learner passed. Their worked and faded build quests may be skipped (A700). */
 	testedOutWorldIds: string[];
 
 	/** When the active XP potion runs out (ISO 8601), or null when none is active. */
@@ -311,7 +311,13 @@ export interface QuestAvailability
 /** What a chest can hold. */
 export type ChestReward = "freeze" | "armor" | "seer-stone" | "studio-cosmetic" | "xp-potion";
 
-/** Whether a world's test-out can be taken, for the World Map's test-out button. */
+/** The key of a world across packs: world ids are only unique inside a pack (A510), so test-out status and saved test-outs use `<packId>/<worldId>` (A700). */
+export function worldKeyOf(packId: string, worldId: string): string
+{
+	return `${packId}/${worldId}`;
+}
+
+/** Whether a world's test-out can be taken, for the World Map's test-out button. Keyed by `worldKeyOf(packId, worldId)` in `getTestOutStatus`. */
 export interface WorldTestOutStatus
 {
 	/** True when every term of the world is at least proficient, so its mixed drill can be taken as a test-out. */
@@ -559,7 +565,7 @@ export interface DrillOutcome
 	/** When the next item is due (ISO 8601), or null when nothing is scheduled. */
 	nextDueAt: string | null;
 
-	/** Worlds whose test-out this drill passed, letting the learner skip their worked and faded quests. */
+	/** World keys (`<packId>/<worldId>`) whose test-out this drill passed, letting the learner skip their worked and faded quests. */
 	testedOutWorldIds: string[];
 
 	/** Chest earned when this drill finished the chosen daily offer. */

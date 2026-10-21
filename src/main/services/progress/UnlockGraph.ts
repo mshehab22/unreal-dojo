@@ -1,5 +1,5 @@
 // The prerequisite graph of the World Map: which quests are available, and why the rest are locked.
-import type { MasteryLevel, PlayerProgress, QuestAvailability } from "@shared/types/progress";
+import { worldKeyOf, type MasteryLevel, type PlayerProgress, type QuestAvailability } from "@shared/types/progress";
 
 import { MasteryRules } from "./MasteryRules";
 import type { RuleQuest } from "./RuleQuest";
@@ -19,7 +19,7 @@ export interface UnlockState
 	/** Item mastery by item id (terms are items). */
 	masteryOf: (itemId: string) => MasteryLevel | null | undefined;
 
-	/** Worlds the learner tested out of. */
+	/** World keys (`<packId>/<worldId>`) the learner tested out of. */
 	testedOutWorldIds: string[];
 
 	/** Rematch due times by quest id. */
@@ -84,7 +84,7 @@ export class UnlockGraph
 	private availabilityOf(quest: RuleQuest, state: UnlockState): QuestAvailability
 	{
 		const stored = state.quests[quest.id]?.status;
-		const testedOut = state.testedOutWorldIds.includes(quest.worldId);
+		const testedOut = state.testedOutWorldIds.includes(worldKeyOf(quest.packId, quest.worldId));
 		const rematchDueAt = state.rematches[quest.id];
 		const dueForRematch = rematchDueAt !== undefined && new Date(rematchDueAt).getTime() <= state.now.getTime();
 		const base = { dueForRematch, skippable: testedOut && this.testOut.isSkippable(quest) };
@@ -128,7 +128,7 @@ export class UnlockGraph
 		const prerequisite = this.questsById.get(prerequisiteId);
 		if (!prerequisite) return false;
 
-		return state.testedOutWorldIds.includes(prerequisite.worldId) && this.testOut.isSkippable(prerequisite);
+		return state.testedOutWorldIds.includes(worldKeyOf(prerequisite.packId, prerequisite.worldId)) && this.testOut.isSkippable(prerequisite);
 	}
 
 	/** The lowest-order quest of the lowest-order world of every pack. */

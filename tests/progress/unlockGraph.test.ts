@@ -67,7 +67,7 @@ describe("UnlockGraph", () =>
 
 	it("waives the term rule in a tested-out world and lets worked and faded build quests be skipped", () =>
 	{
-		const availability = new UnlockGraph([first, second, third]).availability(state(["first"], {}, ["world-1"]));
+		const availability = new UnlockGraph([first, second, third]).availability(state(["first"], {}, ["pack-1/world-1"]));
 
 		expect(availability["second"]).toMatchObject({ status: "available", skippable: true });
 		expect(availability["third"]).toMatchObject({ status: "available", skippable: false });
@@ -76,7 +76,7 @@ describe("UnlockGraph", () =>
 	it("never lets a boss be skipped by test-out", () =>
 	{
 		expect(new TestOutRules().isSkippable(boss)).toBe(false);
-		expect(new UnlockGraph([first, second, boss]).availability(state(["first"], {}, ["world-1"]))["boss"]?.skippable).toBe(false);
+		expect(new UnlockGraph([first, second, boss]).availability(state(["first"], {}, ["pack-1/world-1"]))["boss"]?.skippable).toBe(false);
 	});
 
 	it("tests out a world when every term in it is at proficient", () =>
@@ -212,9 +212,9 @@ describe("terms gate only when taught earlier in course order (A72, A660)", () =
 
 	it("leaves a term taught in a later world out of a world's test-out, and keeps terms taught in that world or earlier", () =>
 	{
-		expect(testOutTermsOf(quests, "world-1")).toEqual(["term.actor"]);
-		expect(testOutTermsOf([teacher, ...quests, makeQuest({ id: "w1-uses", worldId: "world-1", order: 4, terms: ["term.component"] })], "world-1")).toEqual(["term.actor", "term.component"]);
-		expect(testOutTermsOf(quests, "world-2")).toEqual(["term.subobject"]);
+		expect(testOutTermsOf(quests, "pack-1", "world-1")).toEqual(["term.actor"]);
+		expect(testOutTermsOf([teacher, ...quests, makeQuest({ id: "w1-uses", worldId: "world-1", order: 4, terms: ["term.component"] })], "pack-1", "world-1")).toEqual(["term.actor", "term.component"]);
+		expect(testOutTermsOf(quests, "pack-1", "world-2")).toEqual(["term.subobject"]);
 	});
 });
 

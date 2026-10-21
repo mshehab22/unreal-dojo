@@ -199,12 +199,12 @@ describe("ProgressService reviews and drills", () =>
 		// A due drill never tests a world out; only a test-out drill for that world does (A313).
 		expect((await service.finishDrill({ correctCount: 6, totalCount: 7 })).testedOutWorldIds).toEqual([]);
 
-		const outcome = await service.finishDrill({ correctCount: 6, totalCount: 7 }, { rewarded: true, testOut: { worldId: "world-1", termIds: termQuest.terms } });
+		const outcome = await service.finishDrill({ correctCount: 6, totalCount: 7 }, { rewarded: true, testOut: { worldKey: "pack-1/world-1", termIds: termQuest.terms } });
 
 		expect(outcome.xpGained).toBe(10);
 		expect(outcome.streak.count).toBe(1);
-		expect(outcome.testedOutWorldIds).toEqual(["world-1"]);
-		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 }, { rewarded: true, testOut: { worldId: "world-1", termIds: termQuest.terms } })).testedOutWorldIds).toEqual([]);
+		expect(outcome.testedOutWorldIds).toEqual(["pack-1/world-1"]);
+		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 }, { rewarded: true, testOut: { worldKey: "pack-1/world-1", termIds: termQuest.terms } })).testedOutWorldIds).toEqual([]);
 	});
 });
 

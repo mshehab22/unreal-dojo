@@ -6,10 +6,11 @@ import type { RouteParameters } from "../../../app/router/routes";
 /** The drill request a route asks for; anything unrecognized is today's due drill. */
 export function drillRequestFromRoute(parameters: RouteParameters): DrillRequest
 {
+	const pack = parameters["pack"];
 	const world = parameters["world"];
 	const quest = parameters["quest"];
 
-	if (parameters["kind"] === "test-out" && world) return { kind: "test-out", worldId: world };
+	if (parameters["kind"] === "test-out" && pack && world) return { kind: "test-out", packId: pack, worldId: world };
 	if (parameters["kind"] === "parsons-fallback" && quest) return { kind: "parsons-fallback", questId: quest };
 
 	return { kind: "due" };
@@ -23,7 +24,7 @@ export function routeForDrillRequest(request: DrillRequest): Record<string, stri
 		case "due":
 			return { kind: "due" };
 		case "test-out":
-			return { kind: "test-out", world: request.worldId };
+			return { kind: "test-out", pack: request.packId, world: request.worldId };
 		case "parsons-fallback":
 			return { kind: "parsons-fallback", quest: request.questId };
 	}
