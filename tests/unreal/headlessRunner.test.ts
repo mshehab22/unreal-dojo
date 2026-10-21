@@ -63,7 +63,7 @@ describe("HeadlessRunner", () =>
 
 		expect(result).toEqual({ ok: true, compiled: true, compilerOutput: "", tests: [{ name: "Dojo.Sample.Health.TakesDamage", passed: true, durationMs: 27 }], testsPassed: 1, testsTotal: 1, durationMs: 0, loop: "headless" });
 		expect(fileSystem.files.get("/Sandbox/Source/Dojo/Quests/sample-health/SampleHealthComponent.h")).toBe("#pragma once");
-		expect(launcher.specs[1]?.commandArguments[1]).toBe("-ExecCmds=Automation RunTests Dojo.Sample.Health.TakesDamage; Quit");
+		expect(launcher.specs[1]?.commandArguments[1]).toBe("-ExecCmds=Automation RunTests ^Dojo.Sample.Health.TakesDamage; Quit");
 		expect(fileSystem.removedFolders).toContain("/tmp/dojo-report-1");
 		expect(updates[0]).toMatchObject({ phase: "preparing", loop: "headless" });
 		expect(updates.map((update) => update.phase)).toEqual(["preparing", "writing", "building", "building", "launching", "testing", "parsing"]);
@@ -162,6 +162,37 @@ describe("RunRegistry and trackRun", () =>
 		expect(events[0]).toMatchObject({ runId: "run-1", phase: "building", lastLine: "hello" });
 		expect(typeof events[0]?.elapsedMs).toBe("number");
 		expect(() => registry.cancel("run-1")).toThrow(/no running build/);
+	});
+
+	it("cancelAll aborts every run and resolves once they have all ended", async () =>
+	{
+		const registry = new RunRegistry();
+		const endsOnAbort = (_onProgress: unknown, signal: AbortSignal): Promise<void> => new Promise((resolve) => signal.addEventListener("abort", () => setTimeout(resolve, 5)));
+
+		const first = trackRun("build-1", registry, () => undefined, endsOnAbort);
+		const second = trackRun("test-2", registry, () => undefined, endsOnAbort);
+		expect(registry.hasRuns()).toBe(true);
+
+		const startedAt = Date.now();
+		await registry.cancelAll(5000);
+
+		expect(Date.now() - startedAt).toBeLessThan(1000);
+		expect(registry.hasRuns()).toBe(false);
+		await expect(first).rejects.toMatchObject({ appError: { code: "run-cancelled" } });
+		await expect(second).rejects.toMatchObject({ appError: { code: "run-cancelled" } });
+	});
+
+	it("cancelAll stops waiting after the limit when a run never ends, and answers at once with nothing running", async () =>
+	{
+		const registry = new RunRegistry();
+		void trackRun("stuck", registry, () => undefined, () => new Promise<void>(() => undefined));
+
+		const startedAt = Date.now();
+		await registry.cancelAll(50);
+
+		expect(Date.now() - startedAt).toBeGreaterThanOrEqual(45);
+		expect(registry.hasRuns()).toBe(true);
+		await new RunRegistry().cancelAll(60_000);
 	});
 
 	it("refuses a run id already in use, and turns a cancel into run-cancelled", async () =>

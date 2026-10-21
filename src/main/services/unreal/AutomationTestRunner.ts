@@ -5,6 +5,7 @@ import type { PlatformPaths } from "./PlatformPaths";
 import type { ProcessLauncher } from "./ProcessLauncher";
 import { ReportParser } from "./ReportParser";
 import { runSupervised, type Timer } from "./SupervisedProcess";
+import { anchoredTestFilter } from "./TestFilter";
 
 /** A headless test run may take this long before it is killed. */
 export const TEST_RUN_TIMEOUT_MS = 10 * 60 * 1000;
@@ -27,8 +28,8 @@ export interface TestRunRequest
 	/** Full path of `Dojo.uproject`. */
 	projectFile: string;
 
-	/** The `Automation RunTests` filter, for example `Dojo.Sample.Health`. */
-	testFilter: string;
+	/** The exact tests to run, for example `["Dojo.Sample.Health.TakesDamage"]`. Report entries for any other test are dropped. */
+	testNames: string[];
 
 	/** An empty folder for this run's report, so an older report can never be read by mistake. */
 	reportFolder: string;
@@ -56,7 +57,7 @@ export interface TestRunOutcome
 	durationMs: number;
 }
 
-/** Runs `UnrealEditor-Cmd` with `-ExecCmds="Automation RunTests <filter>; Quit"` (verified on 5.8.3, A44) and parses `index.json`. */
+/** Runs `UnrealEditor-Cmd` with `-ExecCmds="Automation RunTests ^Name$+...; Quit"` (no `$` on macOS) (verified on 5.8.3, A44) and parses `index.json`. */
 export class AutomationTestRunner
 {
 	private readonly paths: PlatformPaths;
@@ -75,13 +76,13 @@ export class AutomationTestRunner
 	}
 
 	/** The full argument list, exposed for tests and docs. */
-	commandArguments(request: Pick<TestRunRequest, "projectFile" | "testFilter" | "reportFolder">): string[]
+	commandArguments(request: Pick<TestRunRequest, "projectFile" | "testNames" | "reportFolder">): string[]
 	{
 		const paths = this.paths;
 
 		return [
 			paths.pathArgument(request.projectFile),
-			paths.optionArgument("ExecCmds", `Automation RunTests ${request.testFilter}; Quit`),
+			paths.optionArgument("ExecCmds", `Automation RunTests ${anchoredTestFilter(request.testNames, paths.testNameEndAnchor)}; Quit`),
 			"-Unattended",
 			"-NoPause",
 			"-NullRHI",
@@ -113,8 +114,11 @@ export class AutomationTestRunner
 		const report = this.reportParser.parse(reportText);
 		if (!report.ok) return { ...base, tests: [], pipelineError: report.problem };
 
-		if (report.tests.length === 0) return { ...base, tests: [], pipelineError: `No automation test matched ${request.testFilter}. The quest's test names may not start with that prefix.` };
+		// Only this quest's tests count: on macOS a longer name that starts the same way also runs (no end anchor there).
+		const questTests = report.tests.filter((test) => request.testNames.includes(test.name));
 
-		return { ...base, tests: report.tests };
+		if (questTests.length === 0) return { ...base, tests: [], pipelineError: `None of this quest's tests ran (${request.testNames.join(", ")}). Check the test names in the quest's test file.` };
+
+		return { ...base, tests: questTests };
 	}
 }

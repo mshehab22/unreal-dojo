@@ -62,6 +62,9 @@ export interface HandlerDependencies
 /** The part of SandboxProjectService the handlers use, so tests can pass a fake. */
 export interface SandboxSetupService
 {
+	/** Plain-English warnings about a picked folder (the Windows path length). */
+	folderWarnings(pickedFolder: string): string[];
+
 	/** Copies the template into the picked folder and runs the first full build. */
 	create(enginePath: string, pickedFolder: string, onProgress: ProgressListener, signal: AbortSignal): Promise<SandboxSetupResult>;
 }
@@ -106,6 +109,9 @@ export interface ContentCatalogService
 
 /** Title of the native folder picker for a manual engine pick. */
 const PICK_ENGINE_TITLE = "Choose your Unreal Engine folder (the one that contains Engine)";
+
+/** Title of the folder picker for the sandbox. */
+const PICK_SANDBOX_TITLE = "Choose where to create the Unreal Dojo sandbox project";
 
 /** Task names used in not-implemented messages, so the renderer can say when a feature arrives. */
 const ARRIVES_WITH = {
@@ -157,7 +163,14 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		getEnvironmentStatus: stub("getEnvironmentStatus", ARRIVES_WITH.engine, []),
 		completeFirstRun: stub("completeFirstRun", ARRIVES_WITH.settings, []),
 
-		pickSandboxFolder: stub("pickSandboxFolder", ARRIVES_WITH.sandbox, []),
+		pickSandboxFolder: {
+			argumentSchemas: [],
+			handle: async () =>
+			{
+				const folder = await dependencies.pickFolder(PICK_SANDBOX_TITLE);
+				return folder === null ? null : { path: folder, warnings: dependencies.getSandboxService().folderWarnings(folder) };
+			},
+		},
 		createSandbox: {
 			argumentSchemas: [sandboxSetupRequestSchema],
 			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getSandboxService().create(request.enginePath, request.folder, onProgress, signal)),

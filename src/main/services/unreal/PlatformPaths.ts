@@ -63,6 +63,9 @@ export interface PlatformPaths
 	/** A bare path argument: quoted on Windows, left whole on macOS. */
 	pathArgument(somePath: string): string;
 
+	/** What closes an anchored automation test name: `$` on Windows; nothing on macOS, where Unreal turns every `$` on its command line into `"` (LaunchMac.cpp) and the broken quotes swallow `-NullRHI` (A180). */
+	readonly testNameEndAnchor: string;
+
 	/** Longest sandbox folder path that is safe for Unreal's build, or null when there is no practical limit. 100 on Windows, where deep intermediate paths pass 260 characters. */
 	readonly maximumSandboxPathLength: number | null;
 }

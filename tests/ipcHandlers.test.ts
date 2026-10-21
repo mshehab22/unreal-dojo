@@ -45,6 +45,7 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 	pickFolder: async () => "/Picked/UE_5.8",
 	progressService: createTestProgressService().service,
 	getSandboxService: () => ({
+		folderWarnings: (pickedFolder) => (pickedFolder.length > 10 ? ["long path"] : []),
 		create: async (_enginePath, pickedFolder, onProgress) =>
 		{
 			onProgress({ phase: "building", lastLine: "Result: Succeeded", percent: 100 });
@@ -267,6 +268,13 @@ describe("payload validation", () =>
 
 		expect(response).toEqual({ ok: true, value: { ok: true, sandboxPath: "/Picked/DojoSandbox", durationMs: 5, compilerOutput: "" } });
 		expect(events).toEqual([expect.objectContaining({ runId: "setup-1", phase: "building", percent: 100 })]);
+	});
+
+	it("answers pickSandboxFolder with the picked folder and its warnings", async () =>
+	{
+		const invoke = createInvoker();
+
+		expect(await invoke(IPC_CHANNELS.pickSandboxFolder)).toEqual({ ok: true, value: { path: "/Picked/UE_5.8", warnings: ["long path"] } });
 	});
 
 	it("answers cancelRun for an unknown run with run-not-found", async () =>

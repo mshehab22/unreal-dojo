@@ -9,7 +9,7 @@ import type { IRunner, RunnerContext } from "./Runner";
 import type { SandboxFileSystem } from "./SandboxFileSystem";
 import { PROJECT_FILE_NAME } from "./SandboxProjectService";
 import type { Timer } from "./SupervisedProcess";
-import { questTestFilter } from "./TestFilter";
+import { declaredTestNames } from "./TestFilter";
 import type { UnrealBuilder } from "./UnrealBuilder";
 
 /** Matches the automation lines worth showing under the progress bar while tests run. */
@@ -62,8 +62,8 @@ export class HeadlessRunner implements IRunner
 
 		onProgress({ phase: "preparing", lastLine: "Full build and headless tests", loop: "headless", loopReason: "headless loop (the only loop until M1.4)" });
 
-		const testFilter = questTestFilter(quest.tests);
-		if (testFilter === null) return finish({ error: "This quest's tests declare no automation test, so there is nothing to run." });
+		const testNames = declaredTestNames(quest.tests);
+		if (testNames.length === 0) return finish({ error: "This quest's tests declare no automation test, so there is nothing to run." });
 
 		onProgress({ phase: "writing", lastLine: `Writing ${Object.keys(files).length} file(s) for ${quest.id}` });
 		await writer.write(context.sandboxFolder, quest, files);
@@ -91,7 +91,7 @@ export class HeadlessRunner implements IRunner
 			const tests = await testRunner.run({
 				engineRoot: context.engineRoot,
 				projectFile,
-				testFilter,
+				testNames,
 				reportFolder,
 				signal,
 				onLine: (line) =>

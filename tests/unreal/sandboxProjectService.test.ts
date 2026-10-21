@@ -137,6 +137,18 @@ describe("SandboxProjectService", () =>
 		await expect(service.rebuild("/Engines/UE", "/Empty", () => undefined, new AbortController().signal)).rejects.toMatchObject({ appError: { code: "sandbox-not-ready" } });
 	});
 
+	it("sends the long-path warning as a preparing line when creating on Windows", async () =>
+	{
+		const longFolder = `C:\\Users\\learner\\${"Very Long Folder Name\\".repeat(4)}`;
+		const { service } = createService("5.8.3", undefined, TEMPLATE_FILES, new WindowsPlatformPaths({}));
+		const updates: ProgressUpdate[] = [];
+
+		// The in-memory file system only knows forward slashes, so the copy fails later; the warning is sent before it.
+		await service.create("/Engines/UE", longFolder, (update) => updates.push(update), new AbortController().signal).catch(() => undefined);
+
+		expect(updates[1]).toMatchObject({ phase: "preparing", lastLine: expect.stringMatching(/characters long/) });
+	});
+
 	it("warns about a long sandbox path on Windows only", () =>
 	{
 		const longFolder = `C:\\Users\\learner\\${"Very Long Folder Name\\".repeat(4)}`;

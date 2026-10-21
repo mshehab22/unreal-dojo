@@ -77,6 +77,8 @@ export class SandboxProjectService
 		const startedAt = timer.now();
 
 		onProgress({ phase: "preparing", lastLine: "Checking the engine" });
+		for (const warning of this.folderWarnings(pickedFolder)) onProgress({ phase: "preparing", lastLine: warning });
+
 		const engine = await this.dependencies.engineInspector.inspectFolder(enginePath);
 		const sandboxFolder = await this.resolvedSandboxFolder(pickedFolder);
 

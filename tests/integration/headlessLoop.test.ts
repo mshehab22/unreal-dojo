@@ -105,7 +105,7 @@ describe.skipIf(!HAS_ENGINE)(`headless loop against ${ENGINE_ROOT || "no engine"
 		expect(processesMentioning(sandboxFolder)).toBe("");
 	}, STEP_TIMEOUT_MS);
 
-	it("builds a brand new quest folder whose test includes the quest header by bare name (A181)", async () =>
+	it("builds a brand new quest folder whose test includes the quest header by bare name, and runs only its own test (A181, A180)", async () =>
 	{
 		const quest = {
 			id: "integration-probe",
@@ -125,14 +125,35 @@ describe.skipIf(!HAS_ENGINE)(`headless loop against ${ENGINE_ROOT || "no engine"
 			].join("\n"),
 		};
 
+		// Another quest whose failing test name starts with the probe's name: an unanchored filter would run it too (fix round 1).
+		const overlapping = {
+			id: "integration-overlap",
+			title: "Integration overlap",
+			tests: [
+				"#include \"Misc/AutomationTest.h\"",
+				"#if WITH_AUTOMATION_TESTS",
+				"IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_Probe_Value_SevenOther, \"Dojo.Probe.Value.SevenOther\", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)",
+				"bool FDojo_Probe_Value_SevenOther::RunTest(const FString& Parameters)",
+				"{",
+				"\tTestTrue(TEXT(\"Always fails\"), false);",
+				"\treturn true;",
+				"}",
+				"#endif",
+				"",
+			].join("\n"),
+		};
+		await services!.questFileWriter.write(sandboxFolder, overlapping, {});
+
 		const startedAt = Date.now();
 		const result = await services!.runnerFactory.forContext({ engineRoot: ENGINE_ROOT, sandboxFolder }).run(quest, { "DojoProbeValue.h": "#pragma once\n\ninline int DojoProbeValue() { return 7; }\n" }, () => undefined, new AbortController().signal);
 		timings.newQuestRun = Date.now() - startedAt;
 
 		console.log(result.compilerOutput, JSON.stringify(result.tests));
 		await services!.questFileWriter.remove(sandboxFolder, quest.id);
+		await services!.questFileWriter.remove(sandboxFolder, overlapping.id);
 
 		expect(result).toMatchObject({ ok: true, testsPassed: 1, testsTotal: 1 });
+		expect(result.tests.map((test) => test.name)).toEqual(["Dojo.Probe.Value.Seven"]);
 	}, STEP_TIMEOUT_MS);
 
 	it("reports a failed assertion with its message", async () =>

@@ -9,25 +9,8 @@ export function declaredTestNames(testSource: string): string[]
 	return [...testSource.matchAll(TEST_NAME)].map((match) => match[1] ?? "").filter((name) => name.length > 0);
 }
 
-/** The `RunTests` filter for a quest: the longest dotted prefix every declared test shares, for example `Dojo.W1.HealthComponent` (A180). Null when the source declares no test. */
-export function questTestFilter(testSource: string): string | null
+/** The `Automation RunTests` argument for these tests: each name anchored at the start with `^`, closed with `endAnchor` (`$` where the platform allows it), joined with `+`. Unanchored names are substring matches, so `Dojo.W1.Health` would also run `Dojo.W1.HealthBar` tests (A180). */
+export function anchoredTestFilter(testNames: string[], endAnchor: string): string
 {
-	const names = declaredTestNames(testSource);
-	if (names.length === 0) return null;
-
-	if (names.length === 1) return names[0] ?? null;
-
-	const splitNames = names.map((name) => name.split("."));
-	const shared: string[] = [];
-
-	for (let index = 0; ; index++)
-	{
-		const part = splitNames[0]?.[index];
-
-		if (part === undefined || !splitNames.every((parts) => parts[index] === part)) break;
-
-		shared.push(part);
-	}
-
-	return shared.length > 0 ? shared.join(".") : null;
+	return testNames.map((name) => `^${name}${endAnchor}`).join("+");
 }

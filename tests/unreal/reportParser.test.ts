@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { ReportParser } from "../../src/main/services/unreal/ReportParser";
-import { declaredTestNames, questTestFilter } from "../../src/main/services/unreal/TestFilter";
+import { anchoredTestFilter, declaredTestNames } from "../../src/main/services/unreal/TestFilter";
 
 /** Reads a fixture report as text, keeping its byte order mark. */
 function fixture(name: string): string
@@ -51,24 +51,20 @@ describe("ReportParser", () =>
 	});
 });
 
-describe("questTestFilter", () =>
+describe("test names and the exact filter", () =>
 {
-	it("lists every declared test name", () =>
+	it("lists every declared test name, and none for a source without tests", () =>
 	{
 		const source = `IMPLEMENT_SIMPLE_AUTOMATION_TEST(FA, "Dojo.W1.Health.TakesDamage", Flags)\nIMPLEMENT_COMPLEX_AUTOMATION_TEST( FB , "Dojo.W1.Health.Heals", Flags)`;
 
 		expect(declaredTestNames(source)).toEqual(["Dojo.W1.Health.TakesDamage", "Dojo.W1.Health.Heals"]);
+		expect(declaredTestNames("// nothing here")).toEqual([]);
 	});
 
-	it("uses the one test name, or the dotted prefix every test shares", () =>
+	it("anchors each name at both ends where the platform allows a $, and at the start only otherwise", () =>
 	{
-		expect(questTestFilter(`IMPLEMENT_SIMPLE_AUTOMATION_TEST(FA, "Dojo.W1.Health.TakesDamage", F)`)).toBe("Dojo.W1.Health.TakesDamage");
-		expect(questTestFilter(`IMPLEMENT_SIMPLE_AUTOMATION_TEST(FA, "Dojo.W1.Health.TakesDamage", F) IMPLEMENT_SIMPLE_AUTOMATION_TEST(FB, "Dojo.W1.Health.Heals", F)`)).toBe("Dojo.W1.Health");
-		expect(questTestFilter(`IMPLEMENT_SIMPLE_AUTOMATION_TEST(FA, "Dojo.W1.HealthBar.Fill", F) IMPLEMENT_SIMPLE_AUTOMATION_TEST(FB, "Dojo.W1.Health.Heals", F)`)).toBe("Dojo.W1");
-	});
-
-	it("answers null when no test is declared", () =>
-	{
-		expect(questTestFilter("// nothing here")).toBeNull();
+		expect(anchoredTestFilter(["Dojo.W1.Health.TakesDamage"], "$")).toBe("^Dojo.W1.Health.TakesDamage$");
+		expect(anchoredTestFilter(["Dojo.W1.Health.Heals", "Dojo.W1.Health.HealsTwice"], "$")).toBe("^Dojo.W1.Health.Heals$+^Dojo.W1.Health.HealsTwice$");
+		expect(anchoredTestFilter(["Dojo.W1.Health.Heals", "Dojo.W1.Health.HealsTwice"], "")).toBe("^Dojo.W1.Health.Heals+^Dojo.W1.Health.HealsTwice");
 	});
 });

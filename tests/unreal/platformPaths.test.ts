@@ -96,6 +96,7 @@ describe("build program and argument quoting", () =>
 		expect(paths.pathArgument("C:\\My Sandbox\\Dojo.uproject")).toBe("\"C:\\My Sandbox\\Dojo.uproject\"");
 		expect(paths.verbatimArguments).toBe(true);
 		expect(paths.maximumSandboxPathLength).toBe(100);
+		expect(paths.testNameEndAnchor).toBe("$");
 	});
 
 	it("runs Build.sh and passes arguments whole on macOS, with no path limit", () =>
@@ -107,6 +108,7 @@ describe("build program and argument quoting", () =>
 		expect(paths.pathArgument("/My Sandbox/Dojo.uproject")).toBe("/My Sandbox/Dojo.uproject");
 		expect(paths.verbatimArguments).toBe(false);
 		expect(paths.maximumSandboxPathLength).toBeNull();
+		expect(paths.testNameEndAnchor).toBe("");
 	});
 });
 

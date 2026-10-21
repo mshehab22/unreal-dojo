@@ -47,6 +47,9 @@ async function start(): Promise<void>
 	// A refused save still lets the app open; every progress call answers the save-failed error so the renderer can show it.
 	if (refusal) console.error(`Progress refused: ${refusal.message} ${refusal.detail ?? ""}`);
 
+	const runRegistry = new RunRegistry();
+	stopRunsBeforeQuit(runRegistry);
+
 	let unrealServices: UnrealServices | null = null;
 	const getUnrealServices = (): UnrealServices =>
 		(unrealServices ??= createUnrealServices({ templateFolder: sandboxTemplateFolder(), engineInspector: getEngineLocator(), pathStore: new ElectronStoreSandboxPathStore() }));
@@ -60,7 +63,7 @@ async function start(): Promise<void>
 			pickFolder,
 			progressService,
 			getSandboxService: () => getUnrealServices().sandboxService,
-			runRegistry: new RunRegistry(),
+			runRegistry,
 			sendProgress: sendBuildProgress,
 		}),
 	);
@@ -69,6 +72,24 @@ async function start(): Promise<void>
 	app.on("activate", () =>
 	{
 		if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+	});
+}
+
+/** How long quitting waits for cancelled builds and test runs to end. Killing a process tree takes well under a second. */
+const QUIT_WAIT_MS = 5000;
+
+/** Cancels every running build and test before the app quits, so no UBT or editor is orphaned holding UBT's mutex. */
+function stopRunsBeforeQuit(runRegistry: RunRegistry): void
+{
+	let stopping = false;
+
+	app.on("before-quit", (event) =>
+	{
+		if (stopping || !runRegistry.hasRuns()) return;
+
+		stopping = true;
+		event.preventDefault();
+		void runRegistry.cancelAll(QUIT_WAIT_MS).finally(() => app.quit());
 	});
 }
 
