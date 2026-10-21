@@ -1369,6 +1369,25 @@
     "firstQuestId": "p2-frame-time"
   },
   {
+    "id": "tick-prerequisite",
+    "term": "Tick Prerequisite",
+    "aliases": [
+      "AddTickPrerequisiteActor",
+      "AddTickPrerequisiteComponent",
+      "tick dependency"
+    ],
+    "category": "framework",
+    "short": "A rule that one actor or component must tick after another within the same frame.",
+    "long": "Inside one frame the engine calls ticking objects one after another, and their order is not promised by where they sit in the level. When a camera rig must read its pawn's position after the pawn has moved, or a health bar must read health after damage was applied, call AddTickPrerequisiteActor (or AddTickPrerequisiteComponent) so the engine always ticks the dependency first. Tick groups give coarse order around physics; prerequisites give exact order between two things.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/actor-ticking-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tick",
+      "tick-groups",
+      "primary-actor-tick"
+    ],
+    "firstQuestId": "p3-per-frame-behavior"
+  },
+  {
     "id": "primary-actor-tick",
     "term": "PrimaryActorTick",
     "aliases": [
@@ -1386,7 +1405,8 @@
       "tick-groups",
       "timer-manager",
       "object-pool"
-    ]
+    ],
+    "firstQuestId": "p2-frame-time"
   },
   {
     "id": "timer-handle",

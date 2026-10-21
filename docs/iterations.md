@@ -503,3 +503,19 @@ exit code 0
 - Originality (D13): the when-not quest's runaway-bank question now uses this world's own numbers (a 1/32 second step that costs 40 milliseconds).
 - Replay ghost: the brief's first line now starts at Step 0 / 64. The brief and the rubric agree that a negative playback rate is treated as 0 (the reference already clamps), and the playback test now checks it.
 - Engine, UE 5.8.3 on the Mac, fresh sandboxes under the engine lock: reference solutions 18 of 18 pass (World 1 and World 2); starters compile and 15 of 18 fail, the same split as before (the boulder's 60 frames per second test passes on its working starter by design).
+## M4.x Pack 2 World 3, Update Method (content-patterns, author-patterns)
+- What changed: a third Patterns world, "Things that act on their own", with the full mini-arc for Update Method (six quests). Each thing that behaves over time owns a function for one frame of that behavior, and the engine calls it every frame. The learner meets it as an actor's own Tick, then as one manager walking a plain struct array, then refactors a central director into it. Per the Lead, this pattern is its own world, which changes the plan in A472 (A491).
+- The quests and their observables:
+  - Whose job is this frame? (concept): slicing behavior into frames, storing where you left off, update order inside a frame, tick prerequisites, and idling.
+  - A drone that patrols on its own (build, worked): the >> label glides 400 centimeters, turns into <<, and comes back, even under `t.MaxFPS 2`. In the tests, three seconds in frames of 0.01, 0.1, and 1 second all end 100 centimeters out, and a single five-second frame that passes both ends still lands inside.
+  - Each thing owns its frame (concept): the Update Method card and recognize items.
+  - A spark swarm with one walk per frame (build, stub): `ke * Launch` sends an orange spark out that bursts into 2, then 4, then fades, while the label counts 1, 2, 4, 0, all from one actor. Its deliberate failure: sparks born mid-walk must wait a step (A494).
+  - Hand the crypt's behavior back to its things (refactor): braziers and sweepers waver and turn as before, but each from its own Tick, and they still move with no director in the level.
+  - When nothing needs to happen every frame (concept): listen instead of polling, timers for schedules, stop idle ticking, and one walk for thousands of tiny things.
+- Also: a new `tick-prerequisite` glossary entry, and the update-method card's two use cases and two new items (A495).
+- Proof, UE 5.8.3 on the MacBook Air, fresh copies of the sandbox template, commands from the unreal-pipeline spec, under the shared engine lock:
+  - Reference solutions for all three patterns worlds: build succeeded, 27 of 27 tests passed (9 new).
+  - Starters: all compile; 22 of 27 fail. On the World 3 side, only the crypt's look test (working starter) and the drone's engine-drives-it test pass, by design.
+  - The obvious swarm walk (loop to the live count): fails `NewSparksWaitAStep` and `LaunchBurstsToTheEnd`, both from children moving in the step they were born.
+  - Content verifier `--pack patterns`: no problems.
+- Not done: no boss for this world yet (A490). No screenshots (editor runs with `-NullRHI` on this Mac). Windows unverified. Decisions A490 to A496.

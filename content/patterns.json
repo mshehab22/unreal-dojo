@@ -139,7 +139,10 @@
     "problem": "A world full of patrolling guards, spinning pickups, and ticking bombs cannot be written as one big function that knows about every object. Each object needs to carry its own behavior and remember where it left off between frames.",
     "unrealForm": "AActor::Tick and UActorComponent::TickComponent are this pattern, with PrimaryActorTick.bCanEverTick to opt in, tick intervals to slow it down, tick groups and tick prerequisites to order it, and SetActorTickEnabled to put idle actors to sleep. Timers and latent actions replace many countdowns that beginners write by hand inside Tick.",
     "whenNot": "Do not tick things that only change on events: a chest that opens when used should react to the use call, not poll every frame. Thousands of identical agents should live in one manager's array or in Mass instead of thousands of ticking actors.",
-    "useCaseQuestIds": [],
+    "useCaseQuestIds": [
+      "p3-patrol-drone",
+      "p3-spark-swarm"
+    ],
     "recall": [
       {
         "id": "update-method-recall-1",
@@ -174,6 +177,19 @@
           "Optionally mentions cleaner code"
         ],
         "explanation": "Ticking only to count down wastes frames; the timer manager already tracks time for you."
+      },
+      {
+        "id": "update-method-recall-4",
+        "type": "multiple-choice",
+        "prompt": "During one update walk over an array of sparks, a spark bursts and two children are added to the end of the array. With the safe walk, when do the children first move?",
+        "choices": [
+          "In the same walk, as soon as the loop reaches them",
+          "On the next walk, because this walk stops at the count it started with",
+          "Never, until something calls Launch",
+          "Only after the array is sorted"
+        ],
+        "answerIndex": 1,
+        "explanation": "Reading the count before the walk keeps newcomers out of it, so a spark born this step starts on the next one and nothing moves twice."
       }
     ],
     "scenarios": [
@@ -216,6 +232,19 @@
         ],
         "answerIndex": 2,
         "explanation": "Update Method is for things that change every frame. Event-driven objects should turn off tick and react to a delegate; an early return or a longer interval still pays for the calls."
+      },
+      {
+        "id": "update-method-scenario-3",
+        "type": "multiple-choice",
+        "prompt": "A quest marker should light up once when the boss falls. A teammate puts a check of the boss's health in the marker's Tick. What is the better call?",
+        "choices": [
+          "Keep the Tick check, it is simplest",
+          "Bind the marker to the boss's defeat delegate and give it no Tick",
+          "Move the check into a manager's Tick that walks all markers",
+          "Run the check on a fixed-step bank"
+        ],
+        "answerIndex": 1,
+        "explanation": "The marker reacts to one event; listening runs once, while a per-frame check runs thousands of times to catch it."
       }
     ]
   },

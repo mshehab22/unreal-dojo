@@ -6,6 +6,27 @@ Newest first inside each section. A decision names the options considered, the c
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A496 2026-10-21 Decision numbers A490 to A509 for Pack 2 World 3 (author-patterns)
+A470 to A477 are World 2's (on its branch); A390 and A420 to A429 are used on main. Chosen: A490 to A509, unused on main and on every patterns branch. Reverse cost: none.
+
+### A495 2026-10-21 Glossary and card additions for Update Method (author-patterns, Pack 2 World 3)
+Added `tick-prerequisite` (framework; Epic's 5.8 Actor Ticking page, which covers prerequisites, live), first taught by `p3-per-frame-behavior`. Set `primary-actor-tick`'s `firstQuestId` to `p2-frame-time`, which lists it (missed in World 2). The update-method card lists `p3-patrol-drone` and `p3-spark-swarm` as use cases and gains `update-method-recall-4` (when children born mid-walk first move) and `update-method-scenario-3` (a when-not multiple-choice item: listen instead of polling). Reverse cost: low.
+
+### A494 2026-10-21 World 3's deliberate failure: sparks born during the walk must wait a step (author-patterns, Pack 2 World 3)
+Options: removal during the walk (an obvious `RemoveAt` skips a neighbor, but a ranged-for loop would trip the engine's array-changed check and stop the test run, so it is asked for as a plain requirement instead); newborn sparks moving in the step they were born. Chosen: newborns. The obvious index loop to `Sparks.Num()` moves the children in the same step; checked on 5.8.3, that version fails `NewSparksWaitAStep` ("moved 3, expected 1"; "child at 200, expected 100") and also `LaunchBurstsToTheEnd`, because the children burst again in the same one-second step. Both failures name the same mistake, so the pair is kept. Reverse cost: low.
+
+### A493 2026-10-21 The crypt refactor keeps the director as a roster (author-patterns, Pack 2 World 3)
+Tests must compile against both the starter and the refactor, and the starter only behaves when a director lists the things. Options: delete the director (tests could not include it); keep it as a roster with no Tick and no per-thing state. Chosen: keep the two lists (the brief says a later scoreboard reads them). Tests: `LookUnchanged` (with a director) passes on the starter; `EachThingUpdatesItself` (no director) and `DirectorRunsNobody` (director does not tick, nothing runs twice) fail on it. These tests tick the world (`FDojoTestWorld::Tick`), with a one-frame tolerance for when ticking starts. Reverse cost: low.
+
+### A492 2026-10-21 Update Method mini-arc (author-patterns, Pack 2 World 3)
+Arc: `p3-per-frame-behavior` (concept, no pattern name: slicing behavior into frames, resume state, sequential order, prerequisites, idling), `p3-patrol-drone` (worked: an actor's own Tick with a stored heading and overshoot folded back, even past both ends in one frame), `p3-update-method-card`, `p3-spark-swarm` (stub: one actor walks a plain struct array, newborns wait a step, burst sparks are swept after the walk), `p3-crypt-refactor` (a director that ran every brazier and sweeper through parallel arrays hands each its own Tick), `p3-update-method-when-not` (listen instead of polling, timers for schedules, stop idle ticking, one walk for thousands, never trust placement for order). Mechanics: patrol, firework, crypt hazards. Reverse cost: medium.
+
+### A491 2026-10-21 Update Method gets its own world, superseding A472's plan (author-patterns, Pack 2 World 3)
+A472 planned Update Method and Double Buffer as later orders inside World 2. The Lead's instruction for this task is "World 3, the next pattern in Part 3 order". Options: append to World 2 as A472 said; a world per pattern arc. Chosen: the Lead's, `03-update-method`, with prefix `p3`. Consequences for the pack layout: worlds now follow patterns one by one (World 4 would be Double Buffer, and so on), so Pack 2 grows past the 8 worlds in `docs/product.md`, which now says so; the Pack 4 gate (A131, "Pack 2 world 4 boss") refers to world order and should be re-pointed at the Component world when the Lead next touches it. Reverse cost: medium (folder and id renames).
+
+### A490 2026-10-21 Pack 2 World 3 has no boss yet; any boss will follow A67 (author-patterns, Pack 2 World 3)
+As A380 and A470. A boss in this world would be a reference integration with two-round tests per A67; the natural one combines Update Method with Game Loop and Observer (a crypt run with a round clock), and is better as its own task. Reverse cost: none.
+
 ### A477 2026-10-21 Decision numbers A470 to A489 for Pack 2 World 2 (author-patterns)
 The Lead offered A390 upward, but A390 and A420 to A429 are already used on main by other sessions. Chosen: A470 to A489, a range nobody had touched, so parallel sessions do not collide. Reverse cost: none.
 

@@ -1,0 +1,5 @@
+{
+	"id": "update-method",
+	"title": "Things that act on their own",
+	"summary": "A crypt full of drones, braziers, and sparks has to keep moving every frame without one giant function that knows them all. Learn to give each thing its own per-frame behavior, keep its place between frames, and change the crowd safely while it moves."
+}
