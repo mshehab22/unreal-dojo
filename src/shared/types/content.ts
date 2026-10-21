@@ -314,6 +314,30 @@ export interface GlossaryEntry
 	linkMode?: GlossaryLinkMode;
 }
 
+/**
+ * One spelling of a glossary term (its `term` or one alias), as the TermLinker and Monaco's hover and completion
+ * providers use it. The renderer gets the whole list through IPC.
+ */
+export interface GlossaryAlias
+{
+	/** The text to find, exactly as written in the glossary. */
+	text: string;
+
+	entryId: string;
+
+	/** The entry's display term, for completion labels. */
+	term: string;
+
+	/** The entry's one-line hover text. */
+	short: string;
+
+	/** Identifiers (`AActor`, `BeginPlay`, `UPROPERTY`) match case sensitively; plain words (`actor`) do not. */
+	caseSensitive: boolean;
+
+	/** True for `linkMode: "code-only"` entries: linked only inside inline code. */
+	codeOnly: boolean;
+}
+
 /** A collectible pattern card with its recall and scenario drill items. */
 export interface PatternCard
 {
@@ -354,9 +378,15 @@ export interface Pack
 	worlds: World[];
 }
 
+/** How serious a content problem is. Errors fail the verifier; warnings are printed and do not, until `--release`. */
+export type ProblemSeverity = "error" | "warning";
+
 /** One thing wrong with a content file, always naming the file. */
 export interface ContentProblem
 {
+	/** Absent means "error". */
+	severity?: ProblemSeverity;
+
 	/** Path relative to the content folder, with forward slashes. */
 	file: string;
 
