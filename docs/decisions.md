@@ -949,6 +949,11 @@ Options: a marker string such as `{{ENGINE}}`; empty; a real version. Chosen: em
 ### A40 2026-10-21 The sample quest ships in the template as the sandbox smoke test (builder-unreal, M1.2a)
 Options: keep the sample out of the shipped template; ship it. Chosen: ship it as `Quests/SampleHealth/USampleHealthComponent` with test `Dojo.Sample.Health.TakesDamage`, so the first-run build has something to compile and the first test run proves the whole chain. Named "Sample" so it cannot clash with a content pack's own health component class (all quests share one module, so two `UHealthComponent` classes would not compile). Content authors should give quest classes names unique within the module. Reverse cost: delete two folders.
 
+### A71 2026-10-21 Decision number ranges are assigned by the Lead
+Parallel branches picked their own ranges and collided (A89, A470 to A474, A490, A491). Chosen: the Lead assigns each task a block of ten in its brief and records it in the table below; builders never pick a block themselves. Duplicates already on main stay until a renumbering pass (problems.md). Reverse cost: none.
+
+Assigned blocks from now on: M1.7c A600 to A609; M1.4c A610 to A619; Pack 1 World 4 fixes A620 to A629; Pack 2 World 5 fixes A630 to A639; next free block A640.
+
 ### A70 2026-10-21 The paid API reviews a submit only when every test passed
 From the M1.7c review: the spec reviews every submit that compiled, which with the learner's API key spends money on attempts whose tests failed. Options: review every compiled submit with any provider; never review failing submits; review failing submits only with the subscription-backed Claude Code. Chosen: Claude Code (subscription, no per-call cost) reviews any compiled submit, since findings on failing tests teach; the Anthropic API provider reviews only all-tests-passed submits, and a submit with failing tests falls back to tests-only grading with the reason shown. Recorded in `docs/systems/ai-review.md` by builder-review. Reverse cost: low.
 
