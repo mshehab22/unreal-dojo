@@ -77,7 +77,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M0.6 CI matrix | qa | tester (session) | merged 0deefe6 (squashed) | merged | Green Actions run waits for a private repo (A05); Windows steps unverified |
 | M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | merged 329a995 | merged | 1 fix round; build about 20 s, headless test about 18 s on UE 5.8.3 Mac |
 | M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | merged 267739b | merged | Passed first review; Windows unverified (problems.md) |
-| M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | claude/m1-6-rules-b3c2e0 @ 4d9b9c4 | re-review | Fix round 1: all nine items; 305 tests |
+| M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | claude/m1-6-rules-b3c2e0 @ 4d9b9c4 | fixes | Round 1 held for 8 of 9. Round 2: rematches still farmable through "Drill me" and hover-injected terms; candidates must come only from scheduled due items |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | m1-7b-review-edges @ c14de07 | review | A300 to A302; 235 tests |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop @ 3891f21 | review | 7 of 7 real UE 5.8.3 runs on the Mac; runQuest IPC not wired yet |
