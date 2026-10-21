@@ -84,7 +84,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 8665386 | merged | 1 fix round plus a test fix; includes the GFrameCounter timer fix |
-| M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring @ 638febc | re-review | All four items and A426 cleanup; 11 of 11 engine runs |
+| M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring @ 638febc | fixes (round 2) | Round 1 held. Round 2: syntax-check timeout hangs and leaves clang running; recursive dependency fill (boss needs the practice bell) |
 | M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged 742676e | merged | 1 fix round; probes verified in a packaged build |
 | M1.7c submitQuest and review IPC wiring | ai-review | builder-review (session) | m1-7c-submit-wiring @ 2efbe9e | building | Provider IPC, graders, stored review and files done; the run inside Submit waits for M1.3b |
 | M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | merged b06a722 | merged | 2 rounds; --engine 9 of 9 on UE 5.8.3 through M1.3 runners |
