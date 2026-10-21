@@ -1,8 +1,8 @@
-#include "DojoP3CryptBrazier.h"
+#include "DojoP3ArenaBrazier.h"
 
 #include "Components/TextRenderComponent.h"
 
-ADojoP3CryptBrazier::ADojoP3CryptBrazier()
+ADojoP3ArenaBrazier::ADojoP3ArenaBrazier()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -11,7 +11,7 @@ ADojoP3CryptBrazier::ADojoP3CryptBrazier()
 	Label->SetHorizontalAlignment(EHTA_Center);
 }
 
-void ADojoP3CryptBrazier::Tick(float DeltaSeconds)
+void ADojoP3ArenaBrazier::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
@@ -19,13 +19,13 @@ void ADojoP3CryptBrazier::Tick(float DeltaSeconds)
 	SetFlameHeight(BaseHeight + Waver * FMath::Sin(Phase));
 }
 
-void ADojoP3CryptBrazier::SetFlameHeight(float NewHeight)
+void ADojoP3ArenaBrazier::SetFlameHeight(float NewHeight)
 {
 	FlameHeight = NewHeight;
 	Label->SetText(FText::AsNumber(FMath::RoundToInt(FlameHeight)));
 }
 
-float ADojoP3CryptBrazier::GetFlameHeight() const
+float ADojoP3ArenaBrazier::GetFlameHeight() const
 {
 	return FlameHeight;
 }

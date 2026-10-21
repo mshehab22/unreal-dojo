@@ -22,21 +22,21 @@ concepts:
 ```yaml
 id: predict
 type: multiple-choice
-prompt: "Guess, no penalty: a drone should fly to the end of a corridor, then back. Someone writes it as one function: a loop that moves it forward until the end, then a loop that moves it back. They call it from BeginPlay. What does the player see?"
+prompt: "Guess, no penalty: when a round ends, the arena's scoreboard should roll its number up from 0 to the final score so the crowd can watch it climb. Someone writes the roll as a for loop from 0 to the score that sets the label on each pass, called once from the round's end. What does the player see?"
 choices:
-  - The drone flies out and back smoothly
-  - The game freezes until both loops finish, then the drone is already back at the start
-  - The engine runs the loops on another thread
-  - The drone moves one centimeter per frame
+  - The number climbing smoothly to the score
+  - The final score appear at once, after a short hitch
+  - The number climbing on another thread
+  - Every number at once, overlapping
 answerIndex: 1
-explanation: Nothing is drawn until the function returns, so the whole trip happens inside one frame and the player only sees the end. Behavior that should be seen has to be spread across frames.
+explanation: Nothing is drawn until the function returns, so every pass of the loop happens inside one frame and only the last value is ever shown. Anything the player should watch change has to be spread across frames.
 ```
 
 # Card
 
 The engine's frame comes round many times a second. Something that should be seen to move, a drone, a flame, a sweeping blade, has to do a little of its behavior on each pass and then give the frame back. The cleanest place to put that little piece is in the thing itself: in Unreal, an actor's **Tick** or a component's `TickComponent`. The engine keeps a list of everything that has opted in (`PrimaryActorTick.bCanEverTick`) and calls each one once per frame.
 
-**The function returns every frame, so the object must remember.** A loop that walks out and back knows where it is from the line it is on. Sliced into frames, that knowledge is gone at the end of every Tick, so the object keeps it in fields: which way it is heading, how far through its swing it is, how long until it fires. That stored "where was I" is the price of spreading behavior over frames.
+**The function returns every frame, so the object must remember.** A loop that rolls a number up knows how far it has got from the loop counter. Sliced into frames, that knowledge is gone at the end of every Tick, so the object keeps it in fields: which way it is heading, how far through its swing it is, how long until it fires. That stored "where was I" is the price of spreading behavior over frames.
 
 **One after another, not all at once.** Within a frame the engine calls the objects in turn. If the guard ticks before the lamp, the lamp sees where the guard is now, not where it was at the start of the frame. Usually that is fine. When one thing must always read another after it moved (a camera following a pawn), say so with a **tick prerequisite** (`AddTickPrerequisiteActor`) or a later tick group, instead of relying on luck.
 
@@ -77,19 +77,19 @@ void ADojoArenaTorch::Tick(float DeltaSeconds)
     - It depends on the render thread
   answerIndex: 1
   explanation: Updates run one after another, so the lamp sees whatever the guard already wrote this frame.
-- id: spot-blocking-patrol
+- id: spot-blocking-fade
   type: spot-the-bug
-  prompt: This drone is meant to drift slowly to the end of its corridor. Which line makes the trip happen in a single frame?
+  prompt: The winner's banner should fade in over a second when the round ends. Which line makes it appear fully faded in, all at once?
   code: |
-    void ADojoArenaDrone::BeginPlay()
+    void ADojoArenaWinnerBanner::ShowWinner()
     {
-    	Super::BeginPlay();
-    	while (Offset < PatrolLength) Offset += 1.f;
-    	SetActorLocation(StartLocation + FVector(Offset, 0.f, 0.f));
+    	SetActorHiddenInGame(false);
+    	for (float Opacity = 0.f; Opacity <= 1.f; Opacity += 0.01f) SetOpacity(Opacity);
+    	bShowing = true;
     }
   bugLine: 4
-  fix: Move the drone a frame's worth at a time in Tick, using speed times DeltaSeconds.
-  explanation: The loop finishes before the frame is ever drawn, so the player sees the drone already at the end.
+  fix: Store the opacity on the banner and raise it a frame's worth at a time in Tick, by fade speed times DeltaSeconds, until it reaches 1.
+  explanation: All hundred steps run before the frame is drawn, so the player only ever sees the last one.
 - id: prerequisite
   type: multiple-choice
   prompt: "A camera rig must always read its pawn's position after the pawn has moved in the same frame. What is the reliable way to get that?"

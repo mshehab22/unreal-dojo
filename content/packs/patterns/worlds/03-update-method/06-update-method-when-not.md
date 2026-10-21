@@ -7,7 +7,7 @@ difficulty: 2
 patterns: [update-method]
 skills: [update-method, architecture]
 terms: [tick, timer-manager, primary-actor-tick, multicast-delegate]
-prerequisites: [p3-crypt-refactor]
+prerequisites: [p3-arena-refactor]
 xp: 25
 estimatedMinutes: 6
 concepts:
@@ -22,7 +22,7 @@ concepts:
 ```yaml
 id: predict
 type: multiple-choice
-prompt: "Guess, no penalty: a crypt door must open when a lever is pulled. One version checks the lever's IsPulled every frame in the door's Tick. Another binds to the lever's OnPulled delegate. The lever is pulled once in a ten-minute level. How many times does each version run its check?"
+prompt: "Guess, no penalty: an arena door must open when a lever is pulled. One version checks the lever's IsPulled every frame in the door's Tick. Another binds to the lever's OnPulled delegate. The lever is pulled once in a ten-minute level. How many times does each version run its check?"
 choices:
   - About the same, once per pull
   - The ticking door checks tens of thousands of times; the listening door runs once
@@ -46,7 +46,7 @@ Per-frame updates are for things that change continuously. Lesson zero's questio
 
 **Never trust placement for order.** If B must read A after A moved, make it explicit with a tick prerequisite or tick group. When the walk itself changes the crowd, let newcomers wait a frame and sweep removals after the walk.
 
-**Turn-based or event-driven?** A board game that only changes when a player moves has no continuous behavior to slice. Animations may still tick; the rules do not need to.
+**Changes only when someone acts?** A shop screen whose prices change only when the player buys or sells has no continuous behavior to slice. Its little animations may tick; the pricing rules run when the purchase happens.
 
 # Example
 
@@ -103,22 +103,22 @@ void ADojoArenaDoor::BeginPlay()
   bugLine: 4
   fix: Remove the check from Tick and bind to the board's or foes' announcement, lighting up when it arrives.
   explanation: The marker reacts to an event, so it should listen for it; polling runs every frame for a change that happens once.
-- id: when-not-board-game
+- id: when-not-shop
   type: multiple-choice
-  prompt: "In a turn-based puzzle where pieces only change when the player moves, where should the move rules run?"
+  prompt: "In the arena's armory shop, prices drop when the player sells an item of the same kind. Where should the price rule run?"
   choices:
-    - In every piece's Tick, checking whether it is their turn
-    - In the function that handles the player's move
+    - In every shop item's Tick, checking whether something was sold
+    - In the function that handles the sale
     - In a fixed-step bank
-    - In a manager's Tick that walks every piece
+    - In a manager's Tick that walks every item
   answerIndex: 1
-  explanation: Nothing changes between moves, so there is no per-frame behavior; the rules run when the move happens.
+  explanation: Prices change only when a sale happens, so there is no per-frame behavior; the rule runs in the sale itself.
 - id: explain-when-not
   type: explain-in-one-sentence
   prompt: In one sentence, say when a thing should not have a per-frame update.
   modelAnswer: When it does not change continuously, because it waits for an event, acts on a schedule, or is idle, a delegate, a timer, or switching ticking off does the job without running code every frame.
   rubric:
-    - Names a case such as waiting for an event, a schedule, idleness, or a turn-based change
+    - Names a case such as waiting for an event, a schedule, idleness, or change only on a player action
     - Names the better tool or the per-frame cost avoided
   explanation: Tick is for continuous change; everything else has a cheaper and clearer tool.
 ```

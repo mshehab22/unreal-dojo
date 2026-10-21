@@ -19,15 +19,15 @@ concepts:
 
 # Brief
 
-When you press Play, the drone glides 400 centimeters down its corridor, turns, comes back, and keeps patrolling, and it never leaves the corridor even when a frame takes a whole second.
+When you press Play, the drone glides 400 centimeters down its corridor, turns, comes back, and keeps patrolling, and it never leaves the corridor even when one update carries it a long way.
 
 Nobody calls the drone. It has opted into the engine's per-frame walk, so its own `Tick` runs once a frame with that frame's real length, and moves it a little. Because the patrol is spread over hundreds of frames, the drone has to remember between frames where it is (`Offset`) and which way it is going (`Heading`). Most of the class is written. First read the marked lines and say in a sentence why each one is there. Then fill the one gap in `Tick`: when the move carries the drone past either end, turn it around at that end and fold the leftover distance back into the corridor.
 
-Naive first: a single check that flips the heading at the far end looks right at 60 frames per second. Then run the tests: one of them hands the drone a five-second frame, which carries it past both ends at once.
+Naive first: a single check that flips the heading at the far end looks right at 60 frames per second. Then run the tests: one of them calls Tick directly with five seconds, which carries the drone past both ends at once. A real frame reaches Tick capped at 0.4 seconds by default (World Settings, Max Undilated Frame Time), but a drone at 900 centimeters per second covers more than its whole corridor in that, and a project can raise the cap.
 
 ## See it in the editor
 
-Place a `DojoP3PatrolDrone` in the sandbox map and press Play: the >> label glides along the X axis, turns into << at 400 centimeters, and comes back. Open the console and run `t.MaxFPS 2`: the drone now jumps in big steps but still turns at the ends and never leaves the corridor. Run `t.MaxFPS 0` to restore. Place a second drone with Speed 900: both patrol at once, each from its own Tick, and neither knows the other exists.
+Place a `DojoP3PatrolDrone` in the sandbox map and press Play: the >> label glides along the X axis, turns into << at 400 centimeters, and comes back. Set its Speed to 900, open the console, and run `t.MaxFPS 2`: each frame now carries the drone 360 centimeters, almost a whole corridor, yet it still turns at the ends and never leaves it. Run `t.MaxFPS 0` to restore. Place a second drone with Speed 900: both patrol at once, each from its own Tick, and neither knows the other exists.
 
 # Files
 
@@ -197,7 +197,7 @@ bool FDojo_P3_PatrolDrone_SameSpotAtAnyFrameLength::RunTest(const FString& Param
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P3_PatrolDrone_LongFramePassesBothEnds, "Dojo.P3.PatrolDrone.LongFramePassesBothEnds", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** One five-second frame carries the drone 1500 centimeters, past both ends; it must still land inside, heading the right way. */
+/** One direct Tick of five seconds carries the drone 1500 centimeters, past both ends; it must still land inside, heading the right way. */
 bool FDojo_P3_PatrolDrone_LongFramePassesBothEnds::RunTest(const FString& Parameters)
 {
 	FDojoTestWorld TestWorld;

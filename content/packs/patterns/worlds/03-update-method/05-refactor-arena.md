@@ -1,6 +1,6 @@
 ---
-id: p3-crypt-refactor
-title: Hand the crypt's behavior back to its things
+id: p3-arena-refactor
+title: Hand the arena's behavior back to its things
 order: 5
 kind: refactor
 scaffold: stub
@@ -32,39 +32,39 @@ Refactor it so each thing owns its behavior:
 
 ## See it in the editor
 
-Place two `DojoP3CryptBrazier` actors, two `DojoP3CryptSweeper` actors, and one `DojoP3CryptDirector` with all four in its lists. Press Play: the brazier labels count up and down around 50, the sweeper labels turn. After the refactor, delete the director and play again: everything still moves. Place a third brazier and set its Waver Speed to 10: it flickers faster, and nobody else had to change.
+Place two `DojoP3ArenaBrazier` actors, two `DojoP3ArenaSweeper` actors, and one `DojoP3ArenaDirector` with all four in its lists. Press Play: the brazier labels count up and down around 50, the sweeper labels turn. After the refactor, delete the director and play again: everything still moves. Place a third brazier and set its Waver Speed to 10: it flickers faster, and nobody else had to change.
 
 # Files
 
-## DojoP3CryptDirector.h
+## DojoP3ArenaDirector.h
 
 ```cpp
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "DojoP3CryptDirector.generated.h"
+#include "DojoP3ArenaDirector.generated.h"
 
-class ADojoP3CryptBrazier;
-class ADojoP3CryptSweeper;
+class ADojoP3ArenaBrazier;
+class ADojoP3ArenaSweeper;
 
-/** Runs the crypt: every frame it wavers each brazier's flame and turns each sweeper. */
+/** Runs the arena: every frame it wavers each brazier's flame and turns each sweeper. */
 UCLASS()
-class ADojoP3CryptDirector : public AActor
+class ADojoP3ArenaDirector : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	/** Turns ticking on. */
-	ADojoP3CryptDirector();
+	ADojoP3ArenaDirector();
 
-	/** The crypt's braziers, picked in the level. */
-	UPROPERTY(EditAnywhere, Category = "Crypt")
-	TArray<TObjectPtr<ADojoP3CryptBrazier>> Braziers;
+	/** The arena's braziers, picked in the level. */
+	UPROPERTY(EditAnywhere, Category = "Arena")
+	TArray<TObjectPtr<ADojoP3ArenaBrazier>> Braziers;
 
-	/** The crypt's sweepers, picked in the level. */
-	UPROPERTY(EditAnywhere, Category = "Crypt")
-	TArray<TObjectPtr<ADojoP3CryptSweeper>> Sweepers;
+	/** The arena's sweepers, picked in the level. */
+	UPROPERTY(EditAnywhere, Category = "Arena")
+	TArray<TObjectPtr<ADojoP3ArenaSweeper>> Sweepers;
 
 	/** Advances every brazier's waver and every sweeper's turn by one frame. */
 	virtual void Tick(float DeltaSeconds) override;
@@ -82,20 +82,20 @@ private:
 };
 ```
 
-## DojoP3CryptDirector.cpp
+## DojoP3ArenaDirector.cpp
 
 ```cpp
-#include "DojoP3CryptDirector.h"
+#include "DojoP3ArenaDirector.h"
 
-#include "DojoP3CryptBrazier.h"
-#include "DojoP3CryptSweeper.h"
+#include "DojoP3ArenaBrazier.h"
+#include "DojoP3ArenaSweeper.h"
 
-ADojoP3CryptDirector::ADojoP3CryptDirector()
+ADojoP3ArenaDirector::ADojoP3ArenaDirector()
 {
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-void ADojoP3CryptDirector::BeginPlay()
+void ADojoP3ArenaDirector::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -103,13 +103,13 @@ void ADojoP3CryptDirector::BeginPlay()
 	SweeperAngles.Init(0.f, Sweepers.Num());
 }
 
-void ADojoP3CryptDirector::Tick(float DeltaSeconds)
+void ADojoP3ArenaDirector::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
 	for (int32 Index = 0; Index < Braziers.Num(); ++Index)
 	{
-		ADojoP3CryptBrazier* Brazier = Braziers[Index];
+		ADojoP3ArenaBrazier* Brazier = Braziers[Index];
 		if (!IsValid(Brazier)) continue;
 
 		BrazierPhases[Index] += Brazier->WaverSpeed * DeltaSeconds;
@@ -118,7 +118,7 @@ void ADojoP3CryptDirector::Tick(float DeltaSeconds)
 
 	for (int32 Index = 0; Index < Sweepers.Num(); ++Index)
 	{
-		ADojoP3CryptSweeper* Sweeper = Sweepers[Index];
+		ADojoP3ArenaSweeper* Sweeper = Sweepers[Index];
 		if (!IsValid(Sweeper)) continue;
 
 		SweeperAngles[Index] = FMath::Fmod(SweeperAngles[Index] + Sweeper->DegreesPerSecond * DeltaSeconds, 360.f);
@@ -127,26 +127,26 @@ void ADojoP3CryptDirector::Tick(float DeltaSeconds)
 }
 ```
 
-## DojoP3CryptBrazier.h
+## DojoP3ArenaBrazier.h
 
 ```cpp
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "DojoP3CryptBrazier.generated.h"
+#include "DojoP3ArenaBrazier.generated.h"
 
 class UTextRenderComponent;
 
 /** A brazier whose flame wavers up and down around a base height. */
 UCLASS()
-class ADojoP3CryptBrazier : public AActor
+class ADojoP3ArenaBrazier : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	/** Creates the label and turns ticking off. */
-	ADojoP3CryptBrazier();
+	ADojoP3ArenaBrazier();
 
 	/** Floating text that shows the flame height. */
 	UPROPERTY(VisibleAnywhere, Category = "Brazier")
@@ -176,14 +176,14 @@ private:
 };
 ```
 
-## DojoP3CryptBrazier.cpp
+## DojoP3ArenaBrazier.cpp
 
 ```cpp
-#include "DojoP3CryptBrazier.h"
+#include "DojoP3ArenaBrazier.h"
 
 #include "Components/TextRenderComponent.h"
 
-ADojoP3CryptBrazier::ADojoP3CryptBrazier()
+ADojoP3ArenaBrazier::ADojoP3ArenaBrazier()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -192,38 +192,38 @@ ADojoP3CryptBrazier::ADojoP3CryptBrazier()
 	Label->SetHorizontalAlignment(EHTA_Center);
 }
 
-void ADojoP3CryptBrazier::SetFlameHeight(float NewHeight)
+void ADojoP3ArenaBrazier::SetFlameHeight(float NewHeight)
 {
 	FlameHeight = NewHeight;
 	Label->SetText(FText::AsNumber(FMath::RoundToInt(FlameHeight)));
 }
 
-float ADojoP3CryptBrazier::GetFlameHeight() const
+float ADojoP3ArenaBrazier::GetFlameHeight() const
 {
 	return FlameHeight;
 }
 ```
 
-## DojoP3CryptSweeper.h
+## DojoP3ArenaSweeper.h
 
 ```cpp
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "DojoP3CryptSweeper.generated.h"
+#include "DojoP3ArenaSweeper.generated.h"
 
 class UTextRenderComponent;
 
 /** A sweeping blade that turns steadily around its post. */
 UCLASS()
-class ADojoP3CryptSweeper : public AActor
+class ADojoP3ArenaSweeper : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	/** Creates the label and turns ticking off. */
-	ADojoP3CryptSweeper();
+	ADojoP3ArenaSweeper();
 
 	/** Floating text that is turned with the blade. */
 	UPROPERTY(VisibleAnywhere, Category = "Sweeper")
@@ -245,14 +245,14 @@ private:
 };
 ```
 
-## DojoP3CryptSweeper.cpp
+## DojoP3ArenaSweeper.cpp
 
 ```cpp
-#include "DojoP3CryptSweeper.h"
+#include "DojoP3ArenaSweeper.h"
 
 #include "Components/TextRenderComponent.h"
 
-ADojoP3CryptSweeper::ADojoP3CryptSweeper()
+ADojoP3ArenaSweeper::ADojoP3ArenaSweeper()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -262,13 +262,13 @@ ADojoP3CryptSweeper::ADojoP3CryptSweeper()
 	Label->SetText(FText::FromString(TEXT("--|--")));
 }
 
-void ADojoP3CryptSweeper::SetAngle(float NewAngle)
+void ADojoP3ArenaSweeper::SetAngle(float NewAngle)
 {
 	Angle = NewAngle;
 	SetActorRotation(FRotator(0.f, Angle, 0.f));
 }
 
-float ADojoP3CryptSweeper::GetAngle() const
+float ADojoP3ArenaSweeper::GetAngle() const
 {
 	return Angle;
 }
@@ -281,17 +281,17 @@ float ADojoP3CryptSweeper::GetAngle() const
 
 #if WITH_AUTOMATION_TESTS
 
-#include "Quests/p3-crypt-refactor/DojoP3CryptBrazier.h"
-#include "Quests/p3-crypt-refactor/DojoP3CryptDirector.h"
-#include "Quests/p3-crypt-refactor/DojoP3CryptSweeper.h"
+#include "Quests/p3-arena-refactor/DojoP3ArenaBrazier.h"
+#include "Quests/p3-arena-refactor/DojoP3ArenaDirector.h"
+#include "Quests/p3-arena-refactor/DojoP3ArenaSweeper.h"
 #include "Support/DojoTestWorld.h"
 
-namespace DojoP3CryptRefactorTest
+namespace DojoP3ArenaRefactorTest
 {
 	/** Spawns a director the way a level does: its lists are filled before BeginPlay runs. */
-	ADojoP3CryptDirector* SpawnDirector(FDojoTestWorld& TestWorld, ADojoP3CryptBrazier* Brazier, ADojoP3CryptSweeper* Sweeper)
+	ADojoP3ArenaDirector* SpawnDirector(FDojoTestWorld& TestWorld, ADojoP3ArenaBrazier* Brazier, ADojoP3ArenaSweeper* Sweeper)
 	{
-		ADojoP3CryptDirector* Director = TestWorld.GetWorld()->SpawnActorDeferred<ADojoP3CryptDirector>(ADojoP3CryptDirector::StaticClass(), FTransform::Identity);
+		ADojoP3ArenaDirector* Director = TestWorld.GetWorld()->SpawnActorDeferred<ADojoP3ArenaDirector>(ADojoP3ArenaDirector::StaticClass(), FTransform::Identity);
 		if (!Director) return nullptr;
 
 		Director->Braziers.Add(Brazier);
@@ -301,7 +301,7 @@ namespace DojoP3CryptRefactorTest
 	}
 
 	/** Checks a brazier and a sweeper after about one second of 60 frames: the tuned look, allowing one frame of difference in when ticking began. */
-	void CheckOneSecond(FAutomationTestBase& Test, const ADojoP3CryptBrazier* Brazier, const ADojoP3CryptSweeper* Sweeper)
+	void CheckOneSecond(FAutomationTestBase& Test, const ADojoP3ArenaBrazier* Brazier, const ADojoP3ArenaSweeper* Sweeper)
 	{
 		const float ExpectedHeight = Brazier->BaseHeight + Brazier->Waver * FMath::Sin(Brazier->WaverSpeed * 1.f);
 		Test.TestEqual(TEXT("The flame wavered to the tuned height for one second"), Brazier->GetFlameHeight(), ExpectedHeight, 1.f);
@@ -309,20 +309,20 @@ namespace DojoP3CryptRefactorTest
 	}
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P3_CryptRefactor_LookUnchanged, "Dojo.P3.CryptRefactor.LookUnchanged", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P3_ArenaRefactor_LookUnchanged, "Dojo.P3.ArenaRefactor.LookUnchanged", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
 /** With a director listing them, one second of frames gives the tuned flame height and sweep, as the starter does. */
-bool FDojo_P3_CryptRefactor_LookUnchanged::RunTest(const FString& Parameters)
+bool FDojo_P3_ArenaRefactor_LookUnchanged::RunTest(const FString& Parameters)
 {
-	using namespace DojoP3CryptRefactorTest;
+	using namespace DojoP3ArenaRefactorTest;
 
 	FDojoTestWorld TestWorld;
 
-	ADojoP3CryptBrazier* Brazier = TestWorld.SpawnActor<ADojoP3CryptBrazier>();
-	ADojoP3CryptSweeper* Sweeper = TestWorld.SpawnActor<ADojoP3CryptSweeper>();
+	ADojoP3ArenaBrazier* Brazier = TestWorld.SpawnActor<ADojoP3ArenaBrazier>();
+	ADojoP3ArenaSweeper* Sweeper = TestWorld.SpawnActor<ADojoP3ArenaSweeper>();
 	if (!TestNotNull(TEXT("Brazier spawned"), Brazier) || !TestNotNull(TEXT("Sweeper spawned"), Sweeper)) return false;
 
-	ADojoP3CryptDirector* Director = SpawnDirector(TestWorld, Brazier, Sweeper);
+	ADojoP3ArenaDirector* Director = SpawnDirector(TestWorld, Brazier, Sweeper);
 	if (!TestNotNull(TEXT("Director spawned"), Director)) return false;
 
 	TestWorld.Tick(60);
@@ -332,17 +332,17 @@ bool FDojo_P3_CryptRefactor_LookUnchanged::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P3_CryptRefactor_EachThingUpdatesItself, "Dojo.P3.CryptRefactor.EachThingUpdatesItself", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P3_ArenaRefactor_EachThingUpdatesItself, "Dojo.P3.ArenaRefactor.EachThingUpdatesItself", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
 /** With no director in the level, a brazier and a sweeper still move, because each ticks itself. */
-bool FDojo_P3_CryptRefactor_EachThingUpdatesItself::RunTest(const FString& Parameters)
+bool FDojo_P3_ArenaRefactor_EachThingUpdatesItself::RunTest(const FString& Parameters)
 {
-	using namespace DojoP3CryptRefactorTest;
+	using namespace DojoP3ArenaRefactorTest;
 
 	FDojoTestWorld TestWorld;
 
-	ADojoP3CryptBrazier* Brazier = TestWorld.SpawnActor<ADojoP3CryptBrazier>();
-	ADojoP3CryptSweeper* Sweeper = TestWorld.SpawnActor<ADojoP3CryptSweeper>();
+	ADojoP3ArenaBrazier* Brazier = TestWorld.SpawnActor<ADojoP3ArenaBrazier>();
+	ADojoP3ArenaSweeper* Sweeper = TestWorld.SpawnActor<ADojoP3ArenaSweeper>();
 	if (!TestNotNull(TEXT("Brazier spawned"), Brazier) || !TestNotNull(TEXT("Sweeper spawned"), Sweeper)) return false;
 
 	TestTrue(TEXT("The brazier ticks"), Brazier->PrimaryActorTick.bCanEverTick);
@@ -355,18 +355,18 @@ bool FDojo_P3_CryptRefactor_EachThingUpdatesItself::RunTest(const FString& Param
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P3_CryptRefactor_DirectorRunsNobody, "Dojo.P3.CryptRefactor.DirectorRunsNobody", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P3_ArenaRefactor_DirectorRunsNobody, "Dojo.P3.ArenaRefactor.DirectorRunsNobody", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
 /** The director no longer ticks, and a director plus self-ticking things does not run anything twice. */
-bool FDojo_P3_CryptRefactor_DirectorRunsNobody::RunTest(const FString& Parameters)
+bool FDojo_P3_ArenaRefactor_DirectorRunsNobody::RunTest(const FString& Parameters)
 {
-	using namespace DojoP3CryptRefactorTest;
+	using namespace DojoP3ArenaRefactorTest;
 
 	FDojoTestWorld TestWorld;
 
-	ADojoP3CryptBrazier* Brazier = TestWorld.SpawnActor<ADojoP3CryptBrazier>();
-	ADojoP3CryptSweeper* Sweeper = TestWorld.SpawnActor<ADojoP3CryptSweeper>();
-	ADojoP3CryptDirector* Director = SpawnDirector(TestWorld, Brazier, Sweeper);
+	ADojoP3ArenaBrazier* Brazier = TestWorld.SpawnActor<ADojoP3ArenaBrazier>();
+	ADojoP3ArenaSweeper* Sweeper = TestWorld.SpawnActor<ADojoP3ArenaSweeper>();
+	ADojoP3ArenaDirector* Director = SpawnDirector(TestWorld, Brazier, Sweeper);
 	if (!TestNotNull(TEXT("Actors spawned"), Brazier) || !TestNotNull(TEXT("Actors spawned"), Sweeper) || !TestNotNull(TEXT("Director spawned"), Director)) return false;
 
 	TestFalse(TEXT("The director has no per-frame work"), Director->PrimaryActorTick.bCanEverTick);

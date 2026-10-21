@@ -2,19 +2,19 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "DojoP3CryptSweeper.generated.h"
+#include "DojoP3ArenaSweeper.generated.h"
 
 class UTextRenderComponent;
 
 /** A sweeping blade that turns steadily around its post, updating itself every frame (Update Method: each object owns its per-frame behavior). */
 UCLASS()
-class ADojoP3CryptSweeper : public AActor
+class ADojoP3ArenaSweeper : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	/** Creates the label and turns ticking on. */
-	ADojoP3CryptSweeper();
+	ADojoP3ArenaSweeper();
 
 	/** Floating text that is turned with the blade. */
 	UPROPERTY(VisibleAnywhere, Category = "Sweeper")

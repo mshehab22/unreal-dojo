@@ -22,9 +22,9 @@ concepts:
 ```yaml
 id: predict
 type: multiple-choice
-prompt: "Guess, no penalty: a crypt has forty braziers, ten sweepers, and five drones. A designer adds a new kind of hazard, a swinging chandelier. With each thing owning its own Tick, what has to change besides the new chandelier class?"
+prompt: "Guess, no penalty: the training floor already has patrol drones, braziers, and sweeping blades, each with its own Tick. A designer wants a new obstacle, a pendulum gong. What has to change besides the new gong class?"
 choices:
-  - The braziers' class, so they know about chandeliers
+  - The braziers' class, so they know about gongs
   - Nothing; the engine already calls every ticking actor, including the new one
   - A central function that lists every hazard type
   - The engine's loop
@@ -81,9 +81,9 @@ private:
 # Questions
 
 ```yaml
-- id: crypt-hazards
+- id: training-floor
   type: which-pattern
-  prompt: "A crypt holds drones that patrol, braziers that waver, and sweepers that turn. Each needs a little behavior every frame, mostly independent of the others. Which pattern?"
+  prompt: "A racing game's pit lane has fuel pumps that fill at their own rate, tyre stacks that cool down, and a pit-board light that blinks while a car is in. Each keeps changing on its own, frame after frame, and none depends on the others. Which pattern gives each its own home for that work?"
   choices: [update-method, observer, game-loop, state]
   answer: update-method
   distractorNotes:

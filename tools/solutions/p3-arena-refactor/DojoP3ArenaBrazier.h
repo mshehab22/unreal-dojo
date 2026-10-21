@@ -2,19 +2,19 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "DojoP3CryptBrazier.generated.h"
+#include "DojoP3ArenaBrazier.generated.h"
 
 class UTextRenderComponent;
 
 /** A brazier whose flame wavers up and down around a base height, updating itself every frame (Update Method: each object owns its per-frame behavior). */
 UCLASS()
-class ADojoP3CryptBrazier : public AActor
+class ADojoP3ArenaBrazier : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	/** Creates the label and turns ticking on. */
-	ADojoP3CryptBrazier();
+	ADojoP3ArenaBrazier();
 
 	/** Floating text that shows the flame height. */
 	UPROPERTY(VisibleAnywhere, Category = "Brazier")
