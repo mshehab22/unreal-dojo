@@ -99,7 +99,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.x Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | claude/m3-patterns-world2-game-loop @ 92381be | review | 18 of 18 solutions on UE 5.8.3 |
 | M4.x Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | claude/m4-patterns-world3-update-method @ 0edd88f | review (after World 2) | 27 of 27 solutions across three worlds |
 | M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | m1-4-fast-loop @ 7fa6c10 | review | Real editor on the Mac: 4.4 s first run, then 32 ms; app wiring after M1.3b |
-| M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | m1-6c-revealed-hints @ 3c9f0a9 | re-review | Refused save no longer breaks quests and worlds |
+| M1.6c Revealed hints persist (A357) | progress-and-rules | builder-rules (session) | merged | merged | 1 fix round; refused save safe; migration verified |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
