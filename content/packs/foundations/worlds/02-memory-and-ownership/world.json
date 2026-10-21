@@ -1,0 +1,5 @@
+{
+	"id": "memory-and-ownership",
+	"title": "Memory and ownership",
+	"summary": "The training yard wants targets that come and go: dummies spawned on demand, clay discs that vanish, a spotter that never holds on too long, and a rack that lends targets out. Learn who keeps a UObject alive and what happens when it goes."
+}

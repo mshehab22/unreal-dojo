@@ -659,9 +659,9 @@
         "id": "state-recall-3",
         "type": "spot-the-bug",
         "prompt": "This door handles the Interact input. Which line allows an illegal transition?",
-        "code": "void ADojoDoor::Interact()\n{\n    switch (State)\n    {\n    case EDojoDoorState::Closed:  BeginOpening(); State = EDojoDoorState::Opening; break;\n    case EDojoDoorState::Open:    BeginClosing(); State = EDojoDoorState::Closing; break;\n    case EDojoDoorState::Locked:  BeginOpening(); State = EDojoDoorState::Opening; break;\n    default: break;\n    }\n}",
+        "code": "void ADojoDoor::Interact()\n{\n    switch (State)\n    {\n    case EDojoDoorState::EDS_Closed:  BeginOpening(); State = EDojoDoorState::EDS_Opening; break;\n    case EDojoDoorState::EDS_Open:    BeginClosing(); State = EDojoDoorState::EDS_Closing; break;\n    case EDojoDoorState::EDS_Locked:  BeginOpening(); State = EDojoDoorState::EDS_Opening; break;\n    default: break;\n    }\n}",
         "bugLine": 7,
-        "fix": "A locked door should ignore Interact (or play a rattle) until it is unlocked; it must not transition to Opening.",
+        "fix": "A locked door should ignore Interact (or play a rattle) until it is unlocked; it must not move to EDS_Opening.",
         "explanation": "Each state decides which inputs it accepts. Locked accepting Interact defeats the lock."
       }
     ],
