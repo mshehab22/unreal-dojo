@@ -26,7 +26,7 @@ The declarations are given; every body is yours. Defaults, set in the constructo
 - Leader Format: `{Player} leads with {Score}`
 - No Scores Text: `No scores yet`
 
-`AnnounceTurn` and `AnnounceLeader` fill the format with named arguments, put the result on the label, write it to the `LogDojo` log, and return it. `AnnounceLeader` with `NAME_None` shows No Scores Text. Numbers must reach the format as text made for the reader, so 1200 shows as 1,200 in English.
+`AnnounceTurn` and `AnnounceLeader` fill the format with named arguments, put the result on the label, write it to the `LogDojo` log, and return it. `AnnounceLeader` with `NAME_None` shows No Scores Text. Numbers must be formatted for the reader's culture, so 1200 shows as 1,200 in English. Passing the int32 straight into the arguments does that; `FText::AsNumber` does it too and is the better habit, because it also takes formatting options such as a minimum or maximum number of digits.
 
 Dependency direction: the announcer only turns values into text. It does not know where the names and scores come from; the roster and the score board from earlier in this world know nothing about it.
 
@@ -187,7 +187,7 @@ bool FDojo_F3_Announcer_DesignersRewordFormats::RunTest(const FString& Parameter
 
 - The three defaults are set in the constructor with LOCTEXT under one namespace, defined and undefined in the source file.
 - Both announcements use FText::Format with named arguments, so a reordered or shortened format still works.
-- Numbers are passed as culture-formatted text, so 1200 reads 1,200 in English.
+- Numbers are formatted for the culture, passed as numbers or through FText::AsNumber, so 1200 reads 1,200 in English.
 - AnnounceLeader with NAME_None shows NoScoresText.
 - Every announcement goes through one Show function that sets the label and logs to LogDojo.
 - The announcer only turns values into text and knows nothing about the roster or the board.

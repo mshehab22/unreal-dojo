@@ -41,7 +41,7 @@ explanation: RemoveAt keeps the order by shifting every later element down, so t
 - `Remove(Value)` removes every element equal to Value; `Contains(Value)` and `Find(Value)` search from the front, one element at a time.
 - `Empty()` clears it; `Reset()` clears it but keeps the memory for reuse.
 
-Walk an array with a ranged for loop: `for (const int32 Score : Scores)`. Inside that loop, never add to or remove from the same array: the engine asserts when the array changes under the loop. To remove while walking, loop over indexes backward, or use `RemoveAll` with a condition.
+Walk an array with a ranged for loop: `for (const int32 Score : Scores)`. Inside that loop, never add to or remove from the same array: the engine reports it with an ensure ("Array has changed during ranged-for iteration!"), play goes on, and the loop quietly skips the element that moved into the removed one's place. To remove while walking, loop over indexes backward, or use `RemoveAll` with a condition.
 
 As a `UPROPERTY`, an array of UObject pointers is followed by the garbage collector entry by entry, and an array of plain values shows up in the Details panel with add and remove buttons.
 
@@ -85,7 +85,7 @@ void ADojoF3LapClock::DropSlowLaps(float Limit)
   explanation: Num returns the count; the last valid index is Num minus 1.
 - id: spot-remove-in-loop
   type: spot-the-bug
-  prompt: This stops the game with an assert as soon as a broken target is found. Which line is wrong?
+  prompt: This logs an ensure about the array changing as soon as a broken target is found, and a second broken target right after it is never removed. Which line is wrong?
   code: |
     for (ADojoF1PopupTarget* Target : Targets)
     {
@@ -96,7 +96,7 @@ void ADojoF3LapClock::DropSlowLaps(float Limit)
     }
   bugLine: 5
   fix: Remove broken targets after the loop, or walk the indexes backward and use RemoveAt, or use RemoveAll with a condition.
-  explanation: A ranged for loop may not change the array it is walking, and the engine checks for it.
+  explanation: A ranged for loop may not change the array it is walking; the engine flags it with an ensure, and the element that slides into the removed slot is skipped.
 - id: index-check
   type: multiple-choice
   prompt: "Keys 1 to 6 hit Targets[Key - 1], but a designer only filled four entries. What keeps key 6 from asserting?"

@@ -172,7 +172,7 @@ void ADojoF3LeagueDirector::LendStep()
 	if (!Target) return;
 
 	LentAt.Add(Target, GetWorld()->GetTimeSeconds());
-	if (IsValid(Sentry)) Sentry->Targets.AddUnique(Target);
+	if (IsValid(Sentry)) Sentry->AddTarget(Target);
 }
 
 void ADojoF3LeagueDirector::CheckStep()
@@ -191,7 +191,7 @@ void ADojoF3LeagueDirector::CheckStep()
 void ADojoF3LeagueDirector::ReturnTarget(ADojoF1PopupTarget* Target)
 {
 	LentAt.Remove(Target);
-	if (IsValid(Sentry)) Sentry->Targets.Remove(Target);
+	if (IsValid(Sentry)) Sentry->RemoveTarget(Target);
 	if (IsValid(Rack)) Rack->Recall(Target);
 }
 

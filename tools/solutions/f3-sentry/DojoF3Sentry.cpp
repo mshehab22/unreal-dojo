@@ -16,16 +16,16 @@ ADojoF3Sentry::ADojoF3Sentry()
 ADojoF1PopupTarget* ADojoF3Sentry::AimAtNearestRaised()
 {
 	const FVector Origin = GetActorLocation();
-	const float MaxRangeSquared = FMath::Square(MaxRange);
+	const double MaxRangeSquared = FMath::Square(MaxRange);
 
 	ADojoF1PopupTarget* Nearest = nullptr;
-	float NearestSquared = MaxRangeSquared;
+	double NearestSquared = MaxRangeSquared;
 
 	for (ADojoF1PopupTarget* Target : Targets)
 	{
 		if (!IsValid(Target) || Target->GetState() != EDojoF1TargetState::ETS_Raised) continue;
 
-		const float DistanceSquared = FVector::DistSquared(Origin, Target->GetActorLocation());
+		const double DistanceSquared = FVector::DistSquared(Origin, Target->GetActorLocation());
 		if (DistanceSquared <= NearestSquared)
 		{
 			Nearest = Target;

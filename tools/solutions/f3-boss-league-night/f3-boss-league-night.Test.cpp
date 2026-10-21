@@ -101,11 +101,13 @@ bool FDojo_F3_LeagueNight_TwoLeaguesPlayAlike::RunTest(const FString& Parameters
 
 		TestFalse(Prefix + TEXT("the league ends after six turns and the last break"), Director->IsLeagueRunning());
 		TestEqual(Prefix + TEXT("six turns played"), TurnScores.Num(), 6);
-		TestTrue(Prefix + TEXT("players take turns in order"), TurnPlayers == TArray<FName>({ TEXT("Ana"), TEXT("Bo"), TEXT("Cy"), TEXT("Ana"), TEXT("Bo"), TEXT("Cy") }));
+		const TArray<FName> Order = Director->Players;
+		TestTrue(Prefix + TEXT("players take turns in the listed order"), TurnPlayers == TArray<FName>({ Order[0], Order[1], Order[2], Order[0], Order[1], Order[2] }));
 		TestTrue(Prefix + TEXT("at most one target is out at a time for a perfect shooter"), MostLent <= 1);
 
+		// Lends at 0, 2, 4, ... 14 seconds of a 15 second turn: 8 targets, each broken with 2 hits of 10.
 		const int32 PerfectTurn = TurnScores.Num() > 0 ? TurnScores[0] : 0;
-		TestTrue(Prefix + TEXT("a perfect turn scores"), PerfectTurn > 0);
+		TestEqual(Prefix + TEXT("a perfect turn scores 8 targets at 20"), PerfectTurn, 160);
 		bool bAllSame = true;
 		for (const int32 Score : TurnScores) bAllSame &= Score == PerfectTurn;
 		TestTrue(Prefix + TEXT("every perfect turn scores the same"), bAllSame);
@@ -113,13 +115,15 @@ bool FDojo_F3_LeagueNight_TwoLeaguesPlayAlike::RunTest(const FString& Parameters
 		TestEqual(Prefix + TEXT("the board keeps the last five turns"), League.Board->GetCount(), 5);
 		TestEqual(Prefix + TEXT("the board's best is a perfect turn"), League.Board->GetBest(), PerfectTurn);
 		TestEqual(Prefix + TEXT("three players on the roster"), League.Roster->GetPlayerCount(), 3);
-		TestEqual(Prefix + TEXT("everyone tied, so Ana leads"), League.Roster->GetLeader(), FName(TEXT("Ana")));
+		TestEqual(Prefix + TEXT("everyone tied, so Ana, who sorts first, leads in any turn order"), League.Roster->GetLeader(), FName(TEXT("Ana")));
 		TestEqual(Prefix + TEXT("the announcer names the leader"), League.Announcer->Label->Text.ToString(), FString::Printf(TEXT("Ana leads with %d"), PerfectTurn));
 
 		const int32 BoardCount = League.Board->GetCount();
 		Director->ShootAimed();
 		TestEqual(Prefix + TEXT("Space between leagues does nothing"), League.Board->GetCount(), BoardCount);
 
+		// League 2 lists the players in reverse, so Cy joins the roster first and only the alphabetical tie rule makes Ana lead.
+		Director->Players = { TEXT("Cy"), TEXT("Bo"), TEXT("Ana") };
 		Director->RestartLeague();
 	}
 
@@ -192,6 +196,36 @@ bool FDojo_F3_LeagueNight_TurnsBreaksAndRecalls::RunTest(const FString& Paramete
 	TestEqual(TEXT("The roster is cleared"), League.Roster->GetPlayerCount(), 0);
 	TestEqual(TEXT("The board is cleared"), League.Board->GetCount(), 0);
 	TestEqual(TEXT("Ana starts the new league"), Director->GetCurrentPlayer(), FName(TEXT("Ana")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F3_LeagueNight_TurnAndBreakLengths, "Dojo.F3.LeagueNight.TurnAndBreakLengths", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Watches the clock through the first turn and break and checks the turn lasts 15 seconds and the break 3. */
+bool FDojo_F3_LeagueNight_TurnAndBreakLengths::RunTest(const FString& Parameters)
+{
+	using namespace DojoF3LeagueTest;
+
+	FDojoTestWorld TestWorld;
+	FLeague League = SpawnLeague(TestWorld);
+	ADojoF3LeagueDirector* Director = League.Director;
+	UWorld* World = TestWorld.GetWorld();
+	const float Start = World->GetTimeSeconds();
+
+	while (World->GetTimeSeconds() < Start + 14.9f) TestWorld.Tick(1);
+	TestTrue(TEXT("The first turn is still running at 14.9 seconds"), Director->IsTurnRunning());
+
+	while (World->GetTimeSeconds() < Start + 15.1f) TestWorld.Tick(1);
+	TestFalse(TEXT("The first turn is over at 15.1 seconds"), Director->IsTurnRunning());
+
+	while (World->GetTimeSeconds() < Start + 17.9f) TestWorld.Tick(1);
+	TestFalse(TEXT("The break still runs at 17.9 seconds"), Director->IsTurnRunning());
+	TestEqual(TEXT("Only one turn has started during the break"), Director->GetTurnsStarted(), 1);
+
+	while (World->GetTimeSeconds() < Start + 18.1f) TestWorld.Tick(1);
+	TestTrue(TEXT("The second turn has started at 18.1 seconds"), Director->IsTurnRunning());
+	TestEqual(TEXT("It is Bo's turn"), Director->GetCurrentPlayer(), FName(TEXT("Bo")));
 
 	return true;
 }

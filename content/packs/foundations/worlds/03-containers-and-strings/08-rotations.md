@@ -33,7 +33,7 @@ explanation: The constructor's order is pitch, yaw, roll, and turning from +X to
 
 # Card
 
-`FRotator` holds three angles in degrees. The constructor's order trips people up: `FRotator(Pitch, Yaw, Roll)`.
+`FRotator` holds three angles in degrees, stored as doubles in UE 5 like FVector's components. The constructor's order trips people up: `FRotator(Pitch, Yaw, Roll)`.
 
 - **Yaw** turns around the vertical Z axis: left and right, like a head shaking no.
 - **Pitch** tilts around Y: up and down, like nodding.
@@ -54,7 +54,7 @@ void ADojoF3Cannon::FaceGround(const AActor* Target)
 	FVector Offset = Target->GetActorLocation() - GetActorLocation();
 	Offset.Z = 0.f;
 
-	const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Offset.Y, Offset.X));
+	const double Yaw = FMath::RadiansToDegrees(FMath::Atan2(Offset.Y, Offset.X));
 	SetActorRotation(FRotator(0.f, Yaw, 0.f));
 }
 ```

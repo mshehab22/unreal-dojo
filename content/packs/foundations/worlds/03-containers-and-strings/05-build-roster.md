@@ -149,8 +149,12 @@ bool FDojo_F3_Roster_KeepsBestPerPlayer::RunTest(const FString& Parameters)
 	Roster->RecordScore(TEXT("Cy"), 70);
 	TestEqual(TEXT("A tie goes to the name that sorts first"), Roster->GetLeader(), FName(TEXT("Bo")));
 
+	// Al joins last, so a walk that keeps the first maximum it finds would still say Bo.
+	Roster->RecordScore(TEXT("Al"), 70);
+	TestEqual(TEXT("A later player who ties and sorts first leads"), Roster->GetLeader(), FName(TEXT("Al")));
+
 	Roster->RecordScore(TEXT("Ana"), 70);
-	TestEqual(TEXT("Ana now ties and sorts first"), Roster->GetLeader(), FName(TEXT("Ana")));
+	TestEqual(TEXT("Ana ties too, but Al still sorts first"), Roster->GetLeader(), FName(TEXT("Al")));
 
 	return true;
 }

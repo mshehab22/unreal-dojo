@@ -28,7 +28,7 @@ When a turn ends, every lent target goes back to the rack. The turn's score is a
 
 How leagues start: the first league starts when play begins, and R starts a new league, only after the last one has ended; Space only works during a turn. Starting a league clears the board and the roster first. A C++ director receives keys only after `EnableInput` with the player controller.
 
-The pieces need two additions, and their rules stay as they are: the roster and the score board each gain `Clear`, which empties them (the board also refreshes its label). The director hands each lent target to the sentry's target list and takes it away again when the target goes back, so the sentry never aims at a target that is resting in the rack.
+The pieces need three additions, and their rules stay as they are: the roster and the score board each gain `Clear`, which empties them (the board also refreshes its label), and the sentry gains `AddTarget` and `RemoveTarget`, both BlueprintCallable, because its Targets list is only editable in the Details panel. The director hands each lent target to the sentry with AddTarget and takes it away with RemoveTarget when the target goes back, so the sentry never aims at a target that is resting in the rack.
 
 Compiles against earlier quests: f3-score-board (`Quests/f3-score-board/DojoF3ScoreBoard.h`), f3-roster (`Quests/f3-roster/DojoF3Roster.h`), f3-announcer (`Quests/f3-announcer/DojoF3Announcer.h`), f3-sentry (`Quests/f3-sentry/DojoF3Sentry.h`), f2-target-rack (`Quests/f2-target-rack/DojoF2TargetRack.h`), and f1-popup-target (`Quests/f1-popup-target/DojoF1PopupTarget.h`).
 
@@ -87,7 +87,7 @@ Feel: tune the lend interval until a strong turn can swing the lead but a single
   pieces:
     - { id: director, kind: class, label: ADojoF3LeagueDirector with StartLeague called from BeginPlay and timers for the turn and the break and flags for league and turn running, covers: [league-driver, tunables] }
     - { id: players, kind: data, label: An editable TArray of FName players and an editable TurnsPerPlayer on the director, covers: [turn-order] }
-    - { id: lend, kind: step, label: A looping lend timer calls Deploy on the rack and adds the target to a map of lend times and to the sentry's Targets and a 0.1 second check returns any target out for 4 seconds, covers: [lend-rhythm] }
+    - { id: lend, kind: step, label: A looping lend timer calls Deploy on the rack and adds the target to a map of lend times and calls AddTarget on the sentry and a 0.1 second check returns any target out for 4 seconds through RemoveTarget and Recall, covers: [lend-rhythm] }
     - { id: shoot, kind: step, label: ShootAimed calls AimAtNearestRaised on the sentry and Hit on the result and adds 10 for a hit that counts and Raise again unless the target broke in which case it is returned, covers: [aim-and-shoot] }
     - { id: results, kind: step, label: EndTurn returns every lent target and calls AddScore on the board and RecordScore on the roster and AnnounceTurn with the roster best and starts the break timer, covers: [turn-results] }
     - { id: finale, kind: step, label: When the last break ends the director clears its league flag and calls AnnounceLeader with GetLeader and that player's best, covers: [league-end] }
@@ -105,7 +105,7 @@ Feel: tune the lend interval until a strong turn can swing the lead but a single
   pieces:
     - { id: level, kind: class, label: Level Blueprint with a Start League event from Event BeginPlay and turn and break timers by event and variables for every number, covers: [league-driver, tunables] }
     - { id: players, kind: data, label: An instance editable array of Name variables for the players and a turns per player integer, covers: [turn-order] }
-    - { id: lend, kind: step, label: A looping Set Timer by Event calls Deploy and adds the target to a map of lend times and to the sentry's Targets and a short looping check calls Recall on any target out for 4 seconds and removes it from both, covers: [lend-rhythm] }
+    - { id: lend, kind: step, label: A looping Set Timer by Event calls Deploy and adds the target to a map of lend times and calls AddTarget on the sentry and a short looping check calls RemoveTarget and Recall on any target out for 4 seconds and removes it from the map, covers: [lend-rhythm] }
     - { id: shoot, kind: step, label: The Space event behind a branch on Turn Running calls AimAtNearestRaised and Hit and adds 10 when it returns true and calls Raise or Recall depending on the target's state, covers: [aim-and-shoot] }
     - { id: results, kind: step, label: The turn timer's event recalls every lent target and calls AddScore and RecordScore and AnnounceTurn and starts the break timer, covers: [turn-results] }
     - { id: finale, kind: step, label: The break timer's event starts the next turn or after the last one calls AnnounceLeader with GetLeader, covers: [league-end] }
@@ -121,9 +121,9 @@ Feel: tune the lend interval until a strong turn can swing the lead but a single
 
 # Integration Rubric
 
-- The score board, roster, announcer, and sentry are reused; the only additions are Clear on the board and the roster, with no rewrite of their rules.
+- The score board, roster, announcer, and sentry are reused; the only additions are Clear on the board and the roster and AddTarget and RemoveTarget on the sentry, with no rewrite of their rules.
 - Player names are FNames from one editable list, used both for turn order and as roster keys.
-- The sentry only ever aims at lent targets: each one is added to its list when lent and removed when it goes back.
+- The sentry only ever aims at lent targets: each one is given to it with AddTarget when lent and taken away with RemoveTarget when it goes back.
 - Every target goes back to the rack when broken, after 4 seconds unbroken, and at the end of every turn.
 - Each turn's score is added to the board, recorded on the roster, and announced through the announcer's formats, never with a hand-built string.
 - The leader comes from the roster at the end of the league, not from a second running tally.

@@ -29,7 +29,7 @@ explanation: Distance is the length of the offset (300, 400, 0), which is the sq
 
 # Card
 
-`FVector` is three numbers, X, Y, and Z, in centimeters. In Unreal, X points forward, Y right, and Z up. The same type means three things, and keeping them apart avoids most math bugs:
+`FVector` is three numbers, X, Y, and Z, in centimeters, stored as doubles in UE 5 so large worlds stay precise; write `double` for the values you compute from it. In Unreal, X points forward, Y right, and Z up. The same type means three things, and keeping them apart avoids most math bugs:
 
 - a position, such as `GetActorLocation()`;
 - an offset between two positions, `Target - Origin`;
@@ -48,11 +48,11 @@ To flatten an offset onto the ground, multiply by `FVector(1, 1, 0)`, or set Z t
 ADojoF1PopupTarget* ADojoF3Spotlight::FindNearest(const TArray<ADojoF1PopupTarget*>& Candidates) const
 {
 	ADojoF1PopupTarget* Nearest = nullptr;
-	float NearestSquared = FMath::Square(Range);
+	double NearestSquared = FMath::Square(Range);
 
 	for (ADojoF1PopupTarget* Candidate : Candidates)
 	{
-		const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
+		const double DistanceSquared = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
 		if (DistanceSquared < NearestSquared)
 		{
 			Nearest = Candidate;
@@ -85,7 +85,7 @@ ADojoF1PopupTarget* ADojoF3Spotlight::FindNearest(const TArray<ADojoF1PopupTarge
   type: spot-the-bug
   prompt: This sentry ignores targets at 600 units with a range of 1000. Which line is wrong?
   code: |
-    const float DistanceSquared = FVector::DistSquared(Origin, Target);
+    const double DistanceSquared = FVector::DistSquared(Origin, Target);
     if (DistanceSquared <= Range)
     {
     	return true;
