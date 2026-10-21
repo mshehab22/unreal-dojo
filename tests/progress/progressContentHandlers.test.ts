@@ -441,3 +441,42 @@ describe("M1.6b fix round 1", () =>
 	});
 });
 
+describe("M1.6b fix round 2", () =>
+{
+	it("never reviews overflow items as filler: with 30 due, only the first 20 move today, however many drills run (A321)", async () =>
+	{
+		const termIds = Array.from({ length: 30 }, (_, index) => `term.${String(index).padStart(2, "0")}`);
+		const content = fixtureContent();
+		const world = content.packs[0]?.worlds[0];
+		const lesson = world?.quests.find((quest) => quest.id === "w1-concept");
+		if (!lesson || lesson.kind !== "concept") throw new Error("expected the concept quest");
+		lesson.terms = termIds;
+		lesson.questions = termIds.map((termId, index) => ({ id: `q-${index}`, type: "multiple-choice" as const, prompt: `About ${termId}?`, choices: ["no", "yes"], answerIndex: 1, explanation: "" }));
+
+		// Spread random picks, so filler would reach the overflow items if it were allowed to.
+		const { handlers, service } = setup({ content, random: [0.95, 0.6, 0.3, 0.8, 0.1], prepare: (progress) =>
+		{
+			progress.quests["w1-concept"] = { status: "passed", bestScore: 100, attempts: 1, hintsRevealed: 0, solutionViewed: false, seerStoneSpent: false, effortXpGranted: false, savedFiles: {}, lastAttemptAt: "2026-10-20T09:00:00.000Z" };
+			termIds.forEach((termId, index) =>
+			{
+				progress.memory[termId] = { ease: 2.5, intervalDays: 1, repetitions: 1, mastery: "familiar", lastReviewedAt: "2026-10-20T08:00:00.000Z" };
+				progress.schedule[termId] = new Date(2026, 9, 21, 7, index).toISOString();
+			});
+		} });
+		const scheduleBefore = { ...service.getProgress().schedule };
+
+		for (let drill = 0; drill < 12; drill++)
+		{
+			const session = await handlers.startDrill.handle({ kind: "due" });
+			for (const item of session.items) await handlers.answerDrillItem.handle({ sessionId: session.sessionId, itemId: item.itemId, response: rightAnswerFor(item.item) });
+			await handlers.finishDrill.handle(session.sessionId);
+		}
+
+		const scheduleAfter = service.getProgress().schedule;
+		const moved = termIds.filter((termId) => scheduleAfter[termId] !== scheduleBefore[termId]);
+
+		expect(moved).toEqual(termIds.slice(0, 20));
+		expect(await handlers.getDrillSummary.handle()).toMatchObject({ dueToday: 0, overflow: 10 });
+	});
+});
+

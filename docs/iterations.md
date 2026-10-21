@@ -314,3 +314,9 @@ exit code 0
 - Proof: typecheck passes. Unit tests: 40 files, 489 passed (482 after the rebase plus 7 new: practice drills pay nothing four times in a row and a real due drill the next day pays 10; a backlog of 25 spreads over two drills and leaves 5 for tomorrow; the cap counts distinct reviews since midnight; one question never repeats; a world with an untaught term tests out; patterns join a test-out only once their card is unlocked). The practice-drill test and the repeat-question test fail when their fixes are switched off. Build passes. End-to-end: 14 of 14 passed (with M2.1's screens now on main). Content verifier: no problems.
 - Not done or left for later: nothing new; the M1.6b list still stands.
 
+### Fix round 2
+- What the reviewer asked for: the daily limit still leaked. When a drill had room left, it filled up with other items the learner had met, and those could include items due today beyond the limit of 20, so they were reviewed early and moved past today.
+- What changed: the filler now skips every item due by the end of today. Items within the limit come in as due items; the rest wait for tomorrow.
+- Proof: typecheck passes. Unit tests: 40 files, 490 passed, including a new one: 30 items due, twelve drills in a row, and only the first 20 had their schedule moved today, with 10 still waiting for tomorrow. It fails on the round 1 code. Build passes. End-to-end: 14 of 14 passed.
+- Not done or left for later: nothing new; the M1.6b list still stands.
+

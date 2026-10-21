@@ -525,6 +525,14 @@ export class ProgressService
 		});
 	}
 
+	/** Every scheduled item due by the end of today, ignoring the cap: the capped ones plus the overflow that slides to tomorrow. */
+	getAllScheduledDueTodayIds(): string[]
+	{
+		this.ensureAvailable();
+
+		return this.drillScheduler.scheduledDueToday(this.progress, this.clock.now());
+	}
+
 	/** Scheduled items due by the end of today, within what is left of the daily cap. Only these make a drill rewarded (A320). */
 	getScheduledDueItemIds(): string[]
 	{

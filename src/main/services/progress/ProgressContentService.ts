@@ -353,9 +353,10 @@ export class ProgressContentService
 		}
 
 		const dueKeys = this.progress.getDueItemIds();
-		const dueSet = new Set(dueKeys);
+		// Filler never holds an item due by the end of today: the capped ones are already in `dueKeys`, and the overflow must slide to tomorrow (A321).
+		const excluded = new Set([...dueKeys, ...this.progress.getAllScheduledDueTodayIds()]);
 		const priority = dueKeys.flatMap((key) => this.shuffle(bank.variantsOf(key)));
-		const pool = this.introducedKeys(quests, bank).filter((key) => !dueSet.has(key)).flatMap((key) => bank.variantsOf(key));
+		const pool = this.introducedKeys(quests, bank).filter((key) => !excluded.has(key)).flatMap((key) => bank.variantsOf(key));
 		const variants = this.drillScheduler.compose(priority, pool, this.random);
 
 		if (variants.length === 0) throw new AppErrorException("quest-locked", "Nothing to drill yet.", "Finish a concept quest first; its terms come back here.");
