@@ -4,6 +4,9 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A286 2026-10-21 Engine smoke builds the cmd.exe command line by hand for Build.bat (QA harness fix round 1, tester)
+Found in review: passing `Build.bat` and its arguments to `cmd.exe /d /s /c` as separate arguments lets Node quote each one for a normal program, which cmd.exe then splits again at the first space, so the default `C:\Program Files\Epic Games\...` path breaks. Options: `shell: true` with pre-quoted arguments (what `NodeProcessRunner` does); build the line ourselves. Chosen: build it ourselves with the same quoting (each part in double quotes, inner quotes doubled, the whole line in one more pair) and spawn `cmd.exe` with `windowsVerbatimArguments: true`, which is exactly what Node's shell mode does, without importing app code into `tools/qa`. A timeout kills the tree with `taskkill /T /F`. Unit tested; unverified on a real Windows machine. Reverse cost: low.
+
 ### A285 2026-10-21 Engine smoke passes on the report, and requires the sample test by name (QA harness, tester)
 Options: trust the editor's exit code; read `index.json` and require no failures; also require `Dojo.Sample.Health.TakesDamage` to be present and passed. Chosen: the last. The pipeline spec already says the report decides (exit code 3 on a failed assertion, and a filter that matches nothing can still exit 0 with an empty report). "Succeeded with warnings" counts as passed, as in the spec. Reverse cost: one condition.
 

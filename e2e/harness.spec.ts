@@ -4,30 +4,39 @@ import { join } from "node:path";
 
 import { stubMessageBox, stubOpenDialog } from "./support/dialogStubs";
 import { expect, test } from "./support/dojoTest";
+import { closeDojo, launchDojo } from "./support/launchDojo";
 import { expectedWindowSize } from "./support/windowSize";
 
-/** A file the first test leaves in its userData folder, which the second test must not see. */
+/** A file one launch leaves in its userData folder, which the next launch must not see. */
 const MARKER_FILE_NAME = "harness-marker.txt";
-
-test.describe.configure({ mode: "serial" });
-
-let firstUserDataFolder = "";
 
 test("the app uses the harness's temporary userData folder", async ({ dojo }) =>
 {
 	const userDataPath = await dojo.electronApp.evaluate(({ app }) => app.getPath("userData"));
 
 	expect(userDataPath).toBe(dojo.userDataFolder);
-
-	firstUserDataFolder = dojo.userDataFolder;
-	writeFileSync(join(userDataPath, MARKER_FILE_NAME), "left by the first harness test");
 });
 
-test("the next test starts with a different, empty userData folder", async ({ dojo }) =>
+test("a later launch starts with a different, empty userData folder and the old one is gone", async ({ dojo }) =>
 {
-	expect(dojo.userDataFolder).not.toBe(firstUserDataFolder);
-	expect(existsSync(firstUserDataFolder)).toBe(false);
-	expect(existsSync(join(dojo.userDataFolder, MARKER_FILE_NAME))).toBe(false);
+	// The fixture's launch plays the earlier test; a second launch inside this test plays the later one, so the order of tests does not matter.
+	writeFileSync(join(dojo.userDataFolder, MARKER_FILE_NAME), "left by the earlier launch");
+
+	const firstFolder = dojo.userDataFolder;
+	await closeDojo(dojo);
+	expect(existsSync(firstFolder)).toBe(false);
+
+	const later = await launchDojo();
+
+	try
+	{
+		expect(later.userDataFolder).not.toBe(firstFolder);
+		expect(existsSync(join(later.userDataFolder, MARKER_FILE_NAME))).toBe(false);
+	}
+	finally
+	{
+		await closeDojo(later);
+	}
 });
 
 test("stubbed dialogs answer without showing a native window", async ({ dojo }) =>

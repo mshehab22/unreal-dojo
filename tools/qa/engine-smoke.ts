@@ -1,7 +1,7 @@
 // Engine smoke check: copies the sandbox template to a temp folder, builds it, runs Dojo.Sample.Health headless, and prints timings.
 // Usage: npx tsx tools/qa/engine-smoke.ts [--engine <engine root>] [--keep]
 // Uses the commands verified in docs/systems/unreal-pipeline.md ("Exact commands"). Exits with 1 when the build fails or any test fails.
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { cpSync, createWriteStream, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -11,6 +11,7 @@ import { createUnrealPlatform } from "../../src/main/services/unreal/createUnrea
 import { NodeCommandRunner } from "../../src/main/services/unreal/NodeCommandRunner";
 import type { PlatformPaths } from "../../src/main/services/unreal/PlatformPaths";
 import type { EngineInstall } from "../../src/shared/types/engine";
+import { windowsShellArguments } from "./windowsCommandLine";
 
 /** The automation test filter this smoke runs; the template's only test is `Dojo.Sample.Health.TakesDamage`. */
 const TEST_FILTER = "Dojo.Sample.Health";
@@ -114,11 +115,12 @@ function runLogged(command: string, commandArguments: string[], logFile: string,
 	const start = performance.now();
 	const log = createWriteStream(logFile);
 
-	// Node will not spawn a .bat without a shell, so Build.bat goes through cmd.exe (unverified on Windows).
-	const usesBatchFile = command.toLowerCase().endsWith(".bat");
+	// Node will not spawn a .bat without a shell, so Build.bat goes through cmd.exe with the command line quoted by hand,
+	// because Node's per-argument quoting breaks on `C:\Program Files\...` once cmd.exe parses it (unverified on Windows).
+	const usesBatchFile = process.platform === "win32" && command.toLowerCase().endsWith(".bat");
 	const child = usesBatchFile
-		? spawn("cmd.exe", ["/d", "/s", "/c", command, ...commandArguments], { stdio: ["ignore", "pipe", "pipe"], windowsHide: true })
-		: spawn(command, commandArguments, { stdio: ["ignore", "pipe", "pipe"] });
+		? spawn("cmd.exe", windowsShellArguments(command, commandArguments), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true, windowsVerbatimArguments: true })
+		: spawn(command, commandArguments, { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
 
 	child.stdout.pipe(log, { end: false });
 	child.stderr.pipe(log, { end: false });
@@ -129,7 +131,7 @@ function runLogged(command: string, commandArguments: string[], logFile: string,
 		const timer = setTimeout(() =>
 		{
 			timedOut = true;
-			child.kill("SIGKILL");
+			killTree(child);
 		}, timeoutMs);
 
 		child.on("close", (exitCode) =>
@@ -146,6 +148,22 @@ function runLogged(command: string, commandArguments: string[], logFile: string,
 			resolvePromise({ exitCode: null, timedOut, seconds: secondsSince(start) });
 		});
 	});
+}
+
+/** Kills a timed-out process and everything it started. On Windows that is `taskkill /T /F` (cmd.exe, then Build.bat, then UBT), spawned without a shell. */
+function killTree(child: ChildProcess): void
+{
+	if (process.platform !== "win32" || child.pid === undefined)
+	{
+		child.kill("SIGKILL");
+
+		return;
+	}
+
+	const killer = spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+
+	// If taskkill itself cannot start, at least kill the direct child.
+	killer.on("error", () => child.kill("SIGKILL"));
 }
 
 /** Reads `index.json` from the report folder, stripping the byte order mark the engine writes. Returns null when there is no report. */
@@ -168,7 +186,7 @@ function printLogTail(logFile: string, lineCount: number): void
 	console.log(lines.slice(-lineCount).map((line) => `    ${line}`).join("\n"));
 }
 
-/** Builds and tests a fresh sandbox copy, prints a timing table, and sets the exit code. */
+/** Picks the engine, makes the temp folder, and runs the smoke; if anything throws after the folder exists, says where it is so it can be inspected or deleted. */
 async function main(): Promise<void>
 {
 	const options = parseOptions(process.argv.slice(2));
@@ -178,8 +196,23 @@ async function main(): Promise<void>
 
 	if (!platform) throw new Error(`Unreal Engine is not supported on ${process.platform}.`);
 
-	const paths: PlatformPaths = platform.paths;
 	const workFolder = realpathSync(mkdtempSync(join(tmpdir(), "dojo-engine-smoke-")));
+
+	try
+	{
+		await runSmoke(engine, platform.paths, workFolder, options, totalStart);
+	}
+	catch (error)
+	{
+		console.log(`
+the smoke stopped with an error; kept ${workFolder}`);
+		throw error;
+	}
+}
+
+/** Builds and tests a fresh sandbox copy inside `workFolder`, prints a timing table, and sets the exit code. */
+async function runSmoke(engine: EngineInstall, paths: PlatformPaths, workFolder: string, options: SmokeOptions, totalStart: number): Promise<void>
+{
 	const sandboxFolder = join(workFolder, "Dojo");
 	const reportFolder = join(workFolder, "report");
 	const buildLog = join(workFolder, "build.log");

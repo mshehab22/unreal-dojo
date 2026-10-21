@@ -25,12 +25,24 @@ export async function launchDojo(): Promise<DojoSession>
 
 	// Launching the project folder (not out/main/index.js) lets Electron read package.json, as the packaged app does.
 	// `--user-data-dir` points app.getPath("userData") at the temp folder, so no test sees another test's settings or the learner's real ones.
-	const electronApp = await electron.launch({ args: [resolve("."), `--user-data-dir=${userDataFolder}`] });
-	const window = await electronApp.firstWindow();
+	let electronApp: ElectronApplication | undefined;
 
-	await window.waitForLoadState("domcontentloaded");
+	try
+	{
+		electronApp = await electron.launch({ args: [resolve("."), `--user-data-dir=${userDataFolder}`] });
+		const window = await electronApp.firstWindow();
 
-	return { electronApp, window, userDataFolder };
+		await window.waitForLoadState("domcontentloaded");
+
+		return { electronApp, window, userDataFolder };
+	}
+	catch (error)
+	{
+		// A launch that fails (no build, or the window never opens) must not leave a running app or a temp folder behind.
+		await electronApp?.close().catch(() => undefined);
+		rmSync(userDataFolder, { recursive: true, force: true });
+		throw error;
+	}
 }
 
 /** Closes the app and deletes its temporary userData folder. */
