@@ -78,7 +78,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.2a Sandbox template builds on the Mac | unreal-pipeline | builder-unreal (session) | merged 329a995 | merged | 1 fix round; build about 20 s, headless test about 18 s on UE 5.8.3 Mac |
 | M1.1 PlatformPaths and EngineLocator | unreal-pipeline | unreal-locator (session) | merged 267739b | merged | Passed first review; Windows unverified (problems.md) |
 | M1.6 Rules, scheduler, save file | progress-and-rules | builder-rules (session) | merged | merged | 2 fix rounds; rematch farming closed, proven with randomized sequences |
-| M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | m1-6b-progress-wiring @ 4a952cb | re-review | Round 2: filler skips every item due today |
+| M1.6b Progress IPC wiring and content mapper | progress-and-rules | builder-rules (session) | m1-6b-progress-wiring @ 4a952cb | ready to merge | Re-review PASS. Merge waits for M2.1c: with real availability and real World 1, the World Map scrolls sideways at 1100x700 |
+| M2.1c World Map overflow with real content | ui-core | ui-core (session "M0.3 Design tokens...") | m2-1c-worldmap-overflow | building | Merges before M1.6b; adds a real-shaped fixture world |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
 | M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop @ 5cdd7fd | fixes | Re-review PASS. Merge taken back: an unhandled run-cancelled rejection in a cancelAll test fails npm test on main |
