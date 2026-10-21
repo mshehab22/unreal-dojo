@@ -8,6 +8,9 @@ export class MacPlatformPaths implements PlatformPaths
 {
 	readonly buildPlatform: UnrealBuildPlatform = "Mac";
 	readonly caseInsensitivePaths = false;
+	readonly verbatimArguments = false;
+	readonly testNameEndAnchor = "";
+	readonly maximumSandboxPathLength = null;
 
 	private readonly homeFolder: string;
 
@@ -93,5 +96,23 @@ export class MacPlatformPaths implements PlatformPaths
 	launcherInstalledDataFile(): string
 	{
 		return posix.join(this.homeFolder, "Library", "Application Support", "Epic", "UnrealEngineLauncher", "LauncherInstalled.dat");
+	}
+
+	/** `Build.sh`, the script M1.2a verified. */
+	buildProgram(engineRoot: string): string
+	{
+		return this.buildScript(engineRoot);
+	}
+
+	/** `-Name=value` as one argument; Unreal on macOS rebuilds the command line from the argument list itself. */
+	optionArgument(name: string, value: string): string
+	{
+		return `-${name}=${value}`;
+	}
+
+	/** The path unchanged. */
+	pathArgument(somePath: string): string
+	{
+		return somePath;
 	}
 }

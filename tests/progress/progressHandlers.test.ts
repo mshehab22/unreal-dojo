@@ -2,12 +2,13 @@
 import { describe, expect, it } from "vitest";
 
 import { createHandlers } from "../../src/main/ipc/createHandlers";
+import { RunRegistry } from "../../src/main/services/unreal/RunRegistry";
 import { createTestProgressService } from "../support/progressFixtures";
 
 describe("progress IPC handlers", () =>
 {
 	const { service } = createTestProgressService();
-	const handlers = createHandlers({ getAppVersion: () => "1.0.0", getEngineLocator: () => { throw new Error("not used"); }, getContentCatalog: () => { throw new Error("not used"); }, pickFolder: async () => null, progressService: service });
+	const handlers = createHandlers({ getAppVersion: () => "1.0.0", getEngineLocator: () => { throw new Error("not used"); }, getContentCatalog: () => { throw new Error("not used"); }, pickFolder: async () => null, progressService: service, getSandboxService: () => { throw new Error("not used"); }, runRegistry: new RunRegistry(), sendProgress: () => undefined });
 
 	it("answers getProgress, setPlayerName, and getRules from the service", async () =>
 	{

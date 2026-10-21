@@ -10,6 +10,7 @@ import type { HandlerDefinition } from "../src/main/ipc/HandlerDefinition";
 import { idSchema, playerNameSchema } from "../src/main/ipc/requestSchemas";
 import { registerHandlers, wrapHandler, type IpcHandleRegistrar, type WrappedHandler } from "../src/main/ipc/registerHandlers";
 import { createTestProgressService } from "./support/progressFixtures";
+import { RunRegistry } from "../src/main/services/unreal/RunRegistry";
 
 /** A fake toolchain answer the engine handlers pass through. */
 const FAKE_TOOLCHAIN = { ok: true, tool: "xcode-select", message: "Xcode 27.1 is selected.", toolVersion: "27.1", problems: [] } as const;
@@ -43,6 +44,17 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 	getContentCatalog: () => FAKE_CONTENT_CATALOG,
 	pickFolder: async () => "/Picked/UE_5.8",
 	progressService: createTestProgressService().service,
+	getSandboxService: () => ({
+		folderWarnings: (pickedFolder) => (pickedFolder.length > 10 ? ["long path"] : []),
+		create: async (_enginePath, pickedFolder, onProgress) =>
+		{
+			onProgress({ phase: "building", lastLine: "Result: Succeeded", percent: 100 });
+
+			return { ok: true, sandboxPath: `${pickedFolder}/DojoSandbox`, durationMs: 5, compilerOutput: "" };
+		},
+	}),
+	runRegistry: new RunRegistry(),
+	sendProgress: () => undefined,
 };
 
 /** A stand-in for ipcMain that records each registered channel. */
@@ -243,6 +255,33 @@ describe("payload validation", () =>
 		expectError(await invoke(IPC_CHANNELS.runQuest, { runId: "run-1", questId: "w1-health", files: { "DojoHealthComponent.h": "#pragma once" } }), "not-implemented");
 		expectError(await invoke(IPC_CHANNELS.openEditor, null), "not-implemented");
 		expectError(await invoke(IPC_CHANNELS.updateSettings, { loopMode: "fast", enginePath: null }), "not-implemented");
+	});
+
+	it("creates the sandbox through the service, streaming progress stamped with the run id", async () =>
+	{
+		const { registrar, handlersByChannel } = createFakeRegistrar();
+		const events: unknown[] = [];
+		registerHandlers(registrar, createHandlers({ ...FAKE_DEPENDENCIES, runRegistry: new RunRegistry(), sendProgress: (event) => events.push(event) }));
+
+		const handler = handlersByChannel.get(IPC_CHANNELS.createSandbox);
+		const response = await handler?.({} as Parameters<WrappedHandler>[0], { runId: "setup-1", enginePath: "/Engines/UE_5.8", folder: "/Picked" });
+
+		expect(response).toEqual({ ok: true, value: { ok: true, sandboxPath: "/Picked/DojoSandbox", durationMs: 5, compilerOutput: "" } });
+		expect(events).toEqual([expect.objectContaining({ runId: "setup-1", phase: "building", percent: 100 })]);
+	});
+
+	it("answers pickSandboxFolder with the picked folder and its warnings", async () =>
+	{
+		const invoke = createInvoker();
+
+		expect(await invoke(IPC_CHANNELS.pickSandboxFolder)).toEqual({ ok: true, value: { path: "/Picked/UE_5.8", warnings: ["long path"] } });
+	});
+
+	it("answers cancelRun for an unknown run with run-not-found", async () =>
+	{
+		const invoke = createInvoker();
+
+		expectError(await invoke(IPC_CHANNELS.cancelRun, "nothing-running"), "run-not-found");
 	});
 
 	it("passes zod's parsed copy to the handler, with strings trimmed", async () =>
