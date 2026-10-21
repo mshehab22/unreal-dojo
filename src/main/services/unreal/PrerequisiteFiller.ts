@@ -38,6 +38,9 @@ export interface PrerequisiteFacts
 	isBoss(questId: string): boolean;
 }
 
+/** Told about every folder the filler writes, so the fast loop's build record knows the sandbox changed (FullBuildLedger.recordSandboxWrite). `replaceFolder` false means the rest of the folder was kept. */
+export type SandboxWriteListener = (questId: string, files: Record<string, string>, replaceFolder: boolean) => void;
+
 /** Files planned for one folder: written as a whole folder (replacing it) or one by one (keeping the rest). */
 interface FolderPlan
 {
@@ -51,12 +54,14 @@ export class PrerequisiteFiller
 {
 	private readonly writer: QuestFileWriter;
 	private readonly solutions: ReferenceSolutions;
+	private readonly onFolderWritten: SandboxWriteListener;
 
-	/** Takes the quest writer and the reference solutions. */
-	constructor(writer: QuestFileWriter, solutions: ReferenceSolutions)
+	/** Takes the quest writer, the reference solutions, and optionally a listener told about every write. */
+	constructor(writer: QuestFileWriter, solutions: ReferenceSolutions, onFolderWritten: SandboxWriteListener = () => undefined)
 	{
 		this.writer = writer;
 		this.solutions = solutions;
+		this.onFolderWritten = onFolderWritten;
 	}
 
 	/** Plans every prerequisite, applies boss piece overrides last so they win regardless of order, writes, and returns what was filled. Throws when a needed reference solution is missing. */
@@ -90,6 +95,8 @@ export class PrerequisiteFiller
 
 			if (plan.replaceFolder) await this.writer.writeLearnerFiles(sandboxFolder, questId, files);
 			else await this.writer.writeSomeLearnerFiles(sandboxFolder, questId, files);
+
+			this.onFolderWritten(questId, files, plan.replaceFolder);
 
 			const names = [...plan.files.keys()].sort();
 

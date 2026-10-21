@@ -35,10 +35,16 @@ export class FullBuildLedger
 		this.builtFiles = new Map(this.writtenFiles);
 	}
 
-	/** Records that another quest's files were written into the sandbox outside a run (PrerequisiteFiller), or removed (`files` null, a quest reset). Identical content is not a change. */
-	recordSandboxWrite(questId: string, files: Record<string, string> | null): void
+	/** Records that a quest's files were written into the sandbox outside a run (PrerequisiteFiller), or removed (`files` null, a quest reset). With `replaceFolder` false only the given files changed and the rest of the folder stays. Identical content is not a change. */
+	recordSandboxWrite(questId: string, files: Record<string, string> | null, replaceFolder = true): void
 	{
-		this.replaceWritten(questId, files ?? {});
+		if (replaceFolder || files === null)
+		{
+			this.replaceWritten(questId, files ?? {});
+			return;
+		}
+
+		for (const [fileName, text] of Object.entries(files)) this.writtenFiles.set(`${questId}/${fileName}`, text);
 	}
 
 	/** True when the sandbox's quest files differ from what the last full build compiled, so the editor may run code that is not on disk (fix round 1). */

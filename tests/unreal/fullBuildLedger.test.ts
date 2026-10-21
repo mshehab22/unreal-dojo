@@ -33,6 +33,18 @@ describe("FullBuildLedger", () =>
 		expect(ledger.sandboxChangedSinceBuild()).toBe(false);
 	});
 
+	it("keeps the rest of a folder on a partial write, so restoring one missing file is a change and rewriting a built one is not", () =>
+	{
+		const ledger = new FullBuildLedger();
+		ledger.recordBuild("quest-a", { "A.h": "h", "A.cpp": "cpp" }, "tests", 10);
+
+		ledger.recordSandboxWrite("quest-a", { "A.cpp": "cpp" }, false);
+		expect(ledger.sandboxChangedSinceBuild()).toBe(false);
+
+		ledger.recordSandboxWrite("quest-a", { "Extra.h": "x" }, false);
+		expect(ledger.sandboxChangedSinceBuild()).toBe(true);
+	});
+
 	it("counts a quest reset that removes files, and a write before the first build, as changes", () =>
 	{
 		const ledger = new FullBuildLedger();

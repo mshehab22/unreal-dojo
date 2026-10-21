@@ -87,6 +87,16 @@ describe("chooseLoop on Windows (Live Coding)", () =>
 		expect(chooseLoop(input({ tests: `${TESTS}\n` })).reason).toMatch(/tests changed/);
 	});
 
+	it("needs a full build when the quest's record is not from the latest build: Q built, Q's reference written with a new UPROPERTY, R built, editor opened, Q's draft run (re-review)", () =>
+	{
+		// Q's draft was built at t=10; the reference write was absorbed by R's build at t=50; the editor opened at t=100 with the reference's header loaded.
+		const draft = { "Health.h": HEADER, "Health.cpp": SOURCE };
+		const choice = chooseLoop(input({ builtSnapshot: { files: draft, tests: TESTS, builtAt: 10 }, lastFullBuildAt: 50, sandboxChangedSinceBuild: false, files: draft }));
+
+		expect(choice.loop).toBe("headless");
+		expect(choice.reason).toMatch(/another quest was built after this one/);
+	});
+
 	it("marks the editor stale when a build finished after it opened", () =>
 	{
 		expect(chooseLoop(input({ lastFullBuildAt: 150 }))).toMatchObject({ loop: "headless", editorStale: true });

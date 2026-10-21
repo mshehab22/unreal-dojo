@@ -5,6 +5,7 @@ import type { PackOutline } from "@shared/types/catalog";
 import type { AuthoredQuest } from "@shared/types/content";
 import type { RunResult } from "@shared/types/run";
 
+import { FullBuildLedger } from "../../src/main/services/unreal/FullBuildLedger";
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
 import { PrerequisiteFiller } from "../../src/main/services/unreal/PrerequisiteFiller";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
@@ -320,6 +321,28 @@ describe("PrerequisiteFiller through runQuest", () =>
 
 		await expect(filler.fill("/S", ["f1-ghost"], facts)).rejects.toThrow(/No reference solution for the earlier quest f1-ghost/);
 		await expect(filler.fill("/S", ["f1-ghost-boss"], facts)).rejects.toThrow(/No reference solution for the earlier quest f1-ghost-boss/);
+	});
+
+	it("tells the listener about every folder it writes, whole or in part, so the fast loop's build record sees the sandbox change (M1.4)", async () =>
+	{
+		const paths = new MacPlatformPaths("/Users/learner");
+		const fileSystem = new FakeSandboxFileSystem({ ...SOLUTIONS, [`${questFolder("f1-popup-target")}/DojoF1PopupTarget.h`]: "mine h" });
+		const writes: [string, Record<string, string>, boolean][] = [];
+		const ledger = new FullBuildLedger();
+		const filler = new PrerequisiteFiller(new QuestFileWriter(paths, fileSystem), new ReferenceSolutions(paths, fileSystem, SOLUTIONS_ROOT), (questId, files, replaceFolder) =>
+		{
+			writes.push([questId, files, replaceFolder]);
+			ledger.recordSandboxWrite(questId, files, replaceFolder);
+		});
+		const facts = { isPassed: (questId: string) => questId === "f1-popup-target", savedFiles: () => ({}), isBoss: () => false };
+
+		await filler.fill("/S", ["f1-training-dummy", "f1-popup-target"], facts);
+
+		expect(writes).toEqual([
+			["f1-training-dummy", { "DojoF1TrainingDummy.h": "dummy h", "DojoF1TrainingDummy.cpp": "dummy cpp" }, true],
+			["f1-popup-target", { "DojoF1PopupTarget.cpp": "target cpp" }, false],
+		]);
+		expect(ledger.sandboxChangedSinceBuild()).toBe(true);
 	});
 
 	it("checks a snippet and rebuilds with the engine and sandbox from settings", async () =>

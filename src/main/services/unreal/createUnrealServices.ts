@@ -12,6 +12,7 @@ import { NodeSandboxFileSystem } from "./NodeSandboxFileSystem";
 import { QuestFileWriter } from "./QuestFileWriter";
 import { RunnerFactory } from "./RunnerFactory";
 import { ClangSnippetSyntaxChecker } from "./ClangSnippetSyntaxChecker";
+import { FullBuildLedger } from "./FullBuildLedger";
 import { PrerequisiteFiller } from "./PrerequisiteFiller";
 import { type AuthoredQuestSource, type LearnerRecord, QuestRunService } from "./QuestRunService";
 import { ReferenceSolutions } from "./ReferenceSolutions";
@@ -50,6 +51,9 @@ export interface UnrealServices
 	runnerFactory: RunnerFactory;
 	questFileWriter: QuestFileWriter;
 	questRunService: QuestRunService;
+
+	/** The full-build record the fast loop decides with (A481). The prerequisite filler already reports its writes to it; the fast loop wiring passes it to RunnerFactory (A489). */
+	buildLedger: FullBuildLedger;
 }
 
 /** Wires real disk, processes, and clock. Throws `toolchain-missing` with a plain explanation on an unsupported operating system. */
@@ -74,12 +78,13 @@ export function createUnrealServices(inputs: UnrealServiceInputs): UnrealService
 	const sandboxService = new SandboxProjectService({ paths, fileSystem, builder, engineInspector: inputs.engineInspector, pathStore: inputs.settings, timer: SYSTEM_TIMER, templateFolder: inputs.templateFolder });
 	const runnerFactory = new RunnerFactory((context) => new HeadlessRunner({ context, paths, fileSystem, writer: questFileWriter, builder, testRunner, timer: SYSTEM_TIMER }));
 
-	const prerequisiteFiller = new PrerequisiteFiller(questFileWriter, new ReferenceSolutions(paths, fileSystem, inputs.solutionsFolder));
+	const buildLedger = new FullBuildLedger();
+	const prerequisiteFiller = new PrerequisiteFiller(questFileWriter, new ReferenceSolutions(paths, fileSystem, inputs.solutionsFolder), (questId, files, replaceFolder) => buildLedger.recordSandboxWrite(questId, files, replaceFolder));
 
 	// Only the Mac check exists so far; Windows answers not-implemented (A402).
 	const snippetChecker = paths.buildPlatform === "Mac" ? new ClangSnippetSyntaxChecker(paths, fileSystem, commandRunner) : null;
 
 	const questRunService = new QuestRunService({ settings: inputs.settings, quests: inputs.quests, runnerFactory, prerequisiteFiller, sandboxService, snippetChecker, learner: inputs.learner });
 
-	return { sandboxService, runnerFactory, questFileWriter, questRunService };
+	return { sandboxService, runnerFactory, questFileWriter, questRunService, buildLedger };
 }

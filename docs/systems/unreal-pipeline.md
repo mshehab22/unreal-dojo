@@ -127,7 +127,7 @@ Rules, first match wins (`chooseLoop.ts`):
 1. `loopMode` is `headless`: headless.
 2. The engine is older than 5.8, no editor the app opened is on this engine and sandbox, or its server does not answer: headless.
 3. Other quests' files changed since the last full build (prerequisite fill, reset): headless. A full build finished after the editor opened: headless, and the editor is stale; on the Mac the reason says to restart the editor.
-4. Windows: headless when this quest has no full build this session, its tests changed, files were added or removed, or a changed header contains a reflection macro (`UCLASS`, `USTRUCT`, `UENUM`, `UINTERFACE`, `UPROPERTY`, `UFUNCTION`, `UDELEGATE`, `GENERATED_BODY`, `DECLARE_DYNAMIC_*`) before or after the change; otherwise fast with Live Coding.
+4. Windows: headless when this quest has no full build this session, its record is not from the latest full build, its tests changed, files were added or removed, or a changed header contains a reflection macro (`UCLASS`, `USTRUCT`, `UENUM`, `UINTERFACE`, `UPROPERTY`, `UFUNCTION`, `UDELEGATE`, `GENERATED_BODY`, `DECLARE_DYNAMIC_*`) before or after the change; otherwise fast with Live Coding.
 5. macOS: fast only when the files and tests equal the last full build of this quest, that build is the latest full build, and it finished before the editor opened; otherwise headless.
 6. `loopMode` `fast` that cannot be honored says so at the start of the reason.
 
@@ -135,7 +135,7 @@ On Windows a headless run closes the open editor first and reopens it afterwards
 
 Quitting: `stopEditorBeforeQuit(app, editorLauncher)` holds the quit while the editor closes (up to the 15 second grace) and disposes the launcher, so a background `reopen()` cannot start an editor during quit.
 
-Not wired into the app yet (A489): `createUnrealServices` still builds the factory without fast loop pieces, the `openEditor` IPC is a stub, sandbox create and rebuild do not record into the ledger, `PrerequisiteFiller` and quest resets do not call `recordSandboxWrite`, and `src/main/index.ts` does not call `stopEditorBeforeQuit`. Those files are in M1.3b's fix round; the wiring follows its merge.
+Not wired into the app yet (A489): `createUnrealServices` still builds the factory without fast loop pieces, the `openEditor` IPC is a stub, sandbox create and rebuild do not record into the ledger, quest resets do not call `recordSandboxWrite` (the `PrerequisiteFiller` does: `createUnrealServices` passes it a listener into the `buildLedger` it returns), and `src/main/index.ts` does not call `stopEditorBeforeQuit`. Those files are in M1.3b's fix round; the wiring follows its merge.
 
 ## Sandbox template (`resources/sandbox-template/`)
 

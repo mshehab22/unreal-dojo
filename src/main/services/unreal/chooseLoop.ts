@@ -61,6 +61,9 @@ export function chooseLoop(input: LoopChoiceInput): LoopChoice
 	{
 		if (editorStale) return headless("Full build: a build finished after the editor opened, so it is not running that code.", true);
 		if (!snapshot) return headless("Full build: this quest has not been fully built yet this session.");
+
+		// A later build may have compiled other files for this quest (a sandbox write it absorbed), so the record only describes the editor's code when it is the latest build.
+		if (snapshot.builtAt !== input.lastFullBuildAt) return headless("Full build: another quest was built after this one, so this quest's code is built again before Live Coding is used.");
 		if (snapshot.tests !== input.tests) return headless("Full build: the quest's tests changed since its last full build.");
 
 		const structuralChange = describeStructuralChange(snapshot.files, input.files);

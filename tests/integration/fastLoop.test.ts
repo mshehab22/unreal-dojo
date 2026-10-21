@@ -13,7 +13,6 @@ import { createEngineLocator } from "../../src/main/services/unreal/createEngine
 import { createUnrealPlatform } from "../../src/main/services/unreal/createUnrealPlatform";
 import { createUnrealServices } from "../../src/main/services/unreal/createUnrealServices";
 import { EditorLauncher, type EditorSession } from "../../src/main/services/unreal/EditorLauncher";
-import { FullBuildLedger } from "../../src/main/services/unreal/FullBuildLedger";
 import { McpEditorClient } from "../../src/main/services/unreal/McpEditorClient";
 import { NodeCommandRunner } from "../../src/main/services/unreal/NodeCommandRunner";
 import { NodePortProbe } from "../../src/main/services/unreal/NodePortProbe";
@@ -21,6 +20,7 @@ import { NodeProcessLauncher } from "../../src/main/services/unreal/NodeProcessL
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
 import { RunnerFactory } from "../../src/main/services/unreal/RunnerFactory";
 import { SYSTEM_TIMER } from "../../src/main/services/unreal/SupervisedProcess";
+import { MemoryUnrealSettings } from "../unreal/MemoryUnrealSettings";
 
 /** The engine to test against, from the environment. */
 const ENGINE_ROOT = process.env.DOJO_ENGINE_ROOT ?? "";
@@ -82,12 +82,19 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 	function createRig()
 	{
 		const locator = createEngineLocator();
-		const services = createUnrealServices({ templateFolder: TEMPLATE_FOLDER, engineInspector: locator, pathStore: { setSandboxPath: () => undefined } });
+		const services = createUnrealServices({
+			templateFolder: TEMPLATE_FOLDER,
+			solutionsFolder: join(__dirname, "..", "..", "tools", "solutions"),
+			engineInspector: locator,
+			settings: new MemoryUnrealSettings(),
+			quests: { getAuthoredQuest: async () => undefined, listPacks: async () => [] },
+			learner: { isPassed: () => false, savedFiles: () => ({}) },
+		});
 		const platform = createUnrealPlatform({ platform: process.platform, homeFolder: homedir(), environment: process.env, commandRunner: new NodeCommandRunner() });
 		if (!platform) throw new Error(`No Unreal platform for ${process.platform}`);
 
 		const editorLauncher = new EditorLauncher({ paths: platform.paths, launcher: new NodeProcessLauncher(platform.processTreeKiller), timer: SYSTEM_TIMER, portProbe: new NodePortProbe(), createClient: (clientPort) => new McpEditorClient(clientPort) });
-		const ledger = new FullBuildLedger();
+		const ledger = services.buildLedger;
 		const factory = new RunnerFactory((context) => services.runnerFactory.forContext(context), {
 			paths: platform.paths,
 			editorLauncher,
