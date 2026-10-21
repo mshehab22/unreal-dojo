@@ -121,6 +121,9 @@ export interface EngineVerifierOptions
 /** Build output lines worth showing: compiler errors and the failure summary. */
 const BUILD_ERROR_PATTERN = /(?:\berror\b|Result: Failed|BUILD FAILED)/i;
 
+/** Build error lines quoted in an inconclusive starter check. */
+const QUOTED_INCONCLUSIVE_LINES = 3;
+
 /** Most build error lines quoted per quest. */
 const MAXIMUM_QUOTED_LINES = 8;
 
@@ -380,7 +383,8 @@ export class EngineVerifier
 
 		if (signal.aborted) return stopped("the last starter check");
 
-		const failed = problems.some((problem) => problem.severity !== "warning");
+		// An inconclusive starter check also keeps the sandbox, so its build log in Saved/VerifierLogs can be read.
+		const failed = problems.some((problem) => problem.severity !== "warning" || problem.message.startsWith("starter check inconclusive"));
 
 		if (failed) return { problems, questsChecked: judged.length, timings, keptSandbox: sandbox.folder };
 
@@ -421,7 +425,10 @@ export class EngineVerifier
 		// A starter that does not compile is fine only when the errors are in its own files; anything else means it broke other quests' code.
 		if (!build.succeeded && buildErrors(build, entry.quest.id).length === 0)
 		{
-			problems.push(inconclusive(entry.file, "the starter broke other quests' code (no build error points into its own files)"));
+			// Quote the first errors so the reason is visible even after the sandbox is gone.
+			const quoted = buildErrors(build).slice(0, QUOTED_INCONCLUSIVE_LINES);
+
+			problems.push(inconclusive(entry.file, `the starter broke other quests' code (no build error points into its own files)${quoted.length > 0 ? `:\n${quoted.join("\n")}` : ""}`));
 		}
 
 		if (build.succeeded)

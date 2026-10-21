@@ -82,7 +82,7 @@ export async function runEngineStage(enginePath: string, options: VerifierOption
 
 	log(`engine: ${report.questsChecked} quests; first build ${report.timings.firstBuildSeconds} s, solution tests ${report.timings.solutionTestsSeconds} s, starter checks ${report.timings.starterChecksSeconds} s`);
 
-	if (report.keptSandbox !== undefined) log(`engine: something failed; the sandbox copy is kept at ${report.keptSandbox}`);
+	if (report.keptSandbox !== undefined) log(`engine: something failed or was inconclusive; the sandbox copy and its logs (Saved/VerifierLogs) are kept at ${report.keptSandbox}`);
 
 	return { problems: report.problems, report };
 }

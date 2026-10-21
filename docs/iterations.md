@@ -467,3 +467,7 @@ exit code 0
   - no boss integration is on main yet, so the boss override path has only been tested with the fake sandbox
   - the run has not been done on Windows
 
+### Follow-up: clearer inconclusive starter checks
+- What changed: author-foundations saw five "inconclusive" starter checks on World 2 and could not see why, because the sandbox had been deleted. An inconclusive check now quotes its first three build errors in the report, and the sandbox and its build logs are kept whenever any check is inconclusive.
+- Proof: 106 content tests pass, including the quoted errors and the kept sandbox.
+

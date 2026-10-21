@@ -294,8 +294,9 @@ describe("EngineVerifier", () =>
 		const report = await verifyWith(sandbox, [quest("a"), quest("b")], await writeSolutions({ a: "SOLUTION", b: "SOLUTION" }));
 
 		expect(report.problems.map((problem) => `${problem.severity ?? "error"} ${problem.file}: ${problem.message}`)).toEqual([
-			"warning examples/a.md: starter check inconclusive: the starter broke other quests' code (no build error points into its own files)",
+			"warning examples/a.md: starter check inconclusive: the starter broke other quests' code (no build error points into its own files):\n/x/Source/Dojo/Quests/b/a.cpp:3:1: error: expected ';'\nResult: Failed (OtherCompilationError)",
 		]);
+		expect(report.keptSandbox).toBe("/fake/sandbox");
 	});
 
 	it("warns when a starter builds but its tests do not run", async () =>
