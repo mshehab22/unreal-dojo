@@ -1,7 +1,7 @@
 // The TermLinker remark plugin: wraps glossary terms in prose and inline code in `glossaryTerm` nodes for hover cards.
 import type { InlineCode, Parent, PhrasingContent, Root, RootContent, Text } from "mdast";
 
-import type { GlossaryAlias } from "../types/content";
+import type { GlossaryAlias } from "../types/catalog";
 
 import { GlossaryMatcher } from "./GlossaryMatcher";
 

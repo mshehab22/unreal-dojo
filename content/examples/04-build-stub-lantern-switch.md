@@ -8,7 +8,7 @@ difficulty: 2
 patterns: []
 skills: [actors, references]
 terms: [tarray, tobjectptr, editanywhere]
-prerequisites: [example-build-faded-flicker]
+prerequisites: [example-build-faded-flicker, example-build-worked-lantern]
 xp: 80
 estimatedMinutes: 20
 concepts:
@@ -21,6 +21,8 @@ concepts:
 When you press Play, every lantern wired to the switch goes dark, and calling `Toggle` on the switch lights them all again at once.
 
 The declarations are given; every function body is yours. The switch holds the references: it knows its lanterns, and the lanterns know nothing about the switch. Skip any entry in the array that is empty, because a designer can leave a slot unassigned.
+
+Compiles against earlier quests: example-build-worked-lantern (`Quests/example-build-worked-lantern/DojoExLantern.h`).
 
 ## See it in the editor
 

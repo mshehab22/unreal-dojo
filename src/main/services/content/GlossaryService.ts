@@ -1,7 +1,9 @@
 // Holds the loaded glossary: entry lookup, the flat alias list for the TermLinker and Monaco, and one shared matcher.
-import { buildAliasTable } from "@shared/content/buildAliasTable";
 import { GlossaryMatcher } from "@shared/content/GlossaryMatcher";
-import type { GlossaryAlias, GlossaryEntry } from "@shared/types/content";
+import type { GlossaryAlias } from "@shared/types/catalog";
+import type { GlossaryEntry } from "@shared/types/content";
+
+import { buildGlossaryAliases } from "../../content/buildGlossaryAliases";
 
 /** The glossary for one content load. Build it from `LoadedContent.glossary`; rebuild it when content reloads. */
 export class GlossaryService
@@ -10,11 +12,11 @@ export class GlossaryService
 	private readonly aliases: GlossaryAlias[];
 	private matcherInstance: GlossaryMatcher | undefined;
 
-	/** Indexes the entries by id and builds the alias list once. */
+	/** Indexes the entries by id and builds the alias list once, with app-shell's builder so the IPC table and this one are the same. */
 	constructor(entries: readonly GlossaryEntry[])
 	{
 		this.byId = new Map(entries.map((entry) => [entry.id, entry]));
-		this.aliases = buildAliasTable(entries);
+		this.aliases = buildGlossaryAliases(entries);
 	}
 
 	/** Every entry, in glossary order. */

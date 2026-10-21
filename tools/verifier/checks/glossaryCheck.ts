@@ -1,5 +1,5 @@
 // Checks the glossary: related ids resolve, docs links are pinned to 5.8, and no two entries claim one spelling.
-import { buildAliasTable } from "../../../src/shared/content/buildAliasTable";
+import { buildGlossaryAliases } from "../../../src/main/content/buildGlossaryAliases";
 import type { ContentProblem } from "../../../src/shared/types/content";
 import type { ContentCheck } from "../ContentCheck";
 import { errorAt } from "./checkHelpers";
@@ -29,8 +29,12 @@ export const glossaryCheck: ContentCheck = {
 		}
 
 		const owners = new Map<string, string>();
+		const position = new Map(input.content.glossary.map((entry, index) => [entry.id, index]));
 
-		for (const alias of buildAliasTable(input.content.glossary))
+		// In glossary order, so the later entry is the one reported whichever order the alias builder returns.
+		const aliases = buildGlossaryAliases(input.content.glossary).sort((first, second) => (position.get(first.entryId) ?? 0) - (position.get(second.entryId) ?? 0));
+
+		for (const alias of aliases)
 		{
 			const key = alias.caseSensitive ? alias.text : alias.text.toLowerCase();
 			const owner = owners.get(key);

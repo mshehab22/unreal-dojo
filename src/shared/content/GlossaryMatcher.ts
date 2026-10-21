@@ -1,5 +1,5 @@
 // Finds glossary terms in prose and in inline code, longest match first, with identifier and plain-word case rules.
-import type { GlossaryAlias } from "../types/content";
+import type { GlossaryAlias } from "../types/catalog";
 
 /** One glossary term found in a piece of text. */
 export interface TermMatch

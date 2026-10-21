@@ -1,4 +1,4 @@
-// Checks per-quest sizes the schema leaves open: rubric bullet counts and a non-empty concepts list.
+// Checks per-quest shape the schema leaves open: rubric bullet counts, a non-empty concepts list, and gradable concept questions.
 import type { ContentProblem } from "../../../src/shared/types/content";
 import type { ContentCheck } from "../ContentCheck";
 import { errorAt } from "./checkHelpers";
@@ -10,7 +10,7 @@ const RUBRIC_MAXIMUM = 6;
 /** Integration rubric bullets every boss needs. */
 const BOSS_RUBRIC_SIZE = 8;
 
-/** Rubric sizes and concepts, for every pack quest and example. */
+/** Rubric sizes, concepts, and, on concept quests, at least one question a grader can mark without AI, for every pack quest and example. */
 export const questShapeCheck: ContentCheck = {
 	name: "quest shape",
 	run(input)
@@ -20,6 +20,11 @@ export const questShapeCheck: ContentCheck = {
 		for (const { quest, file } of input.quests)
 		{
 			if (quest.concepts.length === 0) problems.push(errorAt(file, "concepts: list at least one idea this quest teaches", "front matter"));
+
+			if (quest.kind === "concept" && quest.questions.every((question) => question.type === "explain-in-one-sentence"))
+			{
+				problems.push(errorAt(file, "needs at least one question that is not explain-in-one-sentence, so the quest can be graded without an AI reviewer", "Questions"));
+			}
 
 			if (quest.kind === "build" || quest.kind === "refactor" || quest.kind === "breakdown")
 			{

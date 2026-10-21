@@ -10,9 +10,12 @@ import type { AuthoredQuest, BuildQuest, ConceptQuest, GlossaryEntry, LoadedCont
 import { parseQuestFile } from "../../src/main/services/content/parseQuestFile";
 import { ProblemList } from "../../src/main/services/content/ProblemList";
 import type { ContentCheck, QuestRecord, VerifierInput } from "../../tools/verifier/ContentCheck";
+import { labelCore as reviewerLabelCore } from "../../src/main/services/review/providers/TestsOnlyProvider";
 import { coverageCheck } from "../../tools/verifier/checks/coverageCheck";
+import { dependencyCheck } from "../../tools/verifier/checks/dependencyCheck";
 import { fadeLadderCheck } from "../../tools/verifier/checks/fadeLadderCheck";
 import { glossaryCheck } from "../../tools/verifier/checks/glossaryCheck";
+import { labelCore } from "../../tools/verifier/checks/labelCore";
 import { planCoverageCheck } from "../../tools/verifier/checks/planCoverageCheck";
 import { questionCheck } from "../../tools/verifier/checks/questionCheck";
 import { questShapeCheck } from "../../tools/verifier/checks/questShapeCheck";
@@ -37,7 +40,7 @@ function example<Quest extends AuthoredQuest>(name: string): Quest
 /** A build quest copied from the worked example with a new id, scaffold, and prerequisites. */
 function build(id: string, scaffold: ScaffoldLevel, prerequisites: string[] = []): BuildQuest
 {
-	return { ...example<BuildQuest>("02-build-worked-lantern.md"), id, scaffold, prerequisites, terms: [], patterns: [] };
+	return { ...example<BuildQuest>("02-build-worked-lantern.md"), id, scaffold, prerequisites, terms: [], patterns: [], tests: `IMPLEMENT_SIMPLE_AUTOMATION_TEST(F${id}, "Dojo.Test.${id}", 0)` };
 }
 
 /** A concept quest copied from the concept example with a new id and prerequisites. */
@@ -296,3 +299,69 @@ describe("reference solutions", () =>
 		]);
 	});
 });
+
+describe("cross-quest dependencies (A268)", () =>
+{
+	/** A build quest whose starter includes quest a's header, with the given brief line and prerequisites. */
+	function dependent(declaration: string, prerequisites: string[]): BuildQuest
+	{
+		const quest = build("b", "faded", prerequisites);
+
+		return { ...quest, brief: `${quest.brief}\n\n${declaration}`, files: [{ name: "B.cpp", starter: "#include \"Quests/a/A.h\"\n#include \"Quests/b/B.h\"" }] };
+	}
+
+	it("accepts a dependency named on the line with its path and listed as a prerequisite", async () =>
+	{
+		expect(await messages(dependencyCheck, inputWith([[build("a", "worked"), dependent("Compiles against earlier quests: a (`Quests/a/A.h`).", ["a"])]]))).toEqual([]);
+	});
+
+	it("reports an undeclared include, a declared quest that is not a prerequisite, and one that does not exist", async () =>
+	{
+		const undeclared = await messages(dependencyCheck, inputWith([[build("a", "worked"), dependent("", ["a"])]]));
+		const notPrerequisite = await messages(dependencyCheck, inputWith([[build("a", "worked"), dependent("Compiles against earlier quests: a (`Quests/a/A.h`) and ghost (`Quests/ghost/G.h`).", [])]]));
+
+		expect(undeclared).toEqual(["the code includes Quests/a/ but the \"Compiles against earlier quests:\" line does not name it with its path"]);
+		expect(notPrerequisite).toEqual([
+			"\"Compiles against earlier quests:\" names \"a\", which must also be in prerequisites",
+			"\"Compiles against earlier quests:\" names \"ghost\", which is not a quest id",
+		]);
+	});
+});
+
+describe("concept questions and required piece labels", () =>
+{
+	it("needs a concept question that is not explain-in-one-sentence", async () =>
+	{
+		const quest = concept("a");
+		const onlyExplain = { ...quest, questions: quest.questions.filter((question) => question.type === "explain-in-one-sentence") };
+
+		expect(await messages(questShapeCheck, inputWith([[quest]]))).toEqual([]);
+		expect(await messages(questShapeCheck, inputWith([[onlyExplain]]))).toEqual(["needs at least one question that is not explain-in-one-sentence, so the quest can be graded without an AI reviewer"]);
+	});
+
+	it("needs a required piece label core of at least 4 characters after kind words", async () =>
+	{
+		const breakdown = example<AuthoredQuest>("07-breakdown-campfire.md");
+
+		if (breakdown.kind !== "breakdown") throw new Error("expected a breakdown");
+
+		const [first, ...rest] = breakdown.requiredPieces;
+
+		if (first === undefined) throw new Error("expected a piece");
+
+		const weak = { ...breakdown, requiredPieces: [{ ...first, label: "UI Event Component" }, ...rest] };
+
+		expect(await messages(planCoverageCheck, inputWith([[breakdown]]))).toEqual([]);
+		expect(await messages(planCoverageCheck, inputWith([[weak]]))).toEqual([
+			"required piece \"fire-actor\": label \"UI Event Component\" leaves \"ui\" after kind words are removed; tests-only grading needs at least 4 characters (A302)",
+		]);
+	});
+
+	it("computes the same label core as the tests-only reviewer", () =>
+	{
+		const labels = ["HealthComponent", "UHealthComponent", "OnDeath event", "Setup Steps", "Wave spawner subsystem", "HUD warmth bar listener", "Classes and Systems", "Rates, limits, and radius as editable data", "UI Event Component"];
+
+		expect(labels.map(labelCore)).toEqual(labels.map(reviewerLabelCore));
+	});
+});
+

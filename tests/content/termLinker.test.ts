@@ -4,10 +4,10 @@ import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { describe, expect, it } from "vitest";
 
-import { buildAliasTable } from "@shared/content/buildAliasTable";
 import { termLinker } from "@shared/content/termLinker";
 import type { GlossaryEntry } from "@shared/types/content";
 
+import { buildGlossaryAliases } from "../../src/main/content/buildGlossaryAliases";
 import { GlossaryService } from "../../src/main/services/content/GlossaryService";
 
 /** A glossary entry with only the fields the linker reads filled in meaningfully. */
@@ -31,7 +31,7 @@ const GLOSSARY = [
 /** Parses Markdown, runs the linker, and returns every linked term as `entryId:text`, in order. */
 function linkedTerms(markdown: string): string[]
 {
-	const processor = unified().use(remarkParse).use(termLinker, { aliases: buildAliasTable(GLOSSARY) });
+	const processor = unified().use(remarkParse).use(termLinker, { aliases: buildGlossaryAliases(GLOSSARY) });
 	const tree = processor.runSync(processor.parse(markdown)) as Root;
 	const found: string[] = [];
 

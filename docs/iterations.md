@@ -391,3 +391,16 @@ exit code 0
   - The verifier on the repo: 8 examples ok, exit 0.
   - `--engine` reran with the commented examples: the same three pass, and the two timer examples still fail only on the helper bug, now each with an "inconclusive: the reference solution fails" warning instead of a starter verdict. The run took 1215 s of wall time but only 235 s of CPU, because it waited on Unreal's build mutex while other sessions built.
 
+### Fix round 2, part 1 (new checks; the move onto M1.3's runners waits for M1.3)
+- What the Lead asked for: three new checks. A quest that compiles against another quest's files must say so on its "Compiles against earlier quests:" brief line, and those quests must be prerequisites. A concept quest needs at least one question that can be marked without AI. Each breakdown piece label must keep at least 4 meaningful characters once words like "component" or "event" are removed.
+- What changed:
+  - All three checks are in, with tests.
+  - The branch is rebased onto main, so the verifier now also checks Pack 1 World 1. It passes every rule: 12 quests, 24 files checked, only the coverage warnings.
+  - The check found that my own switch example included the lantern quest's header without declaring it; the example now declares it and lists the lantern as a prerequisite.
+  - On rebasing, the app's content screen had its own copy of the glossary spelling list with a slightly different rule. The verifier, the linker, and the glossary service now all use that one list (A213).
+- Proof:
+  - typecheck passes.
+  - `npm test`: 42 files, 496 tests passed.
+  - build passes.
+  - The verifier on main's content: 24 files, no problems, 3 coverage warnings.
+

@@ -71,13 +71,13 @@ Errors name the file (relative to `content/`), and the section and line when kno
 
 ## Term linking
 
-Built in M1.8. Three pieces, all in `src/shared/content/` so the main process and the renderer use the same code (A202):
+Built in M1.8. The matcher and the plugin are in `src/shared/content/` so the main process and the renderer use the same code (A202); the alias list comes from app-shell (A213):
 
-- `buildAliasTable(entries)` makes the flat alias list (`GlossaryAlias[]`: `text`, `entryId`, `term`, `short`, `caseSensitive`, `codeOnly`), one row per spelling (the term, then each alias). This is the list Monaco's hover and completion providers read, sent to the renderer through IPC.
+- `buildGlossaryAliases(entries)` (`src/main/content/buildGlossaryAliases.ts`, app-shell, M0.2b) makes the flat alias list (`GlossaryAlias[]` in `src/shared/types/catalog.ts`: `text`, `entryId`, `caseSensitive`, `codeOnly`, `short`), one row per spelling. The renderer gets it through `getGlossaryAliases`; Monaco's hover and completion providers and the TermLinker read it.
 - `GlossaryMatcher` compiles the list once. `findInProse(text)` returns non-overlapping matches left to right; where matches overlap, the earliest start wins, then the longest, then the case-sensitive one ("Actor Component" beats "Actor"). A term never matches inside a longer word (`reactor`). `matchInlineCode(code)` returns the entry when the whole code span, trimmed and with a trailing `()` ignored, is one spelling.
 - `termLinker` is the remark plugin. It replaces matched text with `glossaryTerm` nodes (`entryId`, the matched text or inline code as the child, and `data.hName: "glossary-term"` with `hProperties.entryId`, so react-markdown renders a `<glossary-term>` element that the renderer maps to a `HoverCard` through its `components` prop). It never touches headings, code blocks, links, link references, raw HTML, or terms already linked.
 
-Case rule (A201): a spelling is an identifier, matched case sensitively, when it has an uppercase letter after its first character (`AActor`, `BeginPlay`, `UPROPERTY`) or a character words never have (`_ : ( ) < > # .` or a digit, as in `TObjectPtr<>` or `UE_LOG`). Anything else is a plain word, matched in any case (`Actor`, `actor`, `ACTOR`; `garbage collection`).
+Case rule (A201, as built by `isIdentifierText`): a spelling is an identifier, matched case sensitively, when it has no spaces and has an underscore, `::`, a digit, or a capital after its first letter (`AActor`, `BeginPlay`, `UPROPERTY`, `UE_LOG`, `FMath::Lerp`). Anything else is a plain word, matched in any case (`Actor`, `actor`, `ACTOR`; `garbage collection`, `Actor Component`).
 
 Inline code (A200): normal terms link inside inline code too, but only when the whole span is one spelling, so `` `AActor` `` and `` `BeginPlay()` `` link while `` `AActor* Owner` `` does not. Code-only terms (`linkMode: "code-only"`, A62: `check`, `ensure`, `cast`, `destroy`, `category`, `super`) link only that way and never in prose.
 
@@ -91,16 +91,17 @@ Every pack is always read, so cross-pack references and duplicate ids are checke
 
 Checks, all with file names in the output. Errors unless marked as warnings:
 - parsing (M0.4): every quest, manifest, glossary entry, and pattern card parses; required sections per kind; 3 hints; ids unique
-- quest shape: 5 to 6 rubric bullets on build, refactor, and breakdown quests, 8 integration rubric bullets on bosses; `concepts` not empty
+- quest shape: 5 to 6 rubric bullets on build, refactor, and breakdown quests, 8 integration rubric bullets on bosses; `concepts` not empty; a concept quest's `questions` include at least one that is not explain-in-one-sentence, so it can be graded without AI
 - references: `terms[]` are glossary ids, `patterns[]` are pattern ids, `prerequisites[]` are quest ids (a pack quest may only require pack quests; an example may require examples or pack quests; never itself), boss `pieces` are build quests, pattern `useCaseQuestIds` are quests that list that pattern, glossary `firstQuestId` is a quest
 - unlock graph (A203): no prerequisite cycles (reported with the path, `a -> b -> a`); every quest can unlock; inside a pack only the first quest of the first world has no prerequisites, so every other quest is reached from it
 - fade ladder (A204): in each world, build quests never step back (worked, faded, stub, blank); with two or more build quests the first is worked or faded and the last is stub or blank; refactor quests are not on the ladder
 - repetition: from world 3 of each pack on, some quest in each world lists a pattern or term an earlier world of that pack used (reported on the world's `world.json`)
-- plan coverage: breakdowns and bosses have at least two reference plans, and each plan covers every required piece
+- plan coverage: breakdowns and bosses have at least two reference plans, each plan covers every required piece, and every required piece label keeps a core of at least 4 characters once kind words and one-letter prefixes are removed (A302), so tests-only grading can match it
 - questions: multiple-choice and which-pattern questions have 3 or more distinct choices (the schema needs at least 2); which-pattern choices and answer are pattern ids, with exactly one distractor note per wrong choice; checked in concept quests and in pattern card recall and scenario questions
 - glossary: `related` ids resolve and are not the entry itself; `unrealDocsUrl` carries `?application_version=5.8`; no spelling belongs to two entries (the TermLinker could not choose, A209)
 - coverage, warning until release (A205): every glossary term is in some concept quest's and some build quest's `terms[]`; every pattern is listed by at least 3 build quests. Without `--release` each rule prints one summary warning with the first ids; with `--release` every missing id is its own error. Format examples do not count.
 - reference solutions (A210): every build and refactor quest, examples included, has `tools/solutions/<quest-id>/` with exactly its file names
+- cross-quest dependencies (A268, A214): when a build or refactor quest's starter, reference solution, or tests include `Quests/<other-quest-id>/...`, its brief has a line starting `Compiles against earlier quests:` that names each such quest with its `Quests/<id>/` path (a boss uses its spec); every quest named there exists and is in `prerequisites`
 - `--engine <path>` (A208): see below
 
 ### `--engine <path>`
