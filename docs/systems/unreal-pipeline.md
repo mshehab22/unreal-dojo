@@ -13,10 +13,11 @@ interface IRunner {
   // Never throws. Streams progress events. Errors land in RunResult.error.
   run(quest: Quest, files: Record<string, string>, onProgress: (e: BuildProgressEvent) => void, signal: AbortSignal): Promise<RunResult>
 }
-interface BuildProgressEvent { phase: 'writing' | 'building' | 'launching' | 'testing' | 'parsing'; elapsedMs: number; lastLine: string; percent?: number }
 interface RunResult { ok: boolean; compiled: boolean; compilerOutput: string; tests: TestCaseResult[]; testsPassed: number; testsTotal: number; durationMs: number; loop: 'fast' | 'headless'; error?: string }
 interface TestCaseResult { name: string; passed: boolean; message?: string; durationMs?: number }
 ```
+
+`BuildProgressEvent` is defined in `src/shared/types/run.ts` (A85); that file is the source of truth. Fields: `runId` (the id the renderer passed in its request; every event of a run carries it), `phase` (`preparing`, `writing`, `building`, `launching`, `testing`, `parsing`, `reviewing`), `elapsedMs`, `lastLine`, `percent?`, `loop?` (`fast` or `headless`, once chosen), `loopReason?` (sent once with the choice). Services emit it through `sendBuildProgress` in `src/main/ipc/sendBuildProgress.ts`. `RunResult` and `TestCaseResult` above match `run.ts`.
 
 `RunnerFactory.forQuest(quest)` returns `LiveEditorRunner` when the engine is 5.8+, the editor is open with the sandbox project, the MCP server answers, and the diff since the last successful full build touches no header of a reflected type; otherwise `HeadlessRunner`. The choice and the reason go into the progress stream so the UI can say "fast loop" or "full build".
 

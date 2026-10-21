@@ -1,6 +1,7 @@
 // App lifecycle and composition root: builds services, registers IPC, and opens the window.
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 
+import { createHandlers } from "./ipc/createHandlers";
 import { registerHandlers } from "./ipc/registerHandlers";
 import { createMainWindow } from "./window/createMainWindow";
 
@@ -9,7 +10,7 @@ async function start(): Promise<void>
 {
 	await app.whenReady();
 
-	registerHandlers();
+	registerHandlers(ipcMain, createHandlers({ getAppVersion: () => app.getVersion() }));
 	createMainWindow();
 
 	app.on("activate", () =>
