@@ -148,6 +148,22 @@ describe("ContentLoader", () =>
 		expect(content.problems).toEqual([{ file: "patterns.json", section: "entry 0 (observer)", message: "question id \"observer-1\" is used twice in this pattern card" }]);
 	});
 
+	it("accepts linkMode code-only on a glossary entry and rejects any other value", async () =>
+	{
+		await fixture.write("glossary.json", JSON.stringify([
+			{ ...glossaryEntry("check-macro"), linkMode: "code-only" },
+			{ ...glossaryEntry("ensure-macro"), linkMode: "never" },
+			glossaryEntry("actor"),
+		]));
+
+		const content = await new ContentLoader(fixture.root).load();
+
+		expect(content.glossary.map((entry) => [entry.id, entry.linkMode])).toEqual([["check-macro", "code-only"], ["actor", undefined]]);
+		expect(content.problems).toEqual([
+			{ file: "glossary.json", section: "entry 1 (ensure-macro)", message: "[1].linkMode: \"never\" is not allowed (expected one of: code-only)" },
+		]);
+	});
+
 	it("names the glossary entry and field that is wrong", async () =>
 	{
 		const broken = { ...glossaryEntry("tick"), short: 3 };

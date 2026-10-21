@@ -17,6 +17,7 @@ export const glossaryEntrySchema: z.ZodType<GlossaryEntry> = z.strictObject({
 	unrealDocsUrl: text().startsWith("https://", { error: "expected an https:// link to Epic's docs" }),
 	related: textList(),
 	firstQuestId: text().optional(),
+	linkMode: z.enum(["code-only"]).optional(),
 });
 
 /** One pattern card with its recall and scenario questions. */

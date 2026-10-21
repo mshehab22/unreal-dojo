@@ -291,6 +291,9 @@ export type Quest = ConceptQuest | DrillQuest | BreakdownQuest | BuildQuest | Re
 /** A quest that comes from a Markdown file. */
 export type AuthoredQuest = Exclude<Quest, DrillQuest>;
 
+/** How the TermLinker may link a glossary term. */
+export type GlossaryLinkMode = "code-only";
+
 /** One glossary term with its hover text and Epic docs link. */
 export interface GlossaryEntry
 {
@@ -306,6 +309,9 @@ export interface GlossaryEntry
 	related: string[];
 
 	firstQuestId?: string;
+
+	/** "code-only" links the term only inside inline code (for terms that are also plain English words); absent links normally. */
+	linkMode?: GlossaryLinkMode;
 }
 
 /** A collectible pattern card with its recall and scenario drill items. */

@@ -71,7 +71,7 @@ Errors name the file (relative to `content/`), and the section and line when kno
 
 ## Term linking
 
-`TermLinker` is a remark plugin: it finds glossary terms and aliases in text nodes (longest match first, case sensitive for identifiers such as `AActor`, case insensitive for plain words such as "actor"), skips code blocks and headings, and emits a `glossaryTerm` node with the entry id. The renderer maps that node to a `HoverCard`. The same alias table feeds Monaco's hover and completion providers (exposed through IPC as a flat list).
+`TermLinker` is a remark plugin: it finds glossary terms and aliases in text nodes (longest match first, case sensitive for identifiers such as `AActor`, case insensitive for plain words such as "actor"), skips code blocks and headings, and emits a `glossaryTerm` node with the entry id. An entry with `linkMode: "code-only"` (terms that are also ordinary English words, such as `check` and `ensure`) links only inside inline code, never in plain text; an entry without `linkMode` links normally. The renderer maps that node to a `HoverCard`. The same alias table feeds Monaco's hover and completion providers (exposed through IPC as a flat list).
 
 ## Verifier (`tools/verify-content.ts`)
 
