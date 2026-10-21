@@ -520,3 +520,10 @@ exit code 0
   - The obvious swarm walk (loop to the live count): fails `NewSparksWaitAStep` and `LaunchBurstsToTheEnd`, both from children moving in the step they were born.
   - Content verifier `--pack patterns`: no problems.
 - Not done: no boss for this world yet (A490). No screenshots (editor runs with `-NullRHI` on this Mac). Windows unverified. Decisions A490 to A496.
+
+### Fix round 1
+- Rebased on World 2's fix round.
+- Originality (D13): the world no longer echoes the source's crypt setting. It now takes place on the arena's training floor, and the refactor is `p3-arena-refactor` with `ADojoP3ArenaBrazier`, `ADojoP3ArenaSweeper`, and `ADojoP3ArenaDirector`. Two blocking examples are new: a scoreboard rolling its number up in one for loop, and a winner's banner fading in inside one loop. They replace the patrol written as loops. The card's prompts and its which-pattern item are rewritten (the item is now a pit lane in a racing game). The when-not quest's board game is now an armory shop whose prices change only on a sale. The patrol drone build stays.
+- The drone brief now says its five-second update is a direct Tick call in the tests, since real frames reach Tick capped at 0.4 seconds by default. Its editor step uses Speed 900 under `t.MaxFPS 2` so each frame really carries it most of a corridor.
+- `docs/product.md` lists Pack 2's worlds as one ordered list, and A370 carries a dated note that A491 supersedes it in part. A491 now records that the Lead's A68 re-pointed the Pack 4 gate.
+- Engine, UE 5.8.3 on the Mac, fresh sandboxes under the engine lock: reference solutions 27 of 27 pass across the three patterns worlds; starters compile and 22 of 27 fail, the same split as before. The obvious swarm walk still fails only `NewSparksWaitAStep` and `LaunchBurstsToTheEnd`.
