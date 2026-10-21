@@ -1,5 +1,6 @@
 // Builds the handler for every DojoApi method. Services replace the stubs here as each system task lands.
 import type { DojoMethod } from "@shared/ipc";
+import type { EngineInstall, ToolchainCheck } from "@shared/types/engine";
 
 import type { HandlerDefinition, HandlerTable } from "./HandlerDefinition";
 import { notImplemented } from "./notImplemented";
@@ -26,12 +27,25 @@ export interface HandlerDependencies
 {
 	/** Returns the app version (`app.getVersion()` in the real app). */
 	getAppVersion: () => string;
+
+	/** Returns the engine locator (M1.1). A function so an unsupported platform fails on the call, not at startup. */
+	getEngineLocator: () => EngineLocatorService;
+}
+
+/** The part of EngineLocator the handlers use, so tests can pass a fake. */
+export interface EngineLocatorService
+{
+	/** Every supported engine found on this machine. */
+	findEngines(): Promise<EngineInstall[]>;
+
+	/** The platform build toolchain check. */
+	checkToolchain(): Promise<ToolchainCheck>;
 }
 
 /** Task names used in not-implemented messages, so the renderer can say when a feature arrives. */
 const ARRIVES_WITH = {
 	settings: "the settings service (app-shell)",
-	engine: "the engine locator (M1.1)",
+	engine: "the engine locator (M1.1) and its folder picker",
 	sandbox: "sandbox setup (M1.2)",
 	editor: "the fast loop (M1.4)",
 	runs: "the build and test loop (M1.3 and M1.4)",
@@ -63,9 +77,9 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		setApiKey: stub("setApiKey", ARRIVES_WITH.settings, [apiKeySchema]),
 		clearApiKey: stub("clearApiKey", ARRIVES_WITH.settings, []),
 
-		detectEngines: stub("detectEngines", ARRIVES_WITH.engine, []),
+		detectEngines: { argumentSchemas: [], handle: () => dependencies.getEngineLocator().findEngines() },
 		pickEngineFolder: stub("pickEngineFolder", ARRIVES_WITH.engine, []),
-		checkToolchain: stub("checkToolchain", ARRIVES_WITH.engine, []),
+		checkToolchain: { argumentSchemas: [], handle: () => dependencies.getEngineLocator().checkToolchain() },
 		getEnvironmentStatus: stub("getEnvironmentStatus", ARRIVES_WITH.engine, []),
 		completeFirstRun: stub("completeFirstRun", ARRIVES_WITH.settings, []),
 

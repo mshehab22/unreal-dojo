@@ -5,10 +5,22 @@ import { DOJO_METHODS, IPC_CHANNELS, type IpcResponse } from "@shared/ipc";
 import { isAppError } from "@shared/types/errors";
 
 import { AppErrorException } from "../src/main/errors/AppErrorException";
-import { createHandlers } from "../src/main/ipc/createHandlers";
+import { createHandlers, type HandlerDependencies } from "../src/main/ipc/createHandlers";
 import type { HandlerDefinition } from "../src/main/ipc/HandlerDefinition";
 import { idSchema, playerNameSchema } from "../src/main/ipc/requestSchemas";
 import { registerHandlers, wrapHandler, type IpcHandleRegistrar, type WrappedHandler } from "../src/main/ipc/registerHandlers";
+
+/** A fake toolchain answer the engine handlers pass through. */
+const FAKE_TOOLCHAIN = { ok: true, tool: "xcode-select", message: "Xcode 27.1 is selected.", toolVersion: "27.1", problems: [] } as const;
+
+/** Handler dependencies with a fixed version and a fake engine locator that finds one engine. */
+const FAKE_DEPENDENCIES: HandlerDependencies = {
+	getAppVersion: () => "9.9.9",
+	getEngineLocator: () => ({
+		findEngines: async () => [{ path: "/Engines/UE_5.8", version: "5.8.3", source: "launcher", supportsFastLoop: true }],
+		checkToolchain: async () => ({ ...FAKE_TOOLCHAIN, problems: [] }),
+	}),
+};
 
 /** A stand-in for ipcMain that records each registered channel. */
 function createFakeRegistrar(): { registrar: IpcHandleRegistrar; handlersByChannel: Map<string, WrappedHandler> }
@@ -30,7 +42,7 @@ function createFakeRegistrar(): { registrar: IpcHandleRegistrar; handlersByChann
 function createInvoker(): (channel: string, ...methodArguments: unknown[]) => Promise<IpcResponse<unknown>>
 {
 	const { registrar, handlersByChannel } = createFakeRegistrar();
-	registerHandlers(registrar, createHandlers({ getAppVersion: () => "9.9.9" }));
+	registerHandlers(registrar, createHandlers(FAKE_DEPENDENCIES));
 
 	return (channel, ...methodArguments) =>
 	{
@@ -71,7 +83,7 @@ describe("registerHandlers", () =>
 	it("registers a handler on every channel and nothing else", () =>
 	{
 		const { registrar, handlersByChannel } = createFakeRegistrar();
-		registerHandlers(registrar, createHandlers({ getAppVersion: () => "9.9.9" }));
+		registerHandlers(registrar, createHandlers(FAKE_DEPENDENCIES));
 
 		expect([...handlersByChannel.keys()].sort()).toEqual(Object.values(IPC_CHANNELS).sort());
 	});
@@ -81,6 +93,32 @@ describe("registerHandlers", () =>
 		const invoke = createInvoker();
 
 		expect(await invoke(IPC_CHANNELS.getAppVersion)).toEqual({ ok: true, value: "9.9.9" });
+	});
+
+	it("answers detectEngines and checkToolchain from the engine locator", async () =>
+	{
+		const invoke = createInvoker();
+
+		expect(await invoke(IPC_CHANNELS.detectEngines)).toEqual({ ok: true, value: [{ path: "/Engines/UE_5.8", version: "5.8.3", source: "launcher", supportsFastLoop: true }] });
+		expect(await invoke(IPC_CHANNELS.checkToolchain)).toEqual({ ok: true, value: FAKE_TOOLCHAIN });
+	});
+
+	it("passes an engine locator AppError through unchanged", async () =>
+	{
+		const { registrar, handlersByChannel } = createFakeRegistrar();
+		const failingLocator = () =>
+		{
+			throw new AppErrorException("toolchain-missing", "Unreal Dojo works with Unreal on Windows and macOS only.", "Run Unreal Dojo on a Windows PC or a Mac.");
+		};
+
+		registerHandlers(registrar, createHandlers({ ...FAKE_DEPENDENCIES, getEngineLocator: failingLocator }));
+
+		const handler = handlersByChannel.get(IPC_CHANNELS.detectEngines);
+		if (!handler) throw new Error("no detectEngines handler");
+
+		const error = expectError(await handler({} as Parameters<WrappedHandler>[0]), "toolchain-missing");
+
+		expect(error.suggestedAction).toBe("Run Unreal Dojo on a Windows PC or a Mac.");
 	});
 
 	it("answers a stub with a not-implemented AppError that names when it arrives", async () =>

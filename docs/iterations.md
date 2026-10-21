@@ -160,3 +160,23 @@ Parsed 8 files (0 packs, 0 worlds, 0 quests, 8 examples, 0 glossary entries, 0 p
 - What changed: all of the above. The teardown now ends play on each actor by hand, so 5.8 runs the same path older engines will. The map was regenerated with the same Python script under its new name. Decisions A43 and A45 are updated and A46 records the naming call.
 - Proof (fresh copy of the template, UE 5.8.3, stdin from `/dev/null`): full editor build `Result: Succeeded` in 19 s; headless test with the per-quest filter `Dojo.Sample.Health` found 1 test, `Result={Success}`, `TEST COMPLETE. EXIT CODE: 0`, 18 s for the whole run, the editor loaded `L_Sandbox`; report: 1 succeeded, 0 warnings, 0 failed.
 - Still open: Windows, and the C++ APIs and map on UE 5.4 to 5.7 (logged in `docs/problems.md`).
+
+## M1.1 Engine locator and platform paths (unreal-pipeline, builder-unreal)
+- What changed: the app can now find Unreal Engine on its own. It reads the Epic launcher's list of installed engines (on Windows and on the Mac), the Windows registry, and the usual install folders, reads each engine's exact version, and lists every engine from 5.4 up, newest first. A learner can also point at a folder by hand; a wrong folder or a too-old engine gets a plain explanation. It also checks the compiler setup: Visual Studio with the C++ game workload on Windows; on the Mac, that full Xcode is selected, answers, and has its license accepted, and whether the Metal toolchain is installed. Every missing piece comes back as a plain-English message with the exact fix. All the Windows and Mac path differences now live in two small objects chosen by one factory.
+- What was tried and what was solved: the launcher's list on this Mac holds three entries for the same folder (the engine plus the Quixel Bridge and Fab plugins), so only entries named like `UE_5.8` count as engines. The engine is in `~/Applications`, not the launcher's documented default `/Users/Shared/Epic Games`, so both are scanned (A163). The missing Metal toolchain (found in M1.2a) is reported but does not count as "build blocked", because builds and headless tests work without it; the summary still names the Xcode version (A161). On the first real run the summary only mentioned Metal, so it was changed to "Xcode 27.1 is selected ... The Metal toolchain is not installed ...".
+- How to see it: `npx tsx tools/locate-engine.ts --pick ~/Applications/UE_5.8/Engine` prints what the app finds on this machine. In the app, the `detectEngines` and `checkToolchain` requests now answer for real. Nothing visible changed on screen (the first-run screen is a later task), so there is no screenshot.
+- Proof, the real run on this Mac (MacBook Air M5, UE 5.8.3, Xcode 27.1), trimmed:
+
+```
+engines:   /Users/mshehab22/Applications/UE_5.8   version 5.8.3   source launcher   supportsFastLoop true
+toolchain: ok true, tool xcode-select, toolVersion 27.1
+           "Xcode 27.1 is selected (/Applications/Xcode.app/Contents/Developer). The Metal toolchain is not installed.
+            Builds and tests work, but the Unreal editor window will not open."
+           problem: toolchain-missing, blocksBuild false, fix "Run once in Terminal: xcodebuild -downloadComponent MetalToolchain"
+manual pick of ~/Applications/UE_5.8/Engine: /Users/mshehab22/Applications/UE_5.8, 5.8.3, source manual
+exit code 0
+```
+
+- Checks: `npm run typecheck` passes; `npm test` 5 files, 70 tests passed (43 new: both path objects, the platform factory, every locator source on both platforms, duplicates, ordering, old and broken engines, manual pick, the registry reader, every Windows and Mac toolchain failure and the healthy cases); `npm run build` passes; `npm run test:e2e` 1 passed.
+- Decisions made: A160 to A167 in `docs/decisions.md`.
+- Not done or left for later: the Windows side is unit tested with fakes only and is unverified on a real Windows machine (registry output, vswhere output, the Program Files and ProgramData folders). `pickEngineFolder` still needs the folder dialog (A167). `getEnvironmentStatus` waits for the settings service. No Xcode minimum-version check yet (A165).

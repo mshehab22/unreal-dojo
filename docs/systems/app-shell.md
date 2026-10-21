@@ -72,9 +72,9 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Settings | `getSettings()` | `Settings` (with `hasApiKey`, never the key) | settings task |
 | Settings | `updateSettings(patch)` | `Settings` | settings task |
 | Settings | `setApiKey(apiKey)`, `clearApiKey()` | nothing; key kept in safeStorage | settings task |
-| First run | `detectEngines()` | `EngineInstall[]` | M1.1 |
-| First run | `pickEngineFolder()` | `EngineInstall` or null when cancelled | M1.1 |
-| First run | `checkToolchain()` | `ToolchainCheck` (vswhere or xcode-select) | M1.1 |
+| First run | `detectEngines()` | `EngineInstall[]` | done (M1.1), through `EngineLocator` |
+| First run | `pickEngineFolder()` | `EngineInstall` or null when cancelled | M1.1 follow-up: needs the folder dialog; `EngineLocator.inspectFolder` is ready |
+| First run | `checkToolchain()` | `ToolchainCheck` (vswhere or xcode-select) | done (M1.1), through `EngineLocator` |
 | First run | `getEnvironmentStatus()` | `EnvironmentStatus` for the Title chips | M1.1 with settings |
 | First run | `completeFirstRun()` | `Settings` with `firstRunCompletedAt` | settings task |
 | Sandbox | `pickSandboxFolder()` | `SandboxFolderChoice` (path and warnings) or null | M1.2 |

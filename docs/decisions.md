@@ -14,6 +14,33 @@ Newest first inside each section. A decision names the options considered, the c
 - Worked-level self-explanations (`product.md`): stored, not graded. `QuestDraft` and `QuestProgress` gain optional `selfExplanations` (marked line key to sentence; the key format comes from the quest content in M0.4), saved through `saveQuestDraft`. The gate (every marked line explained before the gap unlocks) is renderer-only.
 Reverse cost: low while only stubs exist.
 
+### A167 2026-10-21 `detectEngines` and `checkToolchain` answer through IPC now; `pickEngineFolder` waits for the dialog (builder-unreal, M1.1)
+Options: leave all engine methods as stubs; wire the two that need no UI. Chosen: wire the two. `HandlerDependencies` gains `getEngineLocator`, a function so the locator is built on the first call and an unsupported operating system fails that call with a plain `AppError` instead of crashing startup. `pickEngineFolder` needs Electron's `dialog`, which belongs with the app-shell; `EngineLocator.inspectFolder` is ready for it. Reverse cost: none.
+
+### A166 2026-10-21 PlatformPaths holds paths only; the toolchain check and registry are separate injected objects (builder-unreal, M1.1)
+The spec put `toolchainCheck()` and `killTree(pid)` on PlatformPaths. Options: one object per platform that does paths and runs processes; paths as pure math, with the toolchain checker, registry reader, file system, and process runner as their own interfaces. Chosen: the second. Path objects then need no fakes at all, and each checker is tested with a scripted command runner. `createUnrealPlatform.ts` is the one place that branches on `process.platform`. `killTree` arrives with the builder in M1.3. Reverse cost: low.
+
+### A165 2026-10-21 Visual Studio check requires the C++ game workload and 17.14 or later for every engine (builder-unreal, M1.1)
+Options: check only that Visual Studio exists; check the workload; check the workload and the minimum version per engine. Chosen: workload (`Microsoft.VisualStudio.Workload.NativeGame` plus the MSVC x64 tools) and 17.14 or later, which is what UE 5.8 needs (research 9.1). A learner on 5.4 to 5.7 with an older Visual Studio 2022 would be told to update even though their engine might build. Simple now; making it per engine is a small change if that case shows up. Xcode has no minimum-version check yet (Epic's per-engine Xcode table was not checked). Reverse cost: low.
+
+### A164 2026-10-21 Registry read through `reg query`, including source builds (builder-unreal, M1.1)
+Options: a native registry module; `reg query`. Chosen: `reg query`, no native module and no package.json change. Reads the launcher key `HKLM\SOFTWARE\EpicGames\Unreal Engine` and also `HKCU\Software\Epic Games\Unreal Engine\Builds`, where engines built from source register. Only the default (64-bit) registry view is read. Unverified on a real Windows machine. Reverse cost: none.
+
+### A163 2026-10-21 Default install folders on macOS include `~/Applications` (builder-unreal, M1.1)
+The launcher's documented default is `/Users/Shared/Epic Games`, but this Mac's launcher installed UE 5.8 into `~/Applications/UE_5.8`. Options: shared folder only; both. Chosen: both. The launcher list finds it anyway; the folder scan is the backup when the list is missing. Reverse cost: none.
+
+### A162 2026-10-21 Engines older than 5.4 are left out of detection; a manual pick of one is refused (builder-unreal, M1.1)
+Options: list every engine with a "too old" flag; leave old ones out. Chosen: leave them out of `detectEngines` (the first-run screen should only offer engines that work) and answer `engine-version-unsupported` with a plain message when the learner picks one by hand. Reverse cost: low, one filter.
+
+### A161 2026-10-21 `ToolchainCheck` gains `problems` (each an `AppError` with `blocksBuild`) and `toolVersion` (builder-unreal, M1.1)
+The M0.2 shape had one message and one action. The Mac can have a blocking problem and a non-blocking one at once (the missing Metal toolchain does not stop builds or headless tests, only the editor window). Options: one message only; a list. Chosen: a list, blocking first; `ok` is false only for blocking problems; `message` and `suggestedAction` still summarize, so a simple chip needs nothing else. Changes `src/shared/types/engine.ts` (app-shell's file, a small additive change). Reverse cost: low.
+
+### A160 2026-10-21 `EngineSource` gains `launcher`; the launcher's install list is read first on both platforms (builder-unreal, M1.1)
+Options: treat engines from `LauncherInstalled.dat` as `default-folder`; give them their own source. Chosen: their own source, because the launcher list also finds engines in non-default folders (as on this Mac). Search order is launcher list, registry, default folders; a folder found twice keeps the first source. Plugin entries in the list (`QuixelBridge_5.8`, `FabPlugin_5.8`) share the engine's folder and are skipped by name (`UE_<version>` only). Reverse cost: none.
+
+### A89 2026-10-21 Content methods and `startDrill` wait for M0.2b (M0.2, builder-shell)
+`src/shared/types/content.ts` is still empty on this branch (M0.4 is writing it). Options: invent placeholder content types in app-shell; leave the methods out. Chosen: leave them out and add them in M0.2b after M0.4 merges: `listPacks`, `getPack` or `getWorld`, `getQuest`, `getGlossary`, the flat glossary term list for Monaco, `getPatternCards`, and `startDrill` (its items carry content shapes such as questions and Parsons blocks). Everything else in the specs is in the contract now. Reverse cost: none.
+
 ### A88 2026-10-21 No "view reference solution" method yet (M0.2, builder-shell)
 `docs/product.md` and ui-quests say a learner can view a reference solution (costs the quest's XP or a Seer Stone, schedules a rematch), but `docs/systems/content-engine.md` says `tools/solutions/` is "never loaded by the app". Options: add `viewSolution` reading `tools/solutions/`; add it reading a solution shipped inside the quest file; leave it out. Chosen: leave it out until the Lead settles where solutions live in the shipped app. The Seer Stone count is already in `PlayerProgress`. Reverse cost: one method.
 
