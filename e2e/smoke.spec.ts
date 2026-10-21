@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { expect, test } from "./support/dojoTest";
-import { expectedWindowSize, heightIsLimitedByScreen, measureWindowSizes, MINIMUM_WINDOW_SIZE, SPEC_WINDOW_SIZE } from "./support/windowSize";
+import { expectedWindowSize, heightIsLimitedByScreen, measureWindowSizes, MINIMUM_WINDOW_SIZE, SCREEN_HEIGHT_SLACK, SPEC_WINDOW_SIZE } from "./support/windowSize";
 
 const PACKAGE_VERSION: string = JSON.parse(readFileSync(resolve("package.json"), "utf8")).version;
 
@@ -20,12 +20,14 @@ test("the app opens its main window", async ({ dojo, camera }) =>
 
 	expect(sizes.bounds?.width).toBe(expectedSize.width);
 	// When the screen sets the height, macOS fits the window to the work area of that moment, which the Dock can shrink and grow again
-	// a moment later (853, then 858, on the M5 Air, A118). Then the window only has to fit: at least 700 and no taller than the screen allows.
+	// a moment later (853, then 858, on the M5 Air, A118). Then the height must be within a few points of the screen's limit, and never below 700.
 	// A window that gets its full 900 is still checked exactly.
 	if (heightIsLimitedByScreen(sizes.workArea))
 	{
+		const screenLimit = Math.min(SPEC_WINDOW_SIZE.height, sizes.workArea.height);
+
 		expect(sizes.bounds?.height).toBeGreaterThanOrEqual(MINIMUM_WINDOW_SIZE.height);
-		expect(sizes.bounds?.height).toBeLessThanOrEqual(Math.min(SPEC_WINDOW_SIZE.height, sizes.workArea.height));
+		expect(Math.abs((sizes.bounds?.height ?? 0) - screenLimit), `height ${sizes.bounds?.height} against a screen limit of ${screenLimit}`).toBeLessThanOrEqual(SCREEN_HEIGHT_SLACK);
 	}
 	else
 	{

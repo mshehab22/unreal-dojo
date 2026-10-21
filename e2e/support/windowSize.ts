@@ -31,7 +31,10 @@ export function expectedWindowSize(workArea: WindowSize): WindowSize
 	};
 }
 
-/** True when the screen, not the spec, sets the height. The work area can change after macOS sizes the window (the Dock resizing, A118), so only a range can be checked then. */
+/** How far the height may be from the screen's limit when the screen sets it: 1 point of rounding plus the Dock moving the work area by about 5 (A118). A 1440x800 or 1440x720 window still fails. */
+export const SCREEN_HEIGHT_SLACK = 12;
+
+/** True when the screen, not the spec, sets the height. The work area can change after macOS sizes the window (the Dock resizing, A118), so the height is then checked within SCREEN_HEIGHT_SLACK of the limit. */
 export function heightIsLimitedByScreen(workArea: WindowSize): boolean
 {
 	return workArea.height < SPEC_WINDOW_SIZE.height && workArea.height > MINIMUM_WINDOW_SIZE.height;
