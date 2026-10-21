@@ -514,3 +514,9 @@ exit code 0
 - Proof: the verifier on the foundations pack reports no problems. Under the shared engine lock on the Mac (UE 5.8.3), the four World 1 reference solutions, which the boss uses as its pieces, rebuilt (`Result: Succeeded`) and passed 8 of 8 headless tests; the pieces' code did not change in this task. Nothing visible in the app changed, so no screenshots; the build log and report were in this session's scratch folder and are not kept.
 - Decisions made: A330 (the Lead's), A331, A332.
 - Still open: Windows, and the verifier's `--engine` mode on this content.
+
+### Fix round 1
+- What the reviewer asked for: the boss reset its targets with Repair, which only acts on a broken target, so a target that ended the round lowered kept its hits, its misses, and its MISS label into the next round. Also: say plainly that misses made while the score is 0 still count against points earned later.
+- What changed: the boss now lists a fifth addition, `ResetForRound` on the pop-up target, which lowers it from any state, clears hits and misses, and refreshes the label. Both reference plans' reset steps, the "additions" piece, the round-reset piece, and the integration rubric use it, and the line saying Repair clears misses is gone. The spec now says the keeper subtracts every miss from the points earned and only then clamps at 0 (A338).
+- Proof: the verifier reports no problems for the boss quest. Spec text only; no code changed, so nothing was rebuilt. Nothing visible in the app changed.
+- Decisions made: A338.
