@@ -6,6 +6,7 @@ import type { ContentCheck, QuestRecord, VerifierInput } from "./ContentCheck";
 import { coverageCheck } from "./checks/coverageCheck";
 import { dependencyCheck } from "./checks/dependencyCheck";
 import { fadeLadderCheck } from "./checks/fadeLadderCheck";
+import { packGateCheck } from "./checks/packGateCheck";
 import { glossaryCheck } from "./checks/glossaryCheck";
 import { planCoverageCheck } from "./checks/planCoverageCheck";
 import { questionCheck } from "./checks/questionCheck";
@@ -63,6 +64,7 @@ export const CONTENT_CHECKS: readonly ContentCheck[] = [
 	coverageCheck,
 	solutionCheck,
 	dependencyCheck,
+	packGateCheck,
 ];
 
 /** Lists every pack quest with its file, pack, and world position, then every example. */

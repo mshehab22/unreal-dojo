@@ -1,5 +1,6 @@
 // The keyboard way into the board: every piece in a list, a button per kind to add one, and the selected piece's kind, name, and purpose.
 import { PlusIcon, Trash2Icon } from "lucide-react";
+import { useState } from "react";
 
 import type { PieceKind } from "@shared/types/content";
 import type { BreakdownPiece, BreakdownPlan } from "@shared/types/progress";
@@ -26,6 +27,9 @@ export function PiecePanel({ plan, onPlanChange, selectedPieceId, onSelectPiece 
 {
 	const selected = plan.pieces.find((piece) => piece.id === selectedPieceId) ?? null;
 
+	// Only a piece added from this panel takes focus, so the panel appearing elsewhere (the compare step) never pulls the page down to it.
+	const [addedPieceId, setAddedPieceId] = useState<string | null>(null);
+
 	/** Adds a piece of a kind and selects it so its name can be typed at once. */
 	const add = (kind: PieceKind): void =>
 	{
@@ -33,6 +37,7 @@ export function PiecePanel({ plan, onPlanChange, selectedPieceId, onSelectPiece 
 
 		onPlanChange({ ...plan, pieces: [...plan.pieces, piece] });
 		onSelectPiece(piece.id);
+		setAddedPieceId(piece.id);
 	};
 
 	/** Changes one field of the selected piece. */
@@ -100,7 +105,7 @@ export function PiecePanel({ plan, onPlanChange, selectedPieceId, onSelectPiece 
 					</label>
 					<label className="flex flex-col gap-1">
 						<span className="text-xs text-paper-faint">Name</span>
-						<input data-testid="piece-label" value={selected.label} onChange={(event) => update({ label: event.target.value })} autoFocus placeholder="For example DashComponent" maxLength={200} className={cn(FIELD_CLASS, "h-9")} />
+						<input data-testid="piece-label" value={selected.label} onChange={(event) => update({ label: event.target.value })} autoFocus={selected.id === addedPieceId} placeholder="For example DashComponent" maxLength={200} className={cn(FIELD_CLASS, "h-9")} />
 					</label>
 					<label className="flex flex-col gap-1">
 						<span className="text-xs text-paper-faint">Purpose (required): what is it for?</span>

@@ -1,19 +1,11 @@
-// The fake's full quests: the real Pack 1 World 1 (generated from content by tools/write-fake-world-fixture.ts), and stand-ins for the invented map stages.
+// The fake's full quests: the real Pack 1 World 1 (built from content/ at build and test time, A365), and stand-ins for the invented map stages.
 import type { LearnerQuest, LearnerWorld, QuestOutline } from "@shared/types/catalog";
 import type { AuthoredQuestKind } from "@shared/types/content";
 
-import worldOneJson from "./worldOneFixture.json";
+import worldOneFixture from "virtual:dojo-fake-world";
 
-/** The fixture's shape, as tools/fake/buildFakeWorldFixture.ts writes it. */
-interface WorldOneFixture
-{
-	packId: string;
-	world: LearnerWorld;
-	hints: Record<string, string[]>;
-}
-
-/** The real World 1, typed. */
-const WORLD_ONE_FIXTURE = worldOneJson as unknown as WorldOneFixture;
+/** The real World 1 with its hint texts, as tools/fake/buildFakeWorldFixture.ts builds it. */
+const WORLD_ONE_FIXTURE = worldOneFixture;
 
 /** The pack the real World 1 belongs to. */
 export const WORLD_ONE_PACK_ID = WORLD_ONE_FIXTURE.packId;

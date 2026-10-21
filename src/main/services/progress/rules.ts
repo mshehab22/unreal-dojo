@@ -128,9 +128,29 @@ export const XP_POTION = { share: 0.5, minutes: 30 } as const;
 /** Studio cosmetics a chest can hold, in the order they are given out. */
 export const STUDIO_COSMETICS = ["neon-sign", "arcade-cabinet", "whiteboard-wall", "plant-corner", "trophy-shelf", "server-rack-lights", "coffee-bar", "poster-wall"];
 
-/** Pack gates: a pack (by order) opens once the bosses of these worlds (pack order, world order) are passed. */
-export const PACK_GATES: { packOrder: number; requiresBossOf: { packOrder: number; worldOrder: number }[] }[] = [
-	{ packOrder: 4, requiresBossOf: [{ packOrder: 1, worldOrder: 5 }, { packOrder: 2, worldOrder: 4 }] },
+/** One world whose boss a pack gate waits for, named by pack id and world id (A68, A510). */
+export interface PackGateWorld
+{
+	/** The pack holding the world. */
+	packId: string;
+
+	/** The world id (its `world.json` id), which stays put when worlds are added before it. */
+	worldId: string;
+}
+
+/** A gate: the pack in position `packOrder` opens only once the boss of every listed world is passed. A listed world that does not exist yet keeps the pack closed. */
+export interface PackGate
+{
+	/** The gated pack's position (1 to 4; Pack 4, Systems Lab, has no folder or id yet). */
+	packOrder: number;
+
+	/** The worlds whose bosses must be passed. */
+	requiresBossOf: PackGateWorld[];
+}
+
+/** Pack 4 opens after the Pack 1 Communication world's boss (world 5) and the Pack 2 Component world's boss (A68, A510). */
+export const PACK_GATES: PackGate[] = [
+	{ packOrder: 4, requiresBossOf: [{ packId: "foundations", worldId: "communication" }, { packId: "patterns", worldId: "component" }] },
 ];
 
 /** Builds the snapshot the renderer reads through `getRules`. */

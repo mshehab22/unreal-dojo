@@ -26,7 +26,7 @@ export function isRevisionNoteReady(note: string): boolean
 	return note.trim().split(/\s+/).filter((word) => word.length > 0).length >= 4;
 }
 
-/** The compare step's controls. */
+/** The compare step's controls: the note and Grade come first, then the reference plan as text (open by default). */
 export function RevisionPanel({ reference, patternIds, note, onNoteChange, onGrade, isGrading, blockers }: RevisionPanelProps)
 {
 	const ready = isRevisionNoteReady(note) && blockers.length === 0;
@@ -38,12 +38,6 @@ export function RevisionPanel({ reference, patternIds, note, onNoteChange, onGra
 				<span className="text-sm font-medium text-paper">{reference.title}</span>
 			</div>
 			<PatternChips patternIds={patternIds} />
-			<details data-testid="reference-text" open className="group rounded-md border border-line bg-raised p-3">
-				<summary className="cursor-pointer text-xs text-paper-muted outline-none focus-visible:ring-2 focus-visible:ring-ring">The reference plan as text</summary>
-				<div className="pt-3">
-					<ReferencePlanList reference={reference} />
-				</div>
-			</details>
 			<p className="text-xs text-paper-muted">Compare the two boards. Change yours if the reference shows you something, then say what you changed and why. Most of the grade comes from this revision.</p>
 			<label className="flex flex-col gap-1">
 				<span className="text-xs text-paper-faint">Revision note: at least one sentence</span>
@@ -58,6 +52,12 @@ export function RevisionPanel({ reference, patternIds, note, onNoteChange, onGra
 				<SendIcon />
 				{isGrading ? "Grading" : "Grade my revision"}
 			</Button>
+			<details data-testid="reference-text" open className="group rounded-md border border-line bg-raised p-3">
+				<summary className="cursor-pointer text-xs text-paper-muted outline-none focus-visible:ring-2 focus-visible:ring-ring">The reference plan as text</summary>
+				<div className="pt-3">
+					<ReferencePlanList reference={reference} />
+				</div>
+			</details>
 		</div>
 	);
 }

@@ -1,6 +1,5 @@
 // The fake's quest flows behave like the services they stand in for: real World 1 quests, grading by the A314 and A315 rules,
 // runs that fail then pass, hints, breakdown submit and revise, drills, and the review timeout that offers Retry review.
-import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -30,12 +29,13 @@ async function solvedDummyFiles(fake: FakeDojoApi): Promise<Record<string, strin
 
 describe("fake World 1 fixture", () =>
 {
-	it("matches the real content, so the fake never drifts from Pack 1 World 1 (regenerate with tools/write-fake-world-fixture.ts)", async () =>
+	it("serves the real World 1 from content/, built when the tests are built, so there is no copy to drift (A365)", async () =>
 	{
 		const content = await new ContentLoader(resolve("content")).load();
-		const committed = JSON.parse(await readFile(resolve("src/renderer/src/data/fake/fixtures/worldOneFixture.json"), "utf8")) as unknown;
+		const expected = buildFakeWorldFixture(content);
+		const served = await new FakeDojoApi("quests").getWorld(expected.world.id);
 
-		expect(committed).toEqual(JSON.parse(JSON.stringify(buildFakeWorldFixture(content))));
+		expect(served.quests.map((quest) => quest.id)).toEqual(expected.world.quests.map((quest) => quest.id));
 	});
 
 	it("keeps hint texts out of the quests (A222)", async () =>

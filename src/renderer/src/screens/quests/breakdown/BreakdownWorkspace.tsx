@@ -1,6 +1,6 @@
 // The breakdown board at work: plan with the spec beside it, submit, compare with a reference plan, revise with a note, and grade.
 import { PanelLeftCloseIcon, PanelLeftOpenIcon, SendIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { BreakdownQuest, BossQuest } from "@shared/types/content";
 import type { BreakdownEdgeKind, BreakdownPlan } from "@shared/types/progress";
@@ -55,6 +55,13 @@ export function BreakdownWorkspace({ quest, initialPlan }: BreakdownWorkspacePro
 	const revise = useDojoAction((client, revised: BreakdownPlan, revisionNote: string) => client.reviseBreakdown({ questId: quest.id, revisedPlan: revised, revisionNote }), [QUERY_KEYS.progress, QUERY_KEYS.availability]);
 	const problems = planProblems(plan);
 	const flowError = submit.error ?? revise.error;
+	const top = useRef<HTMLDivElement>(null);
+
+	// The compare step opens at its top: the reference board and the revision note, not wherever the plan step was scrolled.
+	useEffect(() =>
+	{
+		if (referenceIndex !== null) top.current?.scrollIntoView({ block: "start" });
+	}, [referenceIndex]);
 	const reference = referenceIndex === null ? undefined : quest.referencePlans[referenceIndex];
 
 	/** Sends the first plan and opens the compare step with the reference the service picked. */
@@ -63,7 +70,10 @@ export function BreakdownWorkspace({ quest, initialPlan }: BreakdownWorkspacePro
 		await autosave.saveNow();
 		const choice = await submit.run(plan);
 
-		if (choice) setReferenceIndex(choice.referencePlanIndex);
+		if (!choice) return;
+
+		setSelectedPieceId(null);
+		setReferenceIndex(choice.referencePlanIndex);
 	};
 
 	/** Grades the revision and opens the loot screen. */
@@ -89,7 +99,7 @@ export function BreakdownWorkspace({ quest, initialPlan }: BreakdownWorkspacePro
 	);
 
 	return (
-		<div data-testid="breakdown-quest" data-step={reference ? "compare" : "plan"} className="flex h-full min-h-0 flex-col gap-4">
+		<div ref={top} data-testid="breakdown-quest" data-step={reference ? "compare" : "plan"} className="flex h-full min-h-0 flex-col gap-4">
 			<QuestTitleRow quest={quest} actions={<AutosaveIndicator status={autosave.status} />} />
 			<QuestStepRail steps={STEPS} currentIndex={reference ? 1 : 0} />
 			{flowError && <AppErrorView error={flowError} onRetry={() => void (reference ? grade() : submitPlan())} />}
@@ -128,7 +138,7 @@ export function BreakdownWorkspace({ quest, initialPlan }: BreakdownWorkspacePro
 							<BreakdownBoard plan={plan} positions={positions} onPositionsChange={setPositions} onPlanChange={setPlan} selectedPieceId={selectedPieceId} onSelectPiece={setSelectedPieceId} newEdgeKind={edgeKind} ariaLabel="Your plan" testId="learner-board" />
 						</div>
 						<div className="flex h-80 min-h-0 flex-col gap-2 min-[1300px]:h-auto">
-							<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Reference: {reference.title}</span>
+							<span data-testid="reference-heading" className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Reference: {reference.title}</span>
 							<BreakdownBoard plan={referenceAsPlan(reference)} positions={referencePositions} onPositionsChange={setReferencePositions} readOnly ariaLabel={`Reference plan: ${reference.title}`} testId="reference-board" />
 						</div>
 					</div>

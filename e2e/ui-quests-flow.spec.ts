@@ -9,11 +9,12 @@ import { resolve } from "node:path";
 
 import type { Locator, Page } from "@playwright/test";
 
+import { readFakeWorldFixtureJson } from "../tools/fake/readFakeWorldFixture";
 import { expect, test } from "./support/dojoTest";
 import type { ProofCamera } from "./support/ProofCamera";
 
-/** The real World 1 the fake serves, read for answers the flow types (Parsons lines, the explain model answer). */
-const WORLD_ONE = JSON.parse(readFileSync(resolve("src/renderer/src/data/fake/fixtures/worldOneFixture.json"), "utf8")) as {
+/** The real World 1 the fake serves, built from content/ the same way the app's build does (A365), read for answers the flow types (Parsons lines, the explain model answer). */
+const WORLD_ONE = JSON.parse(readFakeWorldFixtureJson()) as {
 	world: { quests: { id: string; kind: string; parsons?: { id: string; lines: string[] }[]; questions?: { type: string; modelAnswer?: string }[] }[] };
 };
 
@@ -317,6 +318,7 @@ test("a breakdown: plan on the board, submit, compare with a reference, revise w
 
 	await window.getByTestId("submit-plan").click();
 	await expect(workspace).toHaveAttribute("data-step", "compare");
+	await expect(window.getByTestId("reference-heading")).toBeInViewport();
 	await expect(window.getByTestId("reference-board").getByTestId("piece-node").first()).toBeVisible();
 	await expect(window.getByTestId("pattern-chips")).toBeVisible();
 
@@ -350,6 +352,9 @@ test("the breakdown compare step stays readable at 1100x700: boards at a usable 
 	await window.getByTestId("submit-plan").click();
 	await expect(window.getByTestId("breakdown-quest")).toHaveAttribute("data-step", "compare");
 
+	// The compare step opens at its top: nothing focused far down pulls the page away from the reference.
+	await expect(window.getByTestId("reference-heading")).toBeInViewport();
+
 	// Both boards are drawn at about 0.6 zoom or more, so a card's text can be read without zooming.
 	for (const board of ["learner-board", "reference-board"])
 	{
@@ -361,10 +366,24 @@ test("the breakdown compare step stays readable at 1100x700: boards at a usable 
 	await expect(window.getByTestId("reference-piece")).toHaveCount(8);
 	await expect(window.getByTestId("reference-edge")).toHaveCount(8);
 	await expectNoSidewaysScroll("breakdown compare at 1100x700");
-	await window.evaluate("document.querySelector('main').scrollTo({ top: 0 })");
 	await saveScreenshot("breakdown-compare-1100x700");
 	await window.getByTestId("reference-text").scrollIntoViewIfNeeded();
 	await saveScreenshot("breakdown-compare-text-1100x700");
+});
+
+test("at 1440x900 the breakdown compare step opens with the reference and the revision note in view", async () =>
+{
+	await setViewport(1440, 900);
+	await openFake("#/quest?id=f1-dash-with-cooldown");
+	await addDashPieces();
+	await window.getByTestId("submit-plan").click();
+	await expect(window.getByTestId("breakdown-quest")).toHaveAttribute("data-step", "compare");
+
+	// Side by side here: the revise column starts at its top, so the reference heading and the note box are on screen without scrolling.
+	await expect(window.getByTestId("reference-heading")).toBeInViewport();
+	await expect(window.getByTestId("revision-note")).toBeInViewport();
+	await expect(window.getByTestId("revision-note")).not.toBeFocused();
+	await expect.poll(() => boardZoom("reference-board"), { message: "reference-board zoom" }).toBeGreaterThanOrEqual(0.6);
 });
 
 test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Submit with a review retry, loot, see it run", async () =>

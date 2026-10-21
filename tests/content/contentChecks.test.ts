@@ -398,7 +398,20 @@ describe("concept questions and required piece labels", () =>
 
 describe("boss reference integrations (A67)", () =>
 {
-	it("warns when a boss has no integration folder, and errors when the folder has no tests or stray files", async () =>
+	it("errors when a pack boss has no integration folder, and only warns for the format example boss (A520)", async () =>
+	{
+		const lighthouse = example<AuthoredQuest>("08-boss-lighthouse.md");
+		const packBoss = { ...lighthouse, id: "yard", prerequisites: [], pieces: [] } as AuthoredQuest;
+		const found = await solutionCheck.run(inputWith([[packBoss]], { examples: [lighthouse], solutionsFolder: "/nowhere" }));
+
+		expect(found.map((problem) => [problem.file, problem.severity ?? "error"])).toEqual([
+			["packs/p1/worlds/01-w1/01-yard.md", "error"],
+			["examples/example-boss-lighthouse.md", "warning"],
+		]);
+		expect(found[1]?.message).toContain("(format example: a warning, A520)");
+	});
+
+	it("errors when a boss integration folder has no tests or has stray files", async () =>
 	{
 		const folder = await mkdtemp(join(tmpdir(), "dojo-boss-"));
 		const lighthouse = { ...example<AuthoredQuest>("08-boss-lighthouse.md"), id: "yard", prerequisites: [], pieces: [] } as AuthoredQuest;
@@ -418,7 +431,7 @@ describe("boss reference integrations (A67)", () =>
 
 		await rm(folder, { recursive: true, force: true });
 
-		expect(missing.map((problem) => [problem.severity, problem.message])).toEqual([["warning", "no reference integration: add solutions/yard/ with the integration's .h and .cpp files and a .Test.cpp that plays two rounds (A67)"]]);
+		expect(missing.map((problem) => [problem.severity, problem.message])).toEqual([[undefined, "no reference integration: add solutions/yard/ with the integration's .h and .cpp files and a .Test.cpp that plays two rounds (A67)"]]);
 		expect(noTests).toEqual(["solutions/yard/ has no .Test.cpp automation tests", "solutions/yard/notes.txt is not a .h or .cpp file"]);
 		expect(complete).toEqual([]);
 	});

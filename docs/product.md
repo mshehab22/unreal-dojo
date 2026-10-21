@@ -54,7 +54,7 @@ Pack 2, Patterns in Unreal (8 worlds following Nystrom's teaching order in `rese
 
 Pack 3, Mechanics Lab (8 worlds using the GameDev.tv ladder as structure only; original exercises from `research/gamedevtv-exercise-design.md` section 6): Enhanced Input; transforms and movement; collision; spawning and timers; tracing; delegates (boss: the multi-quest Quest System); Mechanic Maker (breakdown and build of ready mechanics); Gameplay Moment (breakdown and build of a 2-minute moment).
 
-Pack 4, Systems Lab (6 worlds, breakdown-first, unlocked after Pack 1 world 5 and Pack 2 world 4): inventory and equipment; ability system (then a note on GAS); save and load; interaction and dialogue; spawning director; AI perception and behavior. Each names the patterns it combines and ships at least two reference breakdowns.
+Pack 4, Systems Lab (6 worlds, breakdown-first, unlocked once the bosses of the Pack 1 Communication world (`foundations/communication`) and the Pack 2 Component world (`patterns/component`) are passed, A68): inventory and equipment; ability system (then a note on GAS); save and load; interaction and dialogue; spawning director; AI perception and behavior. Each names the patterns it combines and ships at least two reference breakdowns.
 
 Repetition rules checked by the verifier: from world 3 of each pack on, every world has a quest that reuses an earlier pattern or concept and names it; every glossary term appears in at least one concept quest and one build quest; every pattern has at least three build use cases across the packs; every quest is reachable through the prerequisite graph.
 
