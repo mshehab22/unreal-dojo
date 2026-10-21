@@ -33,8 +33,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 
 ### M1 Engine and rules (parallel across systems)
 - [x] M1.1 unreal-pipeline: PlatformPaths for Windows and macOS with fake-fs unit tests; EngineLocator (default paths, Windows registry, manual pick, vswhere and Xcode checks). Proof: unit tests on both platform objects.
-- [ ] M1.2 unreal-pipeline: sandbox template in `resources/sandbox-template/` and SandboxProjectService (copy, EngineAssociation, first full build with streamed progress). Proof: the template builds on the Windows desktop; timings recorded in `systems/unreal-pipeline.md`.
-- [ ] M1.3 unreal-pipeline: headless loop (UnrealBuilder, AutomationTestRunner, ReportParser, LogFilter) with the hand-written sample quest (Health component + one automation test). Proof: integration test passes on the Windows desktop; timings recorded.
+- [x] M1.2 unreal-pipeline: sandbox template in `resources/sandbox-template/` and SandboxProjectService (copy, EngineAssociation, first full build with streamed progress). Proof: the template builds on the Windows desktop; timings recorded in `systems/unreal-pipeline.md`.
+- [x] M1.3 unreal-pipeline: headless loop (UnrealBuilder, AutomationTestRunner, ReportParser, LogFilter) with the hand-written sample quest (Health component + one automation test). Proof: integration test passes on the Windows desktop; timings recorded.
 - [ ] M1.4 unreal-pipeline: fast loop (McpEditorClient, LiveEditorRunner: CompileLiveCoding then RunTests, header-change detection that falls back to UBT). Proof: same sample quest round-trips in seconds with the editor open; timings recorded.
 - [ ] M1.5 unreal-pipeline: the same four tasks verified on the Mac. If Unreal is not installed there yet, log as unverified and continue.
 - [x] M1.6 progress-and-rules: XpRules, roles, cards and tiers, spells, Seer Stone, spree and armor, streak and freezes, mastery meter, SM-2 scheduler with review log, DrillScheduler, DailyQuestService, unlock graph, atomic save. Proof: unit tests for every rule in the spec's tables.
@@ -82,15 +82,17 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M2.1c World Map overflow with real content | ui-core | ui-core (session "M0.3 Design tokens...") | m2-1c-worldmap-overflow | building | Merges before M1.6b; adds a real-shaped fixture world |
 | M1.7 AI review providers and graders | ai-review | builder-review (session) | merged 26c3e26 | merged | 1 fix round; live Claude Code and API runs still open (problems.md) |
 | M1.7b Review fallback edges | ai-review | builder-review (session) | merged | merged | 1 fix round |
-| M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3-headless-loop @ 5cdd7fd | fixes | Re-review PASS. Merge taken back: an unhandled run-cancelled rejection in a cancelAll test fails npm test on main |
-| M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | m1-8-verifier @ 5ac6787 | fixes | Reviewer confirmed 3 of 5 and the timer diagnosis (5 of 5 with the M1.3 fix). Round 1: starter check edge cases, report layout, tests, comments. Round 2 after M1.3 merges: reuse M1.3 runners (A63), rerun --engine |
+| M1.2 + M1.3 Sandbox service and headless loop | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | merged 8665386 | merged | 1 fix round plus a test fix; includes the GFrameCounter timer fix |
+| M1.3b Run wiring and prerequisite fill (A65) | unreal-pipeline | builder-unreal (session "M1.2a Sandbox template...") | m1-3b-run-wiring | building | runQuest, cancelRun, checkSnippetSyntax; fill skipped prerequisites |
+| M0.2c Settings service | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | m0-2c-settings | building | electron-store, safeStorage key, environment status |
+| M1.8 GlossaryService, TermLinker, full verifier, --engine | content-engine | content-engine (session "M0.4 Content types...") | m1-8-verifier @ ef932b1 | fixes | Round 1 and round 2 part 1 done (new checks); part 2: --engine on M1.3 runners, expect 5 of 5 |
 | M0.2b Content IPC and handler wiring | app-shell | shell-ipc (session "M0.2 Typed IPC contract") | merged | merged | Passed first review; packaged content path and bad-path recovery verified |
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
 | M2.3b World 1 follow-ups, then Pack 1 World 2 | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (M2.3b @ cfedcf2) | fixes (M2.3b); building (World 2) | Round reset needs ResetForRound (Repair only works on Broken) |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | m2-2-quest-screens | building | Concept, Drill, Breakdown, Build, Loot on the M2.1 data layer and fake |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | m3-1-patterns-observer | building | Engine runs under the shared lock |
-| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness @ 8b6e368 | fixes | Round 1: cleanup and test order now; after M1.3 merges the smoke reuses M1.3 runners (A63) |
+| QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness | fixes | Switching the smoke to M1.3 runners (A63) |
 
 Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
 Queued for unreal-pipeline (A65): fill a tested-out or reset prerequisite quest's files with its reference solution before building a later quest that depends on it, and tell the learner which files came from the reference.
