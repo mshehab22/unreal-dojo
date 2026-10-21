@@ -12,6 +12,8 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 - 2026-10-21, unreal-pipeline: on the Mac the editor (`-NullRHI`) logged "Engine exit requested" after SIGTERM but did not exit within 60 seconds and needed SIGKILL. This was right after UBT replaced the module library it had loaded. Workaround: `EditorLauncher` kills hard after a grace period. Owner: builder-unreal.
 - 2026-10-21, unreal-pipeline: a UE 5.8.3 on macOS forum report says Game-target builds can fail because UBA launches xcodebuild with a closed stdin. Spawn UBT with stdin set to ignore (or from `/dev/null`). With that, the editor target builds fine (M1.2a); the Game target was not built, so the report is neither confirmed nor ruled out.
 
+- 2026-10-21, ai-review M1.7: no live review has come back yet. `claude` is not on PATH on the Mac (only the desktop app's bundled, signed-out copy), so the real `structured_output` shape and whether `--json-schema` with `--tools ""` and `--max-turns 1` returns structured output are unverified; the recorded success envelopes are hand-written. The live API run waits for Mohammad's key. Owner: builder-review, once a signed-in `claude` CLI is installed.
+
 ## Unverified on a platform
 
 (The Lead lists here anything that passed on one machine and could not be run on the other.)
