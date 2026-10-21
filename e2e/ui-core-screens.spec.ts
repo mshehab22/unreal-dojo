@@ -224,14 +224,16 @@ test("a pointer resting where results appear does not steal the keyboard highlig
 	{
 		for (let run = 0; run < 5; run++)
 		{
-			// Rest the pointer where the fourth result row ends up (input 56 px, list padding 8 px, rows 56 px each).
-			await window.mouse.move(550, 126 + 56 + 8 + 56 * 3.5);
+			// Rest the pointer just inside the top edge of where the second result row ends up, then the fourth, in turn (panel top 126 px,
+			// input 56 px, list padding 8 px, rows 56 px). The panel's 8 px rise slides that row up under the still pointer.
+			const restingRow = run % 2 === 0 ? 2 : 4;
+			await window.mouse.move(550, 126 + 56 + 8 + 56 * (restingRow - 1) + 4);
 			await window.keyboard.press(`${SHORTCUT_MODIFIER}+K`);
 			await window.keyboard.type("uprop");
 
 			await expect(window.getByTestId("codex-search-results").getByRole("option")).toHaveCount(4);
 			await window.waitForTimeout(250);
-			await expect(window.getByTestId("codex-search-results").getByRole("option").first(), `run ${run + 1}`).toHaveAttribute("aria-selected", "true");
+			await expect(window.getByTestId("codex-search-results").getByRole("option").first(), `run ${run + 1}, pointer resting on row ${restingRow}`).toHaveAttribute("aria-selected", "true");
 			await window.keyboard.press("Enter");
 			await expect(window.getByTestId("codex-entry"), `run ${run + 1}`).toHaveAttribute("data-term", "uproperty");
 		}
