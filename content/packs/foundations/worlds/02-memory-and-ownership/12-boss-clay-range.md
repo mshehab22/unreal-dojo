@@ -30,7 +30,7 @@ How the range knows what happened to a disc: Space goes through the range, which
 
 The most a round can score is 175: 10 shattered discs at 10, plus 3 bonus targets at 25.
 
-The point of the boss is ownership. Discs remove themselves; the range only watches them. Penalty dummies are made by the spawner and removed by the range at the end of the round. Bonus targets are never spawned or destroyed during play; the rack lends and recalls them. The pieces need one addition, and their rules stay as they are: the dummy spawner gains `DestroyAll`, which destroys every dummy it made and starts its line again. The range keeps its own list of the penalty dummies it asked for, oldest first, to find the oldest standing one.
+The point of the boss is ownership. Discs remove themselves; the range only watches them. Penalty dummies are made by the spawner and removed by the spawner's DestroyAll, which the range calls at the end of the round. Bonus targets are never spawned or destroyed during play; the rack lends and recalls them. The pieces need one addition, and their rules stay as they are: the dummy spawner gains `DestroyAll`, which destroys every dummy it made and starts its line again. The range keeps its own list of the penalty dummies it asked for, oldest first, to find the oldest standing one.
 
 Compiles against earlier quests: f1-popup-target (`Quests/f1-popup-target/DojoF1PopupTarget.h`), f1-training-dummy (`Quests/f1-training-dummy/DojoF1TrainingDummy.h`), f2-clay-disc (`Quests/f2-clay-disc/DojoF2ClayDisc.h`), f2-dummy-spawner (`Quests/f2-dummy-spawner/DojoF2DummySpawner.h`), f2-spotter (`Quests/f2-spotter/DojoF2Spotter.h`), and f2-target-rack (`Quests/f2-target-rack/DojoF2TargetRack.h`).
 
@@ -91,7 +91,7 @@ Feel: tune the throw interval until a fallen disc feels like a stumble you can r
     - { id: discs, kind: step, label: A UPROPERTY array of discs in play from which a shot disc is removed before Shatter and a 0.1 second timer treats any entry that is no longer valid as fallen, covers: [disc-tracking] }
     - { id: feed, kind: step, label: After every throw and every check the range calls Watch on the spotter with the newest disc still valid, covers: [spotter-feed] }
     - { id: keys, kind: step, label: Range calls EnableInput in BeginPlay and binds Space to ShootSpotted and F to StrikePenalty and T to HitBonus which act only while bRoundRunning and R to RestartRound which acts only between rounds, covers: [player-input] }
-    - { id: penalty, kind: step, label: A Fell fate calls SpawnDummy and the throw step skips while any spawned dummy is not knocked down, covers: [penalty] }
+    - { id: penalty, kind: step, label: A tracked disc found invalid without a recorded hit calls SpawnDummy and the range adds the result to its oldest-first penalty list and the throw step skips while any dummy in that list stands and F strikes the first standing one, covers: [penalty] }
     - { id: bonus, kind: step, label: A streak counter reset by every fallen disc calls Deploy on the rack and HitBonus raises the target again after a hit that did not break it and a 4 second timer calls Recall, covers: [bonus] }
     - { id: end, kind: step, label: The check step calls EndRound once ten discs are thrown and none are in play and no bonus is lent and EndRound clears the timers and calls DestroyAll and Recall and Watch with nullptr and shows the score while StartRound zeroes the score and counts, covers: [round-end] }
   edges:
@@ -108,9 +108,9 @@ Feel: tune the throw interval until a fallen disc feels like a stumble you can r
     - { id: discs, kind: step, label: A Blueprint array of discs in play from which the Space event removes the disc before calling Shatter and a 0.1 second timer treats every entry that fails IsValid as fallen, covers: [disc-tracking] }
     - { id: feed, kind: step, label: The last valid entry of that array is passed to the spotter's Watch after every change, covers: [spotter-feed] }
     - { id: keys, kind: step, label: Keyboard events Space and F and T behind a branch on Round Running call Shatter and Strike and Hit and the R event calls Start Round behind a branch on Round Running being false, covers: [player-input] }
-    - { id: penalty, kind: step, label: A Fell fate calls SpawnDummy and a branch on the throw timer waits while any dummy stands, covers: [penalty] }
+    - { id: penalty, kind: step, label: A tracked disc found invalid without a recorded hit calls SpawnDummy and the Blueprint appends the result to an oldest-first penalty array and a branch on the throw timer waits while any dummy in it stands and F strikes the first standing one, covers: [penalty] }
     - { id: bonus, kind: step, label: A streak variable reset by every fallen disc calls Deploy and a T hit that does not break the target calls Raise again and a 4 second Set Timer by Event calls Recall on that target, covers: [bonus] }
-    - { id: end, kind: step, label: When ten discs are thrown and none are in play and no bonus is lent the Blueprint clears its timers and calls DestroyAll and Recall and shows the score and Start Round zeroes the score and counts, covers: [round-end] }
+    - { id: end, kind: step, label: When ten discs are thrown and none are in play and no bonus is lent the Blueprint clears its timers and calls DestroyAll and Recall and Watch with nothing and sets the score on a Text Render actor placed in the level and Start Round zeroes the score and counts and that text, covers: [round-end] }
   edges:
     - { from: level, to: discs, label: spawns a disc per throw }
     - { from: discs, to: feed, label: newest valid disc }
@@ -122,7 +122,7 @@ Feel: tune the throw interval until a fallen disc feels like a stumble you can r
 
 # Integration Rubric
 
-- Each kind of actor has one creator and one remover: discs remove themselves, penalty dummies are removed by the spawner at round end, and bonus targets are only lent and recalled.
+- Each kind of actor has one creator and one remover: discs remove themselves, penalty dummies are removed by the spawner's DestroyAll, which the range calls at the end of the round, and bonus targets are only lent and recalled.
 - The spotter is the only thing Space acts through, and it never points at a disc that is gone.
 - References match ownership: the range or Blueprint tracks discs in play and checks each with IsValid, records hits as they happen instead of reading destroyed discs, and the spotter holds its disc weakly.
 - The pieces are reused; the only addition is DestroyAll on the spawner, with no rewrite of their rules.

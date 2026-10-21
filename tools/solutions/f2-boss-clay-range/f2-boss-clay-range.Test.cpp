@@ -170,4 +170,106 @@ bool FDojo_F2_ClayRange_FallenDiscsCostTime::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F2_ClayRange_SpotterAndStreak, "Dojo.F2.ClayRange.SpotterAndStreak", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** With two discs up, checks the spotter watches the newer and moves to the older after a shot; then shows a fallen disc resets the streak, so shoot 2, fall 1, shoot 1 earns no bonus. */
+bool FDojo_F2_ClayRange_SpotterAndStreak::RunTest(const FString& Parameters)
+{
+	using namespace DojoF2RangeTest;
+
+	FDojoTestWorld TestWorld;
+	FRange Setup = SpawnRange(TestWorld);
+	ADojoF2ClayRange* Range = Setup.Range;
+
+	for (int32 Frame = 0; Frame < 60 && Range->GetThrownCount() < 1; ++Frame) TestWorld.Tick(1);
+	AActor* Older = Setup.Spotter->GetTarget();
+	if (!TestNotNull(TEXT("The spotter watches the first disc"), Older)) return false;
+
+	// The second disc is thrown at 2 seconds, while the first is still in play until 3; a few more frames let the check step run.
+	for (int32 Frame = 0; Frame < 60 * 3 && Range->GetThrownCount() < 2; ++Frame) TestWorld.Tick(1);
+	TestWorld.Tick(12);
+	AActor* Newer = Setup.Spotter->GetTarget();
+	TestTrue(TEXT("With two discs in play the spotter watches the newer one"), Newer != nullptr && Newer != Older);
+
+	Range->ShootSpotted();
+	TestWorld.Tick(12);
+	TestTrue(TEXT("After the newer disc is shot the spotter moves to the older one"), Setup.Spotter->GetTarget() == Older);
+
+	Range->ShootSpotted();
+	TestEqual(TEXT("Two discs shot"), Range->GetScore(), 20);
+
+	// Let the third disc fall, knock its penalty dummy down, then shoot the fourth.
+	for (int32 Frame = 0; Frame < 60 * 5 && Range->CountStandingPenalties() == 0; ++Frame) TestWorld.Tick(1);
+	TestEqual(TEXT("The third disc fell"), Range->CountStandingPenalties(), 1);
+	while (Range->CountStandingPenalties() > 0) Range->StrikePenalty();
+
+	const int32 ThrownBefore = Range->GetThrownCount();
+	for (int32 Frame = 0; Frame < 60 * 3 && Range->GetThrownCount() == ThrownBefore; ++Frame) TestWorld.Tick(1);
+	Range->ShootSpotted();
+
+	TestEqual(TEXT("Three discs shot in all"), Range->GetScore(), 30);
+	TestNull(TEXT("The fall reset the streak, so the third shot in all earns no bonus"), Range->GetActiveBonus());
+	TestEqual(TEXT("Every bonus target is still in the rack"), Setup.Rack->GetAvailableCount(), 3);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F2_ClayRange_BonusGetsItsTime, "Dojo.F2.ClayRange.BonusGetsItsTime", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Earns the last bonus on the ninth disc, never hits it, shoots the tenth, and checks the bonus stays out for its 4 seconds and the round waits for it. */
+bool FDojo_F2_ClayRange_BonusGetsItsTime::RunTest(const FString& Parameters)
+{
+	using namespace DojoF2RangeTest;
+
+	FDojoTestWorld TestWorld;
+	FRange Setup = SpawnRange(TestWorld);
+	ADojoF2ClayRange* Range = Setup.Range;
+	UWorld* World = TestWorld.GetWorld();
+
+	ADojoF1PopupTarget* Bonus = nullptr;
+	float LentAt = 0.f;
+	for (int32 Frame = 0; Frame < 60 * 30 && Range->GetThrownCount() < 10; ++Frame)
+	{
+		if (Setup.Spotter->HasTarget()) Range->ShootSpotted();
+
+		// Break the bonuses from discs 3 and 6, but leave the one from disc 9 alone.
+		ADojoF1PopupTarget* Active = Range->GetActiveBonus();
+		if (Active && Active->GetState() == EDojoF1TargetState::ETS_Raised)
+		{
+			if (Range->GetScore() >= 90)
+			{
+				if (Bonus != Active) LentAt = World->GetTimeSeconds();
+				Bonus = Active;
+			}
+			else
+			{
+				Range->HitBonus();
+				Range->HitBonus();
+			}
+		}
+
+		TestWorld.Tick(1);
+	}
+
+	if (!TestNotNull(TEXT("The ninth disc lent a bonus target"), Bonus)) return false;
+
+	for (int32 Frame = 0; Frame < 60 && Setup.Spotter->HasTarget() == false; ++Frame) TestWorld.Tick(1);
+	Range->ShootSpotted();
+	TestEqual(TEXT("All ten discs shot"), Range->GetScore(), 150);
+	TestTrue(TEXT("The round keeps running while the bonus is still lent"), Range->IsRoundRunning());
+
+	while (World->GetTimeSeconds() < LentAt + 3.8f) TestWorld.Tick(1);
+	TestFalse(TEXT("At 3.8 seconds the unbroken bonus is still out"), Bonus->IsHidden());
+	TestEqual(TEXT("At 3.8 seconds the rack still lends it"), Setup.Rack->GetAvailableCount(), 2);
+	TestTrue(TEXT("At 3.8 seconds the round is still running"), Range->IsRoundRunning());
+
+	while (World->GetTimeSeconds() < LentAt + 4.3f) TestWorld.Tick(1);
+	TestTrue(TEXT("After 4 seconds the unbroken bonus is hidden"), Bonus->IsHidden());
+	TestEqual(TEXT("After 4 seconds it is back in the rack"), Setup.Rack->GetAvailableCount(), 3);
+	TestFalse(TEXT("With the bonus back, the round ends"), Range->IsRoundRunning());
+	TestEqual(TEXT("Ten discs and two broken bonuses"), Range->GetScore(), 150);
+
+	return true;
+}
+
 #endif
