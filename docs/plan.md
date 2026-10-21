@@ -93,7 +93,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
 | M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (round 4 @ 787192d) | passed; merges with World 2 | Hits mutation caught; 10 of 10; A67 layout documented |
-| M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (head bcc8937, rebased) | review (boss) | Boss integration 3e7db85, 22 of 22 with both bosses; A343 fixed four spec gaps found by building |
+| M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (head bcc8937) | fixes (boss) | 22 of 22; boss tests miss four promises (spotter choice, streak reset, round waits for bonus, bonus recall); spec and Blueprint plan wording |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | claude/m2-2-quest-screens-a21151 @ c14b36d | re-review | Round 1 fixed, main merged in; 651 unit, 21 e2e x3 |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
 | M4.x Pack 2 World 2 (Game Loop) | content-patterns | author-patterns (session) | claude/m3-patterns-world2-game-loop @ 92381be | review | 18 of 18 solutions on UE 5.8.3 |
