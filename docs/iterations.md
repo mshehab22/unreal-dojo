@@ -449,3 +449,21 @@ exit code 0
 - Proof: typecheck passes. Unit tests: 40 files, 490 passed, including a new one: 30 items due, twelve drills in a row, and only the first 20 had their schedule moved today, with 10 still waiting for tomorrow. It fails on the round 1 code. Build passes. End-to-end: 14 of 14 passed.
 - Not done or left for later: nothing new; the M1.6b list still stands.
 
+
+## M3.1 Pack 2 lesson zero and the Observer arc (content-patterns, author-patterns)
+- What changed: Pack 2, Patterns in Unreal, now exists with its first world, "The lens, then the first payoff" (seven quests). Lesson zero teaches how to judge a design by the price of the next change. Then the arc for the pattern Unreal hands over most completely: a concept quest on the engine's delegates that never names the pattern, a worked build, a concept quest that names what was just built (Observer), a stub build in a different mechanic, a refactor of tightly wired code into it, and a "when not to use it" quest. The world also holds Observer, ahead of the Time world, so lesson zero has a payoff in the same sitting (A370).
+- The quests and their observables:
+  - Judge a design by the price of the next change (concept): predict, card, six questions.
+  - Announce it once, let anyone listen (concept): native and dynamic multicast delegates, binding, unbinding in EndPlay, dependency direction.
+  - A bounty board that hears every fall (build, worked): three foes with 1, 2, and 3 hits to defeat; each `ke * TakeHit` in the console moves the board from 0 / 3 to 1 / 3, 2 / 3, then BOUNTY DONE. The foes never know the board exists.
+  - What you just built has a name (concept): the Observer card, plus recognize items such as spotting engine overlap events as a subject.
+  - A tutorial sign that stops listening when it is done (build, stub): two `ke * Pull` runs take the sign from "Pull the lever: 2 left" to "Well done", after which the sign has unbound itself. The Level Blueprint can also listen to the lever's On Pulled event. Its one deliberate failure: a sign wired twice hears every pull twice (A376).
+  - Unplug the generator from its devices (refactor): `ke * Toggle` twice still lights and darkens the lamps and sounds the alarm once, but the generator no longer knows lamps or alarms exist.
+  - When a plain call beats a delegate (concept): five cases, with the binding-order trap as the example.
+- The Observer card in the pattern list now lists the two build quests as use cases, with one new recall item and one new when-not scenario. No new glossary terms were needed; six delegate terms now point to the delegates concept quest as their first quest (A379).
+- Proof, all on UE 5.8.3 on the MacBook Air, each sandbox a fresh copy of the template, built and tested with the commands in the unreal-pipeline spec under the shared engine lock:
+  - Reference solutions: build succeeded, 9 of 9 tests passed.
+  - Starters: all three compile; 7 of 9 tests fail. The refactor's behavior test passes on its working starter by design, and so does the sign's reflection test (its declarations are given). Each quest has at least one failing test.
+  - The deliberate failure, checked on its own: the reference sign with plain `AddDynamic` fails only `WiredTwiceHearsOnce` (heard 2, expected 1, plus the engine's duplicate-binding ensure).
+  - Content verifier `--pack patterns` on main: no problems. The full M1.8 checks, run from the unreleased verifier branch on a copy of this content, also report no problems (fade ladder, unlock graph, cross-quest dependencies, solution files).
+- Not done: World 1 has no breakdown or boss yet (A380). No screenshots: nothing ran in the editor's viewport, because this Mac's editor runs with `-NullRHI`. Windows is unverified. Decisions A370 to A381.

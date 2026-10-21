@@ -1460,7 +1460,8 @@
       "dynamic-multicast-delegate",
       "broadcast",
       "unbinding-delegates"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "dynamic-delegate",
@@ -1498,7 +1499,8 @@
       "blueprintassignable",
       "overlap-event",
       "multicast-delegate"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "adddynamic",
@@ -1517,7 +1519,8 @@
       "unbinding-delegates",
       "overlap-event",
       "beginplay"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "broadcast",
@@ -1533,7 +1536,8 @@
       "multicast-delegate",
       "dynamic-multicast-delegate",
       "delegate"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "unbinding-delegates",
@@ -1553,7 +1557,8 @@
       "endplay",
       "multicast-delegate",
       "delegate"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "blueprintassignable",
@@ -1570,7 +1575,8 @@
       "uproperty",
       "broadcast",
       "user-widget"
-    ]
+    ],
+    "firstQuestId": "p1-multicast-delegates"
   },
   {
     "id": "uinterface",
