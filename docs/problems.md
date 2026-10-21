@@ -17,7 +17,6 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 - 2026-10-21, unreal-pipeline: every quest lives in the one `Dojo` module, so a compile error left in one quest's files breaks the build of every other quest until it is fixed or reset (seen in the M1.3 integration run). Workaround: the compiler output names the file, and resetting the quest removes it (`QuestFileWriter.remove`). To decide with M2.2 (the Build screen): show which quest broke the build, or have the runner set aside other quests' failing files. Owner: builder-unreal with ui-quests.
 
 - 2026-10-21, qa: under heavy machine load (load average about 21 with several Unreal builds running), single end-to-end tests fail on timing (Cmd+K glossary search, the smoke window-height check) and pass on rerun. Owner: tester, to raise waits on the slow steps and keep engine runs serialized.
-- 2026-10-21, unreal-pipeline M1.3b: the packaged app has no `tools/solutions/`, so filling a skipped prerequisite (A65) works only in development until `package.json` gets the extraResources entry `{ "from": "tools/solutions", "to": "tools/solutions" }` (A404). Builders do not edit `package.json`. Owner: Lead.
 
 - 2026-10-21, ui-core: the e2e test "a locked stage explains why on hover" fails about 1 run in 3 to 6 in the full suite and passes alone (10 of 10). Low-rate hover timing flake. Owner: ui-core.
 

@@ -94,7 +94,7 @@ IPC: `createSandbox`, `cancelRun`, and `pickSandboxFolder` answer (A189); `runQu
 | --- | --- |
 | `QuestRunService.ts` | `runQuest`, `checkSnippetSyntax`, `rebuildSandbox` for the IPC handlers. Reads the engine and sandbox from settings (`sandbox-not-ready` before setup), the quest from the content catalog (`quest-not-found` for an unknown or non-code quest), fills prerequisites, then runs through `RunnerFactory` |
 | `QuestDependencies.ts` | Quest ids on the brief's "Compiles against earlier quests:" line (A268) |
-| `ReferenceSolutions.ts` | `<solutions>/<quest-id>/<FileName>`: `tools/solutions` in development, `<resources>/tools/solutions` when packaged (A404) |
+| `ReferenceSolutions.ts` | `<solutions>/<quest-id>/<FileName>`: `tools/solutions` in development, `<resources>/solutions` when packaged (extraResources, A406) |
 | `PrerequisiteFiller.ts` | Writes a prerequisite's whole reference solution when the learner has not passed it or its sandbox files are missing; one `writing` progress line per filled quest naming the files and why (A65, A401) |
 | `SnippetSyntaxChecker.ts`, `ClangSnippetSyntaxChecker.ts` | The scratch buffer check on macOS: UBT's `DojoTestActor.cpp.o.rsp` with the source swapped for the snippet, a prelude that blanks the reflection macros, `-fsyntax-only`, run as `xcrun clang++` from `Engine/Source`; about 0.5 s (A403). Windows answers `not-implemented` for now (A402) |
 

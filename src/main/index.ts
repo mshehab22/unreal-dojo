@@ -91,8 +91,8 @@ async function start(): Promise<void>
 	let unrealServices: UnrealServices | null = null;
 	const getUnrealServices = (): UnrealServices =>
 		(unrealServices ??= createUnrealServices({
-			templateFolder: appResourceFolder("resources", "sandbox-template"),
-			solutionsFolder: appResourceFolder("tools", "solutions"),
+			templateFolder: appResourceFolder(["resources", "sandbox-template"], ["resources", "sandbox-template"]),
+			solutionsFolder: appResourceFolder(["solutions"], ["tools", "solutions"]),
 			engineInspector: getEngineLocator(),
 			settings: new SettingsServiceUnrealSettings(settingsService),
 			quests: contentCatalog,
@@ -158,12 +158,10 @@ function stopRunsBeforeQuit(runRegistry: RunRegistry): void
 	});
 }
 
-/** A folder shipped next to the asar when packaged (extraResources), or in the source tree in development: the sandbox template, the reference solutions (A403). */
-function appResourceFolder(...parts: string[]): string
+/** A folder shipped next to the asar when packaged (extraResources), or in the source tree in development: the sandbox template, the reference solutions (A404). */
+function appResourceFolder(packagedParts: string[], sourceParts: string[]): string
 {
-	const resourcesRoot = app.isPackaged ? process.resourcesPath : app.getAppPath();
-
-	return join(resourcesRoot, ...parts);
+	return app.isPackaged ? join(process.resourcesPath, ...packagedParts) : join(app.getAppPath(), ...sourceParts);
 }
 
 app.on("window-all-closed", () =>

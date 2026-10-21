@@ -707,6 +707,10 @@ total                                       39.2  PASSED
 - How to see it: `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/integration/runQuest.test.ts` creates a sandbox through the real handler, runs `f1-score-keeper` through `runQuest` with its two earlier quests filled from their reference solutions, and checks a clean and a broken scratch buffer. In the window, the Build screen (M2.2) is the first screen that calls these.
 - Proof: the real-engine run on UE 5.8.3 under the engine lock, 3 of 3 passed: sandbox created; the score keeper built and its test `Dojo.F1.ScoreKeeper.ScoresMixedTargets` passed in 35 s, with both reference fills reported; two syntax checks in 0.6 s, the clean one with no diagnostics and the broken one with "unknown type name 'flot'" on line 10. The M1.3 headless loop test also passed 7 of 7 in the same session. Trimmed output: `docs/iterations/m1-3b-runquest-run.txt`.
 - Decisions made: A400 to A405 in `docs/decisions.md`.
-- Not done or left for later: the packaged app cannot fill prerequisites until `tools/solutions` is added to `package.json`'s extraResources, which the Lead owns (A404, problems.md). No Windows syntax check yet (A402). `openEditor` waits for M1.4 (A405). `submitQuest` (review and rules on top of a run) is not part of this task.
+- Not done or left for later: (packaging of the solutions was done in the follow-up below, A406.) No Windows syntax check yet (A402). `openEditor` waits for M1.4 (A405). `submitQuest` (review and rules on top of a run) is not part of this task.
+
+### Follow-up: reference solutions in the packaged app
+- What changed: with the Lead's permission, the installer now ships the reference solutions as `solutions/` next to the content, and the app reads them from there when installed (A406). A packaged app can now fill skipped earlier quests too.
+- Proof: `npx electron-builder --mac dir` built `dist/mac-arm64/Unreal Dojo.app`, whose `Contents/Resources/solutions/` holds the four World 1 solutions (`f1-practice-bell`, `f1-popup-target`, `f1-score-keeper`, `f1-training-dummy`, header and `.cpp` each).
 
 

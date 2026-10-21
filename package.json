@@ -51,6 +51,13 @@
 				]
 			},
 			{
+				"from": "tools/solutions",
+				"to": "solutions",
+				"filter": [
+					"**/*"
+				]
+			},
+			{
 				"from": "src/renderer/src/assets/fonts",
 				"to": "licenses/fonts",
 				"filter": [
