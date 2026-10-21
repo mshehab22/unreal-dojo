@@ -25,7 +25,7 @@ export interface LedgerAttempt
 /** An empty quest save entry. */
 export function emptyQuestProgress(): QuestProgress
 {
-	return { status: "in_progress", bestScore: null, attempts: 0, hintsRevealed: 0, solutionViewed: false, seerStoneSpent: false, effortXpGranted: false, savedFiles: {}, lastAttemptAt: null };
+	return { status: "in_progress", bestScore: null, attempts: 0, hintsRevealed: 0, revealedHints: [], solutionViewed: false, seerStoneSpent: false, effortXpGranted: false, savedFiles: {}, lastAttemptAt: null };
 }
 
 /** The rules band multiplier for a quest's difficulty against the learner's level. */

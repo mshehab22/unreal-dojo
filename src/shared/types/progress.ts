@@ -78,6 +78,9 @@ export interface QuestProgress
 	/** How many hint spells were revealed. */
 	hintsRevealed: number;
 
+	/** Indexes of the hint spells revealed, in reveal order, so paid hints come back after a restart (A500). `hintsRevealed` is its length. */
+	revealedHints: number[];
+
 	/** True once the reference solution was viewed. */
 	solutionViewed: boolean;
 
@@ -492,6 +495,9 @@ export interface HintReveal
 
 	/** Hints revealed so far on this quest. */
 	hintsRevealed: number;
+
+	/** True when this hint was already revealed before this call, so nothing new was charged (A501). */
+	alreadyRevealed: boolean;
 }
 
 /** The scheduler's answer for one drill or concept item. */

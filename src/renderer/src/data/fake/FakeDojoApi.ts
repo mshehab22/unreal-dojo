@@ -354,10 +354,10 @@ export class FakeDojoApi implements DojoClient
 		return answerFrom(() => this.quests.reset(questId));
 	}
 
-	/** Reveals the next hint spell. */
-	revealHint(questId: string): Promise<HintReveal>
+	/** Reveals the next hint spell, or answers an already revealed one again for free (A501). */
+	revealHint(questId: string, hintIndex?: number): Promise<HintReveal>
 	{
-		return answerFrom(() => this.quests.revealHint(questId));
+		return answerFrom(() => this.quests.revealHint(questId, hintIndex));
 	}
 
 	/** Grades a finished concept quest. */

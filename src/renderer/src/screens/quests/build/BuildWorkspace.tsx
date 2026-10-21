@@ -11,7 +11,7 @@ import { KeyboardHints } from "@/components/KeyboardHints";
 import { AutosaveIndicator } from "@/components/quests/AutosaveIndicator";
 import { QuestTitleRow } from "@/components/quests/QuestTitleRow";
 import { Button } from "@/components/ui/button";
-import { QUERY_KEYS } from "@/data/queryKeys";
+import { QUERY_KEYS, questKey } from "@/data/queryKeys";
 import { useDojoAction } from "@/data/useDojoAction";
 import { useDojoQuery } from "@/data/useDojoQuery";
 import { useDraftAutosave } from "@/data/useDraftAutosave";
@@ -29,7 +29,6 @@ import { LastSubmitCard } from "./LastSubmitCard";
 import { RunColumn } from "./RunColumn";
 import { markedLinesOf } from "./markedLines";
 import { SelfExplanationGate } from "./SelfExplanationGate";
-import { useRevealedHints } from "./useRevealedHints";
 
 /** A build or refactor quest. */
 type CodeQuest = Extract<LearnerQuest, { kind: "build" | "refactor" }>;
@@ -68,8 +67,6 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 	const navigate = useNavigate();
 	const lootEntry = useLootStore((state) => state.entry);
 	const showLoot = useLootStore((state) => state.show);
-	const revealedHints = useRevealedHints((state) => state.byQuest[quest.id]) ?? [];
-	const addHint = useRevealedHints((state) => state.add);
 	const progress = useDojoQuery(QUERY_KEYS.progress, (client) => client.getProgress()).data ?? initialProgress;
 	const aliases = useDojoQuery(QUERY_KEYS.glossaryAliases, (client) => client.getGlossaryAliases());
 	const markedEntries = markedLinesOf(quest.files);
@@ -85,11 +82,14 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 	const [briefOpen, setBriefOpen] = useState(() => window.innerWidth >= WIDE_ENOUGH_FOR_BRIEF);
 	const [lastResult, setLastResult] = useState<RunResult | null>(null);
 
+	// Paid hints come back with the quest (A502); a reveal in this window adds its text at once.
+	const [hintTexts, setHintTexts] = useState<readonly string[]>(() => quest.revealedHints ?? []);
+
 	const autosave = useDraftAutosave({ questId: quest.id, files, ...(markedEntries.length > 0 ? { selfExplanations: explanations } : {}) });
 	const run = useQuestRun((client, request) => client.runQuest(request));
 	const submit = useQuestRun((client, request) => client.submitQuest(request), [QUERY_KEYS.progress, QUERY_KEYS.availability, QUERY_KEYS.drillSummary, QUERY_KEYS.daily]);
 	const retry = useQuestRun((client, request) => client.submitQuest(request), [QUERY_KEYS.progress]);
-	const reveal = useDojoAction((client) => client.revealHint(quest.id), [QUERY_KEYS.progress]);
+	const reveal = useDojoAction((client, hintIndex: number) => client.revealHint(quest.id, hintIndex), [QUERY_KEYS.progress, questKey(quest.id)]);
 	const openEditor = useDojoAction((client) => client.openEditor(quest.id), [QUERY_KEYS.environment]);
 
 	const questProgress = progress.quests[quest.id];
@@ -154,12 +154,21 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 		if (outcome) showLoot(mergeRetriedReview(lastSubmit, outcome, lastSubmit.detail.files));
 	};
 
-	/** Buys the next hint and keeps its text for this window. */
+	/** Asks for the hint after the ones shown, by index, so a stale screen or a double click gets that hint again for free instead of buying another (A501). */
 	const revealHint = async (): Promise<void> =>
 	{
-		const hint = await reveal.run();
+		const hint = await reveal.run(hintTexts.length);
 
-		if (hint) addHint(quest.id, hint);
+		if (!hint) return;
+
+		setHintTexts((current) =>
+		{
+			const next = [...current];
+
+			next[hint.hintIndex] = hint.text;
+
+			return next;
+		});
 	};
 
 	const shortcuts = useRef({ startRun, startSubmit, save: autosave.saveNow });
@@ -185,6 +194,14 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 
 		return () => window.removeEventListener("keydown", onKeyDown);
 	}, []);
+
+	// A quest refetched with more paid hints than shown (revealed in another window) brings their texts in.
+	useEffect(() =>
+	{
+		const fromQuest = quest.revealedHints ?? [];
+
+		if (fromQuest.length > hintTexts.length) setHintTexts(fromQuest);
+	}, [quest.revealedHints]);
 
 	// Save what is left when the window loses focus.
 	useEffect(() =>
@@ -248,7 +265,7 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 						onOpenEditor={() => void openEditor.run()}
 						isOpeningEditor={openEditor.isPending}
 						lastSubmit={lastSubmit && <LastSubmitCard outcome={lastSubmit.outcome} review={lastSubmit.detail.kind === "build" ? lastSubmit.detail.review : undefined} onOpenLoot={() => navigate("loot", { quest: quest.id })} onRetryReview={() => void retryReview()} isRetrying={retry.status === "running"} />}
-						hints={<HintSpells hintCount={quest.hintCount} hintsRevealed={questProgress?.hintsRevealed ?? 0} revealed={revealedHints} nextCost={Math.round(quest.xp * rules.hintCostShare)} onReveal={() => void revealHint()} isRevealing={reveal.isPending} />}
+						hints={<HintSpells hintCount={quest.hintCount} revealed={hintTexts} nextCost={Math.round(quest.xp * rules.hintCostShare)} onReveal={() => void revealHint()} isRevealing={reveal.isPending} />}
 						offers={!isPassed && failedSubmits >= rules.failedSubmitsBeforeOffers ? <FailedSubmitOffers questId={quest.id} failedSubmits={failedSubmits} seerStones={progress.seerStones} hasParsons={(quest.parsons?.length ?? 0) > 0} /> : undefined}
 					/>
 				</aside>

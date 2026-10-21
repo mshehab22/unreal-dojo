@@ -212,3 +212,21 @@ describe("the quests scenario and the fake breakdown grader", () =>
 		expect(matches.filter((match) => match !== undefined)).toHaveLength(1);
 	});
 });
+
+describe("revealed hints persist (A500 to A502)", () =>
+{
+	it("answers an already revealed index again for free, refuses a skipped one, and returns paid texts with the quest", async () =>
+	{
+		const fake = new FakeDojoApi("quests");
+		const first = await fake.revealHint("f1-training-dummy", 0);
+		const again = await fake.revealHint("f1-training-dummy", 0);
+		const quest = await fake.getQuest("f1-training-dummy");
+		const progress = await fake.getProgress();
+
+		expect(first.alreadyRevealed).toBe(false);
+		expect(again).toMatchObject({ hintIndex: 0, alreadyRevealed: true, hintsRevealed: 1, text: first.text });
+		await expect(fake.revealHint("f1-training-dummy", 2)).rejects.toMatchObject({ code: "invalid-payload" });
+		expect(quest.kind === "build" && quest.revealedHints).toEqual([first.text]);
+		expect(progress.quests["f1-training-dummy"]?.revealedHints).toEqual([0]);
+	});
+});

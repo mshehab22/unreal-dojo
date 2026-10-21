@@ -4,7 +4,7 @@ import type { MasteryLevel, PatternCardTier, RulesSnapshot, XpBandRule } from "@
 import type { QuestKind } from "./contentFacts";
 
 /** Save file schema version. Raise it with a migration in ProgressStore when the save shape changes. */
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 /** Minimum score (0 to 100) to pass a build, refactor, breakdown, or boss integration. */
 export const PASS_SCORE = 70;

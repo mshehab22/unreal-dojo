@@ -2,16 +2,15 @@
 import { SparklesIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 
-import type { HintReveal } from "@shared/types/progress";
-
 import { Button } from "@/components/ui/button";
 
 /** Props for HintSpells. */
 interface HintSpellsProps
 {
 	readonly hintCount: number;
-	readonly hintsRevealed: number;
-	readonly revealed: readonly HintReveal[];
+
+	/** The texts of the hints already paid for, by hint index (they come back with the quest, A502). */
+	readonly revealed: readonly string[];
 
 	/** XP the next hint costs on a pass, from the quest's XP and the rules' hint share. */
 	readonly nextCost: number;
@@ -19,18 +18,21 @@ interface HintSpellsProps
 	readonly isRevealing: boolean;
 }
 
-/** The spell slots and the revealed texts. Hints never contain code. */
-export function HintSpells({ hintCount, hintsRevealed, revealed, nextCost, onReveal, isRevealing }: HintSpellsProps)
+/** The spell slots and the paid hints' texts. Hints never contain code. */
+export function HintSpells({ hintCount, revealed, nextCost, onReveal, isRevealing }: HintSpellsProps)
 {
 	const latestHint = useRef<HTMLParagraphElement>(null);
+	const shownCount = useRef(revealed.length);
+	const hintsRevealed = revealed.length;
 	const remaining = Math.max(0, hintCount - hintsRevealed);
 
-	// A newly revealed hint scrolls into view, so it is never bought out of sight.
+	// A newly revealed hint scrolls into view, so it is never bought out of sight; hints already paid for when the quest opens do not move the column.
 	useEffect(() =>
 	{
-		latestHint.current?.scrollIntoView({ block: "nearest" });
+		if (revealed.length > shownCount.current) latestHint.current?.scrollIntoView({ block: "nearest" });
+
+		shownCount.current = revealed.length;
 	}, [revealed.length]);
-	const lostTexts = hintsRevealed - revealed.length;
 
 	return (
 		<div data-testid="hint-spells" className="flex flex-col gap-2">
@@ -45,13 +47,12 @@ export function HintSpells({ hintCount, hintsRevealed, revealed, nextCost, onRev
 					))}
 				</span>
 			</div>
-			{revealed.map((hint, index) => (
-				<p key={hint.hintIndex} ref={index === revealed.length - 1 ? latestHint : undefined} data-testid="hint-text" className="rounded-md border border-patterns/40 bg-patterns-soft px-3 py-2 text-sm text-paper">
-					<span className="mr-1.5 font-mono text-2xs text-patterns">{hint.hintIndex + 1}</span>
-					{hint.text}
+			{revealed.map((text, index) => (
+				<p key={index} ref={index === revealed.length - 1 ? latestHint : undefined} data-testid="hint-text" className="rounded-md border border-patterns/40 bg-patterns-soft px-3 py-2 text-sm text-paper">
+					<span className="mr-1.5 font-mono text-2xs text-patterns">{index + 1}</span>
+					{text}
 				</p>
 			))}
-			{lostTexts > 0 && <p className="text-xs text-paper-faint">{lostTexts === 1 ? "One hint was" : `${lostTexts} hints were`} revealed in an earlier session.</p>}
 			{remaining > 0 ? (
 				<Button variant="outline" size="sm" className="h-auto min-h-8 self-start py-1.5 text-left whitespace-normal" onClick={onReveal} disabled={isRevealing} data-testid="reveal-hint">
 					{isRevealing ? "Casting" : `Reveal hint ${hintsRevealed + 1} (costs ${nextCost} XP on a pass)`}

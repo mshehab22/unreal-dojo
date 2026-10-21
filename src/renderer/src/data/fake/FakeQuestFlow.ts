@@ -88,13 +88,22 @@ export class FakeQuestFlow
 
 	// Content
 
-	/** A full quest: a real World 1 quest, or a stand-in for an invented map stage. */
+	/** A full quest: a real World 1 quest, or a stand-in for an invented map stage. Build and refactor quests carry the texts of the hints already revealed (A502). */
 	quest(questId: string): LearnerQuest
 	{
-		const real = worldOneQuest(questId);
+		const quest = worldOneQuest(questId) ?? this.standIn(questId);
 
-		if (real) return real;
+		if (quest.kind !== "build" && quest.kind !== "refactor") return quest;
 
+		const texts = hintTextsFor(questId, this.host.outline(questId));
+		const revealed = this.host.progress().quests[questId]?.revealedHints ?? [];
+
+		return { ...quest, revealedHints: revealed.map((index) => texts[index] ?? "") };
+	}
+
+	/** A stand-in for an invented map stage, or the error a screen shows. */
+	private standIn(questId: string): LearnerQuest
+	{
 		const outline = this.host.outline(questId);
 
 		if (!outline) throw fail("quest-not-found", `There is no quest called ${questId}.`, "Open it from the World Map.");
@@ -199,21 +208,33 @@ export class FakeQuestFlow
 		return saved;
 	}
 
-	/** Reveals the next hint and counts it on the quest. */
-	revealHint(questId: string): HintReveal
+	/** Reveals a hint as the progress service does (A501): an index already revealed is answered again for free; otherwise only the next one in order is revealed and counted. */
+	revealHint(questId: string, hintIndex?: number): HintReveal
 	{
 		const quest = this.codeQuest(questId);
 		const progress = this.host.progress();
 		const saved: QuestProgress = { ...(progress.quests[questId] ?? emptyQuestProgress()) };
 		const texts = hintTextsFor(questId, this.host.outline(questId));
-		const text = texts[saved.hintsRevealed];
+		const xpCost = Math.round(quest.xp * this.host.rules().hintCostShare);
+
+		if (hintIndex !== undefined && saved.revealedHints.includes(hintIndex))
+		{
+			return { hintIndex, text: texts[hintIndex] ?? "", xpCost, hintsRevealed: saved.hintsRevealed, alreadyRevealed: true };
+		}
+
+		const nextIndex = saved.revealedHints.length;
+
+		if (hintIndex !== undefined && hintIndex !== nextIndex) throw fail("invalid-payload", "Hints are revealed in order.", "Reveal the next hint first.");
+
+		const text = texts[nextIndex];
 
 		if (text === undefined) throw fail("invalid-payload", "Every hint for this quest is already revealed.", "Use the ones above, or ask why a test fails.");
 
-		saved.hintsRevealed += 1;
+		saved.revealedHints = [...saved.revealedHints, nextIndex];
+		saved.hintsRevealed = saved.revealedHints.length;
 		progress.quests = { ...progress.quests, [questId]: saved };
 
-		return { hintIndex: saved.hintsRevealed - 1, text, xpCost: Math.round(quest.xp * this.host.rules().hintCostShare), hintsRevealed: saved.hintsRevealed };
+		return { hintIndex: nextIndex, text, xpCost, hintsRevealed: saved.hintsRevealed, alreadyRevealed: false };
 	}
 
 	/** Grades a finished concept quest; explain answers that only a self-check could grade are left out of the pass share (A315). */

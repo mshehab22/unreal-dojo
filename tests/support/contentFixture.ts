@@ -4,7 +4,7 @@ import type { PlayerProgress } from "@shared/types/progress";
 
 import { ContentCatalog } from "../../src/main/content/ContentCatalog";
 import type { ProgressGraders } from "../../src/main/services/progress/ProgressGraders";
-import { ProgressContentService } from "../../src/main/services/progress/ProgressContentService";
+import { ProgressContentService, type ProgressContentSource } from "../../src/main/services/progress/ProgressContentService";
 import { SequenceRandom } from "./SequenceRandom";
 import { createTestProgressService, localMoment } from "./progressFixtures";
 
@@ -141,13 +141,13 @@ export function fakeGraders(provider: "claude-code" | "tests-only" = "claude-cod
 }
 
 /** The progress stack on the fixture content, a fixed clock, and an in-memory disk. */
-export function createTestProgressContent(options: { graders?: ProgressGraders; random?: number[]; prepare?: (progress: PlayerProgress) => void; content?: LoadedContent } = {})
+export function createTestProgressContent(options: { graders?: ProgressGraders; random?: number[]; prepare?: (progress: PlayerProgress) => void; content?: LoadedContent; source?: ProgressContentSource } = {})
 {
 	const progress = createTestProgressService(localMoment(2026, 10, 21, 9), options.random ?? [0], options.prepare);
 	const loaded = options.content ?? fixtureContent();
 	const catalog = new ContentCatalog({ root: "/fixture", folderExists: async () => true, loadContent: async () => loaded });
 	let sessionNumber = 0;
-	const content = new ProgressContentService(catalog, progress.service, options.graders ?? fakeGraders(), new SequenceRandom(options.random ?? [0]), () => `session-${++sessionNumber}`);
+	const content = new ProgressContentService(options.source ?? catalog, progress.service, options.graders ?? fakeGraders(), new SequenceRandom(options.random ?? [0]), () => `session-${++sessionNumber}`);
 
 	return { ...progress, catalog, content };
 }

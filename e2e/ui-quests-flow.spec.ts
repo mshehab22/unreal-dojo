@@ -416,6 +416,15 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await expect(window.getByTestId("hint-text")).toHaveCount(1);
 	await saveScreenshot("build-hint");
 
+	// Leave the quest and come back: the paid hint returns with the quest (A502), and the button offers hint 2, not hint 1 again.
+	await window.evaluate(`location.hash = "#/world-map"`);
+	await expect(window.getByTestId("screen-worldMap")).toBeVisible();
+	await window.evaluate(`location.hash = "#/quest?id=f1-training-dummy"`);
+	await waitForEditor(window.getByTestId("build-quest"));
+	await expect(window.getByTestId("hint-text")).toHaveCount(1);
+	await expect(window.getByTestId("reveal-hint")).toContainText("Reveal hint 2");
+	await expect(window.getByTestId("self-explanation-gate")).toHaveAttribute("data-open", "true");
+
 	// Fill both gaps by typing in Monaco.
 	const editor = build.getByTestId("code-editor");
 	await window.getByTestId("file-tab").filter({ hasText: "DojoF1TrainingDummy.h" }).click();

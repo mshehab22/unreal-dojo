@@ -596,6 +596,18 @@ total                                       39.2  PASSED
 - What changed: when the screen limits the height, the window must now be within 12 points of the screen's limit (and never below 700); 12 covers the 1 point rounding and the Dock's 5 point change, and nothing more (A118). The full 900 and the width are still checked exactly. After rebasing onto `main`, the ui-core screens file was moved onto the shared setup again with its new tests, and the mouse-parking workaround from round 2 is gone because ui-core fixed the palette.
 - Proof: a temporary copy of the smoke test that forces the window to 1440x800 failed ("height 800 against a screen limit of 851", 51 points off), and one forced to 1440x720 failed (129 points off); the copy was then deleted. The real smoke test passed 30 of 30 with the machine heavily loaded (load average 15 to 20). Full end-to-end suite twice: 19 passed both times. Typecheck passes; unit tests 622 passed and 7 skipped; content verifier no problems (5 warnings, all in content).
 
+## M1.6c Revealed hints persist (progress-and-rules, builder-rules)
+- What changed: a hint spell the learner paid for now stays revealed. The save file remembers which hints of each quest were revealed, the quest comes back from the main process with those hint texts already filled in, and asking again for a hint already paid for shows it again for free instead of charging for another. Older save files are upgraded on load: their count of revealed hints becomes the list of the first hints, which is what they were.
+- How to see it: no new screen in this task; the build quest screen can now show the revealed hints straight from the quest data. Run `npm test`; `tests/progress/revealedHints.test.ts` reveals two hints, restarts the app on the same save, and checks the hints are back, a repeat costs nothing, and the pass is charged for two hints, not three.
+- Proof: typecheck passes. Unit tests: 53 files, 628 passed and 7 skipped (the skipped ones need Unreal); the progress tests are 212 of them, 6 new (restart round trip, the world view, reveal order and free repeats, the version 1 migration, loading and rewriting an old save, and saves the migration must leave alone). Build passes. End-to-end: 15 of 15 passed. Content verifier: no problems (5 warnings from the content packs, not this task).
+- Decisions made: A500 to A503 in `docs/decisions.md` (indexes and save version 2, the optional hint index, hint texts with the quest, and the small edits outside this system: the renderer fake fixture, the IPC signature, the request schema, the quest type).
+- Not done or left for later: the build quest screen (ui-quests) should read `revealedHints` from the quest and send the hint index when it asks for a hint; until it does, nothing breaks, it just asks for the next hint as before. builder-review's M1.7c adds fields to the attempt record and the save schema; expect a small rebase there.
+
+### Fix round 1
+- What the reviewer asked for: when the save file could not be opened (for example one made by a newer version), opening a build or refactor quest now failed, because adding its revealed hints read the whole save, which is refused in that state. It also copied the whole save once per quest.
+- What changed: the branch was first rebased onto main. The revealed hints of one quest are now read through a small accessor that answers "none" when the save is refused, so quests and worlds load as before, just without revealed hints.
+- Proof: typecheck passes. Unit tests: 637 passed and 7 skipped, including a new one where the save is refused and both the quest and the world still load with no revealed hints; it fails on the first round's code. Build passes. End-to-end: 19 of 19 passed on two runs in a row; one earlier run had a single text check fail that did not repeat (logged as flaky, not traced to this change).
+
 
 ## M2.2 Quest screens (ui-quests, builder-ui-quests)
 - What changed: every quest can now be played. Clicking an open stage on the World Map, Studio's Continue, Start drill, or a world's Test out opens the matching screen. All of it runs on built-in sample data for now, and that sample data is the real Pack 1 World 1 (the training yard), so what you see is the actual content.
@@ -707,3 +719,8 @@ total                                       39.2  PASSED
 *The reference plan as text in the revise panel.*
 
 - Decisions made: fix round 2 note under A355.
+
+### Fix round 3 (revealed hints persist)
+- What changed: with M1.6c merged, the build screen shows the hints you already paid for from the quest itself, so they are there after leaving and coming back (and, in the real app, after a restart). Revealing asks for a specific hint by number: if that hint was already paid for (a stale screen, a double click), it comes back free instead of charging for the next one. The sample data keeps revealed hints the same way.
+- Proof (merged with main): `npm run typecheck` passes; `npm test` 55 files, 668 passed, 7 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (5 warnings from content); `npm run test:e2e` 26 passed, three runs in a row. The build flow now leaves the quest after buying a hint, comes back, and checks the hint is still shown and the button offers hint 2.
+- Decisions made: A357 marked superseded by A500 to A502.
