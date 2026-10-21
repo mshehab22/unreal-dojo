@@ -8,7 +8,7 @@ difficulty: 2
 patterns: []
 skills: [actors, references]
 terms: [tarray, tobjectptr, editanywhere]
-prerequisites: [example-build-faded-flicker]
+prerequisites: [example-build-faded-flicker, example-build-worked-lantern]
 xp: 80
 estimatedMinutes: 20
 concepts:
@@ -21,6 +21,8 @@ concepts:
 When you press Play, every lantern wired to the switch goes dark, and calling `Toggle` on the switch lights them all again at once.
 
 The declarations are given; every function body is yours. The switch holds the references: it knows its lanterns, and the lanterns know nothing about the switch. Skip any entry in the array that is empty, because a designer can leave a slot unassigned.
+
+Compiles against earlier quests: example-build-worked-lantern (`Quests/example-build-worked-lantern/DojoExLantern.h`).
 
 ## See it in the editor
 
@@ -39,26 +41,32 @@ Place three lanterns and one switch. In the switch's Details panel add the three
 
 class ADojoExLantern;
 
+/** A switch that holds references to lanterns and lights or darkens them all at once. */
 UCLASS()
 class ADojoExLanternSwitch : public AActor
 {
 	GENERATED_BODY()
 
 public:
+	/** Turns ticking off; the switch only reacts to Toggle. */
 	ADojoExLanternSwitch();
 
 	UPROPERTY(EditAnywhere, Category = "Switch")
 	TArray<TObjectPtr<ADojoExLantern>> Lanterns;
 
+	/** Flips the switch and applies the new state to every lantern. */
 	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Switch")
 	void Toggle();
 
+	/** Whether the switch is currently on. */
 	bool IsOn() const;
 
 protected:
+	/** Applies the starting state to every wired lantern. */
 	virtual void BeginPlay() override;
 
 private:
+	/** Sets every wired lantern's light to match the switch. */
 	void ApplyToAll();
 
 	bool bIsOn = false;
@@ -71,25 +79,30 @@ private:
 #include "DojoExLanternSwitch.h"
 
 #include "Components/PointLightComponent.h"
-#include "DojoExLantern.h"
+#include "Quests/example-build-worked-lantern/DojoExLantern.h"
 
+/** Turns ticking off; the switch only reacts to Toggle. */
 ADojoExLanternSwitch::ADojoExLanternSwitch()
 {
 }
 
+/** Applies the starting state to every wired lantern. */
 void ADojoExLanternSwitch::BeginPlay()
 {
 }
 
+/** Flips the switch and applies the new state to every lantern. */
 void ADojoExLanternSwitch::Toggle()
 {
 }
 
+/** Whether the switch is currently on. */
 bool ADojoExLanternSwitch::IsOn() const
 {
 	return false;
 }
 
+/** Sets every wired lantern's light to match the switch, skipping empty slots. */
 void ADojoExLanternSwitch::ApplyToAll()
 {
 }
@@ -103,8 +116,8 @@ void ADojoExLanternSwitch::ApplyToAll()
 #if WITH_AUTOMATION_TESTS
 
 #include "Components/PointLightComponent.h"
-#include "DojoExLantern.h"
-#include "DojoExLanternSwitch.h"
+#include "Quests/example-build-worked-lantern/DojoExLantern.h"
+#include "Quests/example-build-stub-lantern-switch/DojoExLanternSwitch.h"
 #include "Support/DojoTestWorld.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_Examples_Switch_TogglesAll, "Dojo.Examples.Switch.TogglesAll", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)

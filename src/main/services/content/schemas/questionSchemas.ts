@@ -49,7 +49,7 @@ const whichPatternSchema = z
 	.strictObject({
 		...questionBase,
 		type: z.literal("which-pattern"),
-		choices: textList(1),
+		choices: textList(2),
 		answer: text(),
 		distractorNotes: z.array(z.strictObject({ choice: text(), why: text() })).min(1),
 	})
