@@ -37,6 +37,10 @@ The M0.2 shape had one message and one action. The Mac can have a blocking probl
 
 ### A160 2026-10-21 `EngineSource` gains `launcher`; the launcher's install list is read first on both platforms (builder-unreal, M1.1)
 Options: treat engines from `LauncherInstalled.dat` as `default-folder`; give them their own source. Chosen: their own source, because the launcher list also finds engines in non-default folders (as on this Mac). Search order is launcher list, registry, default folders; a folder found twice keeps the first source. Plugin entries in the list (`QuixelBridge_5.8`, `FabPlugin_5.8`) share the engine's folder and are skipped by name (`UE_<version>` only). Reverse cost: none.
+
+### A138 2026-10-21 Where the save keeps the XP potion, cosmetics, and chests (M1.6, builder-rules)
+The spec's save file had no place for an active XP potion, held cosmetics, or unopened chests. Options for chests: store unopened chests and open them on the loot screen; open each chest the moment it is earned. Chosen: open at once. The reward is rolled and applied in the same save write that completes the daily quest, and the attempt or drill outcome carries `chest` so the loot screen can animate the opening. Nothing unopened is stored, so a crash cannot lose or duplicate a chest. The active potion is `PlayerProgress.xpPotionUntil` (ISO end time, or null): a new potion restarts the 30 minutes, and an expired one is ignored, not cleared. Held cosmetics are `studio.cosmetics` (ids from `STUDIO_COSMETICS` in `rules.ts`, given in order, never repeated). Freezes, armor, and Seer Stones already had fields (`streak.freezes`, `spree.armor`, `seerStones`). Reverse cost: low. Storing unopened chests later needs one list field and an `openChest` method.
+
 ### A137 2026-10-21 A first boss pass adds a module to the studio (M1.6, builder-rules)
 product.md says each shipped mechanic adds a module to the engine room but no rule says when. Options: every build pass; every boss pass; leave it to the UI. Chosen: the first pass of a boss adds the boss id to `studio.modules`, alongside the freeze and armor the boss earns. Reverse cost: low.
 

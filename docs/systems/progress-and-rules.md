@@ -71,6 +71,7 @@ Last updated by M1.6 (rules, scheduler, save file).
 ### Save file
 - Write: the JSON goes to `progress.json.tmp` and is flushed (fsync), the current `progress.json` is copied to `progress.json.bak`, then the temp file is renamed over `progress.json`. A crash at any step leaves the old or the new file whole. Writes are serialized.
 - Load: missing file gives a fresh save (or the backup if only the backup exists). A file that is not JSON or fails the zod schema is moved to `progress.json.corrupt-<time>` and the backup is used; if the backup is bad too, a fresh save starts. A save whose `version` is newer than the app is refused with `save-failed`, never overwritten. Fields added after version 1 default to empty.
+- Loot items: chests open the moment they are earned (no unopened chests are stored); the outcome carries `chest`. The active potion is `xpPotionUntil`, held cosmetics are `studio.cosmetics`, freezes `streak.freezes`, armor `spree.armor`, stones `seerStones` (A138).
 - The save shape is `PlayerProgress` in `src/shared/types/progress.ts`. M1.6 added `memory` (SM-2 state and mastery per item), `drillQueue`, `rematches`, `testedOutWorldIds`, `xpPotionUntil`, `studio.cosmetics`, `daily.completedDates`, and on `QuestProgress` `seerStoneSpent` and `effortXpGranted` (A120).
 
 ### Flows
