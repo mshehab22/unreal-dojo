@@ -41,7 +41,7 @@ Drill composition (6 to 10 items): due items mixed across topics; at least one p
 
 Daily quest: three offers (drill, concept, short build with `scaffold: worked` and no new class so the fast loop applies); one chosen per calendar day; chest on completion (freeze, armor, Seer Stone, studio cosmetic, XP potion +50% for 30 minutes); finishing every day of a month earns a badge; missing days costs nothing.
 
-Unlocks: a quest is available when all `prerequisites[]` are passed and all `terms[]` are at least familiar (or the learner tested out of the world). The first quest of each pack's first world is always available. Pack 4 unlocks after Pack 1 world 5 and Pack 2 world 4 bosses.
+Unlocks: a quest is available when all `prerequisites[]` are passed and all `terms[]` are at least familiar (or the learner tested out of the world). The first quest of each pack's first world is always available. Pack 4 unlocks after the bosses of the Pack 1 Communication world (`foundations` / `communication`, world 5) and the Pack 2 Component world (`patterns` / `component`), named by world id in `PACK_GATES` (A68, A510); while either world does not exist, Pack 4 stays locked and the verifier warns (A511).
 
 Rematch: a due pattern or term surfaces as a quest from a different world than the one it was earned in when one exists.
 
@@ -90,6 +90,7 @@ Last updated by M1.6b (content-backed progress and drill methods).
 - Every quest-specific call checks the quest exists (`quest-not-found`) and is not locked (`quest-locked` with the map's reason).
 - Concept submit: questions graded in main, 80% passes, each of the quest's terms reviewed once with quality from the score inside the same queued step as the attempt. Breakdown: the first plan is kept as `submittedPlan`, the closest reference plan is shown, the revision is graded; a boss breakdown records no pass (A316, A317).
 - Drills: due (today's due items within what is left of the day's cap of 20, A321, filled from met items to 6 to 10, with the three required formats when content has them, never the same question twice, A323), test-out (a world's taught terms and its patterns with an unlocked card, only when eligible; tests the world out when every taught term stays proficient, A313, A322), Parsons fallback (after two failed submits, pays nothing). Drill XP, streak credit, and the daily drill offer count only when the drill held a scheduled due item; otherwise it is practice (A320).
+- Pack gates: `PACK_GATES` in `rules.ts` names the gated pack by order (Pack 4 has no folder yet) and the required worlds by pack id and world id. `UnlockGraph` resolves each to its boss quests; a required world with no boss in the loaded content keeps the pack locked with "the <world> world's boss (not released yet)" in the reason. `tools/verifier/checks/packGateCheck.ts` reports a gate world that is missing or has no boss (warning; error with `--release`).
 - Unlocks: only terms some concept quest teaches gate a quest, and a concept quest is never gated by its own terms (A312).
 
 ### IPC wired

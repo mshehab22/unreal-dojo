@@ -694,3 +694,10 @@ total                                       39.2  PASSED
 - Decisions made: A520.
 - Not done or left for later: a reference integration for the example lighthouse boss (about 500 to 700 lines, like the Pack 1 bosses). The A68 gate check comes from builder-rules in M1.6d.
 
+## M1.6d Pack 4 gate by world id (progress-and-rules, builder-rules)
+- What changed: the last pack (Systems Lab) used to wait for "world 5 of Pack 1 and world 4 of Pack 2", which broke as soon as Pack 2 switched to one world per pattern. It now waits for two named worlds, Pack 1's Communication world and Pack 2's Component world, wherever they end up in the list. Neither world is written yet, so the pack stays locked and says so ("the component world's boss (not released yet)") instead of opening by accident. The content checker now warns whenever the gate names a world that is missing or has no boss, and treats it as an error in the release check.
+- How to see it: `npx tsx tools/verify-content.ts` prints two "pack gate" warnings today, one for each world not written yet. `npm test` runs the gate and check tests.
+- Proof: typecheck passes. Unit tests: 645 passed and 7 skipped (they need Unreal); 9 new: the gate found by id with the Component world at any position and a decoy world 4 boss that no longer counts, the pack staying locked while either world is missing, other packs not gated, and the checker's warnings for a missing pack, a missing world, and a world with no boss, quiet when both exist, errors with `--release`, and quiet on an empty content folder. Build passes. Content verifier: no problems, 7 warnings (the 2 new gate warnings plus 5 from the packs). End-to-end: 19 of 19 passed.
+- Decisions made: A510 (the world ids and how a missing world keeps the pack closed) and A511 (the checker warning, added as one new verifier check).
+- Not done or left for later: the authors of Pack 1 world 5 and the Pack 2 Component world must use the ids `communication` and `component` (A510). content-engine may want to mention the new check in its spec.
+

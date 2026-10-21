@@ -41,8 +41,8 @@ export class UnlockGraph
 	/** The first quest of each pack's first world. */
 	private readonly alwaysAvailableIds: Set<string>;
 
-	/** Boss quest ids each pack (by id) waits for. */
-	private readonly packGateBossIds: Map<string, string[]>;
+	/** What each gated pack (by id) waits for: boss quest ids, and labels of gate worlds that have no boss yet (which keep it closed). */
+	private readonly packGates: Map<string, { bossIds: string[]; missing: string[] }>;
 
 	/** Terms some concept quest teaches. Only these can gate a quest: a term nothing teaches could never reach familiar (A312). */
 	private readonly taughtTerms: Set<string>;
@@ -52,7 +52,7 @@ export class UnlockGraph
 	{
 		this.questsById = new Map(quests.map((quest) => [quest.id, quest]));
 		this.alwaysAvailableIds = this.findAlwaysAvailable();
-		this.packGateBossIds = this.findPackGates();
+		this.packGates = this.findPackGates();
 		this.taughtTerms = taughtTermsOf(quests);
 	}
 
@@ -100,8 +100,10 @@ export class UnlockGraph
 	/** Why a quest is locked, or null when it is open. Pack gate first, then prerequisites, then terms. */
 	private lockedReason(quest: RuleQuest, state: UnlockState, testedOut: boolean): string | null
 	{
-		const gateBosses = (this.packGateBossIds.get(quest.packId) ?? []).filter((bossId) => state.quests[bossId]?.status !== "passed");
-		if (gateBosses.length > 0) return `Beat ${this.joinTitles(gateBosses)} first.`;
+		const gate = this.packGates.get(quest.packId);
+		const unbeaten = (gate?.bossIds ?? []).filter((bossId) => state.quests[bossId]?.status !== "passed").map((bossId) => this.questsById.get(bossId)?.title ?? bossId);
+		const waitingFor = [...unbeaten, ...(gate?.missing ?? [])];
+		if (waitingFor.length > 0) return `Beat ${this.joinList(waitingFor)} first.`;
 
 		if (this.alwaysAvailableIds.has(quest.id)) return null;
 
@@ -145,21 +147,26 @@ export class UnlockGraph
 		return new Set([...firstByPack.values()].map((quest) => quest.id));
 	}
 
-	/** Resolves the PACK_GATES rule (by pack and world order) into boss quest ids per gated pack id. */
-	private findPackGates(): Map<string, string[]>
+	/** Resolves PACK_GATES (worlds by pack and world id) into boss quest ids per gated pack id. A gate world with no boss in the loaded content is listed as missing, so the pack stays closed until it is written and beaten (A510). */
+	private findPackGates(): Map<string, { bossIds: string[]; missing: string[] }>
 	{
-		const gates = new Map<string, string[]>();
+		const gates = new Map<string, { bossIds: string[]; missing: string[] }>();
 
 		for (const gate of PACK_GATES)
 		{
 			const gatedPackIds = new Set(this.quests.filter((quest) => quest.packOrder === gate.packOrder).map((quest) => quest.packId));
-			const bossIds = gate.requiresBossOf.flatMap((world) =>
-				this.quests
-					.filter((quest) => quest.kind === "boss" && quest.packOrder === world.packOrder && quest.worldOrder === world.worldOrder)
-					.map((quest) => quest.id),
-			);
+			const bossIds: string[] = [];
+			const missing: string[] = [];
 
-			for (const packId of gatedPackIds) gates.set(packId, bossIds);
+			for (const world of gate.requiresBossOf)
+			{
+				const bosses = this.quests.filter((quest) => quest.kind === "boss" && quest.packId === world.packId && quest.worldId === world.worldId);
+
+				if (bosses.length === 0) missing.push(`the ${world.worldId} world's boss (not released yet)`);
+				bossIds.push(...bosses.map((quest) => quest.id));
+			}
+
+			for (const packId of gatedPackIds) gates.set(packId, { bossIds, missing });
 		}
 
 		return gates;
