@@ -38,7 +38,7 @@ function createService(version: string, build: ScriptedProcess = { exitCode: 0, 
 		fileSystem,
 		builder: new UnrealBuilder(paths, launcher, timer),
 		engineInspector: { inspectFolder: async () => engine },
-		pathStore: { setSandboxPath: (sandboxPath) => savedPaths.push(sandboxPath) },
+		pathStore: { setSandboxPath: (sandboxPath) => savedPaths.push(sandboxPath), setEnginePath: (enginePath) => void savedPaths.push(`engine ${enginePath}`) },
 		timer,
 		templateFolder: "/App/resources/sandbox-template",
 	});
@@ -67,7 +67,7 @@ describe("SandboxProjectService", () =>
 		expect(projectOf(fileSystem).EngineAssociation).toBe("5.8");
 		expect(projectOf(fileSystem).Plugins.map((plugin) => plugin.Name)).toEqual(["ModelContextProtocol", "AutomationTestToolset", "LiveCodingToolset", "SomethingElse"]);
 		expect(launcher.specs[0]?.commandArguments).toContain("-Project=/Picked/DojoSandbox/Dojo.uproject");
-		expect(savedPaths).toEqual(["/Picked/DojoSandbox"]);
+		expect(savedPaths).toEqual(["/Picked/DojoSandbox", "engine /Engines/UE"]);
 		expect(updates.map((update) => update.phase)).toEqual(["preparing", "writing", "building", "building", "building"]);
 		expect(updates[3]).toEqual({ phase: "building", lastLine: "@progress 'Compiling C++ source code...' 100%", percent: 100 });
 	});
@@ -80,7 +80,7 @@ describe("SandboxProjectService", () =>
 		const result = await service.create("/Engines/UE", "/var/folders/x", () => undefined, new AbortController().signal);
 
 		expect(result.sandboxPath).toBe("/private/var/folders/x/DojoSandbox");
-		expect(savedPaths).toEqual(["/private/var/folders/x/DojoSandbox"]);
+		expect(savedPaths).toEqual(["/private/var/folders/x/DojoSandbox", "engine /Engines/UE"]);
 		expect(launcher.specs[0]?.commandArguments).toContain("-Project=/private/var/folders/x/DojoSandbox/Dojo.uproject");
 	});
 
@@ -102,7 +102,7 @@ describe("SandboxProjectService", () =>
 
 		expect(result.ok).toBe(false);
 		expect(result.compilerOutput).toContain("no member named 'SetBegunPlay'");
-		expect(savedPaths).toEqual(["/Picked/DojoSandbox"]);
+		expect(savedPaths).toEqual(["/Picked/DojoSandbox", "engine /Engines/UE"]);
 	});
 
 	it("refuses a sandbox folder that already has files", async () =>

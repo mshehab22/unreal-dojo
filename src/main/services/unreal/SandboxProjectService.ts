@@ -98,6 +98,7 @@ export class SandboxProjectService
 
 		// Remember the folder before building: a failed first build is fixed by rebuilding the same sandbox.
 		this.dependencies.pathStore.setSandboxPath(sandboxFolder);
+		await this.dependencies.pathStore.setEnginePath(enginePath);
 
 		return this.buildSandbox(enginePath, sandboxFolder, startedAt, onProgress, signal);
 	}

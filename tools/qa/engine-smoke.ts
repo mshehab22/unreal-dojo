@@ -71,7 +71,7 @@ function createSmokeServices(locator: EngineLocator): SmokeServices
 	const builder = new UnrealBuilder(paths, launcher, SYSTEM_TIMER);
 
 	// The smoke's sandbox is thrown away, so it is never remembered in the learner's settings.
-	const pathStore = { setSandboxPath: (): void => undefined };
+	const pathStore = { setSandboxPath: (): void => undefined, setEnginePath: (): void => undefined };
 	const sandboxService = new SandboxProjectService({ paths, fileSystem, builder, engineInspector: locator, pathStore, timer: SYSTEM_TIMER, templateFolder: resolve("resources/sandbox-template") });
 
 	return { sandboxService, testRunner: new AutomationTestRunner(paths, launcher, SYSTEM_TIMER, fileSystem) };

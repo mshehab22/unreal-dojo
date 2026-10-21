@@ -46,22 +46,46 @@ export class QuestFileWriter
 	/** Writes every learner file and the test file fresh, and removes files left in the quest folder from an earlier run. Throws on an unsafe id or file name. */
 	async write(sandboxFolder: string, quest: QuestForWriting, files: Record<string, string>): Promise<void>
 	{
-		assertSafeQuestId(quest.id);
+		// Learner files are written unchanged so compiler line numbers match the editor.
+		await this.writeLearnerFiles(sandboxFolder, quest.id, files);
+
+		await this.fileSystem.writeTextFile(this.testFile(sandboxFolder, quest.id), `// Quest test: ${quest.id} (${quest.title}). Written by Unreal Dojo; edits here are replaced on the next run.\n${quest.tests}`);
+	}
+
+	/** Writes only a quest's learner files, fresh, replacing the folder's contents; used to fill a prerequisite quest from its reference solution (A65). */
+	async writeLearnerFiles(sandboxFolder: string, questId: string, files: Record<string, string>): Promise<void>
+	{
+		assertSafeQuestId(questId);
 
 		const fileNames = Object.keys(files);
 		for (const fileName of fileNames) assertSafeFileName(fileName);
 
-		const questFolder = this.questFolder(sandboxFolder, quest.id);
+		const questFolder = this.questFolder(sandboxFolder, questId);
 
 		for (const leftover of await this.fileSystem.listFiles(questFolder))
 		{
 			if (!fileNames.includes(leftover)) await this.fileSystem.removeFile(this.paths.join(questFolder, leftover));
 		}
 
-		// Learner files are written unchanged so compiler line numbers match the editor.
 		for (const fileName of fileNames) await this.fileSystem.writeTextFile(this.paths.join(questFolder, fileName), files[fileName] ?? "");
+	}
 
-		await this.fileSystem.writeTextFile(this.testFile(sandboxFolder, quest.id), `// Quest test: ${quest.id} (${quest.title}). Written by Unreal Dojo; edits here are replaced on the next run.\n${quest.tests}`);
+	/** Writes the given learner files fresh and leaves every other file in the folder alone; used to fill only what is missing (A408) and to apply a boss's piece overrides (A409). */
+	async writeSomeLearnerFiles(sandboxFolder: string, questId: string, files: Record<string, string>): Promise<void>
+	{
+		assertSafeQuestId(questId);
+
+		for (const fileName of Object.keys(files)) assertSafeFileName(fileName);
+
+		for (const [fileName, text] of Object.entries(files)) await this.fileSystem.writeTextFile(this.paths.join(this.questFolder(sandboxFolder, questId), fileName), text);
+	}
+
+	/** The learner file names currently in a quest's sandbox folder. */
+	async existingLearnerFiles(sandboxFolder: string, questId: string): Promise<string[]>
+	{
+		assertSafeQuestId(questId);
+
+		return this.fileSystem.listFiles(this.questFolder(sandboxFolder, questId));
 	}
 
 	/** Removes a quest's folder and test file, for a quest reset. */

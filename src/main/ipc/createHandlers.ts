@@ -3,7 +3,7 @@ import type { DojoMethod } from "@shared/ipc";
 import type { ContentStatus, GlossaryAlias, LearnerQuest, LearnerWorld, PackOutline } from "@shared/types/catalog";
 import type { GlossaryEntry, PatternCard } from "@shared/types/content";
 import type { EngineInstall, EnvironmentStatus, SandboxSetupResult, ToolchainCheck } from "@shared/types/engine";
-import type { BuildProgressEvent } from "@shared/types/run";
+import type { BuildProgressEvent, RunResult, SyntaxCheckResult } from "@shared/types/run";
 import type { Settings, SettingsPatch } from "@shared/types/settings";
 
 import type { ProgressListener } from "../services/unreal/ProgressUpdate";
@@ -55,6 +55,9 @@ export interface HandlerDependencies
 	/** Returns the sandbox service (M1.2). A function for the same reason. */
 	getSandboxService: () => SandboxSetupService;
 
+	/** Returns the quest run service (M1.3b): runs, the snippet syntax check, and sandbox rebuilds. */
+	getQuestRunService: () => QuestRunApi;
+
 	/** Running operations by run id, for `cancelRun`. */
 	runRegistry: RunRegistry;
 
@@ -98,6 +101,19 @@ export interface SandboxSetupService
 
 	/** Copies the template into the picked folder and runs the first full build. */
 	create(enginePath: string, pickedFolder: string, onProgress: ProgressListener, signal: AbortSignal): Promise<SandboxSetupResult>;
+}
+
+/** The part of QuestRunService the handlers use, so tests can pass a fake. */
+export interface QuestRunApi
+{
+	/** Builds and tests a quest's files. */
+	runQuest(questId: string, files: Record<string, string>, onProgress: ProgressListener, signal: AbortSignal): Promise<RunResult>;
+
+	/** Syntax-checks a scratch buffer. */
+	checkSnippetSyntax(code: string): Promise<SyntaxCheckResult>;
+
+	/** Clean full build of the sandbox in settings. */
+	rebuildSandbox(onProgress: ProgressListener, signal: AbortSignal): Promise<SandboxSetupResult>;
 }
 
 /** The part of EngineLocator the handlers use, so tests can pass a fake. */
@@ -204,12 +220,18 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 			argumentSchemas: [sandboxSetupRequestSchema],
 			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getSandboxService().create(request.enginePath, request.folder, onProgress, signal)),
 		},
-		rebuildSandbox: stub("rebuildSandbox", ARRIVES_WITH.sandbox, [idSchema]),
+		rebuildSandbox: {
+			argumentSchemas: [idSchema],
+			handle: (runId) => trackRun(runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getQuestRunService().rebuildSandbox(onProgress, signal)),
+		},
 		openEditor: stub("openEditor", ARRIVES_WITH.editor, [idSchema.nullable()]),
 
-		runQuest: stub("runQuest", ARRIVES_WITH.runs, [runRequestSchema]),
+		runQuest: {
+			argumentSchemas: [runRequestSchema],
+			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getQuestRunService().runQuest(request.questId, request.files, onProgress, signal)),
+		},
 		submitQuest: stub("submitQuest", ARRIVES_WITH.submit, [runRequestSchema]),
-		checkSnippetSyntax: stub("checkSnippetSyntax", ARRIVES_WITH.runs, [syntaxCheckRequestSchema]),
+		checkSnippetSyntax: { argumentSchemas: [syntaxCheckRequestSchema], handle: (request) => dependencies.getQuestRunService().checkSnippetSyntax(request.code) },
 		cancelRun: { argumentSchemas: [idSchema], handle: (runId) => dependencies.runRegistry.cancel(runId) },
 
 		getProgress: { argumentSchemas: [], handle: () => progressService.getProgress() },

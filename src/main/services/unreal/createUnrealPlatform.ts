@@ -25,6 +25,9 @@ export interface UnrealPlatform
 
 	/** Kills a build or editor process with all its children. */
 	processTreeKiller: ProcessTreeKiller;
+
+	/** Runs short commands (toolchain queries, the snippet syntax check). */
+	commandRunner: CommandRunner;
 }
 
 /** What the factory reads from the running process. Passed in so tests can ask for either platform. */
@@ -56,7 +59,8 @@ export function createUnrealPlatform(inputs: UnrealPlatformInputs): UnrealPlatfo
 			paths,
 			toolchainChecker: new WindowsToolchainChecker(commandRunner, environment["ProgramFiles(x86)"]),
 			engineRegistry: new WindowsEngineRegistry(commandRunner),
-			processTreeKiller: new WindowsProcessTreeKiller(startDetached),
+			processTreeKiller: createProcessTreeKiller(platform),
+			commandRunner,
 		};
 	}
 
@@ -66,11 +70,20 @@ export function createUnrealPlatform(inputs: UnrealPlatformInputs): UnrealPlatfo
 			paths: new MacPlatformPaths(homeFolder),
 			toolchainChecker: new MacToolchainChecker(commandRunner),
 			engineRegistry: null,
-			processTreeKiller: new PosixProcessTreeKiller((processId, signal) => process.kill(processId, signal)),
+			processTreeKiller: createProcessTreeKiller(platform),
+			commandRunner,
 		};
 	}
 
 	return null;
+}
+
+/** The tree killer for an operating system: taskkill on Windows, a process group signal everywhere else. */
+export function createProcessTreeKiller(platform: string): ProcessTreeKiller
+{
+	if (platform === "win32") return new WindowsProcessTreeKiller(startDetached);
+
+	return new PosixProcessTreeKiller((processId, signal) => process.kill(processId, signal));
 }
 
 /** Starts a helper program and lets it run on its own (taskkill). */

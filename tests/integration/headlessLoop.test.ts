@@ -13,6 +13,7 @@ import type { BuildPhase } from "@shared/types/run";
 import { createEngineLocator } from "../../src/main/services/unreal/createEngineLocator";
 import { createUnrealServices } from "../../src/main/services/unreal/createUnrealServices";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
+import { MemoryUnrealSettings } from "../unreal/MemoryUnrealSettings";
 
 /** The engine to test against, from the environment. */
 const ENGINE_ROOT = process.env.DOJO_ENGINE_ROOT ?? "";
@@ -54,8 +55,10 @@ describe.skipIf(!HAS_ENGINE)(`headless loop against ${ENGINE_ROOT || "no engine"
 {
 	let pickedFolder = "";
 	let sandboxFolder = "";
-	const savedPaths: string[] = [];
-	const services = HAS_ENGINE ? createUnrealServices({ templateFolder: TEMPLATE_FOLDER, engineInspector: createEngineLocator(), pathStore: { setSandboxPath: (sandboxPath) => savedPaths.push(sandboxPath) } }) : null;
+	const settings = new MemoryUnrealSettings();
+	const services = HAS_ENGINE
+		? createUnrealServices({ templateFolder: TEMPLATE_FOLDER, solutionsFolder: join(__dirname, "..", "..", "tools", "solutions"), engineInspector: createEngineLocator(), settings, quests: { getAuthoredQuest: async () => undefined, listPacks: async () => [] }, learner: { isPassed: () => false, savedFiles: () => ({}) } })
+		: null;
 
 	afterAll(async () =>
 	{
@@ -82,7 +85,8 @@ describe.skipIf(!HAS_ENGINE)(`headless loop against ${ENGINE_ROOT || "no engine"
 		console.log(`Sandbox: ${sandboxFolder}; first build ok=${result.ok}\n${result.compilerOutput}`);
 
 		expect(result.ok).toBe(true);
-		expect(savedPaths).toEqual([sandboxFolder]);
+		expect(settings.getSandboxPath()).toBe(sandboxFolder);
+		expect(settings.getEnginePath()).toBe(ENGINE_ROOT);
 		expect([...phases]).toEqual(["preparing", "writing", "building"]);
 		expect(lastPercent).toBeGreaterThan(0);
 		expect(JSON.parse(await readFile(join(sandboxFolder, "Dojo.uproject"), "utf8")).EngineAssociation).toMatch(/^5\.\d+$/);

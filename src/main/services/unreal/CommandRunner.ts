@@ -19,6 +19,6 @@ export interface CommandResult
 /** Runs a short command to completion and returns its output. Never throws. */
 export interface CommandRunner
 {
-	/** Runs `command` with `commandArguments` (no shell) and resolves when it exits. */
-	run(command: string, commandArguments: string[]): Promise<CommandResult>;
+	/** Runs `command` with `commandArguments` (no shell) and resolves when it exits. `workingFolder` defaults to the app's. */
+	run(command: string, commandArguments: string[], workingFolder?: string): Promise<CommandResult>;
 }

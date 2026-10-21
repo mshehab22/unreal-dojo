@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { declaredTestNames } from "../../../src/main/services/unreal/TestFilter";
 import type { ContentProblem } from "../../../src/shared/types/content";
-import { readBossSolution } from "../bossSolution";
+import { readBossSolution } from "../../../src/main/services/unreal/bossSolution";
 import { declaredDependencyIds } from "../checks/dependencyCheck";
 import { errorAt } from "../checks/checkHelpers";
 import type { QuestRecord } from "../ContentCheck";

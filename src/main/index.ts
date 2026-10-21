@@ -13,6 +13,7 @@ import { registerHandlers } from "./ipc/registerHandlers";
 import { sendBuildProgress } from "./ipc/sendBuildProgress";
 import { createEngineLocator } from "./services/unreal/createEngineLocator";
 import { createUnrealServices, type UnrealServices } from "./services/unreal/createUnrealServices";
+import { SettingsServiceUnrealSettings } from "./services/unreal/SettingsServiceUnrealSettings";
 import type { EngineLocator } from "./services/unreal/EngineLocator";
 import { MathRandomSource } from "./services/progress/MathRandomSource";
 import { NodeFileSystem } from "./services/progress/NodeFileSystem";
@@ -89,7 +90,17 @@ async function start(): Promise<void>
 
 	let unrealServices: UnrealServices | null = null;
 	const getUnrealServices = (): UnrealServices =>
-		(unrealServices ??= createUnrealServices({ templateFolder: sandboxTemplateFolder(), engineInspector: getEngineLocator(), pathStore: settingsService }));
+		(unrealServices ??= createUnrealServices({
+			templateFolder: appResourceFolder(["resources", "sandbox-template"], ["resources", "sandbox-template"]),
+			solutionsFolder: appResourceFolder(["solutions"], ["tools", "solutions"]),
+			engineInspector: getEngineLocator(),
+			settings: new SettingsServiceUnrealSettings(settingsService),
+			quests: contentCatalog,
+			learner: {
+				isPassed: (questId) => progressService.getProgress().quests[questId]?.status === "passed",
+				savedFiles: (questId) => progressService.getProgress().quests[questId]?.savedFiles ?? {},
+			},
+		}));
 
 	// Built on first use; read here only for the provider statuses. The review handlers are wired by ai-review.
 	let reviewService: ReviewService | null = null;
@@ -117,6 +128,7 @@ async function start(): Promise<void>
 			progressService,
 			progressContentService,
 			getSandboxService: () => getUnrealServices().sandboxService,
+			getQuestRunService: () => getUnrealServices().questRunService,
 			runRegistry,
 			sendProgress: sendBuildProgress,
 			settingsService,
@@ -149,12 +161,10 @@ function stopRunsBeforeQuit(runRegistry: RunRegistry): void
 	});
 }
 
-/** The shipped sandbox template: next to the asar when packaged (extraResources), in the source tree in development. */
-function sandboxTemplateFolder(): string
+/** A folder shipped next to the asar when packaged (extraResources), or in the source tree in development: the sandbox template, the reference solutions (A404). */
+function appResourceFolder(packagedParts: string[], sourceParts: string[]): string
 {
-	const resourcesRoot = app.isPackaged ? process.resourcesPath : app.getAppPath();
-
-	return join(resourcesRoot, "resources", "sandbox-template");
+	return app.isPackaged ? join(process.resourcesPath, ...packagedParts) : join(app.getAppPath(), ...sourceParts);
 }
 
 app.on("window-all-closed", () =>

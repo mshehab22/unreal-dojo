@@ -11,7 +11,11 @@ import { NodeProcessLauncher } from "./NodeProcessLauncher";
 import { NodeSandboxFileSystem } from "./NodeSandboxFileSystem";
 import { QuestFileWriter } from "./QuestFileWriter";
 import { RunnerFactory } from "./RunnerFactory";
-import type { SandboxPathStore } from "./SandboxPathStore";
+import { ClangSnippetSyntaxChecker } from "./ClangSnippetSyntaxChecker";
+import { PrerequisiteFiller } from "./PrerequisiteFiller";
+import { type AuthoredQuestSource, type LearnerRecord, QuestRunService } from "./QuestRunService";
+import { ReferenceSolutions } from "./ReferenceSolutions";
+import type { UnrealSettingsStore } from "./UnrealSettingsStore";
 import { SandboxProjectService } from "./SandboxProjectService";
 import { SYSTEM_TIMER } from "./SupervisedProcess";
 import { platformUnsupported } from "./unrealErrors";
@@ -26,8 +30,17 @@ export interface UnrealServiceInputs
 	/** Reads the engine's version for the sandbox's EngineAssociation. */
 	engineInspector: EngineInspector;
 
-	/** Remembers the sandbox folder. */
-	pathStore: SandboxPathStore;
+	/** Remembers and answers the engine and sandbox folders. */
+	settings: UnrealSettingsStore;
+
+	/** Finds quests by id (the content catalog). */
+	quests: AuthoredQuestSource;
+
+	/** What the progress service knows about the learner's quests. */
+	learner: LearnerRecord;
+
+	/** The reference solutions folder (`tools/solutions` in the source tree, A403). */
+	solutionsFolder: string;
 }
 
 /** The unreal-pipeline services the IPC handlers use. */
@@ -36,6 +49,7 @@ export interface UnrealServices
 	sandboxService: SandboxProjectService;
 	runnerFactory: RunnerFactory;
 	questFileWriter: QuestFileWriter;
+	questRunService: QuestRunService;
 }
 
 /** Wires real disk, processes, and clock. Throws `toolchain-missing` with a plain explanation on an unsupported operating system. */
@@ -50,15 +64,22 @@ export function createUnrealServices(inputs: UnrealServiceInputs): UnrealService
 		throw new AppErrorException(error.code, error.message, error.suggestedAction, error.detail);
 	}
 
-	const { paths } = platform;
+	const { paths, commandRunner } = platform;
 	const fileSystem = new NodeSandboxFileSystem();
 	const launcher = new NodeProcessLauncher(platform.processTreeKiller);
 	const builder = new UnrealBuilder(paths, launcher, SYSTEM_TIMER);
 	const testRunner = new AutomationTestRunner(paths, launcher, SYSTEM_TIMER, fileSystem);
 	const questFileWriter = new QuestFileWriter(paths, fileSystem);
 
-	const sandboxService = new SandboxProjectService({ paths, fileSystem, builder, engineInspector: inputs.engineInspector, pathStore: inputs.pathStore, timer: SYSTEM_TIMER, templateFolder: inputs.templateFolder });
+	const sandboxService = new SandboxProjectService({ paths, fileSystem, builder, engineInspector: inputs.engineInspector, pathStore: inputs.settings, timer: SYSTEM_TIMER, templateFolder: inputs.templateFolder });
 	const runnerFactory = new RunnerFactory((context) => new HeadlessRunner({ context, paths, fileSystem, writer: questFileWriter, builder, testRunner, timer: SYSTEM_TIMER }));
 
-	return { sandboxService, runnerFactory, questFileWriter };
+	const prerequisiteFiller = new PrerequisiteFiller(questFileWriter, new ReferenceSolutions(paths, fileSystem, inputs.solutionsFolder));
+
+	// Only the Mac check exists so far; Windows answers not-implemented (A402).
+	const snippetChecker = paths.buildPlatform === "Mac" ? new ClangSnippetSyntaxChecker(paths, fileSystem, commandRunner) : null;
+
+	const questRunService = new QuestRunService({ settings: inputs.settings, quests: inputs.quests, runnerFactory, prerequisiteFiller, sandboxService, snippetChecker, learner: inputs.learner });
+
+	return { sandboxService, runnerFactory, questFileWriter, questRunService };
 }
