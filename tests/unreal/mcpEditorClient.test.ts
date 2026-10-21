@@ -82,6 +82,24 @@ describe("McpEditorClient", () =>
 		expect(server.calls.map((call) => call.toolName)).toEqual(["DiscoverTests", "RunTests", "DiscoverTests", "RunTests"]);
 	});
 
+	it("closes at once: a slow call in flight rejects, and a queued call fails without reconnecting (fix round 1)", async () =>
+	{
+		server.handler = (_toolset, tool) => (tool === "RunTests" ? { text: returnValueText(PASSING_SUMMARY), delayMs: 60_000 } : { text: returnValueText({ status: "ready" }) });
+
+		const inFlight = client.runTests(["A"]).catch((error: unknown) => error);
+		const queued = client.runTests(["B"]).catch((error: unknown) => error);
+
+		while (!server.calls.some((call) => call.toolName === "RunTests")) await new Promise((resolve) => setTimeout(resolve, 5));
+
+		const startedAt = Date.now();
+		await client.close();
+
+		expect(((await inFlight) as EditorClientError).kind).toBe("connection");
+		expect(((await queued) as EditorClientError).kind).toBe("connection");
+		expect(Date.now() - startedAt).toBeLessThan(2_000);
+		expect(server.sessionCount).toBe(1);
+	});
+
 	it("calls CompileLiveCoding on the Live Coding toolset and returns its text", async () =>
 	{
 		server.handler = () => ({ text: returnValueText({ result: "Success", log: "Live coding succeeded" }) });

@@ -20,6 +20,7 @@ function input(overrides: Partial<LoopChoiceInput> = {}): LoopChoiceInput
 		editor: { launchedAt: 100, answering: true },
 		lastFullBuildAt: 50,
 		builtSnapshot: { files, tests: TESTS, builtAt: 50 },
+		sandboxChangedSinceBuild: false,
 		files,
 		tests: TESTS,
 		...overrides,
@@ -38,6 +39,14 @@ describe("chooseLoop, rules for both platforms", () =>
 		expect(chooseLoop(input({ engineSupportsFastLoop: false })).reason).toMatch(/older than 5\.8/);
 		expect(chooseLoop(input({ editor: null })).reason).toMatch(/editor is not open/);
 		expect(chooseLoop(input({ editor: { launchedAt: 100, answering: false } })).reason).toMatch(/not answering/);
+	});
+
+	it("goes headless on both platforms when other quests' files changed since the last full build", () =>
+	{
+		for (const liveCodingAvailable of [true, false])
+		{
+			expect(chooseLoop(input({ liveCodingAvailable, sandboxChangedSinceBuild: true }))).toEqual({ loop: "headless", reason: "Full build: other quests' files in the sandbox changed since the last full build.", editorStale: false });
+		}
 	});
 
 	it("explains when a fast loop set in Settings cannot be used", () =>
@@ -103,6 +112,14 @@ describe("chooseLoop on macOS (no Live Coding, A45)", () =>
 	it("needs a full build when the quest was never built", () =>
 	{
 		expect(chooseLoop(mac({ builtSnapshot: null })).loop).toBe("headless");
+	});
+
+	it("needs a full build when another quest was built after this one, even with the editor opened after both", () =>
+	{
+		const choice = chooseLoop(mac({ lastFullBuildAt: 80 }));
+
+		expect(choice.loop).toBe("headless");
+		expect(choice.reason).toMatch(/another quest was built after this one/);
 	});
 
 	it("marks the editor stale after a build that finished while it was open, and offers a restart", () =>

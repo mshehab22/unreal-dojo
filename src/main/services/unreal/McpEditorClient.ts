@@ -27,6 +27,7 @@ export class McpEditorClient implements EditorToolClient
 	private client: Client | null = null;
 	private testsDiscovered = false;
 	private queue: Promise<unknown> = Promise.resolve();
+	private closed = false;
 
 	/** Takes the server port, the `mcpPort` setting (default 8000, A44). */
 	constructor(port: number)
@@ -79,10 +80,12 @@ export class McpEditorClient implements EditorToolClient
 		return this.serial(() => this.callTool(LIVE_CODING_TOOLSET, "CompileLiveCoding", {}, LONG_CALL_TIMEOUT_MS));
 	}
 
-	/** Closes the session after any call in flight. */
+	/** Closes for good and at once, without waiting for the queue: a call in flight rejects as a connection error, and queued calls fail without reconnecting. */
 	close(): Promise<void>
 	{
-		return this.serial(() => this.dropSession());
+		this.closed = true;
+
+		return this.dropSession();
 	}
 
 	/** Queues work behind every earlier call, so calls never overlap even when callers do not wait. */
@@ -98,6 +101,7 @@ export class McpEditorClient implements EditorToolClient
 	private async session(): Promise<Client>
 	{
 		if (this.client) return this.client;
+		if (this.closed) throw new EditorClientError("connection", "The connection to the editor was closed.");
 
 		const client = new Client({ name: "unreal-dojo", version: "1.0.0" });
 

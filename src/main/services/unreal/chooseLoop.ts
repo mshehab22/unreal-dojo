@@ -26,6 +26,9 @@ export interface LoopChoiceInput
 	/** What the last full build compiled for this quest, or null. */
 	builtSnapshot: BuiltQuestSnapshot | null;
 
+	/** True when other quests' files in the sandbox were written or removed since the last full build (prerequisite fill, reset). */
+	sandboxChangedSinceBuild: boolean;
+
 	/** The files and tests of this run. */
 	files: Record<string, string>;
 	tests: string;
@@ -52,6 +55,8 @@ export function chooseLoop(input: LoopChoiceInput): LoopChoice
 	const snapshot = input.builtSnapshot;
 	const editorStale = input.lastFullBuildAt !== null && input.lastFullBuildAt > input.editor.launchedAt;
 
+	if (input.sandboxChangedSinceBuild) return headless("Full build: other quests' files in the sandbox changed since the last full build.", editorStale);
+
 	if (input.liveCodingAvailable)
 	{
 		if (editorStale) return headless("Full build: a build finished after the editor opened, so it is not running that code.", true);
@@ -64,11 +69,13 @@ export function chooseLoop(input: LoopChoiceInput): LoopChoice
 		return { loop: "fast", reason: "Fast loop: Live Coding in the open editor (only .cpp or plain header changes since the last full build).", editorStale: false };
 	}
 
-	// macOS: no Live Coding, so the editor runs exactly the code it loaded at launch (A45).
+	// macOS: no Live Coding, so the editor runs exactly the code it loaded at launch (A45). That build must be the latest one, and this quest's record must come from it.
 	const unchanged = snapshot !== null && snapshot.tests === input.tests && sameFiles(snapshot.files, input.files);
+	const fromLatestBuild = snapshot !== null && snapshot.builtAt === input.lastFullBuildAt;
 
 	if (editorStale) return headless("Full build: the open editor still has older code. Restart the editor to use the fast loop again.", true);
 	if (!unchanged || snapshot === null || snapshot.builtAt > input.editor.launchedAt) return headless("Full build: the code changed, and Live Coding is not available on the Mac.");
+	if (!fromLatestBuild) return headless("Full build: another quest was built after this one, so this quest's code is built again before its tests run in the editor.");
 
 	return { loop: "fast", reason: "Fast loop: the code is unchanged since the editor loaded it, so only the tests run again.", editorStale: false };
 }

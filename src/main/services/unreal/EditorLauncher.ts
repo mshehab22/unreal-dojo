@@ -1,6 +1,8 @@
 // Opens the Unreal editor on the sandbox with its MCP server, remembers that one editor, and closes it cleanly.
+import { AppErrorException } from "../../errors/AppErrorException";
 import type { EditorToolClient } from "./EditorToolClient";
 import type { PlatformPaths } from "./PlatformPaths";
+import type { PortProbe } from "./PortProbe";
 import type { ProcessLauncher, RunningProcess } from "./ProcessLauncher";
 import type { Timer } from "./SupervisedProcess";
 
@@ -57,14 +59,18 @@ export interface EditorLauncherDependencies
 
 	/** Makes the client for a port (McpEditorClient in the app, a fake in tests). */
 	createClient: (port: number) => EditorToolClient;
+
+	/** Checks the MCP port before launch. Unreal's server does not fail on a taken port, so without this the client could talk to another editor (fix round 1). */
+	portProbe: PortProbe;
 }
 
-/** Keeps at most one editor open. Launching again closes the old one first. Closing asks the editor to quit, then kills its tree after 15 seconds. */
+/** Keeps at most one editor open. Launching again closes the old one first. Closing asks the editor to quit, then kills its tree after 15 seconds. After dispose (app quit) it never starts another. */
 export class EditorLauncher
 {
 	private readonly dependencies: EditorLauncherDependencies;
 	private session: { value: EditorSession; process: RunningProcess; exited: boolean } | null = null;
 	private lastRequest: EditorLaunchRequest | null = null;
+	private disposed = false;
 
 	/** Takes the paths, process launcher, clock, and client maker. */
 	constructor(dependencies: EditorLauncherDependencies)
@@ -88,14 +94,24 @@ export class EditorLauncher
 		return [paths.pathArgument(request.projectFile), ...mcpArguments, ...windowlessArguments];
 	}
 
-	/** Closes any editor already open, starts a new one, and returns its session at once (the server answers some seconds later; see waitUntilAnswering). */
+	/** Closes any editor already open, checks the MCP port is free, starts a new editor, and returns its session at once (the server answers some seconds later; see waitUntilAnswering). Throws `editor-launch-failed` when the port is taken or the app is quitting. */
 	async launch(request: EditorLaunchRequest): Promise<EditorSession>
 	{
+		this.refuseWhenDisposed();
 		await this.close();
 
 		this.lastRequest = request;
 
-		const { paths, launcher, timer, createClient } = this.dependencies;
+		const { paths, launcher, timer, createClient, portProbe } = this.dependencies;
+
+		if (request.startMcpServer && (await portProbe.isInUse(request.port)))
+		{
+			throw new AppErrorException("editor-launch-failed", `Port ${request.port} is already in use, so the editor's MCP server cannot start there.`, "Close the other Unreal editor or program using it, or change the MCP port in Settings.", `127.0.0.1:${request.port} accepted a connection before launch`);
+		}
+
+		// Quit may have begun while the old editor closed or the port was checked.
+		this.refuseWhenDisposed();
+
 		const process = launcher.start({ command: paths.editorBinary(request.engineRoot), commandArguments: this.commandArguments(request), verbatimArguments: paths.verbatimArguments }, request.onLine ?? (() => undefined));
 		const client = createClient(request.port);
 
@@ -116,10 +132,18 @@ export class EditorLauncher
 		return entry.value;
 	}
 
-	/** Opens the editor again the way it was last opened (after a full build closed it, or to restart a stale one). Null when it was never opened. */
+	/** Opens the editor again the way it was last opened (after a full build closed it, or to restart a stale one). Null when it was never opened or the app is quitting. */
 	async reopen(): Promise<EditorSession | null>
 	{
-		return this.lastRequest ? this.launch(this.lastRequest) : null;
+		return this.lastRequest && !this.disposed ? this.launch(this.lastRequest) : null;
+	}
+
+	/** Closes the editor for good: no launch or reopen starts another afterwards. The app calls it before quitting. */
+	async dispose(): Promise<void>
+	{
+		this.disposed = true;
+
+		await this.close();
 	}
 
 	/** Asks the session's server until it answers, the editor exits, or the time runs out. */
@@ -146,13 +170,21 @@ export class EditorLauncher
 
 		if (!entry || entry.exited) return;
 
-		await entry.value.client.close();
 		entry.process.requestExit();
 
 		const cancelKill = this.dependencies.timer.schedule(() => entry.process.killTree(), CLOSE_GRACE_MS);
 
+		// Dropping the connection rejects a call in flight at once instead of waiting up to 10 minutes for it.
+		void entry.value.client.close();
+
 		// After a clean exit its helpers are left alone: the zen storage server it may have started is shared with other editors.
 		await entry.process.exited;
 		cancelKill();
+	}
+
+	/** Throws when the app is quitting. */
+	private refuseWhenDisposed(): void
+	{
+		if (this.disposed) throw new AppErrorException("editor-launch-failed", "Unreal Dojo is closing, so it will not open the editor.", "Open Unreal Dojo again to use the editor.");
 	}
 }

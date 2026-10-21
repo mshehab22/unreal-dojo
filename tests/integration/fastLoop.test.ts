@@ -16,6 +16,7 @@ import { EditorLauncher, type EditorSession } from "../../src/main/services/unre
 import { FullBuildLedger } from "../../src/main/services/unreal/FullBuildLedger";
 import { McpEditorClient } from "../../src/main/services/unreal/McpEditorClient";
 import { NodeCommandRunner } from "../../src/main/services/unreal/NodeCommandRunner";
+import { NodePortProbe } from "../../src/main/services/unreal/NodePortProbe";
 import { NodeProcessLauncher } from "../../src/main/services/unreal/NodeProcessLauncher";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
 import { RunnerFactory } from "../../src/main/services/unreal/RunnerFactory";
@@ -85,7 +86,7 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 		const platform = createUnrealPlatform({ platform: process.platform, homeFolder: homedir(), environment: process.env, commandRunner: new NodeCommandRunner() });
 		if (!platform) throw new Error(`No Unreal platform for ${process.platform}`);
 
-		const editorLauncher = new EditorLauncher({ paths: platform.paths, launcher: new NodeProcessLauncher(platform.processTreeKiller), timer: SYSTEM_TIMER, createClient: (clientPort) => new McpEditorClient(clientPort) });
+		const editorLauncher = new EditorLauncher({ paths: platform.paths, launcher: new NodeProcessLauncher(platform.processTreeKiller), timer: SYSTEM_TIMER, portProbe: new NodePortProbe(), createClient: (clientPort) => new McpEditorClient(clientPort) });
 		const ledger = new FullBuildLedger();
 		const factory = new RunnerFactory((context) => services.runnerFactory.forContext(context), {
 			paths: platform.paths,
@@ -141,7 +142,7 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 
 	afterAll(async () =>
 	{
-		await rig?.editorLauncher.close();
+		await rig?.editorLauncher.dispose();
 		console.log(`Timings (ms): ${JSON.stringify(timings)}`);
 
 		if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true });
@@ -183,6 +184,15 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 		expect(second.reasons[0]).toMatch(/only the tests run again/);
 	}, STEP_TIMEOUT_MS);
 
+	it("refuses to open a second editor on the port the first one holds, and starts no process (fix round 1)", async () =>
+	{
+		const { platform } = requireRig();
+		const secondLauncher = new EditorLauncher({ paths: platform.paths, launcher: new NodeProcessLauncher(platform.processTreeKiller), timer: SYSTEM_TIMER, portProbe: new NodePortProbe(), createClient: (clientPort) => new McpEditorClient(clientPort) });
+
+		await expect(secondLauncher.launch({ engineRoot: ENGINE_ROOT, projectFile: join(sandboxFolder, "Dojo.uproject"), port, startMcpServer: true, windowless: true })).rejects.toThrow(`Port ${port} is already in use`);
+		expect(secondLauncher.current()).toBeNull();
+	}, STEP_TIMEOUT_MS);
+
 	it("builds headless after a code change, then counts the open editor stale until it restarts (A45)", async () =>
 	{
 		const changed = await runSample("headlessAfterChange", true);
@@ -205,7 +215,7 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 	it("quits the editor cleanly and leaves no process on the sandbox", async () =>
 	{
 		const startedAt = Date.now();
-		await requireRig().editorLauncher.close();
+		await requireRig().editorLauncher.dispose();
 		timings.editorClose = Date.now() - startedAt;
 
 		expect(session?.isRunning()).toBe(false);

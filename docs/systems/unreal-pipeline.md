@@ -34,7 +34,7 @@ interface TestCaseResult { name: string; passed: boolean; message?: string; dura
 - `LiveEditorRunner.ts`: on Windows writes files and calls `CompileLiveCoding`, reading the answer with `LiveCodingAnswer` (A485); on macOS skips both, because the chooser only picks it for code the editor already loaded (A45). Then `RunTests` with the quest's declared test names, keeping only those in the answer. Falls back to the headless loop with a reason when the editor stops answering, a tool errors, Live Coding cannot take the change, or the editor does not know the quest's tests (A486). Built in M1.4.
 - `HeadlessRunner.ts`: write files, `UnrealBuilder`, `AutomationTestRunner`, `ReportParser`. Built in M1.3. `ok` only when it compiled, at least one test ran, every test passed, and there was no pipeline error.
 - `QuestFileWriter.ts`: learner files, unchanged, to `<Sandbox>/Source/Dojo/Quests/<quest-id>/`; quest tests to `<Sandbox>/Source/Dojo/Tests/<quest-id>.Test.cpp` with a header comment naming the quest (only the test file, so compiler line numbers match the learner's editor, A188). Files left in the quest folder from an earlier run are removed; `remove` deletes a quest on reset. Refuses file names that are not plain `.h` or `.cpp` names. Each quest folder is an include path (A181). Built in M1.3. Always write files fresh (never move an older copy back into place): UBT decides what to rebuild by modification time, and a restored file with an older time is silently skipped.
-- `EditorLauncher.ts`: opens the editor on the sandbox project with `-ModelContextProtocolStartServer -ModelContextProtocolPort=<port>` when the engine is 5.8+ (plus `-NullRHI -Unattended -NoSplash -NoSound -stdout -FullStdOutLogOutput` when windowless). Keeps one editor; launching again closes the old one. Closing: an exit request (SIGTERM on macOS, `taskkill /T` without `/F` on Windows), then a hard tree kill after 15 seconds; on the Mac the editor was seen hanging in shutdown after a SIGTERM. No kill after a clean exit, because the zen storage server it may have started is shared with other editors (A487). Built in M1.4.
+- `EditorLauncher.ts`: checks the MCP port is free first and refuses with `editor-launch-failed` when anything listens there, since Unreal's server does not fail on a taken port (A491). Opens the editor on the sandbox project with `-ModelContextProtocolStartServer -ModelContextProtocolPort=<port>` when the engine is 5.8+ (plus `-NullRHI -Unattended -NoSplash -NoSound -stdout -FullStdOutLogOutput` when windowless). Keeps one editor; launching again closes the old one. Closing: an exit request (SIGTERM on macOS, `taskkill /T` without `/F` on Windows) and the hard tree kill scheduled for 15 seconds later, then the MCP connection dropped at once so a call in flight does not hold the close; on the Mac the editor was seen hanging in shutdown after a SIGTERM. No kill after a clean exit, because the zen storage server it may have started is shared with other editors (A487). Built in M1.4.
 
 ## Architecture (built so far)
 
@@ -113,8 +113,10 @@ Real engine check: `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/
 | `McpEditorClient.ts` | The real client: `@modelcontextprotocol/sdk` over Streamable HTTP, a promise queue so calls never overlap, `DiscoverTests` once per session |
 | `EditorTestSummaryParser.ts` | Unwraps `{"returnValue": "<json>"}` and reads the RunTests summary (errors as strings or objects) |
 | `LiveCodingAnswer.ts` | Reads CompileLiveCoding's answer into `succeeded`, `no-changes`, `failed`, `needs-full-build`, `unavailable`, or `busy`; an unknown answer counts as needing a full build |
-| `EditorLauncher.ts` | Above; also `reopen()` and `waitUntilAnswering(session, timeout)` (polls once a second) |
-| `FullBuildLedger.ts` | In memory: when the last full build finished, and per quest the files and tests it compiled |
+| `EditorLauncher.ts` | Above; also `reopen()`, `dispose()` (no editor starts afterwards), and `waitUntilAnswering(session, timeout)` (polls once a second). Refuses a taken MCP port (A491) |
+| `PortProbe.ts`, `NodePortProbe.ts` | A one-second TCP connect to 127.0.0.1: is something already listening on the MCP port |
+| `stopEditorBeforeQuit.ts` | The `before-quit` hook: holds the quit while the editor closes, disposes the launcher, quits again |
+| `FullBuildLedger.ts` | In memory: when the last full build finished, per quest the files and tests it compiled, and whether any quest's files in the sandbox changed since (`recordSandboxWrite`) |
 | `chooseLoop.ts` | The rules below, as a pure function |
 | `LoopSelectingRunner.ts` | Gathers the inputs, announces the loop and reason once, runs the fast runner or the headless one, and records every build that compiled |
 | `LiveEditorRunner.ts` | Above |
@@ -124,14 +126,16 @@ Real engine check: `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/
 Rules, first match wins (`chooseLoop.ts`):
 1. `loopMode` is `headless`: headless.
 2. The engine is older than 5.8, no editor the app opened is on this engine and sandbox, or its server does not answer: headless.
-3. A full build finished after the editor opened: headless, and the editor is stale. On the Mac the reason says to restart the editor.
+3. Other quests' files changed since the last full build (prerequisite fill, reset): headless. A full build finished after the editor opened: headless, and the editor is stale; on the Mac the reason says to restart the editor.
 4. Windows: headless when this quest has no full build this session, its tests changed, files were added or removed, or a changed header contains a reflection macro (`UCLASS`, `USTRUCT`, `UENUM`, `UINTERFACE`, `UPROPERTY`, `UFUNCTION`, `UDELEGATE`, `GENERATED_BODY`, `DECLARE_DYNAMIC_*`) before or after the change; otherwise fast with Live Coding.
-5. macOS: fast only when the files and tests equal the last full build of this quest and that build finished before the editor opened; otherwise headless.
+5. macOS: fast only when the files and tests equal the last full build of this quest, that build is the latest full build, and it finished before the editor opened; otherwise headless.
 6. `loopMode` `fast` that cannot be honored says so at the start of the reason.
 
 On Windows a headless run closes the open editor first and reopens it afterwards in the background (A483). Cancel takes effect between steps; a call already sent to the editor is not interrupted (A488).
 
-Not wired into the app yet (A489): `createUnrealServices` still builds the factory without fast loop pieces, the `openEditor` IPC is a stub, and sandbox create and rebuild do not record into the ledger. Those files are in M1.3b's fix round; the wiring follows its merge.
+Quitting: `stopEditorBeforeQuit(app, editorLauncher)` holds the quit while the editor closes (up to the 15 second grace) and disposes the launcher, so a background `reopen()` cannot start an editor during quit.
+
+Not wired into the app yet (A489): `createUnrealServices` still builds the factory without fast loop pieces, the `openEditor` IPC is a stub, sandbox create and rebuild do not record into the ledger, `PrerequisiteFiller` and quest resets do not call `recordSandboxWrite`, and `src/main/index.ts` does not call `stopEditorBeforeQuit`. Those files are in M1.3b's fix round; the wiring follows its merge.
 
 ## Sandbox template (`resources/sandbox-template/`)
 

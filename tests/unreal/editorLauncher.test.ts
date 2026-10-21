@@ -1,13 +1,17 @@
 // Checks the editor's command line on both platforms, one editor at a time, waiting for the server, and the two-step close.
 import { describe, expect, it } from "vitest";
 
+import { AppErrorException } from "../../src/main/errors/AppErrorException";
 import { CLOSE_GRACE_MS, EditorLauncher } from "../../src/main/services/unreal/EditorLauncher";
+import { NodePortProbe } from "../../src/main/services/unreal/NodePortProbe";
+import { stopEditorBeforeQuit, type QuittingApp } from "../../src/main/services/unreal/stopEditorBeforeQuit";
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
 import type { PlatformPaths } from "../../src/main/services/unreal/PlatformPaths";
 import { WindowsPlatformPaths } from "../../src/main/services/unreal/WindowsPlatformPaths";
 import { FakeEditorToolClient } from "./FakeEditorToolClient";
 import { FakeProcessLauncher } from "./FakeProcessLauncher";
 import { FakeTimer } from "./FakeTimer";
+import { FakeUnrealMcpServer } from "./FakeUnrealMcpServer";
 
 const MAC_ENGINE = "/Users/learner/Applications/UE_5.8";
 const MAC_PROJECT = "/Users/learner/Dojo/DojoSandbox/Dojo.uproject";
@@ -18,7 +22,8 @@ function createLauncher(paths: PlatformPaths = new MacPlatformPaths("/Users/lear
 	const processes = new FakeProcessLauncher([{ hangs: true }, { hangs: true }, { hangs: true }]);
 	const timer = new FakeTimer();
 	const clients: FakeEditorToolClient[] = [];
-	const launcher = new EditorLauncher({ paths, launcher: processes, timer, createClient: () =>
+	const portProbe = { inUse: false, isInUse: async () => portProbe.inUse };
+	const launcher = new EditorLauncher({ paths, launcher: processes, timer, portProbe, createClient: () =>
 	{
 		const client = new FakeEditorToolClient();
 		clients.push(client);
@@ -26,7 +31,7 @@ function createLauncher(paths: PlatformPaths = new MacPlatformPaths("/Users/lear
 		return client;
 	} });
 
-	return { launcher, processes, timer, clients };
+	return { launcher, processes, timer, clients, portProbe };
 }
 
 /** Lets pending promise callbacks run. */
@@ -154,5 +159,154 @@ describe("EditorLauncher", () =>
 
 		await settle();
 		expect(answer).toBe(false);
+	});
+
+	it("refuses to start an editor when the MCP port is already taken (fix round 1)", async () =>
+	{
+		const { launcher, processes, portProbe } = createLauncher();
+		portProbe.inUse = true;
+
+		const failure = await launcher.launch({ engineRoot: MAC_ENGINE, projectFile: MAC_PROJECT, port: 8000, startMcpServer: true, windowless: false }).catch((error: unknown) => error);
+
+		expect(failure).toBeInstanceOf(AppErrorException);
+		expect((failure as AppErrorException).appError).toMatchObject({ code: "editor-launch-failed", message: "Port 8000 is already in use, so the editor's MCP server cannot start there.", suggestedAction: "Close the other Unreal editor or program using it, or change the MCP port in Settings." });
+		expect(processes.specs).toEqual([]);
+		expect(launcher.current()).toBeNull();
+	});
+
+	it("does not probe the port for an engine without the MCP server", async () =>
+	{
+		const { launcher, portProbe } = createLauncher();
+		portProbe.inUse = true;
+
+		await expect(launcher.launch({ engineRoot: MAC_ENGINE, projectFile: MAC_PROJECT, port: 8000, startMcpServer: false, windowless: false })).resolves.toBeDefined();
+	});
+
+	it("asks the editor to quit and schedules the kill even when the client's close never finishes", async () =>
+	{
+		const { launcher, processes, timer, clients } = createLauncher();
+		processes.honorsExitRequests = false;
+		await launcher.launch({ engineRoot: MAC_ENGINE, projectFile: MAC_PROJECT, port: 8000, startMcpServer: true, windowless: true });
+
+		let exitRequestsWhenClientClosed = -1;
+		clients[0]!.close = () =>
+		{
+			exitRequestsWhenClientClosed = processes.exitRequestCount;
+
+			return new Promise<void>(() => undefined);
+		};
+
+		const closing = launcher.close();
+		await settle();
+		timer.advance(CLOSE_GRACE_MS);
+		await closing;
+
+		expect(exitRequestsWhenClientClosed).toBe(1);
+		expect(processes.killCount).toBe(1);
+	});
+
+	it("starts nothing after dispose, including a reopen and a launch that was already on its way", async () =>
+	{
+		const { launcher, processes, portProbe } = createLauncher();
+		await launcher.launch({ engineRoot: MAC_ENGINE, projectFile: MAC_PROJECT, port: 8000, startMcpServer: true, windowless: false });
+
+		// A background reopen begins, and quit starts while it waits on the port check.
+		let releaseProbe: (inUse: boolean) => void = () => undefined;
+		portProbe.isInUse = () => new Promise<boolean>((resolve) => (releaseProbe = resolve));
+		const reopening = launcher.reopen().catch((error: unknown) => error);
+		await settle();
+
+		await launcher.dispose();
+		releaseProbe(false);
+
+		expect(await reopening).toBeInstanceOf(AppErrorException);
+		expect(await launcher.reopen()).toBeNull();
+		await expect(launcher.launch({ engineRoot: MAC_ENGINE, projectFile: MAC_PROJECT, port: 8000, startMcpServer: true, windowless: false })).rejects.toBeInstanceOf(AppErrorException);
+		expect(processes.specs).toHaveLength(1);
+		expect(launcher.current()).toBeNull();
+	});
+});
+
+describe("NodePortProbe", () =>
+{
+	it("sees the fake MCP server holding its port, and a closed port as free", async () =>
+	{
+		const server = new FakeUnrealMcpServer(() => ({ text: "{}" }));
+		const port = await server.start();
+		const probe = new NodePortProbe();
+
+		expect(await probe.isInUse(port)).toBe(true);
+
+		await server.stop();
+		expect(await probe.isInUse(port)).toBe(false);
+	});
+
+	it("makes a real launcher refuse the port the fake server holds", async () =>
+	{
+		const server = new FakeUnrealMcpServer(() => ({ text: "{}" }));
+		const port = await server.start();
+		const processes = new FakeProcessLauncher([{ hangs: true }]);
+		const launcher = new EditorLauncher({ paths: new MacPlatformPaths("/Users/learner"), launcher: processes, timer: new FakeTimer(), portProbe: new NodePortProbe(), createClient: () => new FakeEditorToolClient() });
+
+		try
+		{
+			await expect(launcher.launch({ engineRoot: MAC_ENGINE, projectFile: MAC_PROJECT, port, startMcpServer: true, windowless: true })).rejects.toThrow(`Port ${port} is already in use`);
+			expect(processes.specs).toEqual([]);
+		}
+		finally
+		{
+			await server.stop();
+		}
+	});
+});
+
+describe("stopEditorBeforeQuit", () =>
+{
+	/** A stand-in for Electron's app that records quits and replays before-quit. */
+	function createApp()
+	{
+		let listener: (event: { preventDefault(): void }) => void = () => undefined;
+		const app = { quitCount: 0, on: (_eventName: "before-quit", newListener: typeof listener) => (listener = newListener), quit: () => app.quitCount++ };
+		const fire = (): boolean =>
+		{
+			let prevented = false;
+			listener({ preventDefault: () => (prevented = true) });
+
+			return prevented;
+		};
+
+		return { app: app as QuittingApp & { quitCount: number }, fire };
+	}
+
+	it("holds the quit until the open editor is closed, holds any quit attempt meanwhile, then quits", async () =>
+	{
+		const { launcher, processes, timer } = createLauncher();
+		processes.honorsExitRequests = false;
+		await launcher.launch({ engineRoot: MAC_ENGINE, projectFile: MAC_PROJECT, port: 8000, startMcpServer: true, windowless: false });
+		const { app, fire } = createApp();
+		stopEditorBeforeQuit(app, launcher);
+
+		expect(fire()).toBe(true);
+		await settle();
+		expect(fire()).toBe(true);
+		expect(app.quitCount).toBe(0);
+
+		timer.advance(CLOSE_GRACE_MS);
+		for (let step = 0; step < 4; step++) await settle();
+
+		expect(processes.killCount).toBe(1);
+		expect(app.quitCount).toBe(1);
+		expect(fire()).toBe(false);
+	});
+
+	it("lets the quit through when no editor is open, and still stops any later reopen", async () =>
+	{
+		const { launcher } = createLauncher();
+		const { app, fire } = createApp();
+		stopEditorBeforeQuit(app, launcher);
+
+		expect(fire()).toBe(false);
+		await settle();
+		expect(await launcher.reopen()).toBeNull();
 	});
 });

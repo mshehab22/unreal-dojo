@@ -60,6 +60,7 @@ export class LoopSelectingRunner implements IRunner
 			editor: session ? { launchedAt: session.launchedAt, answering } : null,
 			lastFullBuildAt: ledger.lastFullBuildAt(),
 			builtSnapshot: ledger.snapshotFor(quest.id),
+			sandboxChangedSinceBuild: ledger.sandboxChangedSinceBuild(),
 			files,
 			tests: quest.tests,
 		});

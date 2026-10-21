@@ -51,7 +51,7 @@ function createRig(paths: PlatformPaths, loopMode: LoopModeSetting = "auto")
 	const fileSystem = new FakeSandboxFileSystem();
 	const client = new FakeEditorToolClient();
 	const processes = new FakeProcessLauncher([{ hangs: true }, { hangs: true }]);
-	const editorLauncher = new EditorLauncher({ paths, launcher: processes, timer, createClient: () => client });
+	const editorLauncher = new EditorLauncher({ paths, launcher: processes, timer, portProbe: { isInUse: async () => false }, createClient: () => client });
 	const ledger = new FullBuildLedger();
 	const headless = new RecordingHeadlessRunner();
 	const writer = new QuestFileWriter(paths, fileSystem);

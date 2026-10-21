@@ -34,6 +34,6 @@ export interface EditorToolClient
 	/** Starts a Live Coding compile, waits for it, and resolves with what the tool returned. Throws EditorClientError. */
 	compileLiveCoding(): Promise<string>;
 
-	/** Ends the session. Never throws. */
+	/** Ends the session for good, at once: a call in flight rejects and later calls fail. Never throws. */
 	close(): Promise<void>;
 }
