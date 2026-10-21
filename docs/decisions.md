@@ -4,6 +4,15 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A506 2026-10-21 League night boss: the director feeds the sentry, and two Clear additions (author-foundations, Pack 1 World 3)
+The sentry aims at whatever is in its Targets list, but the rack keeps its pool private. Options: give the rack a getter for its pool; have the director add each target to the sentry's list when it is lent and remove it when it goes back. Chosen: the director does it, so the sentry never aims at a resting target and the rack needs no change. The roster and the score board each gain `Clear` so R can start a new league clean, and (fix round 1, the Lead's decision) the sentry gains BlueprintCallable `AddTarget` and `RemoveTarget`, because its Targets list is only EditAnywhere and the Blueprint plan could not otherwise feed it; extended copies of all three ship in the boss's solution folder (A340), and the sentry build quest's own interface is unchanged. Reference game: the bowling in Wii Sports. Reverse cost: low.
+
+### A505 2026-10-21 The announcer's test pins the culture to English (author-foundations, Pack 1 World 3)
+FText formats numbers for the current culture, so "1,200" depends on the machine. Options: avoid numbers above 999 in the test; pin the culture inside the test and restore it after. Chosen: pin it to `en` with a culture state snapshot, so the grouping the quest teaches is asserted the same way everywhere. Reverse cost: low.
+
+### A504 2026-10-21 Pack 1 World 3 shape (author-foundations, Pack 1 World 3)
+World 3, "Containers and strings", continues the training yard with a league. Six concept quests: TArray; TMap, TSet, and TQueue; FString, FName, FText, and TEXT; FVector and FMath; FRotator and FQuat; FTransform. Four builds on the fade ladder, reusing World 1 and World 2 on purpose: worked score board (TArray history with a limit, reading the World 1 score keeper; the world's deliberate failure is an average computed with whole-number division), faded roster (TMap keyed by FName, with case-insensitive names), stub announcer (FText::Format with named arguments and culture-formatted numbers), blank sentry (nearest raised World 1 target by squared distance, yaw with Atan2). Breakdown: a league table, with a map-then-sort plan and a sorted-array-plus-index plan. Boss: league night, using the World 2 rack. TSet, TQueue, FQuat, FTransform, and the Kismet math library are taught in concept quests and drills only. Reverse cost: medium.
+
 ### A286 2026-10-21 Engine smoke builds the cmd.exe command line by hand for Build.bat (QA harness fix round 1, tester) (superseded by A63)
 Superseded 2026-10-21: after M1.3 merged, the smoke calls `SandboxProjectService`, `UnrealBuilder`, and `AutomationTestRunner`; `tools/qa/windowsCommandLine.ts`, its test, and the hand-written tree kill were deleted. The text below is kept as history.
 
