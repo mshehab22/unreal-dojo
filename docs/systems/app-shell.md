@@ -48,7 +48,7 @@ Last updated by M0.2 (typed IPC contract).
 ### Processes and files
 - `src/main/index.ts`: composition root. Waits for `app.whenReady()`, calls `registerHandlers()`, opens the window, reopens it from the macOS dock, quits when all windows close on Windows.
 - `src/main/window/createMainWindow.ts`: the one `BrowserWindow`. 1440x900 (the OS caps it to the screen's work area), minimum 1100x700, background `#0b0d12`, `hiddenInset` title bar on macOS, `contextIsolation` on, `nodeIntegration` off, `sandbox` on. Shown on `ready-to-show`. New windows are denied and outside links (`http`, `https`) go to the system browser; in-page navigation away from the app is blocked the same way. Loads `ELECTRON_RENDERER_URL` in dev, `out/renderer/index.html` when built.
-- `src/main/ipc/`: the IPC boundary (see "IPC surface" below). `createHandlers.ts` builds the table with one `HandlerDefinition` per method (payload checks plus the answering function); `registerHandlers.ts` wraps each one and registers it on its channel; `payloadChecks.ts` and `requestChecks.ts` are the hand-written checks (A83); `notImplemented.ts` builds the stub error; `sendBuildProgress.ts` pushes progress events to every window.
+- `src/main/ipc/`: the IPC boundary (see "IPC surface" below). `createHandlers.ts` builds the table with one `HandlerDefinition` per method (a zod schema per argument plus the answering function); `registerHandlers.ts` wraps each one and registers it on its channel; `requestSchemas.ts` holds the zod schemas, each typed against its shared type (A83); `notImplemented.ts` builds the stub error; `sendBuildProgress.ts` pushes progress events to every window.
 - `src/main/errors/AppErrorException.ts`: what services throw to send a specific `AppError` to the renderer (A84).
 - `src/main/services/settings/`: empty; SettingsService arrives with the settings task.
 - `src/preload/index.ts`: exposes `window.dojo` (a `DojoApi`) through `contextBridge`. It builds one forwarding function per method from `IPC_CHANNELS`, so adding a method never needs a preload edit, and adds `onBuildProgress`. Built as CommonJS (`out/preload/index.cjs`) because sandboxed preloads cannot be ES modules. `src/preload/index.d.ts` types `window.dojo` for the renderer.
@@ -60,7 +60,7 @@ Last updated by M0.2 (typed IPC contract).
 
 How a call travels (A80):
 1. The renderer calls `window.dojo.<method>(...)`. The preload sends it with `ipcRenderer.invoke` on `dojo:<method>`.
-2. In main, the wrapper checks every argument (unknown fields, wrong types, too many arguments, unsafe file names are all rejected). A bad payload answers `{ ok: false, error }` with code `invalid-payload` and never reaches the handler.
+2. In main, the wrapper parses every argument with its zod schema (unknown fields, wrong types, too many arguments, unsafe file names are all rejected). A bad payload answers `{ ok: false, error }` with code `invalid-payload` and never reaches the handler; a good one reaches it as zod's parsed copy.
 3. The handler runs. Whatever it throws (an `AppErrorException`, a plain `Error`, a rejected promise, anything) becomes `{ ok: false, error }`; an unknown throw is code `unexpected` and is logged in main. Main never crashes on a renderer call.
 4. The preload unwraps: `ok` resolves the promise with the value, otherwise the promise rejects with the plain `AppError` object. Renderer code uses `try` and `isAppError(error)` and shows it in the one `AppError` component.
 
@@ -103,7 +103,7 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 
 Every method except `getAppVersion` is a stub today that checks its payload and answers `not-implemented`, naming the task that builds it. Content methods (packs, worlds, quests, glossary, the flat term list for Monaco, pattern cards) and `startDrill` wait for the content types from M0.4 and arrive in M0.2b (A89).
 
-Adding a method: add it to `DojoInvokeApi`, add its channel to `IPC_CHANNELS` (the type forces `dojo:<method>`), add its entry to `createHandlers.ts` with one check per argument (the type forces the count). The preload needs no change; `tests/ipcHandlers.test.ts` fails if a channel has no handler.
+Adding a method: add it to `DojoInvokeApi`, add its channel to `IPC_CHANNELS` (the type forces `dojo:<method>`), add its entry to `createHandlers.ts` with one zod schema per argument (the type forces the count and each schema's type; put new request schemas in `requestSchemas.ts`). The preload needs no change; `tests/ipcHandlers.test.ts` fails if a channel has no handler.
 
 ### Security
 - CSP (meta tag in `src/renderer/index.html`): `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self'`. Inline styles are allowed because Tailwind, Motion, and React Flow set style attributes; scripts are not.

@@ -1,16 +1,16 @@
-// The shape every main-process IPC handler is written in: payload checks for each argument, then the function that answers.
+// The shape every main-process IPC handler is written in: a zod schema for each argument, then the function that answers.
+import type { z } from "zod";
+
 import type { DojoInvokeApi, DojoMethod } from "@shared/ipc";
 
-import type { PayloadCheck } from "./payloadChecks";
+/** One schema per argument, in order. A mapped tuple, so the count and each schema's type must match the method's parameters. */
+type ArgumentSchemas<Parameters extends unknown[]> = { [Index in keyof Parameters]: z.ZodType<Parameters[Index]> };
 
-/** One payload check per argument, in order. Written as a mapped tuple so the count must match the method's parameters. */
-type ArgumentChecks<Parameters extends unknown[]> = { [Index in keyof Parameters]: PayloadCheck };
-
-/** How main answers one DojoApi method. `handle` only runs after every argument passed its check. */
+/** How main answers one DojoApi method. `handle` only runs with arguments that passed their schemas. */
 export interface HandlerDefinition<Method extends DojoMethod>
 {
-	/** One check per argument of the method. */
-	argumentChecks: ArgumentChecks<Parameters<DojoInvokeApi[Method]>>;
+	/** One zod schema per argument of the method. */
+	argumentSchemas: ArgumentSchemas<Parameters<DojoInvokeApi[Method]>>;
 
 	/** Answers the request. May throw; the wrapper turns any throw into an AppError. */
 	handle: (...methodArguments: Parameters<DojoInvokeApi[Method]>) => Awaited<ReturnType<DojoInvokeApi[Method]>> | ReturnType<DojoInvokeApi[Method]>;

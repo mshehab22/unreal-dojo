@@ -3,22 +3,22 @@ import type { DojoMethod } from "@shared/ipc";
 
 import type { HandlerDefinition, HandlerTable } from "./HandlerDefinition";
 import { notImplemented } from "./notImplemented";
-import { checkId, checkNullable } from "./payloadChecks";
 import {
-	apiKeyCheck,
-	breakdownRevisionCheck,
-	breakdownSubmissionCheck,
-	conceptSubmissionCheck,
-	dailyOfferIndexCheck,
-	drillAnswerCheck,
-	findingExplanationRequestCheck,
-	playerNameCheck,
-	questDraftCheck,
-	reflectionAnswerRequestCheck,
-	runRequestCheck,
-	sandboxSetupRequestCheck,
-	settingsPatchCheck,
-} from "./requestChecks";
+	apiKeySchema,
+	breakdownRevisionSchema,
+	breakdownSubmissionSchema,
+	conceptSubmissionSchema,
+	dailyOfferIndexSchema,
+	drillAnswerSchema,
+	findingExplanationRequestSchema,
+	idSchema,
+	playerNameSchema,
+	questDraftSchema,
+	reflectionAnswerRequestSchema,
+	runRequestSchema,
+	sandboxSetupRequestSchema,
+	settingsPatchSchema,
+} from "./requestSchemas";
 
 /** What the handlers need from the outside world. Grows as services are built; tests pass fakes. */
 export interface HandlerDependencies
@@ -39,11 +39,11 @@ const ARRIVES_WITH = {
 	review: "AI review (M1.7)",
 } as const;
 
-/** Builds a handler that checks its arguments and then answers `not-implemented`. */
-function stub<Method extends DojoMethod>(method: Method, arrivesWith: string, argumentChecks: HandlerDefinition<Method>["argumentChecks"]): HandlerDefinition<Method>
+/** Builds a handler that validates its arguments and then answers `not-implemented`. */
+function stub<Method extends DojoMethod>(method: Method, arrivesWith: string, argumentSchemas: HandlerDefinition<Method>["argumentSchemas"]): HandlerDefinition<Method>
 {
 	return {
-		argumentChecks,
+		argumentSchemas,
 		handle: () =>
 		{
 			throw notImplemented(method, arrivesWith);
@@ -55,11 +55,11 @@ function stub<Method extends DojoMethod>(method: Method, arrivesWith: string, ar
 export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 {
 	return {
-		getAppVersion: { argumentChecks: [], handle: () => dependencies.getAppVersion() },
+		getAppVersion: { argumentSchemas: [], handle: () => dependencies.getAppVersion() },
 
 		getSettings: stub("getSettings", ARRIVES_WITH.settings, []),
-		updateSettings: stub("updateSettings", ARRIVES_WITH.settings, [settingsPatchCheck]),
-		setApiKey: stub("setApiKey", ARRIVES_WITH.settings, [apiKeyCheck]),
+		updateSettings: stub("updateSettings", ARRIVES_WITH.settings, [settingsPatchSchema]),
+		setApiKey: stub("setApiKey", ARRIVES_WITH.settings, [apiKeySchema]),
 		clearApiKey: stub("clearApiKey", ARRIVES_WITH.settings, []),
 
 		detectEngines: stub("detectEngines", ARRIVES_WITH.engine, []),
@@ -69,37 +69,37 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		completeFirstRun: stub("completeFirstRun", ARRIVES_WITH.settings, []),
 
 		pickSandboxFolder: stub("pickSandboxFolder", ARRIVES_WITH.sandbox, []),
-		createSandbox: stub("createSandbox", ARRIVES_WITH.sandbox, [sandboxSetupRequestCheck]),
-		rebuildSandbox: stub("rebuildSandbox", ARRIVES_WITH.sandbox, [checkId()]),
-		openEditor: stub("openEditor", ARRIVES_WITH.editor, [checkNullable(checkId())]),
+		createSandbox: stub("createSandbox", ARRIVES_WITH.sandbox, [sandboxSetupRequestSchema]),
+		rebuildSandbox: stub("rebuildSandbox", ARRIVES_WITH.sandbox, [idSchema]),
+		openEditor: stub("openEditor", ARRIVES_WITH.editor, [idSchema.nullable()]),
 
-		runQuest: stub("runQuest", ARRIVES_WITH.runs, [runRequestCheck]),
-		submitQuest: stub("submitQuest", ARRIVES_WITH.submit, [runRequestCheck]),
-		cancelRun: stub("cancelRun", ARRIVES_WITH.runs, [checkId()]),
+		runQuest: stub("runQuest", ARRIVES_WITH.runs, [runRequestSchema]),
+		submitQuest: stub("submitQuest", ARRIVES_WITH.submit, [runRequestSchema]),
+		cancelRun: stub("cancelRun", ARRIVES_WITH.runs, [idSchema]),
 
 		getProgress: stub("getProgress", ARRIVES_WITH.progress, []),
 		getRules: stub("getRules", ARRIVES_WITH.progress, []),
 		getQuestAvailability: stub("getQuestAvailability", ARRIVES_WITH.progress, []),
-		setPlayerName: stub("setPlayerName", ARRIVES_WITH.progress, [playerNameCheck]),
-		saveQuestDraft: stub("saveQuestDraft", ARRIVES_WITH.progress, [questDraftCheck]),
-		resetQuest: stub("resetQuest", ARRIVES_WITH.progress, [checkId()]),
-		revealHint: stub("revealHint", ARRIVES_WITH.progress, [checkId()]),
-		submitConcept: stub("submitConcept", ARRIVES_WITH.progress, [conceptSubmissionCheck]),
-		submitBreakdown: stub("submitBreakdown", ARRIVES_WITH.progress, [breakdownSubmissionCheck]),
-		reviseBreakdown: stub("reviseBreakdown", ARRIVES_WITH.review, [breakdownRevisionCheck]),
-		recordTermHover: stub("recordTermHover", ARRIVES_WITH.progress, [checkId()]),
-		queueDrillItem: stub("queueDrillItem", ARRIVES_WITH.progress, [checkId()]),
+		setPlayerName: stub("setPlayerName", ARRIVES_WITH.progress, [playerNameSchema]),
+		saveQuestDraft: stub("saveQuestDraft", ARRIVES_WITH.progress, [questDraftSchema]),
+		resetQuest: stub("resetQuest", ARRIVES_WITH.progress, [idSchema]),
+		revealHint: stub("revealHint", ARRIVES_WITH.progress, [idSchema]),
+		submitConcept: stub("submitConcept", ARRIVES_WITH.progress, [conceptSubmissionSchema]),
+		submitBreakdown: stub("submitBreakdown", ARRIVES_WITH.progress, [breakdownSubmissionSchema]),
+		reviseBreakdown: stub("reviseBreakdown", ARRIVES_WITH.review, [breakdownRevisionSchema]),
+		recordTermHover: stub("recordTermHover", ARRIVES_WITH.progress, [idSchema]),
+		queueDrillItem: stub("queueDrillItem", ARRIVES_WITH.progress, [idSchema]),
 		getDailyQuest: stub("getDailyQuest", ARRIVES_WITH.progress, []),
-		chooseDailyOffer: stub("chooseDailyOffer", ARRIVES_WITH.progress, [dailyOfferIndexCheck]),
+		chooseDailyOffer: stub("chooseDailyOffer", ARRIVES_WITH.progress, [dailyOfferIndexSchema]),
 		resetProgress: stub("resetProgress", ARRIVES_WITH.progress, []),
 
 		getDrillSummary: stub("getDrillSummary", ARRIVES_WITH.progress, []),
-		answerDrillItem: stub("answerDrillItem", ARRIVES_WITH.progress, [drillAnswerCheck]),
-		finishDrill: stub("finishDrill", ARRIVES_WITH.progress, [checkId()]),
+		answerDrillItem: stub("answerDrillItem", ARRIVES_WITH.progress, [drillAnswerSchema]),
+		finishDrill: stub("finishDrill", ARRIVES_WITH.progress, [idSchema]),
 
 		getReviewProviders: stub("getReviewProviders", ARRIVES_WITH.review, []),
 		testClaudeCode: stub("testClaudeCode", ARRIVES_WITH.review, []),
-		explainFinding: stub("explainFinding", ARRIVES_WITH.review, [findingExplanationRequestCheck]),
-		answerReflection: stub("answerReflection", ARRIVES_WITH.review, [reflectionAnswerRequestCheck]),
+		explainFinding: stub("explainFinding", ARRIVES_WITH.review, [findingExplanationRequestSchema]),
+		answerReflection: stub("answerReflection", ARRIVES_WITH.review, [reflectionAnswerRequestSchema]),
 	};
 }

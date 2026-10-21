@@ -7,7 +7,7 @@ import { isAppError } from "@shared/types/errors";
 import { AppErrorException } from "../src/main/errors/AppErrorException";
 import { createHandlers } from "../src/main/ipc/createHandlers";
 import type { HandlerDefinition } from "../src/main/ipc/HandlerDefinition";
-import { checkId } from "../src/main/ipc/payloadChecks";
+import { idSchema, playerNameSchema } from "../src/main/ipc/requestSchemas";
 import { registerHandlers, wrapHandler, type IpcHandleRegistrar, type WrappedHandler } from "../src/main/ipc/registerHandlers";
 
 /** A stand-in for ipcMain that records each registered channel. */
@@ -107,19 +107,19 @@ describe("registerHandlers", () =>
 describe("payload validation", () =>
 {
 	const badPayloads: [string, unknown[], RegExp][] = [
-		["updateSettings", [{ loopMode: "turbo" }], /patch|loopMode/],
-		["updateSettings", [{ hasApiKey: true }], /hasApiKey is not an expected field/],
-		["updateSettings", ["not an object"], /must be an object/],
-		["runQuest", [{ runId: "run-1", questId: "w1-health", files: { "../../Evil.cpp": "" } }], /file name that is not allowed/],
-		["runQuest", [{ runId: "run-1", questId: "w1-health", files: { "Folder/Health.cpp": "" } }], /file name that is not allowed/],
-		["runQuest", [{ runId: "run 1", questId: "w1-health", files: {} }], /runId/],
-		["cancelRun", [42], /must be an id/],
-		["chooseDailyOffer", [3], /between 0 and 2/],
-		["setApiKey", [""], /at least 1/],
-		["saveQuestDraft", [{ questId: "q", breakdownPlan: { pieces: [{ id: "a", kind: "god-class", label: "x", purpose: "y" }], edges: [] } }], /kind must be one of/],
-		["submitConcept", [{ questId: "q", prediction: null, answers: [{ kind: "guess" }] }], /kind must be one of/],
+		["updateSettings", [{ loopMode: "turbo" }], /argument 1\.loopMode: Invalid option/],
+		["updateSettings", [{ hasApiKey: true }], /Unrecognized key.*hasApiKey/],
+		["updateSettings", ["not an object"], /expected object/],
+		["runQuest", [{ runId: "run-1", questId: "w1-health", files: { "../../Evil.cpp": "" } }], /files\..*Invalid key in record, is not an allowed file name/],
+		["runQuest", [{ runId: "run-1", questId: "w1-health", files: { "Folder/Health.cpp": "" } }], /files\..*Invalid key in record, is not an allowed file name/],
+		["runQuest", [{ runId: "run 1", questId: "w1-health", files: {} }], /argument 1\.runId: may only hold/],
+		["cancelRun", [42], /expected string/],
+		["chooseDailyOffer", [3], /<=2/],
+		["setApiKey", [""], /Too small/],
+		["saveQuestDraft", [{ questId: "q", breakdownPlan: { pieces: [{ id: "a", kind: "god-class", label: "x", purpose: "y" }], edges: [] } }], /breakdownPlan\.pieces\.0\.kind/],
+		["submitConcept", [{ questId: "q", prediction: null, answers: [{ kind: "guess" }] }], /answers\.0/],
 		["getProgress", ["unexpected extra"], /at most 0 arguments/],
-		["openEditor", [undefined], /must be an id/],
+		["openEditor", [undefined], /expected string/],
 	];
 
 	for (const [method, methodArguments, detailPattern] of badPayloads)
@@ -144,6 +144,23 @@ describe("payload validation", () =>
 		expectError(await invoke(IPC_CHANNELS.updateSettings, { loopMode: "fast", enginePath: null }), "not-implemented");
 	});
 
+	it("passes zod's parsed copy to the handler, with strings trimmed", async () =>
+	{
+		let receivedName = "";
+
+		const definition: HandlerDefinition<"setPlayerName"> = {
+			argumentSchemas: [playerNameSchema],
+			handle: (playerName) =>
+			{
+				receivedName = playerName;
+				throw new Error("stop here");
+			},
+		};
+
+		await wrapHandler("setPlayerName", definition)({} as Parameters<WrappedHandler>[0], "  Mohammad  ");
+		expect(receivedName).toBe("Mohammad");
+	});
+
 	it("never echoes an API key into the error detail", async () =>
 	{
 		const invoke = createInvoker();
@@ -160,7 +177,7 @@ describe("wrapHandler", () =>
 	it("turns a plain thrown Error into an unexpected AppError", async () =>
 	{
 		const definition: HandlerDefinition<"resetQuest"> = {
-			argumentChecks: [checkId()],
+			argumentSchemas: [idSchema],
 			handle: () =>
 			{
 				throw new Error("disk on fire");
@@ -176,7 +193,7 @@ describe("wrapHandler", () =>
 	it("turns a rejected promise into an AppError", async () =>
 	{
 		const definition: HandlerDefinition<"resetQuest"> = {
-			argumentChecks: [checkId()],
+			argumentSchemas: [idSchema],
 			handle: async () => Promise.reject(new Error("late failure")),
 		};
 
@@ -186,7 +203,7 @@ describe("wrapHandler", () =>
 	it("passes an AppErrorException through unchanged", async () =>
 	{
 		const definition: HandlerDefinition<"resetQuest"> = {
-			argumentChecks: [checkId()],
+			argumentSchemas: [idSchema],
 			handle: () =>
 			{
 				throw new AppErrorException("quest-not-found", "That quest does not exist.", "Go back to the World Map.", "w1-missing");
@@ -201,7 +218,7 @@ describe("wrapHandler", () =>
 	it("turns a thrown non-Error value into an AppError", async () =>
 	{
 		const definition: HandlerDefinition<"resetQuest"> = {
-			argumentChecks: [checkId()],
+			argumentSchemas: [idSchema],
 			handle: () =>
 			{
 				throw "just a string";
@@ -216,7 +233,7 @@ describe("wrapHandler", () =>
 		let handlerRan = false;
 
 		const definition: HandlerDefinition<"resetQuest"> = {
-			argumentChecks: [checkId()],
+			argumentSchemas: [idSchema],
 			handle: () =>
 			{
 				handlerRan = true;
@@ -228,11 +245,11 @@ describe("wrapHandler", () =>
 		expect(handlerRan).toBe(false);
 	});
 
-	it("needs exactly one check per argument at compile time", () =>
+	it("needs exactly one schema per argument at compile time", () =>
 	{
-		// @ts-expect-error resetQuest takes one argument, so it needs one check.
-		const missingCheck: HandlerDefinition<"resetQuest"> = { argumentChecks: [], handle: () => Promise.reject(new Error("unused")) };
+		// @ts-expect-error resetQuest takes one argument, so it needs one schema.
+		const missingCheck: HandlerDefinition<"resetQuest"> = { argumentSchemas: [], handle: () => Promise.reject(new Error("unused")) };
 
-		expect(missingCheck.argumentChecks).toHaveLength(0);
+		expect(missingCheck.argumentSchemas).toHaveLength(0);
 	});
 });

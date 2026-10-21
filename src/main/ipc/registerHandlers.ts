@@ -1,5 +1,6 @@
 // Connects every DojoApi channel to its handler, behind a wrapper that turns bad payloads and thrown errors into AppErrors.
 import type { IpcMain, IpcMainInvokeEvent } from "electron";
+import type { z } from "zod";
 
 import { DOJO_METHODS, IPC_CHANNELS, type DojoMethod, type IpcResponse } from "@shared/ipc";
 import { isAppError, type AppError } from "@shared/types/errors";
@@ -40,35 +41,60 @@ function toAppError(method: DojoMethod, thrown: unknown): AppError
 	};
 }
 
-/** Returns the first problem with the arguments, or null when they all pass. Extra arguments are a problem too. */
-function findArgumentProblem(argumentChecks: readonly ((value: unknown, path: string) => string | null)[], methodArguments: unknown[]): string | null
-{
-	if (methodArguments.length > argumentChecks.length) return `expected at most ${argumentChecks.length} arguments, got ${methodArguments.length}`;
+/** Most zod issues listed in an invalid-payload detail. */
+const MAXIMUM_LISTED_ISSUES = 3;
 
-	for (const [index, check] of argumentChecks.entries())
+/** Returns an issue's message, adding the first inner reason for issues that wrap others (a bad record key, a union with no match). */
+function describeIssueMessage(issue: z.core.$ZodIssue): string
+{
+	const innerIssues = "issues" in issue && Array.isArray(issue.issues) ? (issue.issues as { message?: string }[]) : [];
+	const innerMessage = innerIssues.find((innerIssue) => typeof innerIssue.message === "string")?.message;
+
+	return innerMessage ? `${issue.message}, ${innerMessage}` : issue.message;
+}
+
+/** Describes zod issues as `argument 1.patch.loopMode: Invalid option ...`. zod messages name types and rules, never the value sent. */
+function describeIssues(argumentNumber: number, issues: readonly z.core.$ZodIssue[]): string
+{
+	return issues
+		.slice(0, MAXIMUM_LISTED_ISSUES)
+		.map((issue) => [`argument ${argumentNumber}`, ...issue.path.map(String)].join(".") + `: ${describeIssueMessage(issue)}`)
+		.join("; ");
+}
+
+/** Parses every argument with its schema. Returns the parsed arguments, or the problem text. Extra arguments are a problem too. */
+function parseArguments(argumentSchemas: readonly z.ZodType[], methodArguments: unknown[]): { parsed: unknown[] } | { problem: string }
+{
+	if (methodArguments.length > argumentSchemas.length) return { problem: `expected at most ${argumentSchemas.length} arguments, got ${methodArguments.length}` };
+
+	const parsed: unknown[] = [];
+
+	for (const [index, schema] of argumentSchemas.entries())
 	{
-		const problem = check(methodArguments[index], `argument ${index + 1}`);
-		if (problem) return problem;
+		const result = schema.safeParse(methodArguments[index]);
+		if (!result.success) return { problem: describeIssues(index + 1, result.error.issues) };
+
+		parsed.push(result.data);
 	}
 
-	return null;
+	return { parsed };
 }
 
 /** Wraps one handler: checks the payload, runs it, and always answers with an IpcResponse. It never throws, so main never crashes on a bad call. */
 export function wrapHandler<Method extends DojoMethod>(method: Method, definition: HandlerDefinition<Method>): WrappedHandler
 {
-	const argumentChecks = definition.argumentChecks as readonly ((value: unknown, path: string) => string | null)[];
+	const argumentSchemas = definition.argumentSchemas as readonly z.ZodType[];
 	const handle = definition.handle as (...methodArguments: unknown[]) => unknown;
 
 	return async (_event, ...methodArguments) =>
 	{
-		const problem = findArgumentProblem(argumentChecks, methodArguments);
-		if (problem) return { ok: false, error: invalidPayload(method, problem) };
+		const parseResult = parseArguments(argumentSchemas, methodArguments);
+		if ("problem" in parseResult) return { ok: false, error: invalidPayload(method, parseResult.problem) };
 
 		try
 		{
-			// The arguments passed every check above, so they have the shapes the handler's parameters declare.
-			const value = await handle(...methodArguments);
+			// The handler gets zod's parsed copies, which have the shapes the handler's parameters declare.
+			const value = await handle(...parseResult.parsed);
 			return { ok: true, value };
 		}
 		catch (thrown)
