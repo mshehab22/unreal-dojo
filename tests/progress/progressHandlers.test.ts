@@ -2,13 +2,15 @@
 import { describe, expect, it } from "vitest";
 
 import { createHandlers } from "../../src/main/ipc/createHandlers";
+import { SettingsService } from "../../src/main/services/settings/SettingsService";
 import { RunRegistry } from "../../src/main/services/unreal/RunRegistry";
+import { FakeSecretEncryptor, MemorySettingsStore } from "../settings/settingsFakes";
 import { createTestProgressContent } from "../support/contentFixture";
 
 describe("progress IPC handlers", () =>
 {
 	const { service, content } = createTestProgressContent();
-	const handlers = createHandlers({ getAppVersion: () => "1.0.0", getEngineLocator: () => { throw new Error("not used"); }, getContentCatalog: () => { throw new Error("not used"); }, pickFolder: async () => null, progressService: service, progressContentService: content, getSandboxService: () => { throw new Error("not used"); }, runRegistry: new RunRegistry(), sendProgress: () => undefined });
+	const handlers = createHandlers({ getAppVersion: () => "1.0.0", getEngineLocator: () => { throw new Error("not used"); }, getContentCatalog: () => { throw new Error("not used"); }, pickFolder: async () => null, progressService: service, progressContentService: content, getSandboxService: () => { throw new Error("not used"); }, runRegistry: new RunRegistry(), sendProgress: () => undefined, settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor()), readEnvironmentStatus: () => { throw new Error("not used"); } });
 
 	it("answers getProgress, setPlayerName, and getRules from the service", async () =>
 	{

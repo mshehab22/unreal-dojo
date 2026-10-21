@@ -30,6 +30,9 @@ export interface Settings
 	/** Color theme. */
 	theme: ThemeSetting;
 
+	/** Port of the Unreal editor's MCP server for the fast loop (default 8000; another editor may already hold it, A44). */
+	mcpPort: number;
+
 	/** True when an API key is stored through safeStorage. The key itself never leaves the main process. */
 	hasApiKey: boolean;
 
@@ -38,4 +41,4 @@ export interface Settings
 }
 
 /** The fields the renderer may change in one `updateSettings` call. `hasApiKey` changes only through `setApiKey` and `clearApiKey`. */
-export type SettingsPatch = Partial<Pick<Settings, "enginePath" | "sandboxPath" | "loopMode" | "reviewProvider" | "modelId" | "theme">>;
+export type SettingsPatch = Partial<Pick<Settings, "enginePath" | "sandboxPath" | "loopMode" | "reviewProvider" | "modelId" | "theme" | "mcpPort">>;

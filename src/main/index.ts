@@ -1,8 +1,9 @@
 // App lifecycle and composition root: builds services, registers IPC, and opens the window.
 import { randomUUID } from "node:crypto";
+import { access } from "node:fs/promises";
 import { join } from "node:path";
 
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, safeStorage } from "electron";
 
 import { createContentCatalog } from "./content/createContentCatalog";
 import { resolveContentRoot } from "./content/resolveContentRoot";
@@ -11,7 +12,6 @@ import { registerHandlers } from "./ipc/registerHandlers";
 import { sendBuildProgress } from "./ipc/sendBuildProgress";
 import { createEngineLocator } from "./services/unreal/createEngineLocator";
 import { createUnrealServices, type UnrealServices } from "./services/unreal/createUnrealServices";
-import { ElectronStoreSandboxPathStore } from "./services/unreal/ElectronStoreSandboxPathStore";
 import type { EngineLocator } from "./services/unreal/EngineLocator";
 import { MathRandomSource } from "./services/progress/MathRandomSource";
 import { NodeFileSystem } from "./services/progress/NodeFileSystem";
@@ -20,6 +20,11 @@ import { createTestsOnlyGraders } from "./services/progress/ProgressGraders";
 import { ProgressService } from "./services/progress/ProgressService";
 import { ProgressStore } from "./services/progress/ProgressStore";
 import { SystemClock } from "./services/progress/SystemClock";
+import { createReviewService, type ReviewService } from "./services/review/ReviewService";
+import { SafeStorageReviewSettings } from "./services/review/settings/SafeStorageReviewSettings";
+import { ElectronSettingsStore } from "./services/settings/ElectronSettingsStore";
+import { EnvironmentStatusReader } from "./services/settings/EnvironmentStatusReader";
+import { SettingsService } from "./services/settings/SettingsService";
 import { RunRegistry } from "./services/unreal/RunRegistry";
 import { createMainWindow } from "./window/createMainWindow";
 
@@ -33,10 +38,26 @@ async function pickFolder(title: string): Promise<string | null>
 	return result.canceled ? null : (result.filePaths[0] ?? null);
 }
 
+/** Tells whether a file or folder exists. */
+async function pathExists(path: string): Promise<boolean>
+{
+	try
+	{
+		await access(path);
+		return true;
+	}
+	catch
+	{
+		return false;
+	}
+}
+
 /** Starts the app once Electron is ready and reopens the window when the macOS dock icon is clicked. */
 async function start(): Promise<void>
 {
 	await app.whenReady();
+
+	const settingsService = new SettingsService(new ElectronSettingsStore(), safeStorage);
 
 	let engineLocator: EngineLocator | null = null;
 	const getEngineLocator = (): EngineLocator => (engineLocator ??= createEngineLocator());
@@ -55,7 +76,20 @@ async function start(): Promise<void>
 
 	let unrealServices: UnrealServices | null = null;
 	const getUnrealServices = (): UnrealServices =>
-		(unrealServices ??= createUnrealServices({ templateFolder: sandboxTemplateFolder(), engineInspector: getEngineLocator(), pathStore: new ElectronStoreSandboxPathStore() }));
+		(unrealServices ??= createUnrealServices({ templateFolder: sandboxTemplateFolder(), engineInspector: getEngineLocator(), pathStore: settingsService }));
+
+	// Built on first use; read here only for the provider statuses. The review handlers are wired by ai-review.
+	let reviewService: ReviewService | null = null;
+	const getReviewService = (): ReviewService =>
+		(reviewService ??= createReviewService(new SafeStorageReviewSettings({ currentSettings: () => settingsService.current(), loadEncryptedApiKey: () => settingsService.loadEncryptedApiKey(), decryptor: safeStorage })));
+
+	const environmentStatusReader = new EnvironmentStatusReader({
+		currentSettings: () => settingsService.current(),
+		inspectEngine: (folder) => getEngineLocator().inspectFolder(folder),
+		pathExists,
+		reviewStatuses: () => getReviewService().getProviderStatuses(),
+		editorConnected: async () => false,
+	});
 
 	// Tests-only graders stand in until the review service is wired with the settings service (A318).
 	const progressContentService = new ProgressContentService(contentCatalog, progressService, createTestsOnlyGraders(), new MathRandomSource(), () => randomUUID());
@@ -72,6 +106,8 @@ async function start(): Promise<void>
 			getSandboxService: () => getUnrealServices().sandboxService,
 			runRegistry,
 			sendProgress: sendBuildProgress,
+			settingsService,
+			readEnvironmentStatus: () => environmentStatusReader.read(),
 		}),
 	);
 	createMainWindow();

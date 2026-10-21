@@ -2,8 +2,9 @@
 import type { DojoMethod } from "@shared/ipc";
 import type { ContentStatus, GlossaryAlias, LearnerQuest, LearnerWorld, PackOutline } from "@shared/types/catalog";
 import type { GlossaryEntry, PatternCard } from "@shared/types/content";
-import type { EngineInstall, SandboxSetupResult, ToolchainCheck } from "@shared/types/engine";
+import type { EngineInstall, EnvironmentStatus, SandboxSetupResult, ToolchainCheck } from "@shared/types/engine";
 import type { BuildProgressEvent } from "@shared/types/run";
+import type { Settings, SettingsPatch } from "@shared/types/settings";
 
 import type { ProgressListener } from "../services/unreal/ProgressUpdate";
 import type { RunRegistry } from "../services/unreal/RunRegistry";
@@ -61,6 +62,31 @@ export interface HandlerDependencies
 
 	/** The progress and drill methods that read content: availability, test-out, hints, concept and breakdown grading, daily quest, drills (M1.6b). */
 	progressContentService: ProgressContentService;
+
+	/** The learner's settings and API key. */
+	settingsService: SettingsHandlerService;
+
+	/** Reads the engine, sandbox, review provider, loop mode, and editor connection for the Title chips. */
+	readEnvironmentStatus: () => Promise<EnvironmentStatus>;
+}
+
+/** The part of SettingsService the handlers use, so tests can pass a fake. */
+export interface SettingsHandlerService
+{
+	/** The current settings, without the key. */
+	current(): Settings;
+
+	/** Applies a validated patch. */
+	update(patch: SettingsPatch): Settings;
+
+	/** Encrypts and stores the key; throws `secure-storage-unavailable`. */
+	setApiKey(apiKey: string): void;
+
+	/** Deletes the stored key. */
+	clearApiKey(): void;
+
+	/** Marks first run finished; throws `settings-invalid` while the engine or sandbox is missing. */
+	completeFirstRun(): Settings;
 }
 
 /** The part of SandboxProjectService the handlers use, so tests can pass a fake. */
@@ -119,7 +145,6 @@ const PICK_SANDBOX_TITLE = "Choose where to create the Unreal Dojo sandbox proje
 
 /** Task names used in not-implemented messages, so the renderer can say when a feature arrives. */
 const ARRIVES_WITH = {
-	settings: "the settings service (app-shell)",
 	engine: "the engine locator (M1.1)",
 	sandbox: "the settings service (sandbox setup itself works, M1.2)",
 	editor: "the fast loop (M1.4)",
@@ -148,10 +173,10 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 	return {
 		getAppVersion: { argumentSchemas: [], handle: () => dependencies.getAppVersion() },
 
-		getSettings: stub("getSettings", ARRIVES_WITH.settings, []),
-		updateSettings: stub("updateSettings", ARRIVES_WITH.settings, [settingsPatchSchema]),
-		setApiKey: stub("setApiKey", ARRIVES_WITH.settings, [apiKeySchema]),
-		clearApiKey: stub("clearApiKey", ARRIVES_WITH.settings, []),
+		getSettings: { argumentSchemas: [], handle: () => dependencies.settingsService.current() },
+		updateSettings: { argumentSchemas: [settingsPatchSchema], handle: (patch) => dependencies.settingsService.update(patch) },
+		setApiKey: { argumentSchemas: [apiKeySchema], handle: (apiKey) => dependencies.settingsService.setApiKey(apiKey) },
+		clearApiKey: { argumentSchemas: [], handle: () => dependencies.settingsService.clearApiKey() },
 
 		detectEngines: { argumentSchemas: [], handle: () => dependencies.getEngineLocator().findEngines() },
 		pickEngineFolder: {
@@ -163,8 +188,8 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 			},
 		},
 		checkToolchain: { argumentSchemas: [], handle: () => dependencies.getEngineLocator().checkToolchain() },
-		getEnvironmentStatus: stub("getEnvironmentStatus", ARRIVES_WITH.engine, []),
-		completeFirstRun: stub("completeFirstRun", ARRIVES_WITH.settings, []),
+		getEnvironmentStatus: { argumentSchemas: [], handle: () => dependencies.readEnvironmentStatus() },
+		completeFirstRun: { argumentSchemas: [], handle: () => dependencies.settingsService.completeFirstRun() },
 
 		pickSandboxFolder: {
 			argumentSchemas: [],
