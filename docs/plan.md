@@ -90,7 +90,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M2.1 Core screens | ui-core | ui-core (session "M0.3 Design tokens...") | merged 625b261 | merged | 2 fix rounds |
 | M2.3 Pack 1 World 1 | content-foundations | author-foundations (session "M0.5 Glossary...") | merged bf8aaf4 | merged | 1 fix round; 12 quests; solutions pass and starters fail on UE 5.8.3 |
 | M2.3b World 1 follow-ups | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ f3ea45b) | fixes (round 3) | Round start, C++ round timer, A67 boss reference integration |
-| M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ f14b61f) | review (11 quests); boss waits on A67 | 12 quests, 17 of 17 tests pass on UE 5.8.3 |
+| M4.1 Pack 1 World 2 "Memory and ownership" | content-foundations | author-foundations (session "M0.5 Glossary...") | m2-3b-world2 (@ f14b61f) | fixes; boss waits on A67 | 17 of 17 on UE 5.8.3. Round 1: four GC facts wrong for 5.8 (garbage elimination nulls reflected refs), breakdown reads destroyed discs, rack Recall leaks state (Lead: reuse ResetForRound from the World 1 boss), minor items |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | m2-2-quest-screens | building | Concept, Drill, Breakdown, Build, Loot on the M2.1 data layer and fake |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | m3-1-patterns-observer | building | Engine runs under the shared lock |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | qa-e2e-harness | fixes | Switching the smoke to M1.3 runners (A63) |
