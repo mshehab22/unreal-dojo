@@ -1,0 +1,6 @@
+{
+	"id": "foundations",
+	"title": "Unreal C++ Foundations",
+	"summary": "The engine's own rules for C++: objects and reflection, memory under garbage collection, containers and strings, the gameplay framework, communication, and data and tools.",
+	"order": 1
+}

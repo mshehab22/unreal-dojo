@@ -207,3 +207,27 @@ exit code 0
 - Decisions made: A220 to A225 in `docs/decisions.md` (load once at startup, outlines plus full calls, hints left out, the alias table rule, the engine folder picker, where the drill types live).
 - Not done or left for later: `startDrill` is a stub until progress and rules (M1.6) builds drill scheduling. `getEnvironmentStatus` waits for the settings service. There is no "reload content" request; authors use the verifier.
 
+
+## M2.3 Pack 1 World 1: objects and reflection (content-authoring, author-foundations)
+- What changed: the first real content pack exists. Pack 1 (Unreal C++ Foundations) now has World 1, "Objects and reflection", framed as a training yard whose designers want targets they can tune without a programmer. It holds 12 quests: six concept quests (each opens with a no-penalty guess, then a card, an example, and four or five recall questions including one explain-in-one-sentence item), four build quests that fade from worked to blank, the "dash with cooldown" breakdown with two reference plans, and a boss. Every build quest has a reference solution in `tools/solutions/<quest-id>/`, automation tests, three hints with no code, a rubric of 5 or 6 bullets, and one alternative with its tradeoff. Two build quests carry Parsons blocks (four functions in all). One glossary entry was added (LaunchCharacter) and 31 entries now point to their first quest.
+- The quests, in order, with what the learner sees:
+  1. Concept: UObjects, actors, and the class default object.
+  2. Concept: reflection, UCLASS, and the generated header.
+  3. Concept: UPROPERTY specifiers.
+  4. Concept: UFUNCTION specifiers, including the two Blueprint event kinds.
+  5. Build, worked: a training dummy. `ke * Strike` three times in the console counts the floating number down 3, 2, 1, then DOWN. The learner adds the UFUNCTION macro and the Strike body, after explaining six marked lines.
+  6. Concept: UENUM and USTRUCT.
+  7. Build, faded: a pop-up target whose label reads Down, Up, or Broken, taken from the enum's display names through reflection.
+  8. Concept: Cast and IsA.
+  9. Build, stub: a score keeper that totals dummies and targets from a designer-filled list; the label reads 35 after two strikes and one broken target. This is the world's deliberate failure: the test list holds an empty slot and a plain actor, so an unchecked cast crashes the first try.
+  10. Build, blank: a practice bell. `ke * Strike 50` shows DONG 50% and logs the volume; a Blueprint child can replace the reaction because Ring is a BlueprintNativeEvent, while the counting rule stays in C++.
+  11. Breakdown: dash with cooldown (600 units, 0.15 second input lock, 1.2 second cooldown, wall stop, HUD wedge), two reference plans.
+  12. Boss: the training yard (6 targets, 2 dummies, 45 second round, a rise every 3 seconds, 2 seconds up, at most 2 up, bell at 150 points), the four build quests as pieces, two reference plans, an 8 bullet integration rubric, three ordered extensions, and a feel criterion.
+- How to see it: `npx tsx tools/verify-content.ts --pack foundations`. To compile the reference solutions until `--engine` lands: copy `resources/sandbox-template` to a temp folder, put each solution in `Source/Dojo/Quests/<quest-id>/` and each quest's Tests block in `Source/Dojo/Tests/<quest-id>.Test.cpp`, then run the build and headless test commands from `docs/systems/unreal-pipeline.md`.
+- Proof (MacBook Air M5, UE 5.8.3, fresh copy of the sandbox template, every command with stdin from `/dev/null`):
+  - `npx tsx tools/verify-content.ts --pack foundations`: 24 files parsed (1 pack, 1 world, 12 quests, 8 examples, 192 glossary entries, 22 pattern cards), no problems.
+  - Reference solutions plus the Tests block of each quest file, written into the sandbox the way QuestFileWriter will: editor build `Result: Succeeded`; headless `Automation RunTests Dojo`: 8 succeeded, 0 with warnings, 0 failed (Dojo.F1.TrainingDummy.StrikeIsReflected, Dojo.F1.TrainingDummy.KnockedDownAfterThree, Dojo.F1.PopupTarget.EnumIsReflected, Dojo.F1.PopupTarget.RaiseHitBreakRepair, Dojo.F1.ScoreKeeper.ScoresMixedTargets, Dojo.F1.PracticeBell.RingIsNativeEvent, Dojo.F1.PracticeBell.RingsAboveMinimum, plus the template's Dojo.Sample.Health.TakesDamage). Each F1 test took 8 to 13 ms.
+  - Starters do not pass (each starter swapped in alone, the other quests on their solutions): training dummy builds and fails both its tests ("Strike is a UFUNCTION" is null); pop-up target fails to compile (the enum is the learner's to declare); score keeper builds and fails its test; practice bell fails to compile (the files are empty).
+  - `npm run typecheck` passes; `npm test` 11 files, 132 tests passed.
+- Decisions made: A260 to A266 in `docs/decisions.md`. The one with reach beyond this world is A260: quest tests include quest headers as `Quests/<quest-id>/<File>.h`, because a bare include from `Tests/` does not build; the format examples still use bare includes.
+- Not done or left for later: `--engine` in the verifier (M1.8) has not run on this content; the proof above is the same build and test by hand. Unverified on Windows. Term coverage: USTRUCT, the class default object, and BlueprintImplementableEvent have concept quests but no World 1 build quest (A262). The boss has no automated integration test, as the boss format has none.

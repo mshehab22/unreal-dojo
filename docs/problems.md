@@ -18,6 +18,7 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 
 (The Lead lists here anything that passed on one machine and could not be run on the other.)
 
+- 2026-10-21, content-foundations M2.3: Pack 1 World 1 reference solutions and tests built and passed on the Mac (UE 5.8.3) by hand; unverified on Windows and not yet run through the verifier's `--engine` mode (M1.8).
 - 2026-10-21, app-shell M0.1: the Windows nsis installer and the e2e smoke test have only run on the Mac. Covered by the CI matrix (M0.6) once the GitHub repo exists, or by a manual run on the Windows desktop.
 - 2026-10-21, app-shell M0.1: the Intel (x64) dmg is configured but was not launched on an Intel Mac.
 - 2026-10-21, unreal-pipeline M1.1: the Windows engine locator and toolchain check run only against fakes: real `reg query` output, the registry view (only the default 64-bit view is read, A164), vswhere JSON, and `ProgramFiles`/`ProgramData` values. Hardening to consider on the first Windows run: a `/reg:32` fallback query, and a Windows SDK (10.0.22621.0 or newer) check, which today only shows up as a build error.
