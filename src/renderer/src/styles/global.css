@@ -5,15 +5,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Lets the frame mark areas that move the window (the macOS inset title bar) and areas that stay clickable. */
-@utility app-region-drag {
-	-webkit-app-region: drag;
-}
-
-@utility app-region-none {
-	-webkit-app-region: no-drag;
-}
-
 /* The faint dot grid behind every screen, like an editor viewport. */
 @utility viewport-grid {
 	background-image: radial-gradient(circle at 1px 1px, #ffffff0f 1px, transparent 0);

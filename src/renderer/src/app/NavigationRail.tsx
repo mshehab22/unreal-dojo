@@ -34,7 +34,7 @@ export function NavigationRail({ activeRouteId }: NavigationRailProps)
 
 	return (
 		<nav aria-label="Main" className="flex w-rail shrink-0 flex-col border-r border-line bg-surface">
-			<div className="h-titlebar shrink-0 app-region-drag" />
+			<div className="h-titlebar shrink-0" />
 
 			<div className="flex items-center gap-3 px-5 pb-7">
 				<BrandMark />

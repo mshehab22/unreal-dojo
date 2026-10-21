@@ -93,7 +93,7 @@
 	/* Spacing: Tailwind's 4px step (p-1 = 4px, p-6 = 24px). Layout sizes the frame uses. */
 	--spacing: 0.25rem;
 	--spacing-rail: 15rem;
-	--spacing-titlebar: 3rem;
+	--spacing-titlebar: 3rem; /* clears the 36px TitleBarDragRegion and the macOS window buttons */
 	--spacing-gutter: 2.5rem;
 
 	/* Radii: small for chips, medium for buttons and inputs, large for cards and panels. */

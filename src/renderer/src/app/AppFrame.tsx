@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 
 import { CodexSearchPalette } from "@/components/CodexSearchPalette";
+import { TitleBarDragRegion } from "@/components/TitleBarDragRegion";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 
@@ -28,11 +29,15 @@ export function AppFrame()
 			<div className="flex h-screen overflow-hidden bg-ink text-paper select-none">
 				<NavigationRail activeRouteId={route.id} />
 				<div className="relative flex min-w-0 flex-1 flex-col viewport-grid">
-					<div className="h-titlebar shrink-0 app-region-drag" />
+					<div className="h-titlebar shrink-0" />
 					<main ref={stageReference} data-route={route.id} className="min-h-0 flex-1 overflow-y-auto px-gutter pb-gutter">
 						<ScreenOutlet routeId={route.id} />
 					</main>
 				</div>
+			</div>
+			{/* The window drag strip floats over the top of both columns; each column leaves h-titlebar empty beneath it. */}
+			<div className="fixed inset-x-0 top-0 z-40">
+				<TitleBarDragRegion />
 			</div>
 			<CodexSearchPalette />
 		</TooltipProvider>

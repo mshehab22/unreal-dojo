@@ -66,7 +66,7 @@ export const TYPE_SCALE: readonly TokenEntry[] = [
 export const SPACING: readonly TokenEntry[] = [
 	{ name: "--spacing", purpose: "Base step; p-4 is four of these" },
 	{ name: "--spacing-gutter", purpose: "Screen padding" },
-	{ name: "--spacing-titlebar", purpose: "Top drag strip" },
+	{ name: "--spacing-titlebar", purpose: "Empty band under the window drag strip" },
 	{ name: "--spacing-rail", purpose: "Navigation rail width" },
 ];
 
