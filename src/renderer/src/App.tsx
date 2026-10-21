@@ -1,28 +1,8 @@
-// Placeholder root component until ui-core builds the real frame (M0.3).
-import { useEffect, useState } from "react";
+// Root component: the app frame. Providers that later tasks add (stores, error boundary) wrap it here.
+import { AppFrame } from "./app/AppFrame";
 
-import { TitleBarDragRegion } from "@/components/TitleBarDragRegion";
-
-/** Shows the app name and version so the smoke test and a first launch have something to look at. */
+/** The whole renderer UI. */
 export function App()
 {
-	const [version, setVersion] = useState("");
-
-	useEffect(() =>
-	{
-		void window.dojo.getAppVersion().then(setVersion);
-	}, []);
-
-	return (
-		<div className="flex h-screen flex-col bg-background text-foreground select-none">
-			<TitleBarDragRegion />
-			<main className="flex flex-1 flex-col items-center justify-center gap-3">
-				<h1 className="text-4xl font-semibold tracking-tight">Unreal Dojo</h1>
-				<p className="text-muted-foreground">Learn Unreal Engine C++ by practicing.</p>
-				<p data-testid="app-version" className="text-xs text-muted-foreground">
-					{version ? `v${version}` : ""}
-				</p>
-			</main>
-		</div>
-	);
+	return <AppFrame />;
 }

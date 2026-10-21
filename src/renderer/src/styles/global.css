@@ -1,34 +1,27 @@
-/* Tailwind entry and the base color variables shadcn/ui components read. ui-core (M0.3) replaces these with the real design tokens. */
+/* Tailwind entry: loads the design tokens, then the base rules every screen shares. */
 @import "tailwindcss";
+@import "./tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
-	--background: #0b0d12;
-	--foreground: #e7e9ee;
-	--muted: #1a1d25;
-	--muted-foreground: #8b90a0;
-	--border: #262a35;
-	--ring: #5b8def;
-	--radius: 0.5rem;
+/* Lets the frame mark areas that move the window (the macOS inset title bar) and areas that stay clickable. */
+@utility app-region-drag {
+	-webkit-app-region: drag;
 }
 
-@theme inline {
-	--color-background: var(--background);
-	--color-foreground: var(--foreground);
-	--color-muted: var(--muted);
-	--color-muted-foreground: var(--muted-foreground);
-	--color-border: var(--border);
-	--color-ring: var(--ring);
-	--radius-sm: calc(var(--radius) - 4px);
-	--radius-md: calc(var(--radius) - 2px);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) + 4px);
+@utility app-region-none {
+	-webkit-app-region: no-drag;
+}
+
+/* The faint dot grid behind every screen, like an editor viewport. */
+@utility viewport-grid {
+	background-image: radial-gradient(circle at 1px 1px, #ffffff0f 1px, transparent 0);
+	background-size: 24px 24px;
 }
 
 @layer base {
 	* {
-		@apply border-border outline-ring/50;
+		@apply border-border outline-ring/60;
 	}
 
 	html,
@@ -38,8 +31,25 @@
 	}
 
 	body {
-		@apply bg-background text-foreground antialiased;
-		font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+		@apply bg-background font-sans text-base text-foreground antialiased;
+		font-feature-settings: "ss01", "cv11";
+	}
+
+	h1,
+	h2,
+	h3 {
+		@apply font-display;
+		text-wrap: balance;
+	}
+
+	::selection {
+		background: var(--pack);
+		color: var(--pack-deep);
+	}
+
+	:focus-visible {
+		outline-width: 2px;
+		outline-offset: 2px;
 	}
 }
 

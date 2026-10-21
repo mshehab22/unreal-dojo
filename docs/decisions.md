@@ -6,6 +6,30 @@ Newest first inside each section. A decision names the options considered, the c
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A97 2026-10-21 Placeholder screens list what each will hold (M0.3, builder-ui-core)
+The task asked for empty screens with their name. Options: name only; name, one-line purpose, and the spec's list of what a later task builds there. Chosen: the second, so a playtest of the frame already explains the app and reviewers can see the layout with real text lengths. Each list is copied from this spec's Screens section. Reverse cost: none.
+
+### A96 2026-10-21 Title screen sits inside the frame, with the rail (M0.3, builder-ui-core)
+Options: a full-bleed title screen with no rail (more like a game); the same frame as every other screen. Chosen: the frame for now, so every route is one click away while screens are placeholders. Revisit when the real Title and First-run screens are built. Reverse cost: low.
+
+### A95 2026-10-21 shadcn/ui components written by hand, restyled, on `radix-ui` 1.7.0 (M0.3, builder-ui-core)
+Options: run `npx shadcn add` (needs the network registry and rewrites `global.css`); copy the new-york sources by hand onto the Dojo tokens. Chosen: by hand, for button, badge, dialog, input, kbd, separator, tooltip. `radix-ui` 1.7.0 (2026-10-05) is the newest release at least 14 days old (A08); research said 1.8.x, which is too new. File names follow shadcn (lowercase) and `dialog`/`tooltip` keep their parts in one file, an exception to "one component per file" because the parts are one compound component. Added to devDependencies (A12). Reverse cost: none.
+
+### A94 2026-10-21 Hash router written in the app, no router library (M0.3, builder-ui-core)
+Options: react-router 7, wouter, TanStack Router, a 60-line hash router. Chosen: the hash router (`app/router/`). Seven flat routes need no nesting, loaders, or params; hash URLs work under `file://` in the packaged app; it adds no dependency or lockfile churn; it is unit tested. Switch to wouter or react-router if routes ever need params (`#/quest/:id` may). Reverse cost: low, the route table stays.
+
+### A93 2026-10-21 Pack accents and neutrals (M0.3, builder-ui-core)
+Chosen values: foundations amber `#f6b53f`, patterns violet `#b394ff`, mechanics cyan `#3fd5e8`, systems green `#8ad95f`, each with a 12% soft tint and a near-black deep shade for text on the accent. Background "sumi ink" `#0a0b0f` with surfaces stepping up to `#1f232d`; text "warm paper" `#f4f1ea`, muted `#a9acb6` (about 8.7:1), faint `#7f8392` (about 5.2:1). Outcome colors `pass #45d39b`, `fail #ff6b6b`, `warn #ffd166` are kept off the pack hues so a passed test never reads as "systems". Options considered: shadcn neutral grays (stock look), a cool blue-black (generic dashboard), the warm ink and paper pair (chosen, gives the dojo feel without decoration). Foundations amber doubles as the app's signature accent outside a pack. Reverse cost: edit `tokens.css` only.
+
+### A92 2026-10-21 Fonts: Bricolage Grotesque, Instrument Sans, JetBrains Mono, bundled (M0.3, builder-ui-core)
+Options for display: Space Grotesk (overused), Unbounded (too loud for long headings), Chakra Petch (sci-fi cliché), Bricolage Grotesque (chosen: characterful, variable weight, reads well large). Body: Inter (stock), IBM Plex Sans (static weights only), Instrument Sans (chosen: calm, variable). Code: JetBrains Mono (clear C++ glyphs). All OFL, installed as `@fontsource-variable/*` 5.3.0 devDependencies (newest at least 14 days old) and bundled by Vite, so nothing is fetched at runtime and the CSP is unchanged. Adds about 190 KB of woff2 to the build. Reverse cost: swap three imports and the `--font-*` tokens.
+
+### A91 2026-10-21 Tokens are Tailwind theme variables with Tailwind's defaults reset (M0.3, builder-ui-core)
+Options: plain `:root` variables mapped with `@theme inline` (as the scaffold did); `@theme static` with the default palette, type scale, radii, and shadows reset. Chosen: the second. Every token becomes a utility and a variable at once, `static` keeps unused ones in the CSS so the gallery can read them, and resetting the defaults means a stray `bg-blue-500` or `text-gray-400` fails to style instead of sneaking in. Pack-following tokens (`pack`, `ring`, `shadow-glow`) use `@theme inline` so a `data-pack` wrapper changes them for its subtree. Reverse cost: low.
+
+### A90 2026-10-21 Screenshots at exact sizes through CDP device metrics, with reduced motion (M0.3, builder-ui-core)
+This Mac's screen is 853 points tall (A17), so the OS will not open a 1440x900 window. Options: resize the BrowserWindow (capped by the screen); override the page size through `Emulation.setDeviceMetricsOverride`. Chosen: the override, which renders the page at exactly 1100x700 and 1440x900 on any screen. Screenshots come out at the machine's pixel ratio (2x here). The spec also emulates `prefers-reduced-motion` so durations are zero and no picture catches a transition midway; side effect: the gallery screenshots show the duration tokens as 0s. Reverse cost: none.
+
 ### A19 2026-10-21 npm install scripts left unapproved; Electron downloads its binary on first use (M0.1, builder-shell)
 npm 11.19 blocks package install scripts until they are approved. Options: approve them in `package.json`; leave them. Chosen: leave them. Electron 44 fetches its binary on first run when it is missing, esbuild and fsevents ship prebuilt binaries, and electron-winstaller is only for Squirrel (not used). Everything passed without them. Reverse cost: one `npm install-scripts approve` line if a later package needs it.
 
