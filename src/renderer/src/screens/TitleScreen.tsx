@@ -1,29 +1,26 @@
-// Title screen: the wordmark, version, a continue button, and the environment chips (unchecked until first-run lands).
-import { ArrowRightIcon } from "lucide-react";
-import { useEffect, useState } from "react";
-
+// Title screen: the wordmark, the learner's name, continue or start setup, and the environment chips.
 import { useNavigate } from "@/app/router/useRoute";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { QUERY_KEYS } from "@/data/queryKeys";
+import { useDojoQuery } from "@/data/useDojoQuery";
 import { PACK_ACCENTS, PACK_IDS } from "@/styles/tokenCatalog";
 
-/** The environment checks the title screen will report once the engine and review services exist. */
-const ENVIRONMENT_CHIPS: readonly string[] = ["Engine", "Sandbox", "Review", "Loop mode"];
+import { EnvironmentChips } from "./title/EnvironmentChips";
+import { FreshStart } from "./title/FreshStart";
+import { ReturningStart } from "./title/ReturningStart";
 
-/** The first screen the learner sees. */
+/** The first screen the learner sees. A learner who never finished setup is sent to First-run from here. */
 export function TitleScreen()
 {
 	const navigate = useNavigate();
-	const [version, setVersion] = useState("");
+	const version = useDojoQuery(QUERY_KEYS.appVersion, (client) => client.getAppVersion());
+	const settings = useDojoQuery(QUERY_KEYS.settings, (client) => client.getSettings());
+	const progress = useDojoQuery(QUERY_KEYS.progress, (client) => client.getProgress());
 
-	useEffect(() =>
-	{
-		void window.dojo.getAppVersion().then(setVersion);
-	}, []);
+	const isFresh = settings.data ? settings.data.firstRunCompletedAt === null : false;
 
 	return (
-		<section data-testid="screen-title" className="mx-auto flex h-full w-full max-w-5xl flex-col justify-center gap-12 pb-8">
-			<div className="flex flex-col gap-6">
+		<section data-testid="screen-title" className="mx-auto flex min-h-full w-full max-w-5xl flex-col justify-center gap-10 py-6">
+			<div className="flex flex-col gap-5">
 				<div className="flex items-center gap-3 font-mono text-xs tracking-widest text-paper-faint uppercase">
 					<span className="text-pack">Unreal Engine 5</span>
 					<span className="h-px w-8 bg-line-strong" />
@@ -35,27 +32,18 @@ export function TitleScreen()
 				</p>
 			</div>
 
-			<div className="flex items-center gap-4">
-				<Button variant="pack" size="lg" onClick={() => navigate("studio")}>
-					Continue
-					<ArrowRightIcon />
-				</Button>
+			<div className="flex flex-col gap-3">
+				{isFresh ? (
+					<FreshStart initialName={progress.data?.playerName ?? ""} onReady={() => navigate("firstRun")} />
+				) : (
+					<ReturningStart progress={progress.data} onContinue={() => navigate("studio")} />
+				)}
 				<p data-testid="app-version" className="font-mono text-xs text-paper-faint">
-					{version ? `v${version}` : ""}
+					{version.data ? `v${version.data}` : ""}
 				</p>
 			</div>
 
-			<div className="flex flex-col gap-3">
-				<div className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Environment</div>
-				<div className="flex flex-wrap gap-2">
-					{ENVIRONMENT_CHIPS.map((chip) => (
-						<Badge key={chip}>
-							{chip}
-							<span className="text-paper-faint">not checked</span>
-						</Badge>
-					))}
-				</div>
-			</div>
+			<EnvironmentChips />
 
 			<div className="grid grid-cols-4 gap-2">
 				{PACK_IDS.map((pack) => (

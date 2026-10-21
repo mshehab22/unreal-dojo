@@ -1,4 +1,4 @@
-// ui-core M0.3: the frame navigates between every placeholder screen, Cmd/Ctrl+K and Esc work, and the token gallery renders.
+// ui-core M0.3: the frame navigates between every screen against the real bridge, Cmd/Ctrl+K and Esc work, and the token gallery renders.
 // Page scripts are passed as strings because e2e is typechecked without the DOM library.
 // Saves screenshots of each screen at 1100x700 and 1440x900 to test-results/; SAVE_PROOF=1 also copies them to docs/iterations/m0-3-*.png.
 import { copyFileSync } from "node:fs";
@@ -69,7 +69,7 @@ test.afterAll(async () =>
 	await electronApp.close();
 });
 
-test("every placeholder screen and the token gallery render at both sizes", async ({}, testInfo) =>
+test("every screen and the token gallery render at both sizes against the real bridge", async ({}, testInfo) =>
 {
 	for (const size of SIZES)
 	{

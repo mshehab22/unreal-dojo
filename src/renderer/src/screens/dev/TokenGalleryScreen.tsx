@@ -1,5 +1,5 @@
 // /dev/tokens: every design token and base component on one page, for building and reviewing screens.
-import { NEUTRAL_COLORS, OUTCOME_COLORS, PACK_IDS, FONT_FAMILIES, RADII, SHADOWS, SPACING, SPACING_STEPS, TYPE_SCALE } from "@/styles/tokenCatalog";
+import { NEUTRAL_COLORS, OUTCOME_COLORS, PACK_IDS, TIER_COLORS, FONT_FAMILIES, RADII, SHADOWS, SPACING, SPACING_STEPS, TYPE_SCALE } from "@/styles/tokenCatalog";
 
 import { ColorSwatch } from "./ColorSwatch";
 import { ComponentShowcase } from "./ComponentShowcase";
@@ -47,6 +47,14 @@ export function TokenGalleryScreen()
 			<GallerySection title="Outcomes" note="Test results only. Never used as a pack accent.">
 				<div className="grid grid-cols-3 gap-3">
 					{OUTCOME_COLORS.map((token) => (
+						<ColorSwatch key={token.name} token={token} />
+					))}
+				</div>
+			</GallerySection>
+
+			<GallerySection title="Pattern card tiers" note="Frames for bronze, silver, and gold cards on the Character screen.">
+				<div className="grid grid-cols-3 gap-3">
+					{TIER_COLORS.map((token) => (
 						<ColorSwatch key={token.name} token={token} />
 					))}
 				</div>

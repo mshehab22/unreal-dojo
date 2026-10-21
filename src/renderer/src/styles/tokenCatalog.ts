@@ -41,6 +41,13 @@ export const OUTCOME_COLORS: readonly TokenEntry[] = [
 	{ name: "--color-warn", purpose: "Needs attention" },
 ];
 
+/** Pattern card tier frames. */
+export const TIER_COLORS: readonly TokenEntry[] = [
+	{ name: "--color-tier-bronze", purpose: "Bronze card frame (1 use case)" },
+	{ name: "--color-tier-silver", purpose: "Silver card frame (3 use cases)" },
+	{ name: "--color-tier-gold", purpose: "Gold card frame (5 use cases)" },
+];
+
 /** Type families. */
 export const FONT_FAMILIES: readonly TokenEntry[] = [
 	{ name: "--font-display", purpose: "Bricolage Grotesque: headings, numbers, the wordmark" },
@@ -110,7 +117,7 @@ export const EASINGS: readonly TokenEntry[] = [
 export function allCatalogTokenNames(): string[]
 {
 	const packNames = PACK_IDS.flatMap((pack) => [`--color-${pack}`, `--color-${pack}-soft`, `--color-${pack}-deep`]);
-	const groups = [NEUTRAL_COLORS, OUTCOME_COLORS, FONT_FAMILIES, TYPE_SCALE, SPACING, RADII, SHADOWS, DURATIONS, EASINGS];
+	const groups = [NEUTRAL_COLORS, OUTCOME_COLORS, TIER_COLORS, FONT_FAMILIES, TYPE_SCALE, SPACING, RADII, SHADOWS, DURATIONS, EASINGS];
 
 	return [...packNames, ...groups.flatMap((group) => group.map((entry) => entry.name))];
 }
