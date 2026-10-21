@@ -168,6 +168,17 @@ describe("decision 3: tests-only matching ignores kind words", () =>
 		expect(labelMatches("Death", "OnDeath event")).toBe(true);
 	});
 
+	it("a plural kind word never covers a piece either", () =>
+	{
+		const pairs: Array<[string, string]> = [["Steps", "SetupSteps"], ["Systems", "SaveSystems"], ["Classes", "EnemyClasses"], ["Managers", "WaveManagers"], ["Widgets", "HudWidgets"], ["Assets", "LootAssets"], ["Delegates", "DamageDelegates"]];
+
+		for (const [learnerLabel, requiredLabel] of pairs) expect(labelMatches(learnerLabel, requiredLabel), `${learnerLabel} for ${requiredLabel}`).toBe(false);
+
+		expect(labelCore("EnemyClasses")).toBe("enemy");
+		expect(labelMatches("Setup", "SetupSteps")).toBe(true);
+		expect(labelMatches("SaveSystems", "SaveSystems")).toBe(true);
+	});
+
 	it("a plan of kind words scores zero", () =>
 	{
 		const grade = new TestsOnlyProvider().gradeBreakdown(sampleBreakdownInput({ revisedPlan: planWithLabels(["Component", "Event", "Actor"]) }));

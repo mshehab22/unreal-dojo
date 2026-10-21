@@ -206,3 +206,8 @@ exit code 0
 - Decisions made: A300 to A302 in `docs/decisions.md`. A302 notes one interpretation: "half the length" is measured on the name without its kind words.
 - Not done or left for later: the screens still need to show `fallbackReason` and a Retry review button when `retryReviewSuggested` is set (ui-quests). The live Claude Code and API runs stay open in `docs/problems.md`.
 
+### Fix round 1
+- What the reviewer asked for: the kind-word list missed plurals, so a plan piece named "Steps" still counted for "SetupSteps", and the same for "Systems", "Classes", "Managers", "Widgets", "Assets", and "Delegates". The Lead also confirmed that the half-length rule is measured on the name without its kind words.
+- What changed: a word now counts as a kind word when it is one, or when removing a trailing "s" or "es" makes it one, so the plural forms no longer cover anything. "Setup" still counts for "SetupSteps". A302 now says the half-length reading was confirmed by the Lead.
+- Proof: typecheck passes; unit tests 19 files, 236 tests passed (one new test with seven plural pairs); build passes.
+

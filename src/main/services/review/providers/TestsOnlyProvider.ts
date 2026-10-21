@@ -14,9 +14,9 @@ const SELF_CHECK_SCORE = 70;
 /** Shortest learner label that may match as part of a longer required label, so "A" or "UI" never covers every piece (A158). */
 const MINIMUM_PARTIAL_LABEL_LENGTH = 4;
 
-/** Words that say what kind of piece a label is, not what it does. A partial match ignores them, so "Component" never covers "HealthComponent" (A302). */
+/** Words that say what kind of piece a label is, not what it does. A partial match ignores them and their plurals, so "Component" never covers "HealthComponent" and "Steps" never covers "SetupSteps" (A302). */
 export const KIND_WORDS: ReadonlySet<string> = new Set([
-	"component", "components", "actor", "actors", "class", "object", "event", "events", "delegate", "data", "asset", "struct", "step",
+	"component", "actor", "class", "object", "event", "delegate", "data", "asset", "struct", "step",
 	"system", "subsystem", "manager", "controller", "handler", "service", "interface", "widget", "base", "on",
 ]);
 
@@ -26,10 +26,19 @@ function labelWords(label: string): string[]
 	return (label.match(/[A-Z]?[a-z]+|[A-Z]+(?![a-z])|\d+/g) ?? []).map((word) => word.toLowerCase());
 }
 
-/** The part of a label that names its job: every word except kind words and one-letter Unreal prefixes, joined. "HealthComponent" gives "health". */
+/** True for a kind word or its plural: "systems", "classes", and "widgets" count like "system", "class", and "widget". */
+export function isKindWord(word: string): boolean
+{
+	if (KIND_WORDS.has(word)) return true;
+	if (word.endsWith("es") && KIND_WORDS.has(word.slice(0, -2))) return true;
+
+	return word.endsWith("s") && KIND_WORDS.has(word.slice(0, -1));
+}
+
+/** The part of a label that names its job: every word except kind words (singular or plural) and one-letter Unreal prefixes, joined. "HealthComponent" gives "health". */
 export function labelCore(label: string): string
 {
-	return labelWords(label).filter((word) => word.length > 1 && !KIND_WORDS.has(word)).join("");
+	return labelWords(label).filter((word) => word.length > 1 && !isKindWord(word)).join("");
 }
 
 /**
