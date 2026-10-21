@@ -2,6 +2,7 @@
 import { BookOpenIcon, FlagIcon, MapIcon, SearchIcon, SettingsIcon, UserRoundIcon, WarehouseIcon, type LucideIcon } from "lucide-react";
 
 import { Kbd } from "@/components/ui/kbd";
+import { activeDataSource } from "@/data/activeClient";
 import { modifierKeyLabel } from "@/lib/platform";
 
 import { BrandMark } from "./BrandMark";
@@ -17,6 +18,7 @@ const ROUTE_ICONS: Readonly<Record<RouteId, LucideIcon>> = {
 	character: UserRoundIcon,
 	codex: BookOpenIcon,
 	settings: SettingsIcon,
+	firstRun: FlagIcon,
 	devTokens: SettingsIcon,
 };
 
@@ -31,6 +33,7 @@ export function NavigationRail({ activeRouteId }: NavigationRailProps)
 {
 	const openCodexSearch = usePanelStore((state) => state.setCodexSearchOpen);
 	const railRoutes = ROUTES.filter((route) => route.showInRail);
+	const dataSource = activeDataSource();
 
 	return (
 		<nav aria-label="Main" className="flex w-rail shrink-0 flex-col border-r border-line bg-surface">
@@ -57,7 +60,12 @@ export function NavigationRail({ activeRouteId }: NavigationRailProps)
 				))}
 			</div>
 
-			<div className="mt-auto px-3 pb-4">
+			<div className="mt-auto flex flex-col gap-3 px-3 pb-4">
+				{dataSource.kind === "fake" && (
+					<div data-testid="fake-data-badge" title="Answers come from the typed fake DojoApi, not the main process (A240)." className="rounded-sm border border-dashed border-warn/50 px-2 py-1 text-center font-mono text-2xs tracking-widest text-warn uppercase">
+						Fake data: {dataSource.scenario}
+					</div>
+				)}
 				<button
 					type="button"
 					onClick={() => openCodexSearch(true)}

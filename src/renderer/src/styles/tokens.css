@@ -44,6 +44,11 @@
 	--color-fail: #ff6b6b;
 	--color-warn: #ffd166;
 
+	/* Pattern card tier frames: bronze, silver, gold. Gold borrows foundations amber's warmth but is its own token. */
+	--color-tier-bronze: #d39468;
+	--color-tier-silver: #cdd2dc;
+	--color-tier-gold: #ffc94d;
+
 	/* Names shadcn/ui components read, mapped onto the tokens above. */
 	--color-background: var(--color-ink);
 	--color-foreground: var(--color-paper);

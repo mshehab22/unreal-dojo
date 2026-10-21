@@ -67,6 +67,15 @@ function onBuildProgress(listener: (event: BuildProgressEvent) => void): Unsubsc
 	};
 }
 
-const dojo: DojoApi = { ...createInvokeApi(), onBuildProgress };
+/** Main adds this argument to packaged windows only (createMainWindow). Sandboxed preloads can read process.argv. */
+const PACKAGED_FLAG = "--dojo-packaged";
+
+/** True when main said this is a packaged build. */
+function isPackaged(): boolean
+{
+	return process.argv.includes(PACKAGED_FLAG);
+}
+
+const dojo: DojoApi = { ...createInvokeApi(), onBuildProgress, isPackaged };
 
 contextBridge.exposeInMainWorld("dojo", dojo);

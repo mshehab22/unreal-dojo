@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { CodexSearchPalette } from "@/components/CodexSearchPalette";
 import { TitleBarDragRegion } from "@/components/TitleBarDragRegion";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useRefetchOnFocus } from "@/data/useRefetchOnFocus";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 
 import { NavigationRail } from "./NavigationRail";
@@ -17,6 +18,7 @@ export function AppFrame()
 	const stageReference = useRef<HTMLElement>(null);
 
 	useGlobalShortcuts();
+	useRefetchOnFocus();
 
 	// A new screen starts at the top, not where the last one was scrolled to.
 	useEffect(() =>

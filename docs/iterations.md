@@ -242,3 +242,60 @@ exit code 0
 - Proof: typecheck passes. Unit tests: 27 files, 308 passed, including three new ones: a "Drill me" item never creates a rematch, a missed and hovered term never creates a repeatable one, and 40 random sequences of hovers, "Drill me", misses, map loads, and replays on one day each pay at most one rematch per quest (the test also checks that the sequences do reach real rematches). All three fail on the round 1 code. Build passes; end-to-end 4 of 4 passed.
 - Not done or left for later: nothing new; the round 1 list still stands.
 
+
+## M2.1 Core screens (ui-core, builder-ui-core)
+- What changed: the seven core screens are real now. The Title asks a new learner's name and sends them to setup, or greets a returning one and shows where the environment stands (engine, sandbox, reviewer, how builds run, editor). First-run setup walks through picking the engine (found automatically, or a folder by hand, with the compiler setup checked), choosing the sandbox folder (with the short path warning), the first full build (which step it is on, the time so far, a bar, the latest build line, cancel), opening the editor once, and a summary. The Studio shows the lead programmer with role, level, XP, and a few totals, what is due today with the streak and freezes, the three daily offers (pick one), what to continue, and the engine room with the shipped titles. The World Map shows each pack as a region and each world as a client's contract with its brief, with quests as stages on a path: locked ones say why on hover, passed ones are filled with a check, the one in progress has a thick ring, a due rematch glows in a warm color, the boss is larger, and a world that can be tested out says so. Character shows level and role, the spree, the streak with milestones, Seer Stones, armor, and freezes, the skill tree, every pattern card (earned ones in their tier frame and turn over on click, the rest as silhouettes), and recent attempts. The Codex lists all 191 glossary terms with a filter and categories; each entry shows both definitions, where you meet it, when it is due for review, related terms, Epic's docs, and "Drill me". Cmd+K (Ctrl+K on Windows) searches it from anywhere. Settings changes the engine, rebuilds the sandbox with live progress, sets the loop mode, picks the reviewer and shows which are available, tests Claude Code, stores the API key (shown masked), sets the model, and resets progress after a confirmation.
+- What was tried and what was solved: most services behind the screens are still being built, so every screen reads through one data layer, and a typed stand-in for the main process answers with realistic data when asked to (A240). It uses the real glossary and pattern cards and pretends to run a first build, including one that fails once. Against the real main process today, the Title still works and the other screens show the plain-English error view until their services land. On the Mac the app never promises the fast loop, because Live Coding does not exist there (A243): the loop chip says "Headless loop" and Settings shows "Fast (Windows only)" turned off. Two files whose names differ only in capital letters overwrote each other on the Mac's file system; one was renamed.
+- How to see it: start the app in development with the fake data flag from A240 to see a learner a month in. A stored setting in the window, also described in A240, picks the brand new learner or the build that fails once instead; a packaged app ignores it (A251). Without either, the app talks to the real main process.
+- Checks: see Fix round 1 below for the current numbers.
+- Decisions made: A240 to A251 in `docs/decisions.md` (A241 is superseded by M0.2b).
+- Not done or left for later: hover definitions in text (`TermText`, `HoverCard`) wait for the TermLinker (M1.8). "Start drill", "Test out", and opening a quest wait for the drill and quest screens (M2.2); they are shown turned off and say why on hover or focus, and Continue opens the World Map (A245). Codex entries have no example section because the glossary has no example field (A246). Unverified on Windows: Ctrl+K, the Windows paths and short path warning in the stand-in, and the fast loop wording for 5.8.
+
+### Fix round 1
+- What the reviewer and the Lead asked for: move onto the merged content contract (packs now arrive as outlines); take the drill size and the rematch share from the rules instead of writing them in the screens; turn "Start drill" off and make the reason for both disabled buttons visible on hover and keyboard focus; store the engine choice during setup, with the sandbox path stored by the sandbox service itself; keep the stand-in out of packaged builds; word a failed Settings rebuild differently from a failed first build; refresh data in the background when a screen opens and when the window regains focus; never show Continue on the Title before the settings are known, and prefill the name once it loads; tidy the pattern card layout; give each mastery level its own shape and readable names; split two small components into their own files; wait for every piece of data before the proof pictures; embed the pictures here as JPGs; and the polish list (step count wording, "September 2026", one source for the role, failed and cancelled builds shown as such, region names not cut at 1100 wide, distinct rematch and in-progress stages).
+- What changed: all of the above. The main process now tells the window whether it is a packaged build, and a packaged build always uses the real main process (A251). The engine is saved the moment the learner confirms it; the sandbox path is saved by the sandbox service after a passing build, which the contract now says. A failed build's bar turns red and says "Failed"; a cancelled one goes quiet, says "Cancelled", and offers to start again without an error box. Mastery reads as an empty ring (attempted), a half-filled circle (familiar), a full circle (proficient), and a full circle with a check (mastered), with names such as "Objects" and "Soft refs" instead of ids (A250). The rematch stage is now a warm glowing ring with a replay mark, and the stage in progress is a thick ring with a dot, so neither can be mistaken for passed or open. The Title and the Studio both take the role from the rules. Proof pictures are JPGs at one pixel per screen point and replace the earlier PNGs.
+- Checks: `npm run typecheck` passes; `npm test` 271 passed; `npm run build` passes; `npm run test:e2e` all passed, 10 of them the screen tests (new in this round: a cancelled build, the engine and sandbox stored after setup, both disabled buttons' reasons, the provider list, the in-progress and rematch stages).
+- Proof (all in `docs/iterations/`, every screen at 1100x700 and 1440x900, plus full-length pictures at 1440): `m2-1-title-*.jpg`, `m2-1-title-fresh-1100x700.jpg`, `m2-1-first-run-engine-1100x700.jpg`, `m2-1-first-run-sandbox-1100x700.jpg`, `m2-1-first-run-build-progress-1100x700.jpg`, `m2-1-first-run-build-done-1100x700.jpg`, `m2-1-first-run-build-failed-1100x700.jpg`, `m2-1-first-run-done-1100x700.jpg`, `m2-1-studio-*.jpg`, `m2-1-studio-fresh-1100x700.jpg`, `m2-1-studio-bridge-1100x700.jpg`, `m2-1-world-map-*.jpg`, `m2-1-world-map-locked-reason-1440x900.jpg`, `m2-1-character-*.jpg`, `m2-1-codex-*.jpg`, `m2-1-codex-search-1100x700.jpg`, `m2-1-settings-*.jpg`, `m2-1-settings-reset-confirm-1100x700.jpg`.
+
+![[m2-1-title-1100x700.jpg|800]]
+*Title for a returning learner at the minimum size: Continue, the greeting with the role from the rules, and the environment chips. On the Mac the loop chip says headless.*
+
+![[m2-1-title-fresh-1100x700.jpg|800]]
+*Title for a brand new learner: the name field and "Set up your studio".*
+
+![[m2-1-first-run-engine-1100x700.jpg|800]]
+*First-run step 1: the detected installs with how builds will run on each, a folder picker, and the toolchain check.*
+
+![[m2-1-first-run-build-progress-1100x700.jpg|800]]
+*First-run step 3: the first full build with its phase, elapsed time, bar, and latest build line.*
+
+![[m2-1-first-run-build-failed-1100x700.jpg|800]]
+*A first build that failed: the bar turns red, a plain-English reason, the compiler's lines behind a toggle, and Build again.*
+
+![[m2-1-studio-full-1440.jpg|800]]
+*Studio: lead programmer, today's reviews and streak, the daily quest, what to continue, and the engine room with shipped titles.*
+
+![[m2-1-world-map-full-1440.jpg|800]]
+*World Map: regions, client contracts, and stage states (locked, open, in progress, passed, rematch due), with Test out on the second contract.*
+
+![[m2-1-world-map-locked-reason-1440x900.jpg|800]]
+*Hovering a locked stage says what unlocks it.*
+
+![[m2-1-character-full-1440.jpg|600]]
+*Character: level, spree, streak, held items, the skill tree with mastery shapes, all 22 pattern cards, and recent attempts.*
+
+![[m2-1-codex-search-1100x700.jpg|800]]
+*Cmd/Ctrl+K searches the glossary from any screen; Enter opens the term in the Codex.*
+
+![[m2-1-codex-1440x900.jpg|800]]
+*Codex: filter, categories, and one entry with where you meet it, its review date, related terms, Epic's docs, and Drill me.*
+
+![[m2-1-settings-full-1440.jpg|600]]
+*Settings: engine and sandbox with rebuild, loop mode with "Fast (Windows only)" off on the Mac, reviewer availability, the masked key, the model, and reset.*
+
+![[m2-1-studio-bridge-1100x700.jpg|800]]
+*Against the real main process: the Studio shows the plain-English error view, with a retry, for any service not built yet.*
+
+### Fix round 2 (rebase onto M1.6)
+- What changed: the progress and rules task added fields to the shared save, availability, daily quest, and rules types, so the typed stand-in stopped compiling, as intended. Its fixtures now carry them with that task's real values: per-quest Seer Stone and effort flags, the daily quest's completed days, studio cosmetics, scheduler memory, the drill queue, rematch dates, tested-out worlds, the XP potion, availability's "skippable", and the eight new rule constants. No new screen elements this round. Two are noted for later: "skippable" belongs on the World Map's stages once test-outs can be taken, and the Studio's engine room can show the cosmetics. Progress, rules, and due counts are real in the main process now, so the real-bridge test accepts either real panels or the error view on the Studio.
+- Checks: `npm run typecheck` passes; `npm test` 460 passed; `npx tsx tools/verify-content.ts` no problems; `npm run build` passes; `npm run test:e2e` 14 passed.

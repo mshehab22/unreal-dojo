@@ -1,7 +1,7 @@
 // Creates the single app window with the security and size rules from docs/systems/app-shell.md.
 import { join } from "node:path";
 
-import { BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, shell } from "electron";
 
 const DEFAULT_WIDTH = 1440;
 const DEFAULT_HEIGHT = 900;
@@ -33,6 +33,8 @@ export function createMainWindow(): BrowserWindow
 			contextIsolation: true,
 			nodeIntegration: false,
 			sandbox: true,
+			// The preload answers window.dojo.isPackaged() from this flag, so dev-only switches stay off in installers (A251).
+			additionalArguments: app.isPackaged ? ["--dojo-packaged"] : [],
 		},
 	});
 

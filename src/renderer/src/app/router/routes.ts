@@ -1,7 +1,7 @@
 // The app's routes and how a location hash maps to one. Pure data and functions, so unit tests can run them in Node.
 
 /** Every screen the frame can show. */
-export type RouteId = "title" | "studio" | "worldMap" | "character" | "codex" | "settings" | "devTokens";
+export type RouteId = "title" | "studio" | "worldMap" | "character" | "codex" | "settings" | "firstRun" | "devTokens";
 
 /** One route: its id, hash path, and the label the navigation rail shows. */
 export interface RouteDefinition
@@ -12,7 +12,7 @@ export interface RouteDefinition
 	readonly showInRail: boolean;
 }
 
-/** All routes, in rail order. The dev gallery is reachable by path only. */
+/** All routes, in rail order. First-run setup and the dev gallery are reachable by path only. */
 export const ROUTES: readonly RouteDefinition[] = [
 	{ id: "title", path: "/", label: "Title", showInRail: true },
 	{ id: "studio", path: "/studio", label: "Studio", showInRail: true },
@@ -20,6 +20,7 @@ export const ROUTES: readonly RouteDefinition[] = [
 	{ id: "character", path: "/character", label: "Character", showInRail: true },
 	{ id: "codex", path: "/codex", label: "Codex", showInRail: true },
 	{ id: "settings", path: "/settings", label: "Settings", showInRail: true },
+	{ id: "firstRun", path: "/first-run", label: "First-run setup", showInRail: false },
 	{ id: "devTokens", path: "/dev/tokens", label: "Tokens", showInRail: false },
 ];
 

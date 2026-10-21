@@ -57,7 +57,7 @@ describe("preload bridge", () =>
 	it("exposes only window.dojo, with exactly the DojoApi methods", () =>
 	{
 		expect([...fakeElectron.exposed.keys()]).toEqual(["dojo"]);
-		expect(Object.keys(dojo).sort()).toEqual([...DOJO_METHODS, "onBuildProgress"].sort());
+		expect(Object.keys(dojo).sort()).toEqual([...DOJO_METHODS, "onBuildProgress", "isPackaged"].sort());
 
 		for (const value of Object.values(dojo)) expect(typeof value).toBe("function");
 	});
