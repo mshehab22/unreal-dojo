@@ -44,6 +44,7 @@ export function createNewQuestProgress(): QuestProgress
 		bestScore: null,
 		attempts: 0,
 		hintsRevealed: 0,
+		revealedHints: [],
 		solutionViewed: false,
 		seerStoneSpent: false,
 		effortXpGranted: false,

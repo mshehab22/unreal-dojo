@@ -21,6 +21,7 @@ const questProgressSchema: z.ZodType<QuestProgress> = z.object({
 	bestScore: z.number().min(0).max(100).nullable(),
 	attempts: z.int().min(0),
 	hintsRevealed: z.int().min(0),
+	revealedHints: z.array(z.int().min(0)),
 	solutionViewed: z.boolean(),
 	seerStoneSpent: z.boolean().default(false),
 	effortXpGranted: z.boolean().default(false),

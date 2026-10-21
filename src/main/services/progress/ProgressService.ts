@@ -293,19 +293,29 @@ export class ProgressService
 		return this.drillScheduler.dueToday(this.progress, this.clock.now());
 	}
 
-	/** Reveals the next hint spell of a quest and returns its cost. */
-	revealHint(quest: RuleQuest, hints: string[]): Promise<HintReveal>
+	/** Reveals the next hint spell of a quest (or answers `requestedIndex` again for free when it was already revealed) and returns its cost. */
+	revealHint(quest: RuleQuest, hints: string[], requestedIndex?: number): Promise<HintReveal>
 	{
 		return this.enqueue(async () =>
 		{
 			const current = this.questProgressOf(this.progress, quest.id);
-			const hintIndex = this.hintRules.nextHintIndex(current.hintsRevealed, hints.length);
+			const xpCost = this.hintRules.costPerHint(quest.xp);
+
+			// Asking again for a hint already paid for answers it at no new cost, so a reload or a double click never charges twice (A501).
+			if (requestedIndex !== undefined && current.revealedHints.includes(requestedIndex))
+			{
+				return { hintIndex: requestedIndex, text: hints[requestedIndex] ?? "", xpCost, hintsRevealed: current.revealedHints.length, alreadyRevealed: true };
+			}
+
+			const hintIndex = this.hintRules.nextHintIndex(current.revealedHints.length, hints.length);
 
 			if (hintIndex === null) throw new AppErrorException("invalid-payload", "Every hint for this quest is already revealed.", "Use the hints above, or view the solution after two failed submits.");
+			if (requestedIndex !== undefined && requestedIndex !== hintIndex) throw new AppErrorException("invalid-payload", "Hint spells are revealed in order.", `Reveal hint ${hintIndex + 1} first.`, `asked for ${requestedIndex}, next is ${hintIndex}`);
 
-			await this.commit((progress) => this.withQuest(progress, quest.id, { hintsRevealed: hintIndex + 1 }));
+			const revealedHints = [...current.revealedHints, hintIndex];
+			await this.commit((progress) => this.withQuest(progress, quest.id, { revealedHints, hintsRevealed: revealedHints.length }));
 
-			return { hintIndex, text: hints[hintIndex] ?? "", xpCost: this.hintRules.costPerHint(quest.xp), hintsRevealed: hintIndex + 1 };
+			return { hintIndex, text: hints[hintIndex] ?? "", xpCost, hintsRevealed: revealedHints.length, alreadyRevealed: false };
 		});
 	}
 

@@ -20,6 +20,7 @@ function questProgressFor(stage: StageFixture, index: number): QuestProgress
 		bestScore: stage.bestScore ?? null,
 		attempts: stage.status === "passed" ? 1 + (index % 3 === 0 ? 1 : 0) : 0,
 		hintsRevealed: index % 4 === 1 ? 1 : 0,
+		revealedHints: index % 4 === 1 ? [0] : [],
 		solutionViewed: false,
 		seerStoneSpent: false,
 		effortXpGranted: stage.id === "f1-popup-target",

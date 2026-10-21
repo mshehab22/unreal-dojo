@@ -89,7 +89,7 @@ describe("ProgressService hints and Seer Stone", () =>
 		const { service } = createTestProgressService();
 		const hints = ["one", "two", "three"];
 
-		expect(await service.revealHint(firstQuest, hints)).toEqual({ hintIndex: 0, text: "one", xpCost: 15, hintsRevealed: 1 });
+		expect(await service.revealHint(firstQuest, hints)).toEqual({ hintIndex: 0, text: "one", xpCost: 15, hintsRevealed: 1, alreadyRevealed: false });
 		await service.revealHint(firstQuest, hints);
 		await service.revealHint(firstQuest, hints);
 		await expect(service.revealHint(firstQuest, hints)).rejects.toMatchObject({ appError: { code: "invalid-payload" } });

@@ -10,8 +10,8 @@ export type WorldOutline = Omit<World, "quests"> & { quests: QuestOutline[] };
 /** One pack with world outlines, the whole World Map in one answer. */
 export type PackOutline = Omit<Pack, "worlds"> & { worlds: WorldOutline[] };
 
-/** Swaps the priced hint texts of build and refactor quests for their count; hints only reach the renderer through `revealHint` (A222). */
-type WithoutHintTexts<Quest> = Quest extends CodeQuestFields ? Omit<Quest, "hints"> & { hintCount: number } : Quest;
+/** Swaps the priced hint texts of build and refactor quests for their count; hints only reach the renderer through `revealHint`, and the ones already revealed come back as `revealedHints` from `getQuest` and `getWorld` (A222, A502). */
+type WithoutHintTexts<Quest> = Quest extends CodeQuestFields ? Omit<Quest, "hints"> & { hintCount: number; revealedHints?: string[] } : Quest;
 
 /** A full quest as a quest screen receives it. Identical to the authored quest except that hint texts are left out. */
 export type LearnerQuest = WithoutHintTexts<AuthoredQuest>;

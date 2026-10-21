@@ -7,6 +7,7 @@ import { AppErrorException } from "../../errors/AppErrorException";
 import { AtomicJsonFile, type JsonReadResult } from "./AtomicJsonFile";
 import { createNewProgress } from "./createNewProgress";
 import type { FileSystem } from "./FileSystem";
+import { migrateSave } from "./migrateSave";
 import { playerProgressSchema } from "./progressSchema";
 import { SAVE_VERSION } from "./rules";
 
@@ -102,7 +103,7 @@ export class ProgressStore
 			throw new AppErrorException("save-failed", "This progress file was made by a newer version of Unreal Dojo.", "Update the app to keep your progress.", `save version ${version}, app reads ${SAVE_VERSION}`);
 		}
 
-		const result = playerProgressSchema.safeParse(value);
+		const result = playerProgressSchema.safeParse(migrateSave(value));
 
 		return result.success ? result.data : null;
 	}

@@ -69,6 +69,9 @@ export const playerNameSchema = z.string().trim().min(1).max(MAXIMUM_NAME_LENGTH
 /** An Anthropic API key. zod never puts the value in its messages, so the key is not echoed back. */
 export const apiKeySchema = z.string().trim().min(1).max(MAXIMUM_API_KEY_LENGTH);
 
+/** A hint spell index (0 to 2). */
+export const hintIndexSchema = z.int().min(0).max(2);
+
 /** A daily offer index. */
 export const dailyOfferIndexSchema = z.int().min(0).max(DAILY_OFFER_COUNT - 1);
 
