@@ -286,6 +286,9 @@ Options: a marker string such as `{{ENGINE}}`; empty; a real version. Chosen: em
 ### A40 2026-10-21 The sample quest ships in the template as the sandbox smoke test (builder-unreal, M1.2a)
 Options: keep the sample out of the shipped template; ship it. Chosen: ship it as `Quests/SampleHealth/USampleHealthComponent` with test `Dojo.Sample.Health.TakesDamage`, so the first-run build has something to compile and the first test run proves the whole chain. Named "Sample" so it cannot clash with a content pack's own health component class (all quests share one module, so two `UHealthComponent` classes would not compile). Content authors should give quest classes names unique within the module. Reverse cost: delete two folders.
 
+### A63 2026-10-21 Only `src/main/services/unreal/` spawns Unreal processes
+Reviews found the verifier's `--engine` and the QA engine smoke each had their own Unreal spawning code, each with its own Windows bugs (no shell for `.bat` throws EINVAL on Node 24; cmd quoting breaks on `C:\Program Files`; timeouts kill only the top process). Options: fix each copy; route every Unreal build and test through M1.3's `UnrealBuilder` and `AutomationTestRunner`. Chosen: one implementation. The verifier and the smoke rebase onto M1.3 once it merges and call those classes. Reverse cost: low.
+
 ### A62 2026-10-21 Ordinary-word glossary terms link only inside inline code
 From the M0.5 review: terms such as `check` and `ensure` are also everyday words ("check the flags"), and the TermLinker matches plain words case-insensitively, so prose would fill with wrong hover links. Options: drop those terms from linking; link them only in code spans; keep them linked everywhere. Chosen: an optional `linkMode: "code-only"` field on GlossaryEntry, honored by the M1.8 TermLinker; generic aliases (override, virtual, verify, assert, meta, Remove, dictionary) are removed. Reverse cost: low.
 
