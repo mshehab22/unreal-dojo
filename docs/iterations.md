@@ -141,3 +141,22 @@ Parsed 8 files (0 packs, 0 worlds, 0 quests, 8 examples, 0 glossary entries, 0 p
   patterns: 22 cards, 110 drill items {'explain-in-one-sentence': 17, 'fill-blank': 17, 'multiple-choice': 27, 'spot-the-bug': 10, 'which-pattern': 39}
   result: PASS (0 errors, 0 warnings)
   ```
+
+## M1.2a Sandbox template builds on the Mac (unreal-pipeline, builder-unreal)
+- What changed: the app now has the small Unreal project it will copy for every learner, with one hand-written sample quest (a health component) and its test. It was copied to a temporary folder, built with Unreal 5.8.3 on the MacBook, and its test was run without opening a window. Both worked on the first build. The editor's built-in MCP server was also reached and ran the same test in about a tenth of a second.
+- How to see it: copy `resources/sandbox-template/` to a folder outside the repo, set `EngineAssociation` to `5.8` in `Dojo.uproject`, then run the build and headless test commands listed under "Exact commands" in `docs/systems/unreal-pipeline.md`. The report lands in the folder given to `-ReportExportPath`.
+- Proof (terminal capture summary, no screenshots: nothing visible changed):
+  - Build on a fresh copy: 10 actions, `Result: Succeeded`, 22 s. One `.cpp` changed: 6.5 s.
+  - Headless test: `Found 1 automation tests based on 'Dojo'`, `Result={Success} Path={Dojo.Sample.Health.TakesDamage}`, `TEST COMPLETE. EXIT CODE: 0`, 18 s for the whole run. Report: 1 succeeded, 0 failed, no warnings.
+  - The first run passed with one warning (the test world was destroyed without ending play). Fixed in the helper; the rerun is clean.
+  - Failure check: the health clamp was removed on purpose in the copy. The report showed `Fail` with "Expected 'Health clamps at zero' to be 0, but it was -430", process exit code 3. Then restored.
+  - MCP: the editor answered `initialize` 9 s after launch; `tools/list` gave `list_toolsets`, `describe_toolset`, `call_tool`; `RunTests` returned `Success` in 55 ms. Live Coding answered "not available in this build configuration" on the Mac.
+- Things found along the way: the windowed editor quits on this Mac because Xcode 27's Metal toolchain is not installed (`docs/problems.md`), so the MCP proof used `-NullRHI`. Another session's editor held port 8000, so the proof used port 8010 (A44). The spec's MCP argument names were wrong and are corrected (A44). Mac cannot hot-compile, so the Mac uses the headless loop for code changes (A45). Restoring a file with an older timestamp made UBT skip the rebuild; the spec now tells `QuestFileWriter` to always write fresh files.
+- Decisions: A40 to A45 in `docs/decisions.md`.
+- Not done: Windows run; SandboxProjectService and the runners themselves (rest of M1.2 and later tasks); the windowed editor on the Mac until the Metal toolchain is installed; checking the 5.8 map on older engines.
+
+### Fix round 1
+- What the reviewer and the Lead asked for: rebase onto main; make the sample quest look like real quest code (no module export macro, forward declarations, a comment on the delegate); a test-world teardown that does not rely on a 5.8-only engine call; a Mac runner rule that accounts for the editor keeping old code; the verified headless command and exit codes in the spec; tidier problems; and the map renamed to `L_Sandbox`.
+- What changed: all of the above. The teardown now ends play on each actor by hand, so 5.8 runs the same path older engines will. The map was regenerated with the same Python script under its new name. Decisions A43 and A45 are updated and A46 records the naming call.
+- Proof (fresh copy of the template, UE 5.8.3, stdin from `/dev/null`): full editor build `Result: Succeeded` in 19 s; headless test with the per-quest filter `Dojo.Sample.Health` found 1 test, `Result={Success}`, `TEST COMPLETE. EXIT CODE: 0`, 18 s for the whole run, the editor loaded `L_Sandbox`; report: 1 succeeded, 0 warnings, 0 failed.
+- Still open: Windows, and the C++ APIs and map on UE 5.4 to 5.7 (logged in `docs/problems.md`).
