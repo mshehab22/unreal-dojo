@@ -3,6 +3,7 @@ import { spawn, spawnSync, type SpawnOptions } from "node:child_process";
 
 import { describe, expect, it } from "vitest";
 
+import { NodeCommandRunner } from "../../src/main/services/unreal/NodeCommandRunner";
 import { NodeProcessLauncher, type SpawnFunction } from "../../src/main/services/unreal/NodeProcessLauncher";
 import { PosixProcessTreeKiller } from "../../src/main/services/unreal/PosixProcessTreeKiller";
 import { WindowsProcessTreeKiller } from "../../src/main/services/unreal/WindowsProcessTreeKiller";
@@ -92,5 +93,40 @@ describe("NodeProcessLauncher spawn options", () =>
 	it("leaves argv0 alone when arguments are passed whole", () =>
 	{
 		expect(recordSpawn(false).options.argv0).toBeUndefined();
+	});
+});
+
+describe.skipIf(process.platform === "win32")("NodeCommandRunner time limit", () =>
+{
+	/** A node script that starts a grandchild holding stderr open, prints its id, and then blocks itself too (like xcrun waiting on a stuck clang -cc1). */
+	const BLOCKS = `
+const { spawn } = require("node:child_process");
+const stuck = spawn(process.execPath, ["-e", "setTimeout(() => {}, 30000)"], { stdio: ["ignore", "inherit", "inherit"] });
+console.error("stuck " + stuck.pid);
+setTimeout(() => {}, 30000);
+`;
+
+	it("kills the whole tree on the time limit and answers at once with no exit code", async () =>
+	{
+		const runner = new NodeCommandRunner(new PosixProcessTreeKiller((processId, signal) => process.kill(processId, signal)), 500);
+		const startedAt = Date.now();
+
+		const result = await runner.run(process.execPath, ["-e", BLOCKS]);
+
+		expect(Date.now() - startedAt).toBeLessThan(3000);
+		expect(result).toMatchObject({ started: true, exitCode: null });
+
+		const stuckId = Number(/stuck (\d+)/.exec(result.stderr)?.[1]);
+		await new Promise((resolve) => setTimeout(resolve, 200));
+
+		expect(stuckId).toBeGreaterThan(0);
+		expect(isAlive(stuckId)).toBe(false);
+	});
+
+	it("still answers a quick command normally", async () =>
+	{
+		const result = await new NodeCommandRunner().run(process.execPath, ["-e", "process.stdout.write('hi'); process.exit(3)"]);
+
+		expect(result).toEqual({ started: true, exitCode: 3, stdout: "hi", stderr: "" });
 	});
 });

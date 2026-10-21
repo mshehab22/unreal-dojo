@@ -140,7 +140,7 @@ export function snippetResponseFile(donor: string, preludeFile: string, snippetF
 	return [...kept, `-include "${preludeFile}"`, "-fsyntax-only", "-fno-color-diagnostics", "-Wno-pragma-once-outside-header", "-Wno-infinite-recursion", `"${snippetFile}"`, ""].join("\n");
 }
 
-/** The check's answer from clang's exit code and output: `ok` only on exit code 0 with no errors; a killed run is a timeout error; a failure with no message about the snippet still fails on line 1 (A411). */
+/** The check's answer from clang's exit code and output: `ok` only on exit code 0 with no errors; a killed run is a timeout error; a failure with no message about the snippet still fails on line 1, quoting clang's first error line (A411). */
 export function resultOf(exitCode: number | null, compilerOutput: string, snippetFile: string): SyntaxCheckResult
 {
 	if (exitCode === null) return { ok: false, diagnostics: [{ line: 1, severity: "error", message: `The syntax check took longer than ${CHECK_TIMEOUT_SECONDS} seconds and was stopped. Try again; the first check after a build can be slower.` }] };
@@ -150,7 +150,8 @@ export function resultOf(exitCode: number | null, compilerOutput: string, snippe
 
 	if (exitCode !== 0 && !hasError)
 	{
-		const firstLine = compilerOutput.split(/\r?\n/).find((line) => line.trim() !== "") ?? `exit code ${exitCode}`;
+		const outputLines = compilerOutput.split(/\r?\n/);
+		const firstLine = outputLines.find((line) => /\berror\b/.test(line)) ?? outputLines.find((line) => line.trim() !== "") ?? `exit code ${exitCode}`;
 
 		diagnostics.unshift({ line: 1, severity: "error", message: `The compiler failed: ${firstLine.trim()}` });
 	}

@@ -121,7 +121,7 @@ export class PrerequisiteFiller
 
 		const source: FilledFileSource = hasSaved ? "your saved code" : "the reference solution";
 
-		plans.set(questId, { replaceFolder: false, files: sourced(pick(expected, missing), source), reason: "its files were missing from the sandbox (a reset removes them)" });
+		plans.set(questId, { replaceFolder: false, files: sourced(pick(expected, missing), source), reason: "its files were missing from the sandbox" });
 	}
 
 	/** A boss: missing saved files come back from the saved draft; with nothing saved, an empty boss folder gets the boss's reference code and its piece overrides. Bosses cannot be tested out, so this is the reset case (A409). */
@@ -134,7 +134,7 @@ export class PrerequisiteFiller
 		{
 			const missing = Object.keys(saved).filter((name) => !existing.includes(name));
 
-			if (missing.length > 0) plans.set(bossId, { replaceFolder: false, files: sourced(pick(saved, missing), "your saved code"), reason: "its files were missing from the sandbox (a reset removes them)" });
+			if (missing.length > 0) plans.set(bossId, { replaceFolder: false, files: sourced(pick(saved, missing), "your saved code"), reason: "its files were missing from the sandbox" });
 
 			return;
 		}

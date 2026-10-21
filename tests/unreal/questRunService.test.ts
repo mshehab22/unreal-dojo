@@ -18,7 +18,7 @@ import { FakeSandboxFileSystem } from "./FakeSandboxFileSystem";
 import { MemoryUnrealSettings } from "./MemoryUnrealSettings";
 
 /** Every quest id the fake content knows. */
-const KNOWN_IDS = ["f1-training-dummy", "f1-popup-target", "f1-score-keeper", "f1-boss-training-yard", "f2-after-boss", "f1-popup"];
+const KNOWN_IDS = ["f1-training-dummy", "f1-popup-target", "f1-score-keeper", "f1-boss-training-yard", "f2-after-boss", "f1-popup", "f1-practice-bell", "f1-boss-director", "f2-target-rack"];
 
 /** The score keeper's brief line, as World 1 writes it (A268). */
 const SCORE_KEEPER_BRIEF = "Intro.\n\nCompiles against earlier quests: f1-training-dummy (`Quests/f1-training-dummy/DojoF1TrainingDummy.h`) and f1-popup-target (`Quests/f1-popup-target/DojoF1PopupTarget.h`).\n\nMore.";
@@ -39,6 +39,11 @@ const SOLUTIONS = {
 	[`${SOLUTIONS_ROOT}/f1-boss-training-yard/DojoF1TrainingYard.cpp`]: "yard cpp",
 	[`${SOLUTIONS_ROOT}/f1-boss-training-yard/TrainingYard.Test.cpp`]: "yard tests",
 	[`${SOLUTIONS_ROOT}/f1-boss-training-yard/f1-popup-target/DojoF1PopupTarget.h`]: "extended target h",
+	[`${SOLUTIONS_ROOT}/f1-practice-bell/DojoF1PracticeBell.h`]: "bell h",
+	[`${SOLUTIONS_ROOT}/f1-practice-bell/DojoF1PracticeBell.cpp`]: "bell cpp",
+	[`${SOLUTIONS_ROOT}/f1-boss-director/DojoF1Director.h`]: "director h",
+	[`${SOLUTIONS_ROOT}/f1-boss-director/DojoF1Director.cpp`]: "director cpp includes the bell",
+	[`${SOLUTIONS_ROOT}/f1-boss-director/f1-popup-target/DojoF1PopupTarget.h`]: "director's target h",
 };
 
 /** The sandbox quest folder of a quest. */
@@ -47,10 +52,10 @@ function questFolder(questId: string): string
 	return `/S/Source/Dojo/Quests/${questId}`;
 }
 
-/** A quest shaped enough for the service. */
+/** A quest shaped enough for the service; a boss carries its dependency line in its spec. */
 function quest(id: string, kind: "build" | "boss" | "concept", brief = "No dependencies."): AuthoredQuest
 {
-	return { id, title: id, kind, brief, tests: `IMPLEMENT_SIMPLE_AUTOMATION_TEST(F, "Dojo.F1.${id}.Works", Flags)`, files: [] } as unknown as AuthoredQuest;
+	return { id, title: id, kind, brief, spec: brief, tests: `IMPLEMENT_SIMPLE_AUTOMATION_TEST(F, "Dojo.F1.${id}.Works", Flags)`, files: [] } as unknown as AuthoredQuest;
 }
 
 /** The fake content: every known id in one world. */
@@ -60,6 +65,9 @@ const QUESTS = [
 	quest("f1-score-keeper", "build", SCORE_KEEPER_BRIEF),
 	quest("f1-boss-training-yard", "boss"),
 	quest("f2-after-boss", "build", AFTER_BOSS_BRIEF),
+	quest("f1-practice-bell", "build"),
+	quest("f1-boss-director", "boss", "Compiles against earlier quests: f1-popup-target (`Quests/f1-popup-target/DojoF1PopupTarget.h`) and f1-practice-bell (`Quests/f1-practice-bell/DojoF1PracticeBell.h`)."),
+	quest("f2-target-rack", "build", "Compiles against earlier quests: f1-popup-target as extended by f1-boss-director (`Quests/f1-popup-target/DojoF1PopupTarget.h`)."),
 	quest("c1", "concept"),
 ];
 
@@ -189,7 +197,7 @@ describe("PrerequisiteFiller through runQuest", () =>
 
 		expect(fileSystem.files.get(`${questFolder("f1-training-dummy")}/DojoF1TrainingDummy.h`)).toBe("learner h");
 		expect(fileSystem.files.get(`${questFolder("f1-training-dummy")}/DojoF1TrainingDummy.cpp`)).toBe("saved cpp");
-		expect(lines[1]).toBe("Filled f1-training-dummy because its files were missing from the sandbox (a reset removes them): DojoF1TrainingDummy.cpp from your saved code.");
+		expect(lines[1]).toBe("Filled f1-training-dummy because its files were missing from the sandbox: DojoF1TrainingDummy.cpp from your saved code.");
 		expect(lines).toHaveLength(2);
 	});
 
@@ -258,7 +266,7 @@ describe("PrerequisiteFiller through runQuest", () =>
 
 		expect(saved.fileSystem.files.get(`${questFolder("f1-boss-training-yard")}/MyYard.cpp`)).toBe("my yard cpp");
 		expect(saved.fileSystem.files.get(`${questFolder("f1-popup-target")}/DojoF1PopupTarget.h`)).toBe("learner target h");
-		expect(savedLines).toContain("Filled f1-boss-training-yard because its files were missing from the sandbox (a reset removes them): MyYard.cpp from your saved code, MyYard.h from your saved code.");
+		expect(savedLines).toContain("Filled f1-boss-training-yard because its files were missing from the sandbox: MyYard.cpp from your saved code, MyYard.h from your saved code.");
 
 		const present = createService({
 			passed: ["f1-popup-target", "f1-boss-training-yard"],
@@ -268,6 +276,23 @@ describe("PrerequisiteFiller through runQuest", () =>
 
 		expect(presentLines).toHaveLength(1);
 		expect(present.fileSystem.files.get(`${questFolder("f1-popup-target")}/DojoF1PopupTarget.h`)).toBe("learner target h");
+	});
+
+	it("brings a filled boss's own dependencies too, by the same rules: the director's bell comes from its reference, the learner's passed target keeps its .cpp, the override wins", async () =>
+	{
+		const { service, fileSystem } = createService({
+			passed: ["f1-popup-target", "f1-boss-director"],
+			files: { [`${questFolder("f1-popup-target")}/DojoF1PopupTarget.h`]: "learner target h", [`${questFolder("f1-popup-target")}/DojoF1PopupTarget.cpp`]: "learner target cpp" },
+		});
+
+		const lines = await runAndCollect(service, "f2-target-rack");
+
+		expect(lines[0]).toBe("Checking earlier quests this one compiles against: f1-popup-target, f1-boss-director, f1-practice-bell");
+		expect(fileSystem.files.get(`${questFolder("f1-practice-bell")}/DojoF1PracticeBell.cpp`)).toBe("bell cpp");
+		expect(fileSystem.files.get(`${questFolder("f1-boss-director")}/DojoF1Director.cpp`)).toBe("director cpp includes the bell");
+		expect(fileSystem.files.get(`${questFolder("f1-popup-target")}/DojoF1PopupTarget.h`)).toBe("director's target h");
+		expect(fileSystem.files.get(`${questFolder("f1-popup-target")}/DojoF1PopupTarget.cpp`)).toBe("learner target cpp");
+		expect(lines).toContain("Filled f1-practice-bell because you have not passed it yourself (tested out or not done): DojoF1PracticeBell.cpp from the reference solution, DojoF1PracticeBell.h from the reference solution.");
 	});
 
 	it("runs a quest without a dependency line straight away", async () =>

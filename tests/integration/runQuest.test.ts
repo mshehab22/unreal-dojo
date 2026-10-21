@@ -120,11 +120,12 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 		]));
 	}, STEP_TIMEOUT_MS);
 
-	it("builds on a reset fixture boss: the boss's code without its tests and its piece override land in the sandbox, and the later quest passes", async () =>
+	it("builds on a reset fixture boss: the boss's code without its tests, its piece override, and its own dependency (the bell) land in the sandbox, and the later quest passes", async () =>
 	{
 		// A fixture boss until World 2's boss solution lands: it extends f1-popup-target with a field, and its integration reads it.
 		const solutionsFolder = join(pickedFolder, "fixture-solutions");
 		await cp(join(REPOSITORY, "tools", "solutions", "f1-popup-target"), join(solutionsFolder, "f1-popup-target"), { recursive: true });
+		await cp(join(REPOSITORY, "tools", "solutions", "f1-practice-bell"), join(solutionsFolder, "f1-practice-bell"), { recursive: true });
 		const pieceHeader = await readFile(join(solutionsFolder, "f1-popup-target", "DojoF1PopupTarget.h"), "utf8");
 		const extendedHeader = pieceHeader.replace("int32 HitsToBreak = 2;", "int32 HitsToBreak = 2;\n\n\t/** Fixture boss extension. */\n\tint32 BonusPoints = 7;");
 		expect(extendedHeader).not.toBe(pieceHeader);
@@ -133,7 +134,7 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 		await mkdir(join(bossFolder, "f1-popup-target"), { recursive: true });
 		await writeFile(join(bossFolder, "f1-popup-target", "DojoF1PopupTarget.h"), extendedHeader);
 		await writeFile(join(bossFolder, "DojoFxYard.h"), "#pragma once\n\n#include \"CoreMinimal.h\"\n\n/** The fixture boss's bonus, read from the extended target. */\nint32 DojoFxYardBonus();\n");
-		await writeFile(join(bossFolder, "DojoFxYard.cpp"), "#include \"DojoFxYard.h\"\n\n#include \"DojoF1PopupTarget.h\"\n\nint32 DojoFxYardBonus()\n{\n\treturn GetDefault<ADojoF1PopupTarget>()->BonusPoints + 1;\n}\n");
+		await writeFile(join(bossFolder, "DojoFxYard.cpp"), "#include \"DojoFxYard.h\"\n\n#include \"DojoF1PopupTarget.h\"\n#include \"DojoF1PracticeBell.h\"\n\nint32 DojoFxYardBonus()\n{\n\t// The bell is the boss's own dependency (A413): it only compiles if the bell's files were brought in too.\n\treturn GetDefault<ADojoF1PopupTarget>()->BonusPoints + (GetDefault<ADojoF1PracticeBell>() != nullptr ? 1 : 0);\n}\n");
 		await writeFile(join(bossFolder, "FxYard.Test.cpp"), "// Must never be written into the sandbox.\n#error boss tests were written\n");
 
 		const afterQuest = {
@@ -156,7 +157,7 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 				"",
 			].join("\n"),
 		} as unknown as AuthoredQuest;
-		const bossQuest = { id: "fx-boss-yard", kind: "boss" } as unknown as AuthoredQuest;
+		const bossQuest = { id: "fx-boss-yard", kind: "boss", spec: "Compiles against earlier quests: f1-popup-target (`Quests/f1-popup-target/DojoF1PopupTarget.h`) and f1-practice-bell (`Quests/f1-practice-bell/DojoF1PracticeBell.h`)." } as unknown as AuthoredQuest;
 		const fixtureQuests = [afterQuest, bossQuest];
 		const fixturePack = { id: "fx", worlds: [{ id: "fx-world", quests: [{ id: "fx-after-yard" }, { id: "fx-boss-yard" }] }] } as unknown as PackOutline;
 
@@ -185,7 +186,8 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 
 		expect(result).toMatchObject({ ok: true, compiled: true, testsPassed: 1, testsTotal: 1 });
 		expect(lines).toContain("Filled fx-boss-yard because its files were missing from the sandbox, and the boss's reference needs its own versions of some pieces: DojoFxYard.cpp from the boss's reference solution, DojoFxYard.h from the boss's reference solution.");
-		expect(lines).toContain("Filled f1-popup-target because its files were missing from the sandbox (a reset removes them): DojoF1PopupTarget.cpp from the reference solution, DojoF1PopupTarget.h from the boss's reference solution.");
+		expect(lines).toContain("Filled f1-popup-target because its files were missing from the sandbox: DojoF1PopupTarget.cpp from the reference solution, DojoF1PopupTarget.h from the boss's reference solution.");
+		expect(lines).toContain("Filled f1-practice-bell because you have not passed it yourself (tested out or not done): DojoF1PracticeBell.cpp from the reference solution, DojoF1PracticeBell.h from the reference solution.");
 		expect(existsSync(join(sandboxFolder, "Source", "Dojo", "Quests", "fx-boss-yard", "FxYard.Test.cpp"))).toBe(false);
 		expect(existsSync(join(sandboxFolder, "Source", "Dojo", "Tests", "fx-boss-yard.Test.cpp"))).toBe(false);
 

@@ -67,14 +67,11 @@ export class QuestRunService
 		const context = this.requireContext();
 		const quest = await this.requireCodeQuest(questId);
 
-		const prerequisites = prerequisiteQuestIds(quest.brief, await this.knownQuestIds());
+		const { prerequisites, bossIds } = await this.allPrerequisites(quest);
 
 		if (prerequisites.length > 0)
 		{
 			onProgress({ phase: "preparing", lastLine: `Checking earlier quests this one compiles against: ${prerequisites.join(", ")}` });
-
-			const bossIds = new Set<string>();
-			for (const prerequisite of prerequisites) if ((await this.dependencies.quests.getAuthoredQuest(prerequisite))?.kind === "boss") bossIds.add(prerequisite);
 
 			const learner = this.dependencies.learner;
 			const filled = await this.dependencies.prerequisiteFiller.fill(context.sandboxFolder, prerequisites, {
@@ -106,6 +103,29 @@ export class QuestRunService
 		const context = this.requireContext();
 
 		return this.dependencies.sandboxService.rebuild(context.engineRoot, context.sandboxFolder, onProgress, signal);
+	}
+
+	/** The quest's prerequisites and theirs, transitively (a boss's spec names its own, A413), each once and never the quest itself, with the bosses among them. */
+	private async allPrerequisites(quest: AuthoredQuest): Promise<{ prerequisites: string[]; bossIds: Set<string> }>
+	{
+		const knownIds = await this.knownQuestIds();
+		const prerequisites: string[] = [];
+		const bossIds = new Set<string>();
+		const queue = prerequisiteQuestIds(dependencyProse(quest), knownIds);
+
+		while (queue.length > 0)
+		{
+			const questId = queue.shift() ?? "";
+			if (questId === quest.id || prerequisites.includes(questId)) continue;
+
+			prerequisites.push(questId);
+
+			const prerequisite = await this.dependencies.quests.getAuthoredQuest(questId);
+			if (prerequisite?.kind === "boss") bossIds.add(questId);
+			if (prerequisite) queue.push(...prerequisiteQuestIds(dependencyProse(prerequisite), knownIds));
+		}
+
+		return { prerequisites, bossIds };
 	}
 
 	/** Every quest id in the content. */
@@ -144,4 +164,14 @@ export function describeFill(prerequisite: FilledPrerequisite): string
 	const files = prerequisite.files.map((file) => `${file.name} from ${file.source}`).join(", ");
 
 	return `Filled ${prerequisite.questId} because ${prerequisite.reason}: ${files}.`;
+}
+
+/** The prose that carries a quest's "Compiles against earlier quests:" line: a code quest's brief, a boss's spec. */
+function dependencyProse(quest: AuthoredQuest): string
+{
+	if (quest.kind === "build" || quest.kind === "refactor") return quest.brief;
+
+	if (quest.kind === "boss") return quest.spec;
+
+	return "";
 }

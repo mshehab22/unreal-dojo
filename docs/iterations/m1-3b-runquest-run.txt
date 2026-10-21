@@ -1,5 +1,13 @@
- ✓ tests/integration/runQuest.test.ts > runQuest against /Users/mshehab22/Applications/UE_5.8 > creates the sandbox through createSandbox, which saves the engine and sandbox folders 55658ms
-runQuest f1-score-keeper: 58207 ms
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > creates the sandbox and its first full build passes 25780ms
+ ✓ tests/integration/runQuest.test.ts > runQuest against /Users/mshehab22/Applications/UE_5.8 > creates the sandbox through createSandbox, which saves the engine and sandbox folders 48142ms
+  "ok": true,
+  "compiled": true,
+      "name": "Dojo.Sample.Health.TakesDamage",
+      "passed": true,
+  "testsPassed": 1,
+  "testsTotal": 1,
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > writes the sample quest, rebuilds, and its test passes 62416ms
+runQuest f1-score-keeper: 55620 ms
 Filled f1-training-dummy because you have not passed it yourself (tested out or not done): DojoF1TrainingDummy.cpp from the reference solution, DojoF1TrainingDummy.h from the reference solution.
 Filled f1-popup-target because you have not passed it yourself (tested out or not done): DojoF1PopupTarget.cpp from the reference solution, DojoF1PopupTarget.h from the reference solution.
   "ok": true,
@@ -9,14 +17,26 @@ Filled f1-popup-target because you have not passed it yourself (tested out or no
         "passed": true,
     "testsPassed": 1,
     "testsTotal": 1,
- ✓ tests/integration/runQuest.test.ts > runQuest against /Users/mshehab22/Applications/UE_5.8 > runs the score keeper through runQuest: prerequisites come from reference solutions, the build passes, its tests pass 58208ms
-fixture boss run: 45651 ms
-Filled f1-popup-target because its files were missing from the sandbox (a reset removes them): DojoF1PopupTarget.cpp from the reference solution, DojoF1PopupTarget.h from the boss's reference solution.
+ ✓ tests/integration/runQuest.test.ts > runQuest against /Users/mshehab22/Applications/UE_5.8 > runs the score keeper through runQuest: prerequisites come from reference solutions, the build passes, its tests pass 55621ms
+ [{"name":"Dojo.Probe.Value.Seven","passed":true,"durationMs":8}]
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > builds a brand new quest folder whose test includes the quest header by bare name, and runs only its own test (A181, A180) 34844ms
+fixture boss run: 44751 ms
+Filled f1-popup-target because its files were missing from the sandbox: DojoF1PopupTarget.cpp from the reference solution, DojoF1PopupTarget.h from the boss's reference solution.
 Filled fx-boss-yard because its files were missing from the sandbox, and the boss's reference needs its own versions of some pieces: DojoFxYard.cpp from the boss's reference solution, DojoFxYard.h from the boss's reference solution.
+Filled f1-practice-bell because you have not passed it yourself (tested out or not done): DojoF1PracticeBell.cpp from the reference solution, DojoF1PracticeBell.h from the reference solution.
 [{"name":"Dojo.Fx.AfterYard.Bonus","passed":true,"durationMs":8}]
- ✓ tests/integration/runQuest.test.ts > runQuest against /Users/mshehab22/Applications/UE_5.8 > builds on a reset fixture boss: the boss's code without its tests and its piece override land in the sandbox, and the later quest passes 45657ms
-two syntax checks: 483 ms {"ok":true,"value":{"ok":false,"diagnostics":[{"line":10,"column":2,"severity":"error","message":"unknown type name 'flot'; did you mean 'float'?"}]}}
+ ✓ tests/integration/runQuest.test.ts > runQuest against /Users/mshehab22/Applications/UE_5.8 > builds on a reset fixture boss: the boss's code without its tests, its piece override, and its own dependency (the bell) land in the sandbox, and the later quest passes 44760ms
+two syntax checks: 1085 ms {"ok":true,"value":{"ok":false,"diagnostics":[{"line":10,"column":2,"severity":"error","message":"unknown type name 'flot'; did you mean 'float'?"}]}}
 {"ok":true,"value":{"ok":false,"diagnostics":[{"line":5,"column":29,"severity":"error","message":"invalid application of 'sizeof' to an incomplete type 'FThing' (in TypeCompatibleBytes.h)"},{"line":5,"column":29,"severity":"error","message":"invalid application of 'alignas' to an incomplete type 'FThing' (in TypeCompatibleBytes.h)"}]}}
- ✓ tests/integration/runQuest.test.ts > runQuest against /Users/mshehab22/Applications/UE_5.8 > checks a scratch buffer with the compiler: a clean reflected class passes, a typo is reported on its line, a header error is mapped and fails 709ms
-      Tests  4 passed (4)
+ ✓ tests/integration/runQuest.test.ts > runQuest against /Users/mshehab22/Applications/UE_5.8 > checks a scratch buffer with the compiler: a clean reflected class passes, a typo is reported on its line, a header error is mapped and fails 1408ms
+[{"name":"Dojo.Sample.Health.TakesDamage","passed":false,"durationMs":12,"message":"Expected 'Health clamps at zero' to be 0.000000, but it was -430.000000 and outside tolerance 0.000100."}]
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > reports a failed assertion with its message 35389ms
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > reports a compile error in the learner's file with the filtered output 8940ms
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > cancels mid-build and leaves no process behind 1030ms
+  "ok": false,
+  "compiled": true,
+  "testsPassed": 0,
+  "testsTotal": 0,
+ ✓ tests/integration/headlessLoop.test.ts > headless loop against /Users/mshehab22/Applications/UE_5.8 > cancels mid-test and leaves no process behind 13705ms
+      Tests  11 passed (11)
 exit 0

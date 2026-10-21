@@ -111,10 +111,12 @@ describe("parseDiagnostics", () =>
 		const included = [`In file included from ${SNIPPET}:4:`, "/etc/hosts:1:1: error: expected unqualified-id"].join("\n");
 		const unplaced = "/S/Intermediate/pch.gch: fatal error: file '/Engine/Core.h' has been modified since the precompiled header was built";
 		const stale = "fatal error: file '/Engine/Core.h' has been modified since the precompiled header '/S/pch.gch' was built";
+		const staleWithIncludeLine = `In file included from ${SNIPPET}:1:\n${stale}`;
 
 		expect(parseDiagnostics(included, SNIPPET)).toEqual([{ line: 4, severity: "error", message: "expected unqualified-id (in hosts)" }]);
 		expect(parseDiagnostics(unplaced, SNIPPET)).toEqual([]);
 		expect(resultOf(1, stale, SNIPPET)).toEqual({ ok: false, diagnostics: [{ line: 1, severity: "error", message: `The compiler failed: ${stale}` }] });
+		expect(resultOf(1, staleWithIncludeLine, SNIPPET).diagnostics[0]?.message).toBe(`The compiler failed: ${stale}`);
 	});
 
 	it("drops header warnings", () =>

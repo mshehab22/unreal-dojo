@@ -92,14 +92,14 @@ IPC: `createSandbox`, `cancelRun`, and `pickSandboxFolder` answer (A189); `runQu
 
 | File | Job |
 | --- | --- |
-| `QuestRunService.ts` | `runQuest`, `checkSnippetSyntax`, `rebuildSandbox` for the IPC handlers. Reads the engine and sandbox from settings (`sandbox-not-ready` before setup), the quest from the content catalog (`quest-not-found` for an unknown or non-code quest), fills prerequisites, then runs through `RunnerFactory` |
+| `QuestRunService.ts` | `runQuest`, `checkSnippetSyntax`, `rebuildSandbox` for the IPC handlers. Prerequisites are followed transitively through each one's own dependency line, a boss's in its spec (A413). Reads the engine and sandbox from settings (`sandbox-not-ready` before setup), the quest from the content catalog (`quest-not-found` for an unknown or non-code quest), fills prerequisites, then runs through `RunnerFactory` |
 | `QuestDependencies.ts` | Every known quest id (from the content catalog) on the brief's "Compiles against earlier quests:" line, so "f1-popup-target as extended by f1-boss-training-yard" names both (A268, A407) |
 | `ReferenceSolutions.ts` | `<solutions>/<quest-id>/<FileName>`: `tools/solutions` in development, `<resources>/solutions` when packaged (extraResources, A406) |
 | `PrerequisiteFiller.ts` | Per prerequisite: not passed (tested out or not done) gets its whole reference; passed with files missing gets only those, from the progress save's `savedFiles`, else the reference; files already present are never touched. A boss prerequisite with an empty folder and nothing saved gets its reference code (never its tests) and its piece overrides, which win over the piece's own files and reference in any order. One `writing` line per folder names every file and its source (A65, A401, A408, A409) |
 | `bossSolution.ts` | The A215 boss layout reader (code, `*.Test.cpp`, piece overrides), moved from `tools/verifier/` so the verifier and the app share one implementation; takes a folder reader |
 | `SnippetSyntaxChecker.ts`, `ClangSnippetSyntaxChecker.ts` | The scratch buffer check on macOS: UBT's `DojoTestActor.cpp.o.rsp` with the source swapped for the snippet, a prelude that blanks the reflection macros, `-fsyntax-only`, run as `xcrun clang++` from `Engine/Source`; about 0.5 s (A403). Each check writes its own `Snippet-<id>` files and removes them (A410). `ok` needs exit code 0 and no errors; header errors land on the snippet line from clang's instantiation or include notes, else line 1; a timeout is its own error (A411). Windows answers `not-implemented` for now (A402) |
 
-`CommandRunner.run` takes an optional working folder (the snippet check needs `Engine/Source`).
+`CommandRunner.run` takes an optional working folder (the snippet check needs `Engine/Source`). `NodeCommandRunner` starts each command in its own process group and, on its 20 s limit, kills the whole tree and answers at once with `exitCode: null` (A412).
 
 Real engine check: `DOJO_ENGINE_ROOT=~/Applications/UE_5.8 npx vitest run tests/integration/runQuest.test.ts` creates a sandbox through the `createSandbox` handler, runs `f1-score-keeper` with its reference solution through the `runQuest` handler (its two prerequisites filled from their reference solutions), and runs two snippet checks.
 
