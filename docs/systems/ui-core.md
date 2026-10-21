@@ -4,7 +4,7 @@ Owner: builder-ui-core. Folder: `src/renderer/src/` (app frame, `screens/` for t
 
 ## Visual direction
 
-Use the frontend-design skill before the first screen. Dark, high contrast, generous type, one accent per pack (foundations amber, patterns violet, mechanics cyan, systems green), motion only on reward moments, a small cast of studio characters drawn as simple vector portraits (client, lead programmer, QA) used sparingly for delight. No stock dashboard look, no gradients-on-everything. Tokens in `styles/tokens.css` (colors, spacing, radii, type scale, motion durations). Every screen works at 1100x700.
+Use the frontend-design skill before the first screen. Dark, high contrast, generous type, one accent per pack (foundations amber, patterns violet, mechanics cyan, systems green), short feedback transitions (150 ms or less on hover, press, and panel open) allowed and expressive motion reserved for reward moments (A98), a small cast of studio characters drawn as simple vector portraits (client, lead programmer, QA) used sparingly for delight. No stock dashboard look, no gradients-on-everything. Tokens in `styles/tokens.css` (colors, spacing, radii, type scale, motion durations). Every screen works at 1100x700.
 
 ## Shared components
 
@@ -36,7 +36,8 @@ Last updated by M0.3 (tokens, frame, navigation).
 - `styles/tokens.css` is the only place colors, fonts, type scale, spacing, radii, shadows, easing, entrance animations, and motion durations are defined. They are Tailwind v4 theme variables (`@theme static`, so every one is emitted on `:root` even when no utility uses it), which makes each both a CSS variable (`var(--color-ink)`) and a utility (`bg-ink`, `text-paper-muted`, `w-rail`, `rounded-lg`). Tailwind's default palette, type scale, radii, and shadows are reset, so only Dojo tokens exist.
 - Colors: surfaces `ink`, `surface`, `raised`, `overlay`, `line`, `line-strong`; text `paper`, `paper-muted`, `paper-faint`; outcomes `pass`, `fail`, `warn`; pack accents `foundations` (amber), `patterns` (violet), `mechanics` (cyan), `systems` (green), each with `-soft` (tinted fill) and `-deep` (text on the accent). The shadcn names (`background`, `primary`, `muted`, `border`, `ring`, ...) are aliases onto these.
 - Current pack: `pack`, `pack-soft`, `pack-deep`, `ring`, and `shadow-glow` follow the nearest `data-pack="<pack id>"` attribute (an `@theme inline` block plus `[data-pack]` rules). Foundations amber is the default and the app's signature accent.
-- Motion durations (`--duration-instant` to `--duration-reward`) are plain variables, used as `duration-(--duration-fast)`. They drop to zero under `prefers-reduced-motion`.
+- Motion durations (`--duration-instant` to `--duration-reward`) are plain variables, used as `duration-(--duration-fast)`. Feedback uses `instant` or `fast` (150 ms or less); `base`, `slow`, and `reward` are for reward moments only (A98). They drop to zero under `prefers-reduced-motion`.
+- Font licenses ship in the packaged app at `Resources/licenses/fonts/` through an electron-builder `extraResources` entry.
 - Fonts are committed woff2 files in `assets/fonts/` with `fonts.css` (imported first by `styles/global.css`) and their OFL licenses: Bricolage Grotesque (`font-display`, headings), Instrument Sans (`font-sans`, body), JetBrains Mono (`font-mono`, code and keys). No network at runtime.
 - `styles/tokenCatalog.ts` names every token and its purpose for the gallery; `tests/renderer/tokenCatalog.test.ts` fails if it and `tokens.css` drift.
 

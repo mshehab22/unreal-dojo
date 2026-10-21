@@ -20,10 +20,10 @@
 	--color-line: #2a2f3b;
 	--color-line-strong: #3b4252;
 
-	/* Text: warm paper on ink. Muted passes 7:1 and faint 4.5:1 against ink. */
+	/* Text: warm paper on ink. On every surface from ink to overlay, muted is at least 6.9:1 and faint at least 4.8:1. */
 	--color-paper: #f4f1ea;
 	--color-paper-muted: #a9acb6;
-	--color-paper-faint: #7f8392;
+	--color-paper-faint: #8a8e9c;
 
 	/* Pack accents: one per pack, plus a soft tint for fills and a deep shade for text on the accent. */
 	--color-foundations: #f6b53f;
@@ -113,9 +113,9 @@
 	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 	--ease-reward: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-	/* Entrance animations for panels: a fade for backdrops, a short rise for the panel itself. */
-	--animate-fade-in: fade-in var(--duration-base) var(--ease-out);
-	--animate-rise-in: rise-in var(--duration-base) var(--ease-out);
+	/* Entrance animations for panels: a fade for backdrops, a short rise for the panel itself. Feedback speed, so 150ms or less (A98). */
+	--animate-fade-in: fade-in var(--duration-fast) var(--ease-out);
+	--animate-rise-in: rise-in var(--duration-fast) var(--ease-out);
 
 	@keyframes fade-in {
 		from {
@@ -141,7 +141,8 @@
 }
 
 :root {
-	/* Motion durations. Use as duration-(--duration-fast). Motion is for feedback and reward moments only. */
+	/* Motion durations. Use as duration-(--duration-fast). Feedback (hover, press, panel open) uses instant or fast, 150ms or less;
+	   base, slow, and reward are for reward moments only (A98). */
 	--duration-instant: 80ms;
 	--duration-fast: 140ms;
 	--duration-base: 220ms;

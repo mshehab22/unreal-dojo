@@ -93,9 +93,9 @@ export const SHADOWS: readonly TokenEntry[] = [
 /** Motion durations, fastest first. */
 export const DURATIONS: readonly TokenEntry[] = [
 	{ name: "--duration-instant", purpose: "Press feedback" },
-	{ name: "--duration-fast", purpose: "Hovers, toggles" },
-	{ name: "--duration-base", purpose: "Panels opening" },
-	{ name: "--duration-slow", purpose: "Screen changes" },
+	{ name: "--duration-fast", purpose: "Hovers, toggles, panels opening" },
+	{ name: "--duration-base", purpose: "Reward moments: cards settling" },
+	{ name: "--duration-slow", purpose: "Reward moments: reveals" },
 	{ name: "--duration-reward", purpose: "XP, level up, loot" },
 ];
 

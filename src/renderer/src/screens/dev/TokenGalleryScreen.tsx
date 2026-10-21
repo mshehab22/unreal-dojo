@@ -36,7 +36,7 @@ export function TokenGalleryScreen()
 				</div>
 			</GallerySection>
 
-			<GallerySection title="Surfaces and text" note="Sumi ink with warm paper text. Muted text passes 7:1, faint text 4.5:1.">
+			<GallerySection title="Surfaces and text" note="Sumi ink with warm paper text. On every surface, muted text is at least 6.9:1 and faint text at least 4.8:1.">
 				<div className="grid grid-cols-3 gap-3">
 					{NEUTRAL_COLORS.map((token) => (
 						<ColorSwatch key={token.name} token={token} />
@@ -123,7 +123,7 @@ export function TokenGalleryScreen()
 				</div>
 			</GallerySection>
 
-			<GallerySection title="Motion" note="Durations drop to zero when the OS asks for reduced motion.">
+			<GallerySection title="Motion" note="Feedback is 150ms or less; longer motion is for reward moments. All of it drops to zero under reduced motion.">
 				<MotionSample />
 			</GallerySection>
 
