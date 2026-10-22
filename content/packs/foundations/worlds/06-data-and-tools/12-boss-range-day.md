@@ -116,7 +116,7 @@ Feel: tune the XP curve until the rifle arrives just as the steel starts to feel
 
 - The blaster, weapon asset, target, spawner, level component, and showcase are reused without changes.
 - Waves come from a table read in row order; no wave, target, weapon, or XP number is written in the director.
-- A wave whose kind is missing is reported once in the director's own log category and skipped, and the round carries on.
+- A wave whose kind is missing is reported once, in the director's own log category, or with a Print String for a Blueprint director, and skipped, and the round carries on.
 - F hits the oldest standing target, and an empty clip spends the press on a reload that is not a shot.
 - Fallen targets feed the score and the curve-driven level, and level 3 equips the upgrade with a full clip.
 - The showcase loads the equipped weapon's mesh from its soft reference only when that weapon is equipped.

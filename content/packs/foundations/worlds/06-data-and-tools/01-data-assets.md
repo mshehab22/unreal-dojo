@@ -41,7 +41,7 @@ Gameplay code then holds a `TObjectPtr<UDojoWeaponData>` UPROPERTY, set in Detai
 
 A data asset can hold references to other assets too. Holding a mesh or a sound as a `TSoftObjectPtr` keeps it as a path, so loading the data asset does not drag the mesh into memory with it; a later card covers loading those on demand.
 
-**Primary data assets** (`UPrimaryDataAsset`) add an identity, an `FPrimaryAssetId` such as `Weapon:DA_Rifle`, that the Asset Manager understands. With it, code can list every weapon in the project without referencing each one, and load only the ones it needs. A small game can use plain data assets; a shop with two hundred items, or content that ships later, benefits from primary ones.
+**Primary data assets** (`UPrimaryDataAsset`) add an identity the Asset Manager understands, an `FPrimaryAssetId` made of a type and a name. By default the type is the class's name and the name is the asset's, so DA_Rifle made from `UDojoWeaponData` is `DojoWeaponData:DA_Rifle`; overriding `GetPrimaryAssetId` gives a type of your own. Once that type is listed in Project Settings, under Asset Manager, in Primary Asset Types to Scan, code can list every weapon in the project without referencing each one, and load only the ones it needs. A small game can use plain data assets; a shop with two hundred items, or content that ships later, benefits from primary ones.
 
 Data assets are one of the two main homes for designer data in Unreal. Data Tables are the other, and the next card compares them.
 

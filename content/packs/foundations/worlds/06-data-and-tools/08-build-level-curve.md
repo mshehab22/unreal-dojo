@@ -25,7 +25,7 @@ The declarations are given; every body is yours:
 
 - `AddXP` adds XP and levels up as many times as the XP pays for, reading the XP each level needs from the curve, and returns how many levels it gained. At `MaxLevel` it stops: no more levels and no XP kept.
 - `GetXPToNext` reads the curve at the current level; it is 0 at the top level or with no curve.
-- With no curve, AddXP reports it with `ensureMsgf` (the message names the component and says it has no XP curve) and returns 0. A curve value of 0 or less would never let the loop finish, so that is reported with an ensure too, and the loop stops.
+- With no curve, AddXP reports it with `ensureMsgf` (the message names the component and says it has no XP curve) and returns 0. How you write the condition is your choice. The test checks that the missing curve is survived; whether it is reported is a rubric line, because a plain ensure reports only once per editor session. A curve value of 0 or less would never let the loop finish, so that is reported with an ensure too, and the loop stops.
 - `ResetProgress` goes back to level 1 with no XP.
 
 Write it the obvious way first and run the tests. This one fails on purpose the first time for most people: read which assertion failed and why before you open the hints.
@@ -186,12 +186,11 @@ bool FDojo_F6_LevelCurve_LevelsFromTheCurve::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_F6_LevelCurve_MissingCurveIsReported, "Dojo.F6.LevelCurve.MissingCurveIsReported", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Adds XP with no curve and checks one ensure reports it while the component carries on at level 1. */
+/** Adds XP with no curve and checks the component survives it at level 1; the ensure that reports it may log once per session. */
 bool FDojo_F6_LevelCurve_MissingCurveIsReported::RunTest(const FString& Parameters)
 {
-	// The ensure's condition line must appear (0 means at least once, since the engine may echo it); its header, message, blank lines, and callstack belong to the same report.
-	AddExpectedErrorPlain(TEXT("Ensure condition failed: IsValid(XPCurve)"), EAutomationExpectedErrorFlags::Contains, 0);
-	AddExpectedError(TEXT("Handled ensure|has no XP curve|Stack:|\\[Callstack\\]|^(LogOutputDevice:)?\\s*$"), EAutomationExpectedErrorFlags::Contains, -1);
+	// A plain ensure reports only the first time per editor session, so a rerun may log nothing. Every line of its report, whatever the condition and message say, comes through LogOutputDevice: all are allowed, none is required.
+	AddExpectedError(TEXT("^LogOutputDevice:|Ensure condition failed"), EAutomationExpectedErrorFlags::Contains, -1);
 
 	FDojoTestWorld TestWorld;
 
