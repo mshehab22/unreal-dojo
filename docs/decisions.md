@@ -90,6 +90,35 @@ Options: an app flag or environment variable that calls `app.setPath("userData",
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A789 2026-10-21 World 8 was built in this session's own worktree, from main at a825d04 (author-patterns, M4.P2.8)
+As in A769: the session's file tools write only inside its own worktree, so `m4-p2-world8` is checked out there. It starts from main at a825d04, the Lead's World 8 start commit one past the e5ab9e5 named in the brief. World 7 is not on main yet, so `p8-many-kinds-one-toolbox` requires `p6-later-not-now` instead of World 7's first quest; when World 7 merges, the Lead may point it at `p7-flags-to-modes` for strict course order. Reverse cost: one line.
+
+### A788 2026-10-21 Glossary and card changes for Subclass Sandbox (author-patterns, M4.P2.8)
+Added `abstract-specifier` (`UCLASS(Abstract)`, reflection, Epic's 5.8 Class Specifiers page), `blueprint-protected` (reflection, Metadata Specifiers page; `BlueprintProtected` confirmed in `ObjectMacros.h`), and `tactoriterator` (framework, API page), all titles checked live. The subclass-sandbox card lists `p8-trap-family` and `p8-interactables` as use cases and gains `subclass-sandbox-recall-4` and `subclass-sandbox-scenario-3`. Its `problem` used the source chapter's superpowers and a hero and now uses twenty arena traps; its `unrealForm` repeated the research notes word for word and is rewritten, with the `UGameplayAbility` call chain checked in 5.8's `GameplayAbility.h` (`TryActivateAbility`, the protected non-virtual `CallActivateAbility`, the overridable `ActivateAbility`, `CommitAbility`, `GetAvatarActorFromActorInfo`, `K2_ActivateAbility`). Reverse cost: low.
+
+### A787 2026-10-21 World 8's deliberate failure: a hook that ignores its tool's answer (author-patterns, M4.P2.8)
+Options: a trap that searches fighters itself (the worked quest's marked lines warn against it); a virtual entry a subclass overrides (taught openly on the card); the key chest calling TakeItem and opening whatever it returns. Chosen: the chest. The obvious hook takes the key, gives the reward, and marks itself used, without checking that a key was there; `LockedWithoutAKey` fails. The card does not mention it; the card's new recall item states it afterwards. Checked on 5.8.3 with that chest (see M4.P2.8 in iterations). Reverse cost: low.
+
+### A786 2026-10-21 The refactor reuses World 8's fighter and checks the toolbox by reflection (author-patterns, M4.P2.8)
+`p8-hazard-refactor` compiles against `p8-trap-family` for `ADojoP8Fighter` (declared on the brief's "Compiles against earlier quests:" line, A268). The starter's thin base and duplicated hazards keep the public names (`Unleash`, `FinishCooldown`, `IsCoolingDown`, `GetLastCue`), so `BoulderAsBefore` passes on it; `NetWaitsItsTurn` fails on it (the net launcher never checks its cooldown, the drift the refactor removes); `ToolboxLivesInTheBase` checks by reflection that the base offers `DamageFightersInRadius` and `PlayCue` with `BlueprintProtected` metadata and owns the cooldown functions, with neither hazard declaring copies (`FindFunctionByName` with `ExcludeSuper`). Reverse cost: low.
+
+### A785 2026-10-21 Two sandbox forms: C++ pure virtual, and Blueprint native event (author-patterns, M4.P2.8)
+The trap family uses a protected pure virtual hook (`PURE_VIRTUAL`) and protected, non-UFUNCTION tools, the plain C++ form. The interactables use a `BlueprintNativeEvent` hook (`OnInteract`, overridden in C++ through `OnInteract_Implementation`) and tools marked `BlueprintCallable` with `meta = (BlueprintProtected)`, so designers' Blueprint children get the same toolbox. Both bases are `UCLASS(Abstract)` with a public non-virtual entry that enforces the rules. Reverse cost: low.
+
+### A784 2026-10-21 A second Pack 2 breakdown: the champion's attack moves (author-patterns, M4.P2.8)
+As World 7 (A765). The breakdown plans four attack moves (Shoulder Rush, Overhead Slam, Two-Strike Combo, War Cry) as a sandbox family, with two reference plans: a hand-written move base with a native event hook and BlueprintProtected tools, and each move as a `UGameplayAbility` with blocking tags and a cooldown effect. GAS appears as a plan and a note, not as a dependency of any build. Reverse cost: low.
+
+### A783 2026-10-21 Subclass Sandbox arc, built away from the source's examples (author-patterns, M4.P2.8)
+Not used anywhere in briefs, cards, choices, or distractors: superpowers, a hero, launching into the sky, ground pounds, or a power base with move, sound, and particle helpers. Arc: `p8-many-kinds-one-toolbox` (concept, no pattern name), `p8-trap-family` (worked: an abstract trap base with Spring, a cooldown, and three protected tools; a spike trap as the model and a flame jet to write), `p8-subclass-sandbox-card`, `p8-interactables` (stub: a key chest and a lever on a Blueprint-friendly base with a visitor's items and flags), `p8-hazard-refactor`, `p8-breakdown-attack-moves`, `p8-subclass-sandbox-when-not`. Checked for 6-word and 5-word overlaps against the research's Subclass Sandbox section: none left after rewording five phrases. Reverse cost: medium.
+
+### A782 2026-10-21 Pack 2 World 8 ids (author-patterns, M4.P2.8)
+Folder `08-subclass-sandbox`, world id `subclass-sandbox` (unique across packs, A73), quest ids `p8-<slug>`, classes `ADojoP8<Name>`, tests `Dojo.P8.<Quest>.<Case>`. No enums in this world. Reverse cost: medium once learners have progress saved.
+
+### A781 2026-10-21 Pack 2 World 8 has no boss; any boss will follow A67 (author-patterns, M4.P2.8)
+Reverse cost: none.
+
+### A780 2026-10-21 Decision block A780 to A799 from the Lead (author-patterns, M4.P2.8)
+Assigned under A71; this world uses A780 to A789. Reverse cost: none.
 ### A769 2026-10-21 World 7 was built in this session's own worktree (author-patterns, M4.P2.7)
 The brief asked for branch `m4-p2-world7` in its own worktree from main. A second worktree was created, but this session's file tools may only write inside the session's own worktree, so the branch was checked out there instead (the session's previous branch, `m4-p2-world6`, was merged and clean) and the extra worktree removed. The branch starts from main at 3136ecf, one Lead commit after the 4c20ec6 named in the brief. Reverse cost: none.
 

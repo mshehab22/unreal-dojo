@@ -3940,5 +3940,58 @@
       "gameplay-tags"
     ],
     "firstQuestId": "p7-state-card"
+  },
+  {
+    "id": "abstract-specifier",
+    "term": "UCLASS(Abstract)",
+    "aliases": [
+      "Abstract specifier",
+      "UCLASS(Abstract, Blueprintable)",
+      "abstract base class"
+    ],
+    "category": "reflection",
+    "short": "A class specifier that marks a class as a parent only, so it cannot be placed in a level or spawned on its own.",
+    "long": "Put Abstract in a class's UCLASS specifiers when the class exists to be derived from, such as a trap base or an ability base. The editor will not let a designer drag it into a level, spawning it fails, and Blueprint children of it work normally. Pair it with a pure virtual or native-event hook that every child must fill in, so only complete kinds of the family ever exist in the game.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/class-specifiers?application_version=5.8",
+    "related": [
+      "uclass",
+      "blueprintnativeevent"
+    ],
+    "firstQuestId": "p8-many-kinds-one-toolbox"
+  },
+  {
+    "id": "blueprint-protected",
+    "term": "BlueprintProtected",
+    "aliases": [
+      "meta=(BlueprintProtected)",
+      "BlueprintProtected metadata"
+    ],
+    "category": "reflection",
+    "short": "Function metadata that lets a Blueprint call the function only on itself, so a base class's tools stay inside its own family.",
+    "long": "A BlueprintCallable function with meta = (BlueprintProtected) shows up for Blueprint children of the class, where they can call it on themselves, but other Blueprints cannot call it on someone else. It is the Blueprint counterpart of a C++ protected function, and suits the tools a base class offers its subclasses, such as taking an item from a visitor or hurting fighters in a radius.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/metadata-specifiers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "blueprintcallable",
+      "meta-specifier",
+      "abstract-specifier"
+    ],
+    "firstQuestId": "p8-subclass-sandbox-card"
+  },
+  {
+    "id": "tactoriterator",
+    "term": "TActorIterator",
+    "aliases": [
+      "TActorIterator<T>",
+      "EngineUtils.h"
+    ],
+    "category": "framework",
+    "short": "A loop helper that visits every actor of a class in a world.",
+    "long": "for (TActorIterator<AMyActor> It(GetWorld()); It; ++It) walks every actor of that class, and its children, in the given world. It is handy for a base class tool such as finding every fighter in range, but it visits every actor of the class each time, so for frequent per-frame searches a tracked list or an overlap query is cheaper. It lives in EngineUtils.h.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/TActorIterator?application_version=5.8",
+    "related": [
+      "actor",
+      "world"
+    ],
+    "firstQuestId": "p8-many-kinds-one-toolbox"
   }
 ]
