@@ -41,6 +41,13 @@ interface BuildWorkspaceProps
 	readonly rules: RulesSnapshot;
 }
 
+/** A result in the run column and where it came from. */
+interface ShownResult
+{
+	result: RunResult;
+	source: "run" | "submit";
+}
+
 /** The window width from which the brief column starts open. */
 const WIDE_ENOUGH_FOR_BRIEF = 1600;
 
@@ -80,7 +87,8 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 	const [explanations, setExplanations] = useState<Record<string, string>>(savedExplanations);
 	const [gateOpen, setGateOpen] = useState(() => quest.scaffold !== "worked" || markedEntries.every((entry) => isExplained(savedExplanations[entry.key])));
 	const [briefOpen, setBriefOpen] = useState(() => window.innerWidth >= WIDE_ENOUGH_FOR_BRIEF);
-	const [lastResult, setLastResult] = useState<RunResult | null>(null);
+	// The last result shown in the run column: a Run, or the last Submit kept in the loot store (so Improve after a failed Submit shows its compiler output and tests).
+	const [lastResult, setLastResult] = useState<ShownResult | null>(() => (lootEntry?.quest.id === quest.id && lootEntry.detail.kind === "build" ? { result: lootEntry.detail.run, source: "submit" } : null));
 
 	// Paid hints come back with the quest (A502); a reveal in this window adds its text at once.
 	const [hintTexts, setHintTexts] = useState<readonly string[]>(() => quest.revealedHints ?? []);
@@ -124,7 +132,7 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 		void autosave.saveNow();
 		const result = await run.start(quest.id, filesNow.current);
 
-		if (result) setLastResult(result);
+		if (result) setLastResult({ result, source: "run" });
 	};
 
 	/** Submits the files and opens the loot screen. */
@@ -139,7 +147,7 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 
 		if (!outcome) return;
 
-		setLastResult(outcome.run);
+		setLastResult({ result: outcome.run, source: "submit" });
 		showLoot({ quest, outcome: outcome.outcome, detail: { kind: "build", run: outcome.run, files: submitted, ...(outcome.review ? { review: outcome.review } : {}) } });
 		navigate("loot", { quest: quest.id });
 	};
@@ -257,7 +265,8 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 					<RunColumn
 						run={run}
 						submit={submit}
-						lastResult={lastResult}
+						lastResult={lastResult?.result ?? null}
+						lastResultSource={lastResult?.source ?? "run"}
 						canSubmit={gateOpen}
 						submitBlockedReason={submitBlockedReason}
 						onRun={() => void startRun()}

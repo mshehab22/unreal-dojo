@@ -4,6 +4,18 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A813 2026-10-21 A build quest opens from a fresh read of the save (M2.2b, builder-ui-quests)
+The build workspace took its starting files from the renderer's cached progress, which can be older than a draft saved since, and a Submit then sent the older files. Options: read the draft again at Submit time (a second source of truth beside the editor); open the workspace only from a fresh read. Chosen: the second. `BuildQuestView` waits, once, for the progress refetch that opening a quest starts, so the editor starts from the draft as saved now; from then on the editor is what Submit sends (its own autosave keeps the save in step). Reverse cost: none.
+
+### A812 2026-10-21 Next on the loot screen goes to the next open quest (M2.2b, builder-ui-quests)
+Next went to the next quest by order even when it was locked. Chosen: the first later quest in the same world that is available or in progress (`lib/nextOpenQuest.ts`); passed quests are skipped; with none, Next says "Back to the map". Next stays disabled, labelled "Next", until the map and fresh availability have loaded, so it never shows the wrong target first. Options not taken: searching other worlds (the map is the place to choose across worlds). Reverse cost: none.
+
+### A811 2026-10-21 Repeated review dates are counted (M2.2b, builder-ui-quests)
+The loot screen listed "tomorrow, tomorrow, tomorrow". Chosen: due times are grouped by how they read, in time order, with a count: "3 reviews tomorrow, 1 review in 5 days" (`lib/dueGroups.ts`). Reverse cost: none.
+
+### A810 2026-10-21 The run column shows the last Submit's result (M2.2b, builder-ui-quests)
+After a Submit that did not compile, Improve showed only "not passed yet, score 0", and the loot screen sent the learner to compiler output that was not there. Chosen: the run column starts from the last Submit kept in the loot store, labelled "Last submit", with its tests or "did not compile" and the build log open; a Run replaces it, labelled "Last run". The loot screen now says Improve shows the compiler output beside the code. The fake already answers a non-compiling Submit with compiler output like the real bridge, so it needed no change. Reverse cost: none.
+
 ### A682 2026-10-21 Beacon drill: the director compares lever states on a shared event, and two piece additions (author-foundations, Pack 1 World 5)
 The lever's OnPulled carries only the new position, so a listener bound to several levers cannot tell which one fired. Options: add a second delegate that passes the lever; bind a separate listener object per lever; compare every lever with its last known position on any pull. Chosen: compare, which needs no change to the lever's event and reads plainly in both plans. The pieces need two additions: the lever implements the interactable interface (lighting itself when dark and its own cooldown is ready), and the cooldown gains Cancel for a clean round start. The director owns the 4 second cooldown length and applies it to every lever's cooldown, so the number is pinned in one place. A round start puts lit levers out while the round is stopped, so the director's own handler ignores those pulls and starts no cooldown, then cancels every cooldown; a separate quiet flag was tried and dropped because a mutation showed it changed nothing. The keeper rides on the player's pawn, as in World 4 (A620). Reference game: the torch rooms of Zelda's dungeons. Reverse cost: low.
 

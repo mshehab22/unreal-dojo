@@ -197,7 +197,12 @@ test("a concept quest: predict, the card with hover terms and the example, quest
 	await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "true");
 	await expect(window.getByTestId("loot-score")).toHaveAttribute("data-score", "100");
 	await expect(window.getByTestId("xp-total")).toContainText("XP");
+	await expect(window.getByTestId("loot-next")).toBeEnabled();
+	await expect(window.getByTestId("progress-changes")).toBeVisible();
 	await saveScreenshot("concept-loot");
+
+	// Review dates come grouped with counts, never "tomorrow, tomorrow, tomorrow" (M2.2b).
+	await expect(window.getByTestId("progress-changes")).toContainText(/\d+ reviews? /);
 
 	// Next goes to the next quest in the world.
 	await window.getByTestId("loot-next").click();
@@ -342,6 +347,9 @@ test("a breakdown: plan on the board, submit, compare with a reference, revise w
 	await saveScreenshot("breakdown-loot");
 	await window.getByTestId("breakdown-grade").scrollIntoViewIfNeeded();
 	await saveScreenshot("breakdown-loot-grade");
+
+	// The next quest by order is the boss, still locked: Next goes back to the map instead (M2.2b).
+	await expect(window.getByTestId("loot-next")).toHaveText(/Back to the map/);
 });
 
 test("the breakdown compare step stays readable at 1100x700: boards at a usable zoom and the reference as text", async () =>
@@ -504,13 +512,25 @@ test("two failed submits offer the Parsons fallback, which opens a one-item dril
 	const build = window.getByTestId("build-quest");
 	await waitForEditor(build);
 
-	for (let attempt = 0; attempt < 2; attempt++)
-	{
-		await window.getByTestId("submit-button").click();
-		await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "false", { timeout: 20_000 });
-		await window.getByTestId("loot-improve").click();
-		await waitForEditor(window.getByTestId("build-quest"));
-	}
+	// First submit: the starter builds and its test fails. Improve shows that Submit's tests in the run column (M2.2b).
+	await window.getByTestId("submit-button").click();
+	await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "false", { timeout: 20_000 });
+	await window.getByTestId("loot-improve").click();
+	await waitForEditor(window.getByTestId("build-quest"));
+	await expect(window.getByTestId("run-result")).toHaveAttribute("data-source", "submit");
+	await expect(window.locator('[data-testid="test-row"][data-passed="false"]').first()).toBeVisible();
+
+	// Second submit does not compile: the loot says so, and Improve shows the compiler output beside the code.
+	await selectInEditor(window.getByTestId("build-quest").getByTestId("code-editor"), "#pragma once");
+	await typeInEditor("#pragma once\n{");
+	await window.getByTestId("submit-button").click();
+	await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "false", { timeout: 20_000 });
+	await expect(window.getByTestId("loot-review")).toContainText("did not compile");
+	await window.getByTestId("loot-improve").click();
+	await waitForEditor(window.getByTestId("build-quest"));
+	await expect(window.getByTestId("run-result")).toContainText("Last submit: did not compile");
+	await expect(window.getByTestId("build-log")).toContainText("error");
+	await saveScreenshot("build-last-submit-did-not-compile");
 
 	await expect(window.getByTestId("failed-submit-offers")).toBeVisible();
 	await setViewport(1100, 700);

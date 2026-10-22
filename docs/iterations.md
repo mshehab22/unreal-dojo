@@ -1241,3 +1241,24 @@ total                                       39.2  PASSED
 - Rebased onto main at f39cb0d (World 7 and Pack 1 World 5 merged); main's glossary and pattern-card lines were kept, and World 8's three glossary entries were added on top. `p8-many-kinds-one-toolbox` now requires `p7-flags-to-modes` (A789).
 - Every item on the subclass-sandbox card was checked for leftover source examples. The chapter's names for the two halves of the pattern ("sandbox method", "provided operations") were replaced with this world's own words, hook and tools, in `subclass-sandbox-recall-1`, `-recall-2`, and `-recall-3`, in the card's `whenNot`, in the interactables brief, and in the three bases' class comments. `subclass-sandbox-scenario-1` now names arena traps and cues.
 - Engine, UE 5.8.3, fresh sandboxes under the engine lock with all eight patterns worlds together: reference solutions 72 of 72 pass; starters compile and 58 of 72 fail, with every World 7 and World 8 quest failing at least one test. Verifier no problems (one expected Pack 4 gate warning), `npm run typecheck` passes, `npm test` 838 passed, 24 skipped.
+
+
+## M2.2b Quest flow bugs from the real-engine run (ui-quests, builder-ui-quests)
+- What changed:
+  - After a Submit that does not compile (or fails its tests), Improve now shows that Submit's result beside the code: "Last submit: did not compile" with the build log open, or the failed tests with their messages. A later Run replaces it, labelled "Last run". The loot screen's wording now points there.
+  - The loot screen counts repeated review dates: "3 reviews tomorrow, 1 review in 5 days" instead of "tomorrow, tomorrow, tomorrow".
+  - Next on the loot screen goes to the next quest in the world that is actually open, skipping locked and passed ones, or says "Back to the map" when none is. It waits until it knows, so it never shows the wrong target first.
+  - A build quest now opens from a fresh read of your saved work, so a draft saved since the screen last loaded is what you see and what Submit sends.
+- Proof (MacBook Air M5, from main f39cb0d): `npm run typecheck` passes; `npm test` 70 files, 842 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 27 passed, three runs in a row.
+
+![[m2-2-build-last-submit-did-not-compile.jpg|800]]
+*Improve after a Submit that did not compile: the run column shows that Submit's compiler output.*
+
+![[m2-2-concept-loot.jpg|800]]
+*Concept loot: Next names the next open quest; review dates are listed with counts.*
+
+![[m2-2-breakdown-loot.jpg|800]]
+*Breakdown loot: the next quest by order is the locked boss, so Next goes back to the map.*
+
+- Decisions made: A810 to A813.
+- Not done or left for later: the drill summary still counts self-checked explain items as misses under tests-only review; that waits for M1.6g's new drill result field to reach main.
