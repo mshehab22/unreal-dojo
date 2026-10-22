@@ -1512,6 +1512,26 @@
     "firstQuestId": "f5-timers"
   },
   {
+    "id": "timer-delegate",
+    "term": "FTimerDelegate",
+    "aliases": [
+      "FTimerDelegate",
+      "timer delegate",
+      "CreateUObject",
+      "timer payload"
+    ],
+    "category": "framework",
+    "short": "A delegate the timer manager can fire, which can carry extra arguments for the function it calls.",
+    "long": "The simple SetTimer form calls a member function with no arguments. When one object times many things, such as one clock per quest, build an FTimerDelegate with FTimerDelegate::CreateUObject(this, &UTracker::HandleTimeUp, Quest) and pass it to SetTimer; the quest is stored in the delegate as a payload and handed to HandleTimeUp when the timer fires. It is a plain single-cast delegate, so the function needs no UFUNCTION, and a delegate bound with CreateUObject stops firing once its object is destroyed. Keep one FTimerHandle per thing being timed, and clear it when the thing finishes early.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/gameplay-timers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "timer-handle",
+      "timer-manager",
+      "delegate"
+    ],
+    "firstQuestId": "m6-timers-with-payloads"
+  },
+  {
     "id": "timer-manager",
     "term": "Timer Manager",
     "aliases": [

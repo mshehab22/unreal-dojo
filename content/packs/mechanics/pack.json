@@ -1,0 +1,6 @@
+{
+	"id": "mechanics",
+	"title": "Mechanics Lab",
+	"summary": "Small game mechanics built end to end in UE C++: input, movement, collision, spawning, tracing, and events, each world closing with a system that combines them, then mechanics and moments you plan and build yourself.",
+	"order": 3
+}
