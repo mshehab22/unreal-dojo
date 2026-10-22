@@ -245,11 +245,22 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 
 		runQuest: {
 			argumentSchemas: [runRequestSchema],
-			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getQuestRunService().runQuest(request.questId, request.files, onProgress, signal)),
+			// A locked or unknown quest is refused before any build starts, the same check opening it makes (A802).
+			handle: async (request) =>
+			{
+				await progressContentService.assertQuestOpen(request.questId);
+
+				return trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getQuestRunService().runQuest(request.questId, request.files, onProgress, signal));
+			},
 		},
 		submitQuest: {
 			argumentSchemas: [runRequestSchema],
-			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getReviewHandlers().submitQuest(request, onProgress, signal, () => dependencies.runRegistry.end(request.runId))),
+			handle: async (request) =>
+			{
+				await progressContentService.assertQuestOpen(request.questId);
+
+				return trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getReviewHandlers().submitQuest(request, onProgress, signal, () => dependencies.runRegistry.end(request.runId)));
+			},
 		},
 		checkSnippetSyntax: { argumentSchemas: [syntaxCheckRequestSchema], handle: (request) => dependencies.getQuestRunService().checkSnippetSyntax(request.code) },
 		cancelRun: { argumentSchemas: [idSchema], handle: (runId) => dependencies.runRegistry.cancel(runId) },

@@ -100,8 +100,11 @@ export interface DrillFinishOptions
 /** Drill totals the drill session hands over when it finishes. */
 export interface DrillTotals
 {
-	/** Items answered right. */
+	/** Items answered right, among the graded ones. */
 	correctCount: number;
+
+	/** Explain items only self-checked (no AI grader): neither right nor wrong, and not scheduled (A801). 0 when left out. */
+	selfCheckedCount?: number;
 
 	/** Items in the drill. */
 	totalCount: number;
@@ -247,7 +250,7 @@ export class ProgressService
 		});
 	}
 
-	/** Autosaves a quest in progress. Marks an untouched quest in progress. */
+	/** Autosaves a quest in progress (files, breakdown board, worked-level self-explanations, A800). Marks an untouched quest in progress. */
 	saveQuestDraft(draft: QuestDraft): Promise<void>
 	{
 		return this.enqueue(async () =>
@@ -259,20 +262,21 @@ export class ProgressService
 
 				if (draft.files) next.savedFiles = { ...draft.files };
 				if (draft.breakdownPlan) next.breakdownPlan = structuredClone(draft.breakdownPlan);
+				if (draft.selfExplanations) next.selfExplanations = { ...draft.selfExplanations };
 
 				return { ...progress, quests: { ...progress.quests, [draft.questId]: next } };
 			});
 		});
 	}
 
-	/** Throws away a quest's draft (files, board, note). Score, attempts, hints, and status stay. */
+	/** Throws away a quest's draft (files, board, note, self-explanations). Score, attempts, hints, and status stay. */
 	resetQuest(questId: string): Promise<QuestProgress>
 	{
 		return this.enqueue(async () =>
 		{
 			await this.commit((progress) =>
 			{
-				const { breakdownPlan: _plan, revisionNote: _note, ...rest } = this.questProgressOf(progress, questId);
+				const { breakdownPlan: _plan, revisionNote: _note, selfExplanations: _explanations, ...rest } = this.questProgressOf(progress, questId);
 
 				return { ...progress, quests: { ...progress.quests, [questId]: { ...rest, savedFiles: {} } } };
 			});
@@ -551,6 +555,7 @@ export class ProgressService
 				xpGained,
 				streak,
 				correctCount: totals.correctCount,
+				selfCheckedCount: totals.selfCheckedCount ?? 0,
 				totalCount: totals.totalCount,
 				nextDueAt: this.nextDueDates(next)[0] ?? null,
 				testedOutWorldIds,
@@ -696,6 +701,7 @@ export class ProgressService
 			xpGained: 0,
 			streak: { count: this.streakRules.countAt(this.progress.streak, this.clock.now()) },
 			correctCount: totals.correctCount,
+			selfCheckedCount: totals.selfCheckedCount ?? 0,
 			totalCount: totals.totalCount,
 			nextDueAt: this.nextDueDates(this.progress)[0] ?? null,
 			testedOutWorldIds: [],

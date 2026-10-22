@@ -169,6 +169,16 @@ Reverse cost: none.
 
 ### A780 2026-10-21 Decision block A780 to A799 from the Lead (author-patterns, M4.P2.8)
 Assigned under A71; this world uses A780 to A789. Reverse cost: none.
+
+### A802 2026-10-21 Run and Submit refuse a locked or unknown quest first (M1.6g, builder-rules)
+`runQuest` and `submitQuest` started a build for any quest id; opening a quest already checked it. Both handlers now call `ProgressContentService.assertQuestOpen(questId)` before the run is registered, answering `quest-not-found` or `quest-locked` with the World Map's reason, so no build, run id, or progress event happens for a quest the learner cannot open. The check sits in the handler table (`createHandlers.ts`) so the unreal and review services stay unchanged. Reverse cost: none.
+
+### A801 2026-10-21 A self-checked explain item is neither right nor wrong in the drill result (M1.6g, builder-rules)
+With tests-only review an explain item is self-checked and not scheduled (A318, A460), but the drill result still counted it as a miss, so an all-right drill read "4 / 6" with two items "due for review". Options: count it as right; count it as neither. Chosen: neither. `DrillItemResult.selfChecked: true` marks it (absent otherwise; `correct` stays false and means "not graded right", never "missed"); `DrillOutcome.selfCheckedCount` reports how many, and `correctCount` and `totalCount` cover only graded items. A concept quest's self-checked explain result carries `selfChecked: true` too (it was already left out of the pass count, A315). ui-quests changes the summary copy to use `selfCheckedCount`. Reverse cost: low.
+
+### A800 2026-10-21 Self-explanations are saved with the quest draft (M1.6g, builder-rules)
+`QuestProgress.selfExplanations` existed in the type and the request schema, but `saveQuestDraft` dropped it and the save schema stripped it on load, so a passed worked build reopened with its gate at "0 of 5". Now `saveQuestDraft` stores it (a draft without it keeps the saved ones), the save schema keeps it, `getProgress` returns it with the quest's progress (where the build screen reads it), and `resetQuest` clears it with the files. The field is optional, so older saves load unchanged and no save version bump is needed. Reverse cost: none.
+
 ### A769 2026-10-21 World 7 was built in this session's own worktree (author-patterns, M4.P2.7)
 The brief asked for branch `m4-p2-world7` in its own worktree from main. A second worktree was created, but this session's file tools may only write inside the session's own worktree, so the branch was checked out there instead (the session's previous branch, `m4-p2-world6`, was merged and clean) and the extra worktree removed. The branch starts from main at 3136ecf, one Lead commit after the 4c20ec6 named in the brief. Reverse cost: none.
 

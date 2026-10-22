@@ -15,6 +15,9 @@ export interface StoredDrillSession
 	/** Whether each answered item was right, by item id. Items count once. */
 	answers: Map<string, boolean>;
 
+	/** Item ids answered but only self-checked (no AI grader): left out of the right and wrong counts (A801). */
+	selfChecked: Set<string>;
+
 	/** True when the session held at least one scheduled due item, so finishing it pays drill XP and streak credit (A320). */
 	rewarded: boolean;
 }
@@ -37,6 +40,7 @@ export class DrillSessionStore
 			session: { sessionId, request, items: variants.map((variant) => ({ itemId: variant.itemId, item: variant.item })) },
 			variants: new Map(variants.map((variant) => [variant.itemId, variant])),
 			answers: new Map(),
+			selfChecked: new Set(),
 			rewarded,
 		};
 

@@ -281,7 +281,7 @@ describe("review IPC routing", () =>
 			getContentCatalog: unused,
 			pickFolder: async () => null,
 			progressService: {},
-			progressContentService: {},
+			progressContentService: { assertQuestOpen: async () => undefined },
 			getSandboxService: unused,
 			runRegistry: new RunRegistry(),
 			sendProgress: (event: BuildProgressEvent) => sent.push(event),
@@ -430,7 +430,7 @@ describe("M1.7c fix round 1", () =>
 		const registry = new RunRegistry();
 		const unused = (): never => { throw new Error("not used"); };
 		registerHandlers({ handle: (channel, listener) => void handlersByChannel.set(channel, listener as WrappedHandler) }, createHandlers({
-			getAppVersion: () => "1.0.0", getEngineLocator: unused, getContentCatalog: unused, pickFolder: async () => null, progressService: {}, progressContentService: {}, getSandboxService: unused,
+			getAppVersion: () => "1.0.0", getEngineLocator: unused, getContentCatalog: unused, pickFolder: async () => null, progressService: {}, progressContentService: { assertQuestOpen: async () => undefined }, getSandboxService: unused,
 			runRegistry: registry, sendProgress: () => undefined, settingsService: {}, readEnvironmentStatus: unused, getReviewHandlers: () => review,
 		} as unknown as HandlerDependencies));
 		const invoke = (channel: string, ...methodArguments: unknown[]): Promise<IpcResponse<unknown>> => (handlersByChannel.get(channel) as unknown as (event: object, ...rest: unknown[]) => Promise<IpcResponse<unknown>>)({}, ...methodArguments);
