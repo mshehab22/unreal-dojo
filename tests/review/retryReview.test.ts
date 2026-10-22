@@ -10,6 +10,7 @@ import type { RunRequest, RunResult } from "@shared/types/run";
 import { createHandlers, type HandlerDependencies, type ReviewHandlerService } from "../../src/main/ipc/createHandlers";
 import { registerHandlers, type WrappedHandler } from "../../src/main/ipc/registerHandlers";
 import { AttemptFileRules, STORED_DETAIL_ATTEMPTS_PER_QUEST } from "../../src/main/services/progress/AttemptFileRules";
+import { compilerOutputText } from "../../src/main/services/review/graders/messageSections";
 import { CUT_OFF_MARK, MAXIMUM_COMPILER_OUTPUT_LENGTH, MAXIMUM_TEST_MESSAGE_LENGTH } from "../../src/main/services/review/reviewInputLimits";
 import { ProgressService } from "../../src/main/services/progress/ProgressService";
 import { createReviewHandlers, type ReviewHandlers } from "../../src/main/services/review/createReviewHandlers";
@@ -108,6 +109,70 @@ describe("retryReview", () =>
 		expect(section(retried, "compiler_output")).toBe(section(first, "compiler_output"));
 		expect(section(retried, "test_results")).toBe(section(first, "test_results"));
 		expect(retried).toBe(first);
+	});
+
+	/** Submits a run with this compiler output, retries it, and answers the first and the retried prompt. */
+	async function firstAndRetriedPrompts(compilerOutput: string): Promise<[string, string]>
+	{
+		const run = passingRun();
+		run.compilerOutput = compilerOutput;
+		const claudeCode = new ScriptedProvider("claude-code", [recorded("code-review", "good.json"), recorded("code-review", "good.json")], { id: "claude-code", available: true });
+		const { handlers } = wiring({ claudeCode, run });
+
+		const submit = await handlers.submitQuest(REQUEST, () => undefined, new AbortController().signal);
+		await handlers.retryReview(submit.outcome.attempt.attemptId);
+
+		return [claudeCode.requests[0]?.userMessage ?? "", claudeCode.requests[1]?.userMessage ?? ""];
+	}
+
+	it("keeps the (cut off) mark on a retry when the character right after the cut is whitespace (A746)", async () =>
+	{
+		for (const output of ["x".repeat(MAXIMUM_COMPILER_OUTPUT_LENGTH) + " more", "x".repeat(MAXIMUM_COMPILER_OUTPUT_LENGTH - 1) + "y more log text", "x".repeat(MAXIMUM_COMPILER_OUTPUT_LENGTH) + "\n\n\tnext line"])
+		{
+			const [first, retried] = await firstAndRetriedPrompts(output);
+
+			expect(first, JSON.stringify(output.slice(MAXIMUM_COMPILER_OUTPUT_LENGTH - 2, MAXIMUM_COMPILER_OUTPUT_LENGTH + 3))).toContain(CUT_OFF_MARK);
+			expect(retried).toBe(first);
+		}
+	});
+
+	it("keeps the whitespace and the mark on a retry when a whitespace run runs up to and across the cut (A746)", async () =>
+	{
+		// Six whitespace characters end the kept part, and three more start right after the cut: a second trim used to remove all nine.
+		const output = `${"x".repeat(MAXIMUM_COMPILER_OUTPUT_LENGTH - 6)}  \n \t \n\n ${"z".repeat(40)}`;
+		const [first, retried] = await firstAndRetriedPrompts(output);
+
+		expect(output.slice(MAXIMUM_COMPILER_OUTPUT_LENGTH - 6, MAXIMUM_COMPILER_OUTPUT_LENGTH + 3)).toBe("  \n \t \n\n ");
+		expect(first).toContain(CUT_OFF_MARK);
+		expect(retried).toBe(first);
+	});
+
+	it("formats the stored compiler output exactly like the original, for cuts landing on, before, and after whitespace (A746)", () =>
+	{
+		const rules = new AttemptFileRules();
+		const cut = MAXIMUM_COMPILER_OUTPUT_LENGTH;
+		const cases = [
+			"",
+			"   \n  ",
+			"short log",
+			"x".repeat(cut),
+			`  ${"x".repeat(cut)}  `,
+			"x".repeat(cut + 1),
+			"x".repeat(cut) + " y",
+			"x".repeat(cut - 1) + " y",
+			"x".repeat(cut - 3) + "   " + "y".repeat(10),
+			"x".repeat(cut - 3) + "   \n\n\n" + "y",
+			`\n\t${"a b ".repeat(cut)}\n`,
+		];
+
+		for (const output of cases)
+		{
+			const original = sampleRun({ compilerOutput: output });
+			const stored = rules.capRun(original);
+
+			expect(compilerOutputText(stored), JSON.stringify(output.slice(0, 8))).toBe(compilerOutputText(original));
+			expect(stored.compilerOutput.length).toBeLessThanOrEqual(cut + 1);
+		}
 	});
 
 	it("keeps A70 on a retry: the API reviews only all-passed attempts; Claude Code reviews one with failing tests", async () =>

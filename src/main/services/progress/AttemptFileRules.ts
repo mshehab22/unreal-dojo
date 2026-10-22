@@ -40,9 +40,9 @@ export class AttemptFileRules
 	}
 
 	/**
-	 * Copies a run result keeping only what the review input reads (A740, A744): the compiler output trimmed and kept to one character past the
-	 * review's cut, and each test message the same way, so a retried review shows the same text and the same "(cut off)" mark as the first one.
-	 * Everything else is kept as it is.
+	 * Copies a run result keeping only what the review input reads (A740, A744, A746): each test message to one character past the review's cut,
+	 * and the compiler output trimmed and, past the cut, ending in its next visible character (see `keepForReview`), so a retried review shows the
+	 * same text and the same "(cut off)" mark as the first one. Everything else is kept as it is.
 	 */
 	capRun(run: RunResult): RunResult
 	{

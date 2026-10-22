@@ -17,10 +17,22 @@ export function cutForReview(text: string, maximum: number, separator: string): 
 	return `${text.slice(0, maximum)}${separator}${CUT_OFF_MARK}`;
 }
 
-/** The shortest copy of `text` that `cutForReview` turns into the same result: trimmed when asked, and one character past the cut, so the mark still appears. */
+/**
+ * The shortest copy of `text` that the review formats into the same result, so a retried review reads what the first one read.
+ * Without `trim` (test messages, which the review does not trim): the first character past the cut, so the mark still appears.
+ * With `trim` (compiler output, which the review trims before cutting): the text is trimmed, and when it is longer than the cut, the first
+ * `maximum` characters plus the first non-whitespace character after the cut. The copy then ends in a non-whitespace character, so trimming
+ * it again removes nothing, not even whitespace right at or before the cut, and the mark still appears (A746). A trimmed text longer than
+ * the cut always has such a character, because it ends in one.
+ */
 export function keepForReview(text: string, maximum: number, trim: boolean): string
 {
-	const source = trim ? text.trim() : text;
+	if (!trim) return text.slice(0, maximum + 1);
 
-	return source.slice(0, maximum + 1);
+	const source = text.trim();
+	if (source.length <= maximum) return source;
+
+	const nextVisible = source.slice(maximum).match(/\S/)?.[0] ?? "";
+
+	return source.slice(0, maximum) + nextVisible;
 }
