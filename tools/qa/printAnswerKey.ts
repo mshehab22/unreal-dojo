@@ -21,11 +21,11 @@ interface AnsweredQuestion
 	bugLine?: number;
 }
 
-/** One Parsons block's prompt and how many lines it has, in order (`line-0` to `line-<count - 1>`). */
+/** One Parsons block's prompt and its lines in the right order (`line-0` to `line-<count - 1>`); two blocks can share a prompt, so the lines tell them apart. */
 interface AnsweredParsons
 {
 	prompt: string;
-	lineCount: number;
+	lines: string[];
 }
 
 /** The answer to one question, in the shape the spec uses. */
@@ -56,7 +56,7 @@ async function main(): Promise<void>
 			quest.questions.forEach((question) => questions.push(answerOf(question)));
 		}
 
-		if ((quest.kind === "build" || quest.kind === "refactor") && quest.parsons) quest.parsons.forEach((block) => parsons.push({ prompt: block.prompt, lineCount: block.lines.length }));
+		if ((quest.kind === "build" || quest.kind === "refactor") && quest.parsons) quest.parsons.forEach((block) => parsons.push({ prompt: block.prompt, lines: block.lines.map((line) => line.trim()) }));
 	}
 
 	for (const card of content.patterns)

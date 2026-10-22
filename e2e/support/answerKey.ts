@@ -15,11 +15,11 @@ export interface AnsweredQuestion
 	bugLine?: number;
 }
 
-/** One Parsons block's prompt and how many lines it has in the right order. */
+/** One Parsons block's prompt and its lines in the right order, trimmed. */
 export interface AnsweredParsons
 {
 	prompt: string;
-	lineCount: number;
+	lines: string[];
 }
 
 /** Every answer in `content/`. */
@@ -85,9 +85,14 @@ export async function answerQuestion(key: AnswerKey, question: Locator): Promise
 /** Places a Parsons block's real lines in order (line-0, line-1, ...) and leaves the distractors in the pool. */
 export async function answerParsons(key: AnswerKey, item: Locator): Promise<void>
 {
-	const block = findByPrompt(key.parsons, await item.innerText());
+	// Several blocks can share a prompt; the one whose every line is in this item's pool is the one shown.
+	const shown = words(await item.innerText());
+	const poolLines = new Set((await item.getByTestId("parsons-pool-line").allInnerTexts()).map((line) => line.trim()));
+	const block = key.parsons.filter((entry) => shown.startsWith(words(entry.prompt))).find((entry) => entry.lines.every((line) => poolLines.has(line)));
 
-	for (let line = 0; line < block.lineCount; line++) await item.locator(`[data-testid="parsons-pool-line"][data-line-id="line-${line}"]`).click();
+	if (!block) throw new Error(`No Parsons block in content/ matches this item: ${shown.slice(0, 160)}`);
 
-	await expect(item.locator('[data-testid="parsons-placed-line"]')).toHaveCount(block.lineCount);
+	for (let line = 0; line < block.lines.length; line++) await item.locator(`[data-testid="parsons-pool-line"][data-line-id="line-${line}"]`).click();
+
+	await expect(item.locator('[data-testid="parsons-placed-line"]')).toHaveCount(block.lines.length);
 }

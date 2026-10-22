@@ -150,10 +150,19 @@ async function takeEngineLock(): Promise<void>
 	}
 }
 
-/** Gives the engine lock back. */
+/** Gives the engine lock back. A lock folder that is already gone is reported, not thrown, so it never hides the error that ended the step. */
 function releaseEngineLock(): void
 {
-	if (ENGINE_LOCK) rmdirSync(ENGINE_LOCK);
+	if (!ENGINE_LOCK) return;
+
+	try
+	{
+		rmdirSync(ENGINE_LOCK);
+	}
+	catch (error)
+	{
+		console.log(`could not remove the engine lock ${ENGINE_LOCK}: ${String(error)}`);
+	}
 }
 
 /** Holds the engine lock only while `step` runs Unreal (a sandbox build, a Run, a Submit), so other sessions can use the engine in between. */
@@ -434,9 +443,12 @@ async function buildFailHintPass(): Promise<void>
 	await expect(window.getByTestId("unlocked")).toContainText(QUESTS.enums.title);
 	await saveScreenshot("34-build-loot");
 
-	await expectKnownFailure("M2.2b", "the loot screen lists each review date once", async () =>
+	await expectKnownFailure("M2.2b", "the loot screen lists each review day once", async () =>
 	{
-		await expect(window.getByTestId("screen-loot")).not.toContainText(/Next reviews.*\b(\w+), \1\b/, { timeout: 1_000 });
+		const line = await window.getByTestId("screen-loot").getByText(/^Next reviews/).innerText({ timeout: 1_000 });
+		const days = line.replace(/^Next reviews( due)?\s*/, "").split(/,\s*|\s+and\s+/).map((day) => day.trim()).filter((day) => day.length > 0);
+
+		expect(days, line).toEqual([...new Set(days)]);
 	});
 }
 
@@ -560,6 +572,12 @@ test.describe("the learner flow against the real bridge and a real engine", () =
 					await expect(window.getByTestId("self-explanation-gate")).toHaveAttribute("data-open", "true", { timeout: 2_000 });
 				});
 				finished = true;
+			}
+			catch (error)
+			{
+				// The fixture would photograph the first window, which is closed by now; photograph the restarted one instead.
+				await restarted.window.screenshot({ path: testInfo.outputPath("failure.png") }).catch(() => undefined);
+				throw error;
 			}
 			finally
 			{
