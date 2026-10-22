@@ -1274,3 +1274,112 @@ total                                       39.2  PASSED
 - What changed: Next is worked out once when the loot screen opens and then stays put; switching back to the window no longer moves the keyboard. The end-to-end flow now submits a quest that does not compile, submits another quest, goes back, and finds "Last submit: did not compile" with the log, read from the save. A true restart is covered by M2.4's real-bridge relaunch.
 - Proof: `npm run typecheck` passes; `npm test` 71 files, 857 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 28 passed, three runs in a row.
 - Decisions made: A817 and A818.
+
+## M2.4 End-to-end learner flow (qa-and-ci, tester)
+- What changed: a new test plays a brand new learner through the whole first world of the real app with the real Unreal Engine, not the stand-in data: set up the studio and the sandbox, read a concept card and hover a term, predict and pass four concept quests, do a drill, fail a build, buy a hint, type the fix, pass it, pass the rest of the world, plan the dash breakdown, compare it with the reference and revise it, see the boss unlock, then close the app and open it again to check everything was kept. It only runs when asked for, because it needs Unreal and takes about 35 minutes; the normal test run skips it.
+- How to see it: `npm run build`, then `DOJO_E2E_ENGINE=1 npx playwright test e2e/learner-flow.spec.ts` (details and options in `docs/systems/qa-and-ci.md`). The playtest steps for Mohammad are in the Lead's "Ready to playtest" list.
+- What went wrong and how it was solved: the first run (before A72 merged) showed World 1's first build locked behind a term taught only in World 2; reported, fixed by the Lead's decision A72 and builder-rules' M1.6e, and the recorded run goes through without any drill detour. A run before the rebase hung on the first-run build step (the engine finished in 25 s but the screen never updated); it did not happen again in three later runs on the rebased code, so it is logged as seen once. The test saved a reference solution behind the screen's back and the screen kept its older copy; it now reloads first (A642). The test held the shared engine lock for the whole run at first; it now takes it only around the sandbox build, each Run, and each Submit (A640).
+- Proof: the full flow passed once on the rebased branch in 35.5 minutes (MacBook Air M5, UE 5.8.3, Tests-only review), including waits for other sessions' engine work. Typecheck passes; unit tests 829 passed and 24 skipped; content verifier no problems (14 warnings, all in content); build passes; the default end-to-end suite 27 passed with the new flow skipped. The pictures below are that passing run's screenshots, converted to 1280-wide JPGs (the run itself was not started with `SAVE_PROOF=1`).
+
+![[m2-4-01-title-fresh.jpg|800]]
+*A fresh learner names the studio.*
+
+![[m2-4-02-first-run-engine.jpg|800]]
+*The real engine locator found UE 5.8.3 in ~/Applications.*
+
+![[m2-4-03-first-run-building.jpg|800]]
+*The first full sandbox build, in the temp folder the stubbed folder picker returned.*
+
+![[m2-4-04-first-run-built.jpg|800]]
+*The build passed.*
+
+![[m2-4-05-studio-fresh.jpg|800]]
+*Into the Studio, after skipping the windowed editor step.*
+
+![[m2-4-10-concept-predict.jpg|800]]
+*Concept quest 1: a prediction before the card.*
+
+![[m2-4-10-concept-hover-term.jpg|800]]
+*A glossary term's hover card on the card step.*
+
+![[m2-4-10-concept-results.jpg|800]]
+*Every question graded right.*
+
+![[m2-4-10-concept-loot.jpg|800]]
+*Loot, with the next quest unlocked.*
+
+![[m2-4-20-drill-item.jpg|800]]
+*A drill item, graded.*
+
+![[m2-4-20-drill-summary.jpg|800]]
+*The drill summary (4 of 6: see bug 3 below).*
+
+![[m2-4-30-build-run-fails.jpg|800]]
+*The training dummy build: Run on the starter fails in the real engine.*
+
+![[m2-4-31-build-hint.jpg|800]]
+*A hint bought.*
+
+![[m2-4-32-build-fixed-in-editor.jpg|800]]
+*Both fixes typed into Monaco.*
+
+![[m2-4-33-build-run-passes.jpg|800]]
+*Run passes.*
+
+![[m2-4-34-build-loot.jpg|800]]
+*Submit: passed, 100 score, +34 XP after the 6 XP hint, the next quest unlocked.*
+
+![[m2-4-50-breakdown-plan.jpg|800]]
+*The breakdown's first plan.*
+
+![[m2-4-51-breakdown-compare.jpg|800]]
+*Compared with the reference.*
+
+![[m2-4-52-breakdown-loot.jpg|800]]
+*Revised and graded: passed, two pattern cards, the boss unlocked.*
+
+![[m2-4-60-map-boss-unlocked.jpg|800]]
+*The map: 11 of 12 passed, the boss open.*
+
+![[m2-4-70-restart-title.jpg|800]]
+*After a restart on the same data: welcome back.*
+
+![[m2-4-71-restart-map.jpg|800]]
+*Progress kept: 11 of 12 passed.*
+
+![[m2-4-72-restart-build-kept.jpg|800]]
+*The paid hint kept; the self-explanations were not (bug 1 below).*
+
+- Bugs found (sent to the Lead with owners): (1) the real app does not save the marked-line explanations with the draft (the sample data does), so the gate asks for them again after a reload or restart; (2) the World 1 term gate (fixed by A72); (3) with Tests-only review, a drill's explain items count as misses in the summary ("4 of 6", "2 items are due for review") although they are only self-checked and not scheduled; (4) a Submit that does not compile leaves no compiler output on the quest screen afterwards, only "not passed yet, score 0"; (5) the loot screen repeats "Next reviews tomorrow, tomorrow, tomorrow"; (6) the first-run build step hung once (above).
+- Known failures: three expectations the fixes will change are wrapped as known failures that name their task, so the spec can merge now: self-explanations survive a restart (M1.6g), a drill answered right reports nothing due for review when it had an explain item (M2.2b and M1.6g), and the loot screen lists each review date once (M2.2b). Each records an annotation while the bug stands and fails the run once the fix lands, as a reminder to make it a plain expectation. These wrappers were added after the passing run and have not yet run against the engine; the next full run (after M1.6g, M2.2b, and M2.1e merge) covers them.
+
+### Ready to playtest: the first world, start to finish (real engine)
+What you need: this Mac with Unreal Engine 5.8 at `~/Applications/UE_5.8` (already there), and no other Unreal work running. Time: about an hour if you paste the three later builds' solutions (step 12), about two and a half hours if you write them yourself.
+1. Start the app on a throwaway data folder, so the sample data and any earlier progress cannot get in the way. In Terminal: `cd ~/Projects/unreal-dojo`, `npm install`, `npm run build`, then `npx electron . --user-data-dir=$HOME/DojoPlaytestData`. The Title shows "What should your studio call you?". (Checked: this command opens the real first run, not the sample data.)
+2. Title: type a studio name, press "Set up your studio".
+3. Pick the engine: the list shows UE 5.8.3 at `~/Applications/UE_5.8`; select it and press "Use this engine". A note about the Metal toolchain is fine.
+4. Choose a folder: press "Choose a folder", pick or create an empty folder (for example `~/DojoPlaytestSandbox`), then "Use this folder".
+5. Press "Start the build". It copies the sandbox and builds it once, usually under a minute on this Mac (the screen allows up to 15). Press "Continue" when it says it passed. If it sits at "Starting the first full build" with the clock at 0:00 for more than two minutes, that is bug M2.1e: note it, quit, and start again from step 1 with a new folder name.
+6. "Open the editor once": press "Skip for now" (or "Open the editor" to see it launch, which takes a few minutes). Then press "Enter your studio".
+7. Settings: under Review provider choose "Tests only" (or keep Auto if Claude Code is signed in and you want written reviews).
+8. World Map, Contract 1 "Objects and reflection": press the first stage, "UObjects, actors, and the class default object". Pick a guess and press "Lock in my guess", then "Read the card". Hover a highlighted word to see its card. Press "Answer the questions", answer, press "Submit answers", then "See your loot". The "Next" button opens the next stage. Do the same for "Reflection, UCLASS, and the generated header", "UPROPERTY specifiers decide who can see and change a field", and "UFUNCTION opens a function to Blueprint and the console".
+9. Studio: press "Start drill", answer each item, press "Check" then "Next", and finish.
+10. World Map: open "A training dummy the console can strike". Write a short sentence for each marked line under "Say why each marked line is there", then press "Open the gaps" (until you do, the editor is read-only and Submit is off). Press "Run": it builds and the test fails, which is expected. Press "Reveal hint 1". Fill the two gaps: in `DojoF1TrainingDummy.h` add `UFUNCTION(BlueprintCallable, Category = "Dummy")` on the line above `void Strike();`; in `DojoF1TrainingDummy.cpp` replace the "Your code" comment with `if (IsKnockedDown()) return;`, `HitsTaken++;`, `RefreshLabel();` on three lines. Press "Run" (passes), then "Submit". The loot shows the score, the XP minus the hint, and "Unlocked: UENUM and USTRUCT bring your own types into reflection".
+11. Concept stage "UENUM and USTRUCT bring your own types into reflection", the same way as step 8.
+12. Build stage "A pop-up target that shows its state by name". Write it yourself from the brief, or skip ahead: open `tools/solutions/f1-popup-target/` in the repository, copy each file's whole text, and in the app click that file's tab, select all in the editor, and paste. If the stage asks why marked lines are there, answer and press "Open the gaps" first. Press "Submit".
+13. Concept stage "Cast and IsA ask an object what it really is", as in step 8.
+14. Build stages "A score keeper that tells dummies from targets" (`tools/solutions/f1-score-keeper/`) and "A bell whose ring Blueprint can restyle" (`tools/solutions/f1-practice-bell/`), each written or pasted as in step 12, then "Submit".
+15. Breakdown stage "Plan a dash with a cooldown": add pieces with a name and a purpose each, press "Submit plan", compare your board with the reference, add what you missed, write a short note on what changed, and press the grade button. The loot shows "Unlocked: Boss: the training yard".
+16. Quit the app (Cmd+Q) and start it again with the same command as step 1: `npx electron . --user-data-dir=$HOME/DojoPlaytestData`. The Title says welcome back with your name, the World Map shows 11 of 12 passed with the boss open, and the training dummy still shows the hint you bought. Known bug M1.6g: the marked-line explanations are asked for again.
+17. When done, delete `~/DojoPlaytestData` and `~/DojoPlaytestSandbox` if you do not want to keep them.
+What to look for: anything confusing, slow, or wrong. Note the step number for each.
+
+- Decisions made: A640 to A645 in `docs/decisions.md`.
+- Not done or left for later: the boss itself is not played; the windowed editor buttons are never clicked (A643); unverified on Windows.
+
+
+### Fix round 1
+- What the reviewer asked for: the playtest steps started on the sample data (a stored setting in the real data folder) and could not reach the first run; step 10 missed "Open the gaps"; "carry on through the world" hid two concept stages and three builds; the known-failure choice needed a decision; bug 1 needed plain English; the review-dates check had to follow M2.2b's new wording; and three small test fixes (two Parsons blocks with the same prompt, a lock folder already gone, a failure picture of the closed window after the restart).
+- What changed: the playtest now starts the app on a fresh throwaway data folder with one command, and the restart uses the same command; every stage is named, with how to paste the reference solutions to skip ahead and an honest time. The known-failure choice is A646. The review-dates check now reads the dates line and expects no day twice, whatever the wording. The answer key tells same-prompt Parsons blocks apart by their lines, a missing lock folder is reported instead of thrown, and a failure after the restart photographs the live window.
+- Proof: the playtest command was launched exactly as written on a new folder and opened the real first run (the name box, no sample-data badge, no stored data source). The answer key answered all seven items of a drill (every type, Parsons included) right. Typecheck passes; unit tests 851 passed and 24 skipped; content verifier no problems (13 warnings, all in content); build passes; default end-to-end 27 passed with the learner flow skipped.
+- Not done or left for later: the full real-engine run waits for M1.6g, M2.2b, M2.1e, and M1.3c, as the Lead asked; then the known-failure marks come off.
