@@ -100,7 +100,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.P1.T Term coverage (A72), then Pack 1 World 5 "communication" | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-terms-world5 @ 50017e1 (term coverage merged 81cafd8) | review (World 5) | 12 quests, beacon drill boss with A67 integration; 54 of 54; decisions A681, A682 |
 | M4.P1.6 Pack 1 World 6 "Data and tools" | content-foundations | author-foundations (session "M0.5 Glossary...") | m4-p1-world6 | building | Data Assets, Data Tables, curves, soft references, logging, ensure and check; decisions A720 to A739 |
 | M1.7d Real retryReview (A356) | ai-review | builder-review (session "M1.7 AI review...") | m1-7d-retry-review | building | Review stored files again without a new run; decisions A740 to A749 |
-| M1.8f Close the old M1.8 queued items | content-engine | content-engine (session "M0.4 Content types...") | m1-8f-queued-items | building | choices minimum, lantern order, inline-code linking; decisions A750 to A759 |
+| M1.8f Close the old M1.8 queued items | content-engine | content-engine (session "M0.4 Content types...") | m1-8f-queued-items | merged (f7a2c77) | Two items already done (lantern reconfirmed with --engine); inline-code linking rule added to content-authoring.md; docs only |
 | M1.8c Missing boss integration is an error | content-engine | content-engine (session "M0.4 Content types...") | merged | merged | Lead checked the small diff; --engine 18 of 18 by the builder; example boss stays a warning (A520) |
 | M2.2 Quest screens | ui-quests | builder-ui-quests (session) | merged 07794f5 | merged | 4 fix rounds; at 1100x700 the revision note starts below the fold (accepted) |
 | M3.1 Patterns pack: lesson zero and Observer | content-patterns | author-patterns (session) | merged 6973af3 | merged | 2 fix rounds; zero book matches; 9 of 9 on UE 5.8.3 |
@@ -108,7 +108,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.P2.3 Pack 2 World 3 (Update Method) | content-patterns | author-patterns (session) | merged 0e7060c | merged | 1 fix round; moved to the arena (D13) |
 | M4.P2.4 Pack 2 World 4 (Double Buffer) | content-patterns | author-patterns (session) | merged | merged | Text fix round checked by the Lead; new game-thread glossary entry |
 | M4.P2.5 Pack 2 World 5 (Command) | content-patterns | author-patterns (session) | merged 235f773 | merged | 2 rounds; planner moved into play (D13) |
-| M4.P2.6 Pack 2 World 6 (Event Queue) | content-patterns | author-patterns (session) | m4-p2-world6 @ 168f9a5 | fixes | Review: engine 9/9 pass; fix the card audio wording (D13), ParallelFor accuracy, parallel-for term |
+| M4.P2.6 Pack 2 World 6 (Event Queue) | content-patterns | author-patterns (session) | m4-p2-world6 @ 26f8554 | re-review | Review: engine 9/9 pass; fix the card audio wording (D13), ParallelFor accuracy, parallel-for term |
 | M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged 2b31811 | merged | 2 fix rounds; fast re-run 65 ms to 2.4 s on the Mac |
 | M1.4b Fast loop wiring | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged | merged | Passed; real app open-editor and quit verified with Playwright |
 | M1.4c Reset and editor-engine follow-ups | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged | merged | Passed first review |
@@ -120,7 +120,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M1.8d Verifier warns on later-taught terms (A72) | content-engine | content-engine (session "M0.4 Content types...") | merged | merged | Small diff checked by the Lead; 16 warnings on main |
 | QA e2e harness and engine smoke | qa | tester (session "M0.6 CI matrix workflow") | merged cffa49b | merged | 4 fix rounds; every spec on fresh userData; engine smoke on M1.3 runners |
 
-Dispatched as M1.8f. Queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
+Done in M1.8f. Was queued for M1.8 (from the M0.4 re-review): which-pattern `choices` minimum 2 in the schema; the proximity lantern example registers its sphere before attaching it (confirm with `--engine`); state whether normal terms also link inside inline code.
 Queued for unreal-pipeline (from the M0.2c review, A426): `docs/systems/unreal-pipeline.md` lines 29 and 84 still name `ElectronStoreSandboxPathStore`; the class is unused once settings land.
 Queued for qa (from the M0.2c review): `ui-core-screens.spec.ts` and other specs not yet on the harness run against the real user data folder; with settings real, move every spec onto the harness so no run shares `config.json`.
 Queued for app-shell and progress (from the M2.2 review, A357): revealed hint texts are lost after a restart; store revealed hints in progress and return them with the quest.
