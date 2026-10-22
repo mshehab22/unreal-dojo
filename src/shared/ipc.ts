@@ -25,7 +25,7 @@ import type {
 	SubmitOutcome,
 	WorldTestOutStatus,
 } from "./types/progress";
-import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "./types/review";
+import type { CodeReview, ExplainGrade, FindingExplanationRequest, QuestAlternative, ReflectionAnswerRequest, ReviewProviderStatus } from "./types/review";
 import type { BuildProgressEvent, RunRequest, RunResult, SandboxSetupRequest, SyntaxCheckRequest, SyntaxCheckResult } from "./types/run";
 import type { Settings, SettingsPatch } from "./types/settings";
 
@@ -205,6 +205,9 @@ export interface DojoInvokeApi
 
 	/** Reviews an earlier Submit's stored files and test results again, with no new build or test run, and answers the new review. It replaces that attempt's stored review; score, pass, and XP stay (A740, A741). */
 	retryReview(attemptId: string): Promise<CodeReview>;
+
+	/** A passed quest's alternative (the authored idiomatic version with its tradeoff note, plus the AI reviewer's hint), or null when the quest kind has none. Rejects with alternative-locked before a pass. Free; no AI call (A850). */
+	getQuestAlternative(questId: string): Promise<QuestAlternative | null>;
 }
 
 /** Stops a subscription started by `onBuildProgress`. */
@@ -275,6 +278,7 @@ export const IPC_CHANNELS = {
 	explainFinding: "dojo:explainFinding",
 	answerReflection: "dojo:answerReflection",
 	retryReview: "dojo:retryReview",
+	getQuestAlternative: "dojo:getQuestAlternative",
 } as const satisfies { [Method in DojoMethod]: `dojo:${Method}` };
 
 /** Every DojoInvokeApi method name, in declaration order. */

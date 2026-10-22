@@ -28,7 +28,7 @@ import type {
 	WorldTestOutStatus,
 } from "@shared/types/progress";
 import { worldKeyOf } from "@shared/types/progress";
-import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
+import type { CodeReview, ExplainGrade, FindingExplanationRequest, QuestAlternative, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
 import type { BuildProgressEvent, RunRequest, RunResult, SandboxSetupRequest, SyntaxCheckRequest, SyntaxCheckResult } from "@shared/types/run";
 import type { Settings, SettingsPatch } from "@shared/types/settings";
 
@@ -479,6 +479,12 @@ export class FakeDojoApi implements DojoClient
 	retryReview(attemptId: string): Promise<CodeReview>
 	{
 		return answerFrom(() => this.quests.retryReview(attemptId));
+	}
+
+	/** A passed quest's alternative, locked before a pass. */
+	getQuestAlternative(questId: string): Promise<QuestAlternative | null>
+	{
+		return answerFrom(() => this.quests.getQuestAlternative(questId));
 	}
 
 	// Progress events

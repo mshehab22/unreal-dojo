@@ -181,6 +181,36 @@ describe("Retry review on the loot screen (A740, A741)", () =>
 	}, 20_000);
 });
 
+describe("the M3.4 review extras in the fake (A850 to A852)", () =>
+{
+	it("locks the alternative until a pass, keeps the reflection and the explanation on the attempt, and answers a repeat from them", async () =>
+	{
+		const fake = new FakeDojoApi("quests");
+		const quest = await fake.getQuest("f1-training-dummy");
+
+		await expect(fake.getQuestAlternative(quest.id)).rejects.toMatchObject({ code: "alternative-locked" });
+
+		const submit = await fake.submitQuest({ runId: "a", questId: quest.id, files: await solvedDummyFiles(fake) });
+		const attemptId = submit.outcome.attempt.attemptId;
+		const alternative = await fake.getQuestAlternative(quest.id);
+
+		expect(submit.outcome.attempt.passed).toBe(true);
+		expect(alternative?.markdown).toBe(quest.kind === "build" ? quest.alternative : "");
+
+		const grade = await fake.answerReflection({ attemptId, answer: "  It keeps designers in the Details panel.  " });
+		const why = await fake.explainFinding({ attemptId, findingIndex: 0 });
+		const progress = await fake.getProgress();
+		const attempt = progress.attempts.find((candidate) => candidate.attemptId === attemptId);
+
+		expect(attempt?.reflection).toMatchObject({ answer: "It keeps designers in the Details panel.", grade });
+		expect(Object.values(attempt?.explanations ?? {})).toEqual([why]);
+		await expect(fake.answerReflection({ attemptId, answer: "It keeps designers in the Details panel." })).resolves.toEqual(grade);
+		await expect(fake.explainFinding({ attemptId, findingIndex: 0 })).resolves.toBe(why);
+		await expect(fake.answerReflection({ attemptId, answer: " " })).rejects.toMatchObject({ code: "invalid-payload" });
+		await expect(fake.getQuestAlternative("f1-concept-missing")).rejects.toBeDefined();
+	}, 20_000);
+});
+
 describe("the quests scenario and the fake breakdown grader", () =>
 {
 	it("starts World 1 unplayed: nothing passed, no attempts, rematches, or World 1 card use cases (A351)", async () =>

@@ -88,6 +88,22 @@ export interface ExplainGradeInput
 	answer: string;
 }
 
+/** Everything the reflection grader reads for one answer to a review's reflection question (A853). */
+export interface ReflectionGradeInput
+{
+	/** The review's reflection question. */
+	question: string;
+
+	/** The review's summary, for context. */
+	reviewSummary: string;
+
+	/** The learner's submitted files the question is about (the capped copy stored on the attempt). */
+	files: Record<string, string>;
+
+	/** The learner's sentence. */
+	answer: string;
+}
+
 /** Everything the finding explainer reads to answer "why is this a finding?". */
 export interface FindingExplanationInput
 {

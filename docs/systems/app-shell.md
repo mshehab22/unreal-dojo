@@ -114,15 +114,16 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Drills | `answerDrillItem(answer)` | `DrillItemResult` | done (M1.6b; AI grading when the review service is wired, A318) |
 | Drills | `finishDrill(sessionId)` | `DrillOutcome` | done (M1.6b) |
 | Review | `getReviewProviders()`, `testClaudeCode()` | `ReviewProviderStatus[]`, `ReviewProviderStatus` | done (M1.7c) |
-| Review | `explainFinding(request)` | plain-English text | done (M1.7c) |
-| Review | `answerReflection(request)` | `ExplainGrade` | done (M1.7c) |
+| Review | `explainFinding(request)` | plain-English text; kept on the attempt, so a repeat is free (A851) | done (M1.7c, M3.4) |
+| Review | `answerReflection(request)` | `ExplainGrade`; the answer and grade are kept on the attempt as `reflection`, and the same sentence again answers the kept grade (A852) | done (M1.7c, M3.4) |
 | Review | `retryReview(attemptId)` | `CodeReview`; reviews the stored Submit again with no new build and replaces its stored review (score, pass, XP stay) | done (M1.7d) |
+| Review | `getQuestAlternative(questId)` | `QuestAlternative` or null; `alternative-locked` before a pass; no AI call (A850) | done (M3.4) |
 
 Every method answers for real; the last stubs went with M1.4b and M1.7c, and `notImplemented.ts` was removed with them. The `not-implemented` AppError code stays for features a later task may stub again. The Parsons fallback offer and the self-explanation gate are renderer-only (A89).
 
 Content is read once at startup (A220). A file with problems is left out and listed in `getContentStatus().problems`; the rest still loads. Only a missing content folder or a load that throws makes the content methods reject, with `content-invalid` ("Unreal Dojo could not find its lessons."), and the next call tries the load again. Main never crashes on bad content.
 
-`explainFinding`, `answerReflection`, and `retryReview` find the review by attempt id: `AttemptRecord.review` holds the `CodeReview` of every build, refactor, or boss Submit that compiled, and `AttemptRecord.files` and `AttemptRecord.run` hold what that review read, on the quest's last five Submits (A740).
+`explainFinding`, `answerReflection`, and `retryReview` find the review by attempt id: `AttemptRecord.review` holds the `CodeReview` of every build, refactor, or boss Submit that compiled, and `AttemptRecord.files` and `AttemptRecord.run` hold what that review read, on the quest's last five Submits (A740). `AttemptRecord.explanations` and `AttemptRecord.reflection` keep the follow-ups' answers (A851, A852).
 
 The wrapper always returns a fresh copy of an AppError with only `code`, `message`, `suggestedAction`, and `detail`, so an extra property on a thrown error (a function, a class instance) cannot make the answer fail to clone and turn into `ipc-failed`.
 

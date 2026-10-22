@@ -176,3 +176,29 @@ export interface ReflectionAnswerRequest
 	/** The learner's sentence. */
 	answer: string;
 }
+
+/** The learner's answer to a review's reflection question and its grade, kept on the attempt so it shows again after a reload (A852). */
+export interface ReflectionRecord
+{
+	/** The learner's sentence, trimmed. */
+	answer: string;
+
+	/** The grade it got. Free for the learner. */
+	grade: ExplainGrade;
+
+	/** When it was graded (ISO 8601). */
+	at: string;
+}
+
+/** The alternative a quest shows after a pass (A850): the authored idiomatic version with its tradeoff note, plus the reviewer's own pointer when an AI reviewer wrote one. */
+export interface QuestAlternative
+{
+	/** The quest. */
+	questId: string;
+
+	/** The authored alternative (build and refactor) or alternative note (breakdown), as markdown. */
+	markdown: string;
+
+	/** The AI reviewer's `alternativeHint` from the latest passed attempt, when an AI reviewer (not tests-only) wrote it. */
+	reviewHint?: string;
+}

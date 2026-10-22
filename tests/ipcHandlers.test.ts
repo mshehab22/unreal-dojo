@@ -90,6 +90,7 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 		answerReflection: async () => ({ score: 70, verdict: "partly", note: "n", provider: "tests-only" }),
 		submitQuest: async () => { throw new Error("not used"); },
 		retryReview: async () => { throw new Error("not used"); },
+		getQuestAlternative: async () => null,
 	}),
 };
 
