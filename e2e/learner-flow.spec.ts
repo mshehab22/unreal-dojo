@@ -443,13 +443,10 @@ async function buildFailHintPass(): Promise<void>
 	await expect(window.getByTestId("unlocked")).toContainText(QUESTS.enums.title);
 	await saveScreenshot("34-build-loot");
 
-	await expectKnownFailure("M2.2b", "the loot screen lists each review day once", async () =>
-	{
-		const line = await window.getByTestId("screen-loot").getByText(/^Next reviews/).innerText({ timeout: 1_000 });
-		const days = line.replace(/^Next reviews( due)?\s*/, "").split(/,\s*|\s+and\s+/).map((day) => day.trim()).filter((day) => day.length > 0);
-
-		expect(days, line).toEqual([...new Set(days)]);
-	});
+	// The loot screen names each review day once (M2.2b, A816).
+	const reviewLine = await window.getByTestId("screen-loot").getByText(/^Next reviews/).innerText();
+	const reviewDays = reviewLine.replace(/^Next reviews( due)?\s*/, "").split(/,\s*|\s+and\s+/).map((day) => day.trim()).filter((day) => day.length > 0);
+	expect(reviewDays, reviewLine).toEqual([...new Set(reviewDays)]);
 }
 
 /** The breakdown: the first plan, submitted, compared with the reference, revised with the two missing pieces and a note, graded. */
