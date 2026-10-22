@@ -56,6 +56,13 @@ export const FAILED_BUILD_OUTPUT = [
 	"Result: Failed (OtherCompilationError)",
 ].join("\n");
 
+/** A silent pause after a number of steps, like UBT waiting for another build's mutex with no output. */
+export interface BuildStall
+{
+	afterSteps: number;
+	milliseconds: number;
+}
+
 /** What one simulated build ended with. */
 export interface SimulatedBuildEnd
 {
@@ -76,8 +83,8 @@ export class SandboxBuildSimulator
 	{
 	}
 
-	/** Starts the build and resolves with how it ended. */
-	run(engineVersion: string, shouldFail: boolean): Promise<SimulatedBuildEnd>
+	/** Starts the build and resolves with how it ended, pausing silently once when a stall is given. */
+	run(engineVersion: string, shouldFail: boolean, stall: BuildStall | null = null): Promise<SimulatedBuildEnd>
 	{
 		const steps = shouldFail ? failureSteps(engineVersion) : successSteps(engineVersion);
 
@@ -100,7 +107,7 @@ export class SandboxBuildSimulator
 
 				this.emit({ runId: this.runId, phase: step.phase, elapsedMs, lastLine: step.lastLine, ...(step.percent === undefined ? {} : { percent: step.percent }), ...(index === 0 ? { loop: "headless" as const, loopReason: "first build of a new sandbox" } : {}) });
 				index += 1;
-				this.timer = setTimeout(tick, TICK_MS);
+				this.timer = setTimeout(tick, stall && index === stall.afterSteps ? stall.milliseconds : TICK_MS);
 			};
 
 			tick();

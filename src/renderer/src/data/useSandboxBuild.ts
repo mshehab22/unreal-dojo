@@ -7,7 +7,7 @@ import { dojo } from "./activeClient";
 import type { DojoClient } from "./DojoClient";
 import { queryCache } from "./QueryCache";
 import { QUERY_KEYS } from "./queryKeys";
-import { SandboxBuildTracker, type SandboxBuildSnapshot, type SandboxBuildStatus } from "./SandboxBuildTracker";
+import { SandboxBuildTracker, type SandboxBuildContext, type SandboxBuildSnapshot, type SandboxBuildStatus } from "./SandboxBuildTracker";
 
 export type { SandboxBuildStatus };
 
@@ -19,8 +19,8 @@ export interface SandboxBuild extends SandboxBuildSnapshot
 	checkStatus: () => void;
 }
 
-/** Wraps `operation(client, runId)` (createSandbox or rebuildSandbox) as a startable, cancellable, self-checking build. */
-export function useSandboxBuild(operation: (client: DojoClient, runId: string) => Promise<SandboxSetupResult>): SandboxBuild
+/** Wraps `operation(client, runId)` (createSandbox on first run, rebuildSandbox in Settings) as a startable, cancellable, self-checking build. */
+export function useSandboxBuild(operation: (client: DojoClient, runId: string) => Promise<SandboxSetupResult>, context: SandboxBuildContext): SandboxBuild
 {
 	const trackerReference = useRef<SandboxBuildTracker | null>(null);
 	const [snapshot, setSnapshot] = useState<SandboxBuildSnapshot | null>(null);
@@ -31,7 +31,7 @@ export function useSandboxBuild(operation: (client: DojoClient, runId: string) =
 		setSnapshot(next);
 
 		if (next.status === "succeeded" || next.status === "failed") void queryCache.invalidate([QUERY_KEYS.settings, QUERY_KEYS.environment]);
-	});
+	}, context);
 
 	const tracker = trackerReference.current;
 

@@ -53,11 +53,11 @@ const GLOSSARY = glossaryJson as unknown as GlossaryEntry[];
 /** The real pattern cards, typed. */
 const PATTERN_CARDS = patternsJson as unknown as PatternCard[];
 
-/** How many events a quiet build sends before it goes silent: the three setup steps, as in the tester's hang. */
+/** How many events a quiet build sends before it goes silent: the three setup steps, as in the tester's hang. It sends none after, even once it goes on. */
 const QUIET_BUILD_FORWARDED_EVENTS = 3;
 
-/** How long a status check takes in the quiet scenario. */
-const SLOW_STATUS_MS = 2_000;
+/** How long a quiet build stays silent but alive after its setup steps, like UBT waiting for another build's mutex. */
+const QUIET_BUILD_STALL_MS = 32_000;
 
 /** How long every fake answer takes, so loading states are real but short. */
 const LATENCY_MS = 60;
@@ -132,14 +132,12 @@ export class FakeDojoApi implements DojoClient
 	private readonly listeners = new Set<(event: BuildProgressEvent) => void>();
 	private readonly builds = new Map<string, SandboxBuildSimulator>();
 	private readonly runStatuses = new Map<string, RunStatus>();
-	private readonly slowStatus: boolean;
 	private readonly quests: FakeQuestFlow;
 
 	/** Starts the fake in one scenario's state; the state lives until the page reloads. */
 	constructor(scenario: FakeScenario)
 	{
 		this.state = initialState(scenario);
-		this.slowStatus = scenario === "first-build-goes-quiet";
 		this.quests = new FakeQuestFlow({
 			progress: () => this.state.progress,
 			settings: () => this.state.settings,
@@ -314,10 +312,7 @@ export class FakeDojoApi implements DojoClient
 	/** Where a simulated build stands, as main's run registry would say. Quest runs are not tracked here and read as unknown. */
 	getRunStatus(runId: string): Promise<RunStatus>
 	{
-		const status = this.runStatuses.get(runId) ?? { runId, state: "unknown" as const, lastEvent: null, answer: null };
-
-		// In the quiet scenario main answers slowly, as a busy machine would, so the "still working" notice is on screen long enough to see.
-		if (this.slowStatus) return new Promise((resolve) => setTimeout(() => resolve(structuredClone(status)), SLOW_STATUS_MS));
+		const status: RunStatus = this.runStatuses.get(runId) ?? { runId, state: "unknown", lastEvent: null, eventCount: 0, answer: null };
 
 		return answer(status);
 	}
@@ -705,7 +700,9 @@ export class FakeDojoApi implements DojoClient
 	/** Marks a run finished with its answer, keeping its last event. */
 	private finishRun(runId: string, runAnswer: RunAnswer): void
 	{
-		this.runStatuses.set(runId, { runId, state: "finished", lastEvent: this.runStatuses.get(runId)?.lastEvent ?? null, answer: runAnswer });
+		const previous = this.runStatuses.get(runId);
+
+		this.runStatuses.set(runId, { runId, state: "finished", lastEvent: previous?.lastEvent ?? null, eventCount: previous?.eventCount ?? 0, answer: runAnswer });
 	}
 
 	/** Runs one simulated build, forwarding its events to every listener (a quiet build stops forwarding after the setup steps). */
@@ -713,11 +710,14 @@ export class FakeDojoApi implements DojoClient
 	{
 		let forwarded = 0;
 
-		this.runStatuses.set(runId, { runId, state: "running", lastEvent: null, answer: null });
+		let eventCount = 0;
+
+		this.runStatuses.set(runId, { runId, state: "running", lastEvent: null, eventCount, answer: null });
 
 		const simulator = new SandboxBuildSimulator(runId, (event) =>
 		{
-			this.runStatuses.set(runId, { runId, state: "running", lastEvent: event, answer: null });
+			eventCount += 1;
+			this.runStatuses.set(runId, { runId, state: "running", lastEvent: event, eventCount, answer: null });
 
 			// A quiet build still records every event for getRunStatus but stops sending them after the setup steps.
 			if (goesQuiet && forwarded >= QUIET_BUILD_FORWARDED_EVENTS) return;
@@ -730,7 +730,7 @@ export class FakeDojoApi implements DojoClient
 
 		try
 		{
-			return await simulator.run(engineVersion, shouldFail);
+			return await simulator.run(engineVersion, shouldFail, goesQuiet ? { afterSteps: QUIET_BUILD_FORWARDED_EVENTS, milliseconds: QUIET_BUILD_STALL_MS } : null);
 		}
 		finally
 		{

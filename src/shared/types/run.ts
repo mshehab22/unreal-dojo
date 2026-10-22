@@ -156,6 +156,9 @@ export interface RunStatus
 	/** The latest progress event main sent for the run, or null before the first one. */
 	lastEvent: BuildProgressEvent | null;
 
+	/** How many progress events main has sent for the run. A window compares it with what it has seen to tell new output from none. */
+	eventCount: number;
+
 	/** How it ended, once `finished`. The value has the type of the call that started the run. */
 	answer: RunAnswer | null;
 }

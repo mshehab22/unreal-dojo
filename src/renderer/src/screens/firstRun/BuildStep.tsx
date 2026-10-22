@@ -27,7 +27,7 @@ interface BuildStepProps
 /** Starts and follows the first sandbox build. */
 export function BuildStep({ engine, folder, onBack, onNext }: BuildStepProps)
 {
-	const build = useSandboxBuild((client, runId) => client.createSandbox({ runId, enginePath: engine.path, folder: folder.path }));
+	const build = useSandboxBuild((client, runId) => client.createSandbox({ runId, enginePath: engine.path, folder: folder.path }), "first-run");
 	const [showOutput, setShowOutput] = useState(false);
 	const isRunning = build.status === "running";
 
@@ -62,7 +62,7 @@ export function BuildStep({ engine, folder, onBack, onNext }: BuildStepProps)
 			}
 		>
 			{build.status !== "idle" && build.status !== "errored" && <BuildProgressView event={build.progress} outcome={buildOutcome(build.status)} elapsedMs={build.elapsedMs} />}
-			{build.status === "running" && build.isQuiet && <QuietBuildNotice silentForMs={build.silentForMs} isChecking={build.isChecking} onCheck={build.checkStatus} />}
+			{build.status === "running" && build.isQuiet && <QuietBuildNotice build={build} />}
 			{build.status === "idle" && (
 				<p className="rounded-lg border border-line bg-raised/50 p-4 text-sm text-paper-muted">
 					You can keep using your computer while it builds. Cancelling is safe; the next start picks up from a clean copy.
@@ -95,7 +95,10 @@ export function BuildStep({ engine, folder, onBack, onNext }: BuildStepProps)
 					</Button>
 				</div>
 			)}
-			{build.status === "errored" && build.error && <AppErrorView error={build.error} onRetry={build.start} retryLabel="Start again" />}
+			{build.status === "errored" && build.error && (
+				// A lost run cannot be started again here: the sandbox folder already holds the copy (A824).
+				<AppErrorView error={build.error} onRetry={build.error.code === "run-not-found" ? undefined : build.start} retryLabel="Start again" />
+			)}
 		</StepFrame>
 	);
 }

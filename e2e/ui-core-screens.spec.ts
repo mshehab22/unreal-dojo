@@ -174,8 +174,14 @@ test("a locked stage explains why on hover", async ({ dojo, camera }) =>
 
 	const locked = window.locator('[data-testid="stage-node"][data-status="locked"]').first();
 	await locked.scrollIntoViewIfNeeded();
-	await locked.hover();
-	await expect(window.getByRole("tooltip")).toContainText("first");
+
+	// The tooltip opens after a short delay and a hover can land while the page settles, so the hover is retried until the reason shows.
+	await expect(async () =>
+	{
+		await window.mouse.move(0, 0);
+		await locked.hover();
+		await expect(window.getByRole("tooltip").first()).toContainText("first", { timeout: 1_500 });
+	}).toPass({ timeout: 10_000 });
 	await saveScreenshot(camera, window, "world-map-locked-reason-1440x900");
 });
 
@@ -378,7 +384,7 @@ test("a cancelled first build is calm, and starting again works", async ({ dojo 
 
 test("a first build whose progress and answer never arrive still reaches done, through a status check", async ({ dojo, camera }) =>
 {
-	test.setTimeout(90_000);
+	test.setTimeout(120_000);
 
 	const { window } = dojo;
 
@@ -394,11 +400,16 @@ test("a first build whose progress and answer never arrive still reaches done, t
 	// The window's own clock keeps moving after the events stop, so it never sits at 0:00 (A822).
 	await expect(window.getByTestId("build-elapsed")).not.toHaveText("0:00", { timeout: 5_000 });
 
-	// After 15 s of silence the screen says so and checks with main on its own.
-	await expect(window.getByTestId("quiet-build")).toBeVisible({ timeout: 25_000 });
+	// After 15 s with no new output the screen checks with main on its own; main says the build is still running, so the notice stays up
+	// and says so, instead of flashing away (A822).
+	await expect(window.locator('[data-testid="quiet-build"][data-confirmed="true"]')).toBeVisible({ timeout: 25_000 });
+	await expect(window.getByTestId("quiet-build")).toContainText("Still running; no new output");
+	await window.waitForTimeout(3_000);
+	await expect(window.locator('[data-testid="quiet-build"][data-confirmed="true"]')).toBeVisible();
 	await saveScreenshot(camera, window, "first-run-build-quiet-1100x700");
 
-	await expect(window.getByTestId("build-succeeded")).toBeVisible({ timeout: 15_000 });
+	// The build ends without sending its answer; the next status check finds it finished.
+	await expect(window.getByTestId("build-succeeded")).toBeVisible({ timeout: 40_000 });
 	await expect(window.getByTestId("app-error")).toHaveCount(0);
 	await saveScreenshot(camera, window, "first-run-build-recovered-1100x700");
 });

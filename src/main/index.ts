@@ -87,7 +87,8 @@ async function start(): Promise<void>
 	// A refused save still lets the app open; every progress call answers the save-failed error so the renderer can show it.
 	if (refusal) console.error(`Progress refused: ${refusal.message} ${refusal.detail ?? ""}`);
 
-	const runRegistry = new RunRegistry();
+	// One line per run start and answer in main's console, so a stuck screen can be traced to main or to the window (A823).
+	const runRegistry = new RunRegistry((line) => console.info(line));
 
 	let unrealServices: UnrealServices | null = null;
 

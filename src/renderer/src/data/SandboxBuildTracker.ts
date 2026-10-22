@@ -1,14 +1,18 @@
 // Follows one sandbox create or rebuild from the window: subscribes before it starts, keeps a ticking clock, and asks main how the run
-// stands when progress goes quiet, so a lost event or a lost answer can never leave the screen frozen (A820, A822).
+// stands when no new output arrives, so a lost event or a lost answer can never leave the screen frozen. A recovery fallback (A822);
+// the cause of the hang that prompted it is unknown.
 import type { DojoApi } from "@shared/ipc";
 import type { SandboxSetupResult } from "@shared/types/engine";
 import type { AppError } from "@shared/types/errors";
-import type { BuildProgressEvent, RunAnswer } from "@shared/types/run";
+import type { BuildProgressEvent, RunAnswer, RunStatus } from "@shared/types/run";
 
 import { toAppError } from "./toAppError";
 
 /** Where a sandbox build stands. */
 export type SandboxBuildStatus = "idle" | "running" | "succeeded" | "failed" | "cancelled" | "errored";
+
+/** Which build is tracked; it decides what to suggest if main loses track of it. */
+export type SandboxBuildContext = "first-run" | "rebuild";
 
 /** Everything the screen shows about the build. A new object on every change. */
 export interface SandboxBuildSnapshot
@@ -21,11 +25,17 @@ export interface SandboxBuildSnapshot
 	/** Time since the build started, ticking in the window even when no event arrives. */
 	readonly elapsedMs: number;
 
-	/** True while running when nothing has been heard from main for a while. */
+	/** True while running when no new output has arrived for a while. Stays true until new output does. */
 	readonly isQuiet: boolean;
 
-	/** Time since the last event or status answer. */
+	/** Time since the last new output (an event, or a status answer carrying events the window had not seen). */
 	readonly silentForMs: number;
+
+	/** True once main has said the run is still going during this quiet stretch. */
+	readonly isConfirmedRunning: boolean;
+
+	/** True after several status checks in a row failed or timed out. */
+	readonly isUnreachable: boolean;
 
 	/** True while a status check is in flight. */
 	readonly isChecking: boolean;
@@ -38,16 +48,25 @@ export interface TrackerClock
 
 	/** Calls `callback` every `intervalMs`; returns the function that stops it. */
 	every(callback: () => void, intervalMs: number): () => void;
+
+	/** Calls `callback` once after `delayMs`; returns the function that cancels it. */
+	after(callback: () => void, delayMs: number): () => void;
 }
 
 /** The DojoApi methods the tracker uses. */
 export type TrackerClient = Pick<DojoApi, "onBuildProgress" | "getRunStatus" | "cancelRun">;
 
-/** Nothing heard for this long marks the build quiet and asks main how it stands. */
+/** No new output for this long marks the build quiet and asks main how it stands. */
 export const QUIET_AFTER_MS = 15_000;
 
 /** While quiet, main is asked again this often. */
 export const CHECK_AGAIN_AFTER_MS = 15_000;
+
+/** A status check that has not answered by then counts as failed, so the next round can try again. */
+export const STATUS_TIMEOUT_MS = 10_000;
+
+/** This many failed checks in a row mark main as unreachable. */
+export const FAILED_CHECKS_BEFORE_UNREACHABLE = 3;
 
 /** How often the window's clock ticks. */
 const TICK_MS = 1_000;
@@ -61,18 +80,40 @@ export const SYSTEM_TRACKER_CLOCK: TrackerClock = {
 
 		return () => clearInterval(handle);
 	},
+	after: (callback, delayMs) =>
+	{
+		const handle = setTimeout(callback, delayMs);
+
+		return () => clearTimeout(handle);
+	},
 };
 
 /** The state before any build. */
-const IDLE: SandboxBuildSnapshot = { status: "idle", progress: null, result: null, error: null, elapsedMs: 0, isQuiet: false, silentForMs: 0, isChecking: false };
+const IDLE: SandboxBuildSnapshot = {
+	status: "idle",
+	progress: null,
+	result: null,
+	error: null,
+	elapsedMs: 0,
+	isQuiet: false,
+	silentForMs: 0,
+	isConfirmedRunning: false,
+	isUnreachable: false,
+	isChecking: false,
+};
 
-/** The error shown when main no longer knows the run (the app restarted, or the run was forgotten). */
-function lostRunError(runId: string): AppError
+/**
+ * The error shown when main no longer knows the run (the app restarted, or the run was forgotten). A first-run retry would stop at
+ * `sandbox-folder-not-empty` once the template was copied, so it points to Settings' rebuild instead.
+ */
+function lostRunError(runId: string, context: SandboxBuildContext): AppError
 {
 	return {
 		code: "run-not-found",
 		message: "Unreal Dojo lost track of this build.",
-		suggestedAction: "Start it again. The sandbox is built from a clean copy each time, so nothing is left half done.",
+		suggestedAction: context === "first-run"
+			? "Restart Unreal Dojo, then open Settings and use Rebuild sandbox. Starting the build again here would stop, because the sandbox folder already holds the copy."
+			: "Restart Unreal Dojo, then use Rebuild sandbox again.",
 		detail: runId,
 	};
 }
@@ -83,8 +124,10 @@ export class SandboxBuildTracker
 	private snapshot: SandboxBuildSnapshot = IDLE;
 	private runId: string | null = null;
 	private startedAt = 0;
-	private lastHeardAt = 0;
+	private lastOutputAt = 0;
 	private lastCheckedAt = 0;
+	private knownEventCount = 0;
+	private failedChecks = 0;
 	private settled = true;
 	private stopListening: (() => void) | null = null;
 	private stopTicking: (() => void) | null = null;
@@ -93,6 +136,7 @@ export class SandboxBuildTracker
 		private readonly client: TrackerClient,
 		private readonly operation: (runId: string) => Promise<SandboxSetupResult>,
 		private readonly onChange: (snapshot: SandboxBuildSnapshot) => void,
+		private readonly context: SandboxBuildContext,
 		private readonly clock: TrackerClock = SYSTEM_TRACKER_CLOCK,
 		private readonly newRunId: () => string = () => crypto.randomUUID(),
 	)
@@ -105,7 +149,7 @@ export class SandboxBuildTracker
 		return this.snapshot;
 	}
 
-	/** Starts a build. The progress listener is attached before the call goes out, so no early event can be missed. */
+	/** Starts a build. The progress listener is attached before the call goes out. */
 	start(): void
 	{
 		this.releaseRun();
@@ -115,8 +159,10 @@ export class SandboxBuildTracker
 
 		this.runId = runId;
 		this.startedAt = now;
-		this.lastHeardAt = now;
+		this.lastOutputAt = now;
 		this.lastCheckedAt = now;
+		this.knownEventCount = 0;
+		this.failedChecks = 0;
 		this.settled = false;
 		this.stopListening = this.client.onBuildProgress((event) => this.receive(runId, event));
 		this.stopTicking = this.clock.every(() => this.tick(runId), TICK_MS);
@@ -145,7 +191,7 @@ export class SandboxBuildTracker
 		if (this.runId && !this.settled) void this.client.cancelRun(this.runId).catch(() => undefined);
 	}
 
-	/** Asks main right now how the build stands (the "Check status" button, and the quiet watchdog). */
+	/** Asks main right now how the build stands (the "Check status" button, and the quiet watchdog). Gives up after STATUS_TIMEOUT_MS. */
 	async checkStatus(): Promise<void>
 	{
 		const runId = this.runId;
@@ -155,33 +201,41 @@ export class SandboxBuildTracker
 		this.lastCheckedAt = this.clock.now();
 		this.update({ ...this.snapshot, isChecking: true });
 
-		try
+		const status = await this.statusWithTimeout(runId);
+
+		if (runId !== this.runId || this.settled) return;
+
+		if (!status)
 		{
-			const status = await this.client.getRunStatus(runId);
-
-			if (runId !== this.runId || this.settled) return;
-
-			if (status.state === "finished" && status.answer)
-			{
-				this.settle(runId, status.answer, status.lastEvent);
-				return;
-			}
-
-			if (status.state === "unknown")
-			{
-				this.settle(runId, { ok: false, error: lostRunError(runId) });
-				return;
-			}
-
-			// Still running: main answered, so the build is alive. Take its latest event, which covers any the window missed.
-			this.lastHeardAt = this.clock.now();
-			this.update({ ...this.snapshot, progress: status.lastEvent ?? this.snapshot.progress, isChecking: false, isQuiet: false, silentForMs: 0 });
+			this.failedChecks += 1;
+			this.update({ ...this.snapshot, isChecking: false, isUnreachable: this.failedChecks >= FAILED_CHECKS_BEFORE_UNREACHABLE });
+			return;
 		}
-		catch
+
+		this.failedChecks = 0;
+
+		if (status.state === "finished" && status.answer)
 		{
-			// The check itself failed; stay quiet and try again on the next round.
-			if (runId === this.runId && !this.settled) this.update({ ...this.snapshot, isChecking: false });
+			this.settle(runId, status.answer, status.lastEvent);
+			return;
 		}
+
+		if (status.state === "unknown")
+		{
+			this.settle(runId, { ok: false, error: lostRunError(runId, this.context) });
+			return;
+		}
+
+		// Still running. Only events the window had not seen count as new output; the same event again means the build is alive but silent.
+		if (status.eventCount > this.knownEventCount)
+		{
+			this.knownEventCount = status.eventCount;
+			this.lastOutputAt = this.clock.now();
+			this.update({ ...this.snapshot, progress: status.lastEvent ?? this.snapshot.progress, isChecking: false, isUnreachable: false, isQuiet: false, isConfirmedRunning: false, silentForMs: 0 });
+			return;
+		}
+
+		this.update({ ...this.snapshot, isChecking: false, isUnreachable: false, isConfirmedRunning: true });
 	}
 
 	/** Stops listening and ticking; a late answer is ignored. */
@@ -191,22 +245,45 @@ export class SandboxBuildTracker
 		this.releaseRun();
 	}
 
+	/** The status answer, or null when the call failed or did not answer in time. */
+	private statusWithTimeout(runId: string): Promise<RunStatus | null>
+	{
+		return new Promise((resolve) =>
+		{
+			const cancelTimeout = this.clock.after(() => resolve(null), STATUS_TIMEOUT_MS);
+
+			this.client.getRunStatus(runId).then(
+				(status) =>
+				{
+					cancelTimeout();
+					resolve(status);
+				},
+				() =>
+				{
+					cancelTimeout();
+					resolve(null);
+				},
+			);
+		});
+	}
+
 	/** Takes a progress event for the current run. */
 	private receive(runId: string, event: BuildProgressEvent): void
 	{
 		if (event.runId !== runId || runId !== this.runId || this.settled) return;
 
-		this.lastHeardAt = this.clock.now();
-		this.update({ ...this.snapshot, progress: event, isQuiet: false, silentForMs: 0, elapsedMs: this.elapsed(event) });
+		this.knownEventCount += 1;
+		this.lastOutputAt = this.clock.now();
+		this.update({ ...this.snapshot, progress: event, isQuiet: false, isConfirmedRunning: false, silentForMs: 0, elapsedMs: this.elapsed(event) });
 	}
 
-	/** Advances the clock; when nothing was heard for a while, marks the build quiet and asks main. */
+	/** Advances the clock; when no new output came for a while, marks the build quiet and asks main, then again every CHECK_AGAIN_AFTER_MS. */
 	private tick(runId: string): void
 	{
 		if (runId !== this.runId || this.settled) return;
 
 		const now = this.clock.now();
-		const silentForMs = now - this.lastHeardAt;
+		const silentForMs = now - this.lastOutputAt;
 		const isQuiet = silentForMs >= QUIET_AFTER_MS;
 
 		this.update({ ...this.snapshot, elapsedMs: this.elapsed(this.snapshot.progress), isQuiet, silentForMs });
@@ -223,7 +300,7 @@ export class SandboxBuildTracker
 		this.releaseRun();
 
 		const progress = lastEvent ?? this.snapshot.progress;
-		const base = { ...this.snapshot, progress, isQuiet: false, isChecking: false, silentForMs: 0, elapsedMs: this.elapsed(progress) };
+		const base = { ...this.snapshot, progress, isQuiet: false, isChecking: false, isConfirmedRunning: false, isUnreachable: false, silentForMs: 0, elapsedMs: this.elapsed(progress) };
 
 		if (answer.ok)
 		{
