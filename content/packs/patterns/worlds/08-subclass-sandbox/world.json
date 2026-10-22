@@ -1,0 +1,5 @@
+{
+	"id": "subclass-sandbox",
+	"title": "A toolbox for every subclass",
+	"summary": "The arena keeps adding traps, chests, levers, and hazards, each with its own little script. Learn to give a family of subclasses one base class that hands them safe tools, so each new kind is a short override that never reaches into the rest of the game on its own."
+}

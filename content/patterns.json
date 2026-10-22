@@ -899,10 +899,13 @@
     "id": "subclass-sandbox",
     "title": "Subclass Sandbox",
     "intent": "Give a family of subclasses (traps, abilities, card effects) one base class that hands them a toolbox of protected helpers, so each subclass writes a single override using only those tools and never reaches into engine systems on its own.",
-    "problem": "Fifty superpowers each need to play sounds, spawn effects, and move the hero. If every power reaches into the audio, VFX, and movement systems directly, the coupling spreads across fifty classes, and changing one engine system means touching all of them.",
-    "unrealForm": "UGameplayAbility is the cleanest engine example: subclasses override ActivateAbility and use provided operations such as CommitAbility and ApplyGameplayEffectToOwner. AActor itself gives subclasses GetWorld, timers, and spawn helpers around BeginPlay and Tick. You write your own shallow base classes (UDojoTrapBase with protected helpers like DamageActorsInRadius) and let designers subclass them.",
+    "problem": "Twenty arena traps each search for fighters, apply damage, play cues, and run their own cooldown timers. If every trap reaches into the damage, cue, and timer systems directly, the coupling spreads across twenty classes, the copies drift (one forgets its cooldown), and changing how damage works means touching all of them.",
+    "unrealForm": "UGameplayAbility has this shape: the ability system calls the non-virtual CallActivateAbility, which runs the shared setup and then the ActivateAbility hook a subclass fills in, with helpers such as CommitAbility for costs and cooldowns. AActor works the same way around BeginPlay and Tick, with GetWorld and the timer manager at hand. For your own families (traps, interactables, hazards), write an abstract base with one hook (a pure virtual, or a BlueprintNativeEvent for Blueprint children), a non-virtual public entry that enforces the rules, and protected tools marked BlueprintCallable with meta = (BlueprintProtected).",
     "whenNot": "When the variants differ only in numbers, use data (Type Object) instead of fifty classes. When the base class keeps growing helpers for every new subclass, split helpers into components or provider objects before it becomes a dumping ground.",
-    "useCaseQuestIds": [],
+    "useCaseQuestIds": [
+      "p8-trap-family",
+      "p8-interactables"
+    ],
     "recall": [
       {
         "id": "subclass-sandbox-recall-1",
@@ -936,6 +939,19 @@
           "Names the base as the single place coupling lives"
         ],
         "explanation": "Fifty subclasses with one dependency each beats fifty subclasses with five dependencies each."
+      },
+      {
+        "id": "subclass-sandbox-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A key chest's hook calls the base's TakeItem tool, which reports whether the visitor had the key. What must the chest do with that answer?",
+        "choices": [
+          "Ignore it; the tool already handled everything",
+          "Open and give the reward only when TakeItem reports success, and stay locked otherwise",
+          "Call TakeItem a second time to be sure",
+          "Remove the key from the visitor directly as well"
+        ],
+        "answerIndex": 1,
+        "explanation": "A tool can refuse; the subclass's behavior has to follow its answer, or a visitor with no key walks away with the reward."
       }
     ],
     "scenarios": [
@@ -992,6 +1008,19 @@
           }
         ],
         "explanation": "A data asset per enemy kind (Type Object) moves the differences into data designers edit without compiling."
+      },
+      {
+        "id": "subclass-sandbox-scenario-3",
+        "type": "multiple-choice",
+        "prompt": "The arena has two kinds of banner, and no third is planned. A teammate wants to extract an abstract banner base with a hook and a toolbox now. What is the better call?",
+        "choices": [
+          "Extract the base now, in case more banners come",
+          "Write the two banners plainly and extract a base when a third arrives and the shared parts are clear",
+          "Merge both banners into one class with a flag per difference",
+          "Make every banner function BlueprintProtected"
+        ],
+        "answerIndex": 1,
+        "explanation": "A base for two members is a guess at what they share; with a third member the real shared tools become clear."
       }
     ]
   },
