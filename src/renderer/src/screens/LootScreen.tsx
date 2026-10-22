@@ -1,5 +1,6 @@
 // The loot screen after a graded attempt: the score counting up, XP itemized, everything that changed, the review, the alternative after a pass, and Improve, See it run, Next.
 import { ArrowRightIcon, MonitorPlayIcon, WrenchIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { useNavigate, useRouteParameters } from "@/app/router/useRoute";
 import { AppErrorView } from "@/components/AppErrorView";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { QUERY_KEYS } from "@/data/queryKeys";
 import { useDojoAction } from "@/data/useDojoAction";
 import { useDojoQuery } from "@/data/useDojoQuery";
+import { nextOpenQuest } from "@/lib/nextOpenQuest";
 import { indexQuests } from "@/lib/questIndex";
 
 import { BreakdownGradeSection } from "./quests/loot/BreakdownGradeSection";
@@ -26,14 +28,38 @@ import { XpBreakdownList } from "./quests/loot/XpBreakdownList";
 export function LootScreen()
 {
 	const navigate = useNavigate();
+	const nextButton = useRef<HTMLButtonElement>(null);
 	const questId = useRouteParameters()["quest"] ?? "";
 	const entry = useLootStore((state) => state.entry);
 	const showLoot = useLootStore((state) => state.show);
 	const rules = useDojoQuery(QUERY_KEYS.rules, (client) => client.getRules());
 	const packs = useDojoQuery(QUERY_KEYS.packs, (client) => client.listPacks());
+	const availability = useDojoQuery(QUERY_KEYS.availability, (client) => client.getQuestAvailability());
 	const patternCards = useDojoQuery(QUERY_KEYS.patternCards, (client) => client.getPatternCards());
 	const openEditor = useDojoAction((client, id: string) => client.openEditor(id), [QUERY_KEYS.environment]);
 	const retry = useDojoAction((client, attemptId: string) => client.retryReview(attemptId), [QUERY_KEYS.progress]);
+
+	// Next waits for the map and the first availability fetch since this screen opened, so it never flashes "Back to the map" before the next quest is known.
+	// After that it stays known: a background refetch (window focus) neither disables it nor moves the keyboard (A817).
+	const sawAvailabilityFetch = useRef(false);
+	const [nextKnown, setNextKnown] = useState(false);
+	const focusedNext = useRef(false);
+
+	if (availability.isLoading) sawAvailabilityFetch.current = true;
+
+	useEffect(() =>
+	{
+		if (!nextKnown && sawAvailabilityFetch.current && !availability.isLoading && availability.data !== undefined && packs.data !== undefined) setNextKnown(true);
+	}, [nextKnown, availability.isLoading, availability.data, packs.data]);
+
+	// Next takes the keyboard once, when it first becomes known (a disabled button cannot hold focus), so Enter moves on.
+	useEffect(() =>
+	{
+		if (!nextKnown || focusedNext.current) return;
+
+		focusedNext.current = true;
+		nextButton.current?.focus();
+	}, [nextKnown]);
 
 	if (!entry || entry.quest.id !== questId)
 	{
@@ -51,7 +77,7 @@ export function LootScreen()
 	const passed = outcome.attempt.passed;
 	const index = packs.data ? indexQuests(packs.data) : null;
 	const location = index?.get(quest.id);
-	const nextQuest = location?.world.quests.filter((candidate) => candidate.order > quest.order).sort((first, second) => first.order - second.order)[0];
+	const nextQuest = location && availability.data ? nextOpenQuest(location.world.quests, quest.order, availability.data) : null;
 	const questTitles = new Map([...(index?.values() ?? [])].map((found) => [found.quest.id, found.quest.title]));
 	const alternative = quest.kind === "build" || quest.kind === "refactor" ? quest.alternative : quest.kind === "breakdown" ? quest.alternativeNote : null;
 
@@ -84,7 +110,7 @@ export function LootScreen()
 				{detail.kind === "build" && (
 					<>
 						<p className="text-sm text-paper-muted">
-							{detail.run.compiled ? `Tests ${detail.run.testsPassed} of ${detail.run.testsTotal} passed.` : "It did not compile, so there is no review this time. The compiler output is on the quest screen."}
+							{detail.run.compiled ? `Tests ${detail.run.testsPassed} of ${detail.run.testsTotal} passed.` : "It did not compile, so there is no review this time. Improve opens the quest with the compiler output beside your code."}
 						</p>
 						{detail.review && <CodeReviewSection review={detail.review} attemptId={outcome.attempt.attemptId} onRetryReview={() => void retryReview()} isRetrying={retry.isPending} />}
 						{retry.error && <AppErrorView error={retry.error} onRetry={() => void retryReview()} />}
@@ -110,8 +136,8 @@ export function LootScreen()
 						See it run
 					</Button>
 				)}
-				<Button variant="pack" autoFocus onClick={() => (nextQuest ? navigate("quest", { id: nextQuest.id }) : navigate("worldMap"))} data-testid="loot-next">
-					{nextQuest ? `Next: ${nextQuest.title}` : "Back to the map"}
+				<Button ref={nextButton} variant="pack" disabled={!nextKnown} onClick={() => (nextQuest ? navigate("quest", { id: nextQuest.id }) : navigate("worldMap"))} data-testid="loot-next">
+					{!nextKnown ? "Next" : nextQuest ? `Next: ${nextQuest.title}` : "Back to the map"}
 					<ArrowRightIcon />
 				</Button>
 			</div>

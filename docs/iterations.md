@@ -1241,3 +1241,36 @@ total                                       39.2  PASSED
 - Rebased onto main at f39cb0d (World 7 and Pack 1 World 5 merged); main's glossary and pattern-card lines were kept, and World 8's three glossary entries were added on top. `p8-many-kinds-one-toolbox` now requires `p7-flags-to-modes` (A789).
 - Every item on the subclass-sandbox card was checked for leftover source examples. The chapter's names for the two halves of the pattern ("sandbox method", "provided operations") were replaced with this world's own words, hook and tools, in `subclass-sandbox-recall-1`, `-recall-2`, and `-recall-3`, in the card's `whenNot`, in the interactables brief, and in the three bases' class comments. `subclass-sandbox-scenario-1` now names arena traps and cues.
 - Engine, UE 5.8.3, fresh sandboxes under the engine lock with all eight patterns worlds together: reference solutions 72 of 72 pass; starters compile and 58 of 72 fail, with every World 7 and World 8 quest failing at least one test. Verifier no problems (one expected Pack 4 gate warning), `npm run typecheck` passes, `npm test` 838 passed, 24 skipped.
+
+
+## M2.2b Quest flow bugs from the real-engine run (ui-quests, builder-ui-quests)
+- What changed:
+  - After a Submit that does not compile (or fails its tests), Improve now shows that Submit's result beside the code: "Last submit: did not compile" with the build log open, or the failed tests with their messages. A later Run replaces it, labelled "Last run". The loot screen's wording now points there.
+  - The loot screen no longer repeats review dates ("tomorrow, tomorrow, tomorrow"); see fix round 1 for the final wording.
+  - Next on the loot screen goes to the next quest in the world that is actually open, skipping locked and passed ones, or says "Back to the map" when none is. It waits until it knows, so it never shows the wrong target first.
+  - A build quest now opens from a fresh read of your saved work, so a draft saved since the screen last loaded is what you see and what Submit sends.
+- Proof (MacBook Air M5, from main f39cb0d): `npm run typecheck` passes; `npm test` 70 files, 842 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 27 passed, three runs in a row.
+
+![[m2-2-build-last-submit-did-not-compile.jpg|800]]
+*Improve after a Submit that did not compile: the run column shows that Submit's compiler output.*
+
+![[m2-2-concept-loot.jpg|800]]
+*Concept loot: Next names the next open quest; each review day is named once.*
+
+![[m2-2-breakdown-loot.jpg|800]]
+*Breakdown loot: the next quest by order is the locked boss, so Next goes back to the map.*
+
+- Decisions made: A810 to A813.
+- Not done or left for later: the drill summary still counts self-checked explain items as misses under tests-only review; that waits for M1.6g's new drill result field to reach main.
+
+### Fix round 1
+- What the reviewer and the Lead asked for: the last Submit's compiler output must survive a reload or restart; Next lost the keyboard focus while it waited; and the review dates claimed counts the data cannot back.
+- What changed: the run column now also reads the last Submit from your saved attempts (the save already keeps each Submit's result), so after a reload or restart it still says "Last submit: did not compile" with the log. Next takes the keyboard as soon as it knows where it goes, so Enter moves on again. Review dates now read like "Next reviews due now, tomorrow and in 5 days": each day once, no counts, and anything already due says "due now". The sample data keeps past due times and each Submit's result the way the real save does.
+- Proof (rebased on main 7798025): `npm run typecheck` passes; `npm test` 71 files, 857 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 27 passed, three runs in a row. A reload cannot be shown with the sample data (it lives in the page), so unit tests cover it.
+- Decisions made: A814 to A816.
+
+### Fix round 2
+- What the reviewer asked for: coming back to the window (for example from Unreal) briefly disabled Next and then gave it the keyboard again, so the next Enter could skip ahead; and an end-to-end check of the last Submit coming back from the save.
+- What changed: Next is worked out once when the loot screen opens and then stays put; switching back to the window no longer moves the keyboard. The end-to-end flow now submits a quest that does not compile, submits another quest, goes back, and finds "Last submit: did not compile" with the log, read from the save. A true restart is covered by M2.4's real-bridge relaunch.
+- Proof: `npm run typecheck` passes; `npm test` 71 files, 857 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 28 passed, three runs in a row.
+- Decisions made: A817 and A818.

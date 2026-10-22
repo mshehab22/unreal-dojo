@@ -8,7 +8,8 @@ import "./lootMotion.css";
 
 import { Chest } from "@/components/Chest";
 import { PatternCard as PatternCardView } from "@/components/PatternCard";
-import { formatDue, humanizeId } from "@/lib/formatting";
+import { describeDueGroups } from "@/lib/dueGroups";
+import { humanizeId } from "@/lib/formatting";
 import { MASTERY_NAMES, skillLabel } from "@/lib/skillNames";
 
 /** Props for ProgressChanges. */
@@ -100,7 +101,7 @@ export function ProgressChanges({ outcome, rules, patternCards, questTitles }: P
 			{outcome.nextDueDates.length > 0 && (
 				<p className="flex items-center gap-2 text-paper-muted">
 					<CalendarClockIcon className="size-4 text-pack" />
-					Next reviews {outcome.nextDueDates.map((dueAt) => formatDue(dueAt)).join(", ")}
+					Next reviews {describeDueGroups(outcome.nextDueDates)}
 				</p>
 			)}
 		</div>

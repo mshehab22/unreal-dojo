@@ -2,6 +2,7 @@
 import type { LearnerQuest } from "@shared/types/catalog";
 import type { AttemptOutcome, ChestReward, MasteryLevel, PatternCardTier, PlayerProgress, QuestProgress, RulesSnapshot, XpBreakdown } from "@shared/types/progress";
 import type { CodeReview } from "@shared/types/review";
+import type { RunResult } from "@shared/types/run";
 
 import { levelStanding } from "../../lib/levels";
 
@@ -20,6 +21,10 @@ export interface LedgerAttempt
 	/** True for a build or refactor Submit, which moves the spree. */
 	movesSpree: boolean;
 	review?: CodeReview;
+
+	/** The submitted files and the engine's verdict, kept on build Submits as the progress service keeps them (A740). */
+	files?: Record<string, string>;
+	run?: RunResult;
 }
 
 /** An empty quest save entry. */
@@ -111,7 +116,7 @@ export function recordAttempt(progress: PlayerProgress, rules: RulesSnapshot, at
 	}
 
 	const attemptId = `fake-attempt-${progress.attempts.length + 1}`;
-	const record = { attemptId, questId: quest.id, at: new Date().toISOString(), score: attempt.score, passed: attempt.passed, xpGained: xp.total, ...(attempt.review ? { review: attempt.review } : {}) };
+	const record = { attemptId, questId: quest.id, at: new Date().toISOString(), score: attempt.score, passed: attempt.passed, xpGained: xp.total, ...(attempt.review ? { review: attempt.review } : {}), ...(attempt.files ? { files: attempt.files } : {}), ...(attempt.run ? { run: attempt.run } : {}) };
 
 	questProgress.status = attempt.passed || wasPassed ? "passed" : "in_progress";
 	questProgress.bestScore = Math.max(questProgress.bestScore ?? 0, attempt.score);
@@ -134,7 +139,8 @@ export function recordAttempt(progress: PlayerProgress, rules: RulesSnapshot, at
 		updatedAt: record.at,
 	});
 
-	const nextDueDates = Object.values(progress.schedule).filter((dueAt) => new Date(dueAt).getTime() > Date.now()).sort().slice(0, 3);
+	// The three soonest due times, past ones included, as the progress service answers them.
+	const nextDueDates = Object.values(progress.schedule).sort().slice(0, 3);
 
 	return {
 		attempt: record,

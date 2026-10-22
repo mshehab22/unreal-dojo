@@ -197,7 +197,13 @@ test("a concept quest: predict, the card with hover terms and the example, quest
 	await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "true");
 	await expect(window.getByTestId("loot-score")).toHaveAttribute("data-score", "100");
 	await expect(window.getByTestId("xp-total")).toContainText("XP");
+	await expect(window.getByTestId("loot-next")).toBeEnabled();
+	await expect(window.getByTestId("progress-changes")).toBeVisible();
 	await saveScreenshot("concept-loot");
+
+	// Review dates name each day once, never "tomorrow, tomorrow, tomorrow" (A811).
+	await expect(window.getByTestId("progress-changes")).toContainText("Next reviews");
+	await expect(window.getByTestId("progress-changes")).not.toContainText(/(tomorrow|in \d+ days?|in \d+ hours?), \1/);
 
 	// Next goes to the next quest in the world.
 	await window.getByTestId("loot-next").click();
@@ -342,6 +348,9 @@ test("a breakdown: plan on the board, submit, compare with a reference, revise w
 	await saveScreenshot("breakdown-loot");
 	await window.getByTestId("breakdown-grade").scrollIntoViewIfNeeded();
 	await saveScreenshot("breakdown-loot-grade");
+
+	// The next quest by order is the boss, still locked: Next goes back to the map instead (M2.2b).
+	await expect(window.getByTestId("loot-next")).toHaveText(/Back to the map/);
 });
 
 test("the breakdown compare step stays readable at 1100x700: boards at a usable zoom and the reference as text", async () =>
@@ -469,6 +478,9 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	// Submit: the review times out into tests-only with Retry review; the retry gets the mentor's review.
 	await window.getByTestId("submit-button").click();
 	await expect(window.getByTestId("screen-loot")).toBeVisible({ timeout: 20_000 });
+
+	// Next holds the keyboard once it knows where it goes, so Enter moves on (A812).
+	await expect(window.getByTestId("loot-next")).toBeFocused();
 	await expect(window.getByTestId("review-fallback")).toBeVisible();
 	await window.getByTestId("retry-review").click();
 	await expect(window.getByTestId("code-review")).toHaveAttribute("data-provider", "claude-code", { timeout: 20_000 });
@@ -496,6 +508,31 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await expect(window.getByTestId("last-submit")).toHaveAttribute("data-passed", "true");
 });
 
+test("the last Submit comes back from the save after another quest's Submit replaced the loot hand-off", async () =>
+{
+	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
+	await openFake("#/quest?id=f1-score-keeper");
+	await waitForEditor(window.getByTestId("build-quest"));
+
+	// A Submit that does not compile.
+	await selectInEditor(window.getByTestId("build-quest").getByTestId("code-editor"), "#pragma once");
+	await typeInEditor("#pragma once\n{");
+	await window.getByTestId("submit-button").click();
+	await expect(window.getByTestId("loot-review")).toContainText("did not compile", { timeout: 20_000 });
+
+	// Another quest's Submit replaces the in-memory loot hand-off.
+	await window.evaluate(`location.hash = "#/quest?id=f1-practice-bell"`);
+	await waitForEditor(window.getByTestId("build-quest"));
+	await window.getByTestId("submit-button").click();
+	await expect(window.getByTestId("screen-loot")).toBeVisible({ timeout: 20_000 });
+
+	// Back on the first quest, the run column reads its last Submit from the stored attempt (A814).
+	await window.evaluate(`location.hash = "#/quest?id=f1-score-keeper"`);
+	await waitForEditor(window.getByTestId("build-quest"));
+	await expect(window.getByTestId("run-result")).toContainText("Last submit: did not compile");
+	await expect(window.getByTestId("build-log")).toContainText("error");
+});
+
 test("two failed submits offer the Parsons fallback, which opens a one-item drill", async () =>
 {
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
@@ -504,13 +541,34 @@ test("two failed submits offer the Parsons fallback, which opens a one-item dril
 	const build = window.getByTestId("build-quest");
 	await waitForEditor(build);
 
-	for (let attempt = 0; attempt < 2; attempt++)
-	{
-		await window.getByTestId("submit-button").click();
-		await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "false", { timeout: 20_000 });
-		await window.getByTestId("loot-improve").click();
-		await waitForEditor(window.getByTestId("build-quest"));
-	}
+	// First submit: the starter builds and its test fails. Improve shows that Submit's tests in the run column (M2.2b).
+	await window.getByTestId("submit-button").click();
+	await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "false", { timeout: 20_000 });
+	await expect(window.getByTestId("loot-next")).toBeFocused();
+
+	// Coming back to the window refetches in the background; that must neither disable Next nor take focus from where the learner left it (A817).
+	await window.getByTestId("loot-improve").focus();
+	await window.evaluate("window.dispatchEvent(new Event('focus'))");
+	await window.waitForTimeout(500);
+	await expect(window.getByTestId("loot-improve")).toBeFocused();
+	await expect(window.getByTestId("loot-next")).toBeEnabled();
+
+	await window.getByTestId("loot-improve").click();
+	await waitForEditor(window.getByTestId("build-quest"));
+	await expect(window.getByTestId("run-result")).toHaveAttribute("data-source", "submit");
+	await expect(window.locator('[data-testid="test-row"][data-passed="false"]').first()).toBeVisible();
+
+	// Second submit does not compile: the loot says so, and Improve shows the compiler output beside the code.
+	await selectInEditor(window.getByTestId("build-quest").getByTestId("code-editor"), "#pragma once");
+	await typeInEditor("#pragma once\n{");
+	await window.getByTestId("submit-button").click();
+	await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "false", { timeout: 20_000 });
+	await expect(window.getByTestId("loot-review")).toContainText("did not compile");
+	await window.getByTestId("loot-improve").click();
+	await waitForEditor(window.getByTestId("build-quest"));
+	await expect(window.getByTestId("run-result")).toContainText("Last submit: did not compile");
+	await expect(window.getByTestId("build-log")).toContainText("error");
+	await saveScreenshot("build-last-submit-did-not-compile");
 
 	await expect(window.getByTestId("failed-submit-offers")).toBeVisible();
 	await setViewport(1100, 700);

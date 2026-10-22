@@ -4,6 +4,34 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A818 2026-10-21 The stored-attempt path is tested end to end without a reload (M2.2b fix round 2, Lead request)
+The fake's state lives in the page, so a reload cannot show A814. The e2e drives the same path instead: a Submit of f1-score-keeper that does not compile, then a Submit of f1-practice-bell (which replaces the loot hand-off), then back to f1-score-keeper, where the run column must say "Last submit: did not compile" with the error in the build log. A true restart is covered by M2.4's real-bridge relaunch. Reverse cost: none.
+
+### A817 2026-10-21 Next is known once and focused once (M2.2b fix round 2, builder-ui-quests)
+A815 tied Next to `!availability.isLoading`, so every window-focus refetch disabled Next for a moment and then focused it again, pulling the keyboard away from Improve or the reflection box. Now Next becomes known after the first availability fetch since the loot screen opened (the same pattern as `BuildQuestView`'s fresh read) and stays known; background refetches neither disable it nor move focus. It is focused a single time, behind a ref guard. The e2e focuses Improve, sends a window focus event, and expects Improve to keep focus. Reverse cost: none.
+
+### A816 2026-10-21 Next reviews name each day once, with no counts; past times read "due now" (M2.2b fix round 1, Lead decision)
+A811's counts ("3 reviews tomorrow") claimed more than the data holds: `nextDueDates` carries only the three soonest times. Now the line reads "Next reviews due now, tomorrow and in 5 days": each distinct day once, in time order, no counts, keeping the "Next reviews" label so it never reads like the "Next: <quest>" button. Any past or current time reads "due now" (`lib/dueGroups.ts`; the shared `formatDue` used by the Studio is unchanged). The fake now answers `nextDueDates` as the progress service does, the three soonest schedule times with past ones kept. Reverse cost: none.
+
+### A815 2026-10-21 Next takes focus once it is known (M2.2b fix round 1, builder-ui-quests)
+A812 disabled Next until availability loads, so its `autoFocus` landed on nothing and Enter no longer moved on. Now a ref and an effect focus Next when it becomes known (and only then, so Retry review or Why? keep focus after they run). Reverse cost: none.
+
+### A814 2026-10-21 The last Submit survives a reload: read from the stored attempt (M2.2b fix round 1, builder-ui-quests)
+A810 took the last Submit only from the in-memory loot hand-off, so a reload or restart lost the compiler output again. The progress service already keeps a capped `run` and the `files` on build attempts (A740), and `getProgress` returns them, so no shared type changed. `screens/quests/build/lastSubmitResult.ts` takes the loot hand-off when it is for this quest, otherwise the quest's latest attempt that has a `run`; `BuildWorkspace` seeds the run column with it (from the fresh read of A813). The fake ledger now keeps `files` and `run` on build attempts the same way. The e2e cannot show a reload with the fake (its state lives in the page), so unit tests cover it: the helper with no hand-off, and the fake keeping the run of a Submit that did not compile. Reverse cost: none.
+
+### A813 2026-10-21 A build quest opens from a fresh read of the save (M2.2b, builder-ui-quests)
+The build workspace took its starting files from the renderer's cached progress, which can be older than a draft saved since, and a Submit then sent the older files. Options: read the draft again at Submit time (a second source of truth beside the editor); open the workspace only from a fresh read. Chosen: the second. `BuildQuestView` waits, once, for the progress refetch that opening a quest starts, so the editor starts from the draft as saved now; from then on the editor is what Submit sends (its own autosave keeps the save in step). Reverse cost: none.
+
+### A812 2026-10-21 Next on the loot screen goes to the next open quest (M2.2b, builder-ui-quests)
+Next went to the next quest by order even when it was locked. Chosen: the first later quest in the same world that is available or in progress (`lib/nextOpenQuest.ts`); passed quests are skipped; with none, Next says "Back to the map". Next stays disabled, labelled "Next", until the map and fresh availability have loaded, so it never shows the wrong target first. Options not taken: searching other worlds (the map is the place to choose across worlds). Reverse cost: none.
+
+### A811 2026-10-21 Repeated review dates are counted (M2.2b, builder-ui-quests)
+The loot screen listed "tomorrow, tomorrow, tomorrow". Chosen: due times are grouped by how they read, in time order, with a count: "3 reviews tomorrow, 1 review in 5 days" (`lib/dueGroups.ts`). Reverse cost: none.
+Fix round 1: the counts are gone; see A816.
+
+### A810 2026-10-21 The run column shows the last Submit's result (M2.2b, builder-ui-quests)
+After a Submit that did not compile, Improve showed only "not passed yet, score 0", and the loot screen sent the learner to compiler output that was not there. Chosen: the run column starts from the last Submit kept in the loot store, labelled "Last submit", with its tests or "did not compile" and the build log open; a Run replaces it, labelled "Last run". The loot screen now says Improve shows the compiler output beside the code. The fake already answers a non-compiling Submit with compiler output like the real bridge, so it needed no change. Reverse cost: none.
+
 ### A682 2026-10-21 Beacon drill: the director compares lever states on a shared event, and two piece additions (author-foundations, Pack 1 World 5)
 The lever's OnPulled carries only the new position, so a listener bound to several levers cannot tell which one fired. Options: add a second delegate that passes the lever; bind a separate listener object per lever; compare every lever with its last known position on any pull. Chosen: compare, which needs no change to the lever's event and reads plainly in both plans. The pieces need two additions: the lever implements the interactable interface (lighting itself when dark and its own cooldown is ready), and the cooldown gains Cancel for a clean round start. The director owns the 4 second cooldown length and applies it to every lever's cooldown, so the number is pinned in one place. A round start puts lit levers out while the round is stopped, so the director's own handler ignores those pulls and starts no cooldown, then cancels every cooldown; a separate quiet flag was tried and dropped because a mutation showed it changed nothing. The keeper rides on the player's pawn, as in World 4 (A620). Reference game: the torch rooms of Zelda's dungeons. Reverse cost: low.
 

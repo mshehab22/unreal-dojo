@@ -21,6 +21,9 @@ interface RunColumnProps
 	readonly run: QuestRun<RunResult>;
 	readonly submit: QuestRun<SubmitOutcome>;
 	readonly lastResult: RunResult | null;
+
+	/** Whether the result shown came from a Run or the last Submit. */
+	readonly lastResultSource: "run" | "submit";
 	readonly canSubmit: boolean;
 	readonly submitBlockedReason: string | null;
 	readonly onRun: () => void;
@@ -44,7 +47,7 @@ function outcomeOf(status: QuestRun<unknown>["status"], result: RunResult | null
 }
 
 /** The controls stack; whichever of Run or Submit ran last owns the progress view. */
-export function RunColumn({ run, submit, lastResult, canSubmit, submitBlockedReason, onRun, onSubmit, onOpenEditor, isOpeningEditor, lastSubmit, hints, offers }: RunColumnProps)
+export function RunColumn({ run, submit, lastResult, lastResultSource, canSubmit, submitBlockedReason, onRun, onSubmit, onOpenEditor, isOpeningEditor, lastSubmit, hints, offers }: RunColumnProps)
 {
 	const busy = run.status === "running" || submit.status === "running";
 	const showing = submit.status === "running" ? submit : run.status !== "idle" ? run : null;
@@ -84,9 +87,10 @@ export function RunColumn({ run, submit, lastResult, canSubmit, submitBlockedRea
 			{lastSubmit}
 
 			{lastResult && (
-				<div data-testid="run-result" data-ok={lastResult.ok} className="flex flex-col gap-3 border-t border-line pt-3">
+				<div data-testid="run-result" data-ok={lastResult.ok} data-source={lastResultSource} className="flex flex-col gap-3 border-t border-line pt-3">
 					<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">
-						{lastResult.compiled ? `Tests ${lastResult.testsPassed} of ${lastResult.testsTotal}` : "Did not compile"}
+						{lastResultSource === "submit" ? "Last submit: " : "Last run: "}
+						{lastResult.compiled ? `tests ${lastResult.testsPassed} of ${lastResult.testsTotal}` : "did not compile"}
 					</span>
 					{lastResult.error && <p className="text-sm text-warn">{lastResult.error}</p>}
 					{lastResult.tests.length > 0 && <TestList tests={lastResult.tests} />}
