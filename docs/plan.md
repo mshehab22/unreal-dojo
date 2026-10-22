@@ -147,6 +147,8 @@ Stages: waiting, building, review, fixes, testing, merged. Only the Lead edits t
 
 ## Ready to playtest
 
+Note: earlier dev runs saved `dojo.dataSource = fake:returning` in the app's real data folder on this Mac, and a stored choice wins over the build flag, so a plain `npm run dev` opens the sample learner with a "Fake data" badge. To try the real app from a fresh start, use a throwaway data folder: `npm run build`, then `npx electron . --user-data-dir=$HOME/DojoPlaytestData`.
+
 (What Mohammad can try now, with exact steps. Nothing waits on this.)
 
 ### Quest screens with sample data (M2.2, merged 2026-10-21)
