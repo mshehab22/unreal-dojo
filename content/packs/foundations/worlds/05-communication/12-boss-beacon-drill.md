@@ -107,10 +107,10 @@ Feel: tune the lit time until lighting the third lever feels like a scramble you
     - { id: hands, kind: step, label: Event BeginPlay attaches the keeper to Get Player Pawn and the E event finds the nearest lever within range keeping the first on a tie and calls Prod, covers: [keeper-hands] }
     - { id: news, kind: event, label: Event BeginPlay binds a custom event to each lever's On Pulled and the event compares each lever's Is On with a Boolean array of last positions, covers: [lever-news] }
     - { id: timeout, kind: step, label: A 0.1 second looping Set Timer by Event pulls any lever whose recorded lit time is 6 seconds old, covers: [lit-timeout] }
-    - { id: cool, kind: step, label: The compare event calls Try Start on each newly dark lever's cooldown component, covers: [cooldown] }
+    - { id: cool, kind: step, label: Each lever's cooldown component has Cooldown Seconds set to 4 in Details since Blueprint can only read it and the compare event calls Try Start on each newly dark lever's cooldown component, covers: [cooldown] }
     - { id: alarm, kind: step, label: When all are on the compare event adds to the alarm count and pulls every lever and on the third shows the win on a Text Render actor, covers: [alarm] }
     - { id: drone, kind: step, label: The compare event calls Follow on the drone with each newly lit lever, covers: [drone] }
-    - { id: round, kind: step, label: A non-looping 60 second Set Timer by Event shows TIME UP and the R event behind a branch on Running being false pulls lit levers off before setting Running so the compare event ignores them and calls Cancel on each cooldown, covers: [round] }
+    - { id: round, kind: step, label: A non-looping 60 second Set Timer by Event shows TIME UP and the R event behind a branch on Running being false pulls lit levers off before setting Running so the compare event ignores them and calls Cancel on each cooldown and calls Follow with nothing on the drone and sets the alarm count to 0, covers: [round] }
   edges:
     - { from: hands, to: news, label: a lit lever broadcasts }
     - { from: news, to: cool, label: newly dark levers }
@@ -129,4 +129,4 @@ Feel: tune the lit time until lighting the third lever feels like a scramble you
 - All three lit at once rings the alarm and puts every lever out; three alarms within 60 seconds win, otherwise the round shows TIME UP.
 - The drone follows the newest lit lever and moves in Tick scaled by DeltaSeconds; nothing else ticks.
 - Round 1 starts with play, R starts later rounds only between rounds, and a round start puts levers out without cooldowns, so round 2 plays like round 1.
-- The tuned lit time is written in the submission with one sentence on why it felt fair.
+- The submission names the channel for each link (delegate, interface, timer, Tick, or direct call) with one reason each, and gives the tuned lit time with why it felt fair.

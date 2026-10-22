@@ -270,7 +270,7 @@ bool FDojo_F5_Interact_InterfaceIsBlueprintReady::RunTest(const FString& Paramet
 
 # Alternative
 
-The prodder could Cast the target to IDojoF5Interactable and call Interact on the pointer. That works for classes that implement the interface in C++, but a Blueprint that implements it in its Class Settings has no C++ I part to cast to, so the cast returns null and the Blueprint is silently skipped. Execute_ checks for the interface through reflection and dispatches to either kind, which is why it is the habit to keep for native and implementable events.
+Calling `Interact` straight on the interface is not a shortcut: for a BlueprintNativeEvent, the generated body of that function only stops the program with a failed check telling you to use Execute_. The real C++-only shortcut is `Cast<IDojoF5Interactable>(Target)->Interact_Implementation(this)`. It skips any Blueprint child that overrides Interact, and for an actor that implements the interface only in Blueprint, through its Class Settings, the cast returns null because there is no C++ I part. Execute_ checks for the interface through reflection and dispatches to either kind, which is why it is the habit to keep for native and implementable events.
 
 # Parsons
 

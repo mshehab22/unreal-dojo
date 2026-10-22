@@ -52,7 +52,7 @@ public:
 
 `UDojoF5Interactable` is the reflected half: an empty class that lets the engine and Blueprint know the interface exists. `IDojoF5Interactable` holds the functions. A class keeps the promise by listing the I half as a second parent, `class ADojoF5Crate : public AActor, public IDojoF5Interactable`, and implementing `Interact_Implementation`.
 
-To call it, first ask: `Target->Implements<UDojoF5Interactable>()`. Then call through the generated static helper `IDojoF5Interactable::Execute_Interact(Target, Instigator)`. Execute_ works whether the class implemented the function in C++ or in Blueprint; casting to the I class and calling directly only works for C++ implementations, so prefer Execute_ for BlueprintNativeEvent and BlueprintImplementableEvent functions.
+To call it, first ask: `Target->Implements<UDojoF5Interactable>()`. Then call through the generated static helper `IDojoF5Interactable::Execute_Interact(Target, Instigator)`. Execute_ works whether the class implemented the function in C++ or in Blueprint. The two shortcuts both fail: calling `Interact` directly on the I class stops the program on a failed check for every implementer, because the generated body of an interface event only tells you to call Execute_ instead; and a Cast to the I class returns nullptr for a Blueprint implementer, which has no C++ I part. So always call BlueprintNativeEvent and BlueprintImplementableEvent functions through Execute_.
 
 # Example
 
@@ -85,7 +85,7 @@ bool ADojoF5Keeper::InteractWith(AActor* Target)
   explanation: The Execute_ helper reaches C++ and Blueprint implementations alike.
 - id: spot-implements-class
   type: spot-the-bug
-  prompt: This check never finds an interactable, even on a crate that implements the interface. Which line is wrong?
+  prompt: This check does not compile. Which line is wrong?
   code: |
     bool ADojoF5Keeper::CanInteract(AActor* Target) const
     {
@@ -93,7 +93,7 @@ bool ADojoF5Keeper::InteractWith(AActor* Target)
     }
   bugLine: 3
   fix: Ask about the U half, Implements<UDojoF5Interactable>(), which is the reflected class the engine knows.
-  explanation: Implements takes the reflected U class; the I class holds the functions but is not what the engine looks up.
+  explanation: Implements calls StaticClass on the type it is given, and only the reflected U class has one; the I class holds the functions but is not a UClass.
 - id: two-halves
   type: multiple-choice
   prompt: "Which half of an Unreal interface does a class list as a parent to implement it?"

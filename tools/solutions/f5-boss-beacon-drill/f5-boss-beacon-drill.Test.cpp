@@ -134,6 +134,17 @@ bool FDojo_F5_BeaconDrill_TwoRoundsPlayAlike::RunTest(const FString& Parameters)
 		Director->RestartRound();
 	}
 
+	for (ADojoF5Lever* Lever : Drill.Levers)
+	{
+		TestTrue(TEXT("The director listens to every lever while it is in play"), Lever->OnPulled.Contains(Director, TEXT("HandleAnyLeverPulled")));
+	}
+
+	Director->Destroy();
+	for (ADojoF5Lever* Lever : Drill.Levers)
+	{
+		TestFalse(TEXT("A destroyed director has unbound from every lever"), Lever->OnPulled.Contains(Director, TEXT("HandleAnyLeverPulled")));
+	}
+
 	return true;
 }
 

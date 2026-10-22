@@ -24,11 +24,11 @@ type: multiple-choice
 prompt: "Guess, no penalty: a lamp calls `Lever->OnPulled.AddDynamic(this, &ADojoF5LeverLamp::HandlePulled)` in BeginPlay, but HandlePulled has no UFUNCTION macro. What happens when the lever is pulled?"
 choices:
   - The lamp reacts normally
-  - The build fails or the binding is rejected, because a dynamic delegate finds its handler by reflected name
+  - It compiles, but an ensure reports the binding failed when the lamp starts, and the lamp never reacts
   - The lamp reacts twice
   - The lever stops broadcasting
 answerIndex: 1
-explanation: Dynamic delegates bind by function name through reflection, so the handler must be a UFUNCTION; without it the binding cannot work.
+explanation: AddDynamic compiles because it passes the handler's name as text; at run time the delegate looks that name up through reflection, finds no UFUNCTION, reports it with an ensure, and never binds.
 ```
 
 # Card
