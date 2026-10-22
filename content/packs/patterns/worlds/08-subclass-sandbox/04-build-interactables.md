@@ -13,8 +13,8 @@ xp: 110
 estimatedMinutes: 30
 concepts:
   - The base decides when an interaction may happen and calls a BlueprintNativeEvent hook that C++ and Blueprint children override
-  - Provided operations marked BlueprintProtected are callable from Blueprint children but not from outside graphs
-  - A provided operation reports whether it worked, and the subclass must act on that answer
+  - Tools marked BlueprintProtected are callable from Blueprint children but not from outside graphs
+  - A tool reports whether it worked, and the subclass must act on that answer
 ---
 
 # Brief
@@ -26,7 +26,7 @@ Around the arena stand chests, levers, terminals, and more coming. Each one does
 The declarations, the visitor, the constructor, the getters, and the base's default hook ("Nothing happens") are given. Yours:
 
 - The base's `Interact`, as described above.
-- The provided operations: `ShowPrompt` sets the prompt and the label; `TakeItem` removes one item through the visitor and reports whether there was one to take; `GiveItem` and `SetQuestFlag` pass to the visitor; `MarkUsedUp` stops further interactions. Each ignores an empty visitor.
+- The tools: `ShowPrompt` sets the prompt and the label; `TakeItem` removes one item through the visitor and reports whether there was one to take; `GiveItem` and `SetQuestFlag` pass to the visitor; `MarkUsedUp` stops further interactions. Each ignores an empty visitor.
 - The key chest's hook: for a visitor holding `KeyItem`, take the key, give `RewardItem`, show "Opened", and mark the chest used up; otherwise show "Locked: needs a key".
 - The lever's hook: record `FlagName` on the visitor and show "Clunk", every time.
 
@@ -484,7 +484,7 @@ bool FDojo_P8_Interactables_LeverAndTheHook::RunTest(const FString& Parameters)
 
 - Interact is the only public entry and holds the shared rules: it ignores an empty visitor or a used-up interactable and counts the rest.
 - OnInteract is a BlueprintNativeEvent; C++ children override OnInteract_Implementation and never call it directly.
-- The provided operations are protected, BlueprintProtected, and the only way children touch the visitor's items and flags.
+- The tools are protected, BlueprintProtected, and the only way children touch the visitor's items and flags.
 - The chest acts on TakeItem's answer: no key means no reward and no use-up.
 - The lever records its flag on every pull and is never used up.
 - Item and flag names come from editable properties, not strings in the code.

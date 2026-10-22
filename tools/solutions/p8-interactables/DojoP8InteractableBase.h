@@ -7,7 +7,7 @@
 class ADojoP8Visitor;
 class UTextRenderComponent;
 
-/** The base for every arena interactable: it owns when an interaction may happen, and hands subclasses, in C++ or Blueprint, a protected toolbox for items, flags, and prompts (Subclass Sandbox: OnInteract is the sandbox method, the BlueprintProtected functions are the provided operations). */
+/** The base for every arena interactable: it owns when an interaction may happen, and hands subclasses, in C++ or Blueprint, a protected toolbox for items, flags, and prompts (Subclass Sandbox: OnInteract is the hook, the BlueprintProtected functions are the tools). */
 UCLASS(Abstract, Blueprintable)
 class ADojoP8InteractableBase : public AActor
 {

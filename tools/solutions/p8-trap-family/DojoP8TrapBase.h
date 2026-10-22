@@ -6,7 +6,7 @@
 
 class UTextRenderComponent;
 
-/** The base every arena trap derives from: it owns springing and the cooldown, and gives subclasses a small set of protected tools so a new trap is one override that never touches fighters, cues, or timers directly (Subclass Sandbox: Trigger is the sandbox method, the protected functions are the provided operations). */
+/** The base every arena trap derives from: it owns springing and the cooldown, and gives subclasses a small set of protected tools so a new trap is one override that never touches fighters, cues, or timers directly (Subclass Sandbox: Trigger is the hook, the protected functions are the tools). */
 UCLASS(Abstract)
 class ADojoP8TrapBase : public AActor
 {

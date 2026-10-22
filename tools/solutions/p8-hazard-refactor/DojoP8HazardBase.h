@@ -6,7 +6,7 @@
 
 class UTextRenderComponent;
 
-/** The parent of the arena's hazards: it owns setting a hazard off and the cooldown, and gives each hazard a protected toolbox, so a hazard is one override (Subclass Sandbox: OnUnleash is the sandbox method, the protected functions are the provided operations). */
+/** The parent of the arena's hazards: it owns setting a hazard off and the cooldown, and gives each hazard a protected toolbox, so a hazard is one override (Subclass Sandbox: OnUnleash is the hook, the protected functions are the tools). */
 UCLASS(Abstract)
 class ADojoP8HazardBase : public AActor
 {

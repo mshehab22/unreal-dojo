@@ -7,7 +7,7 @@ difficulty: 2
 patterns: []
 skills: [subclass-sandbox, object-model]
 terms: [uclass, abstract-specifier, tactoriterator, ufunction]
-prerequisites: [p6-later-not-now]
+prerequisites: [p7-flags-to-modes]
 xp: 25
 estimatedMinutes: 7
 concepts:

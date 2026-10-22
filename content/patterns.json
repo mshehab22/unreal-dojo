@@ -901,7 +901,7 @@
     "intent": "Give a family of subclasses (traps, abilities, card effects) one base class that hands them a toolbox of protected helpers, so each subclass writes a single override using only those tools and never reaches into engine systems on its own.",
     "problem": "Twenty arena traps each search for fighters, apply damage, play cues, and run their own cooldown timers. If every trap reaches into the damage, cue, and timer systems directly, the coupling spreads across twenty classes, the copies drift (one forgets its cooldown), and changing how damage works means touching all of them.",
     "unrealForm": "UGameplayAbility has this shape: the ability system calls the non-virtual CallActivateAbility, which runs the shared setup and then the ActivateAbility hook a subclass fills in, with helpers such as CommitAbility for costs and cooldowns. AActor works the same way around BeginPlay and Tick, with GetWorld and the timer manager at hand. For your own families (traps, interactables, hazards), write an abstract base with one hook (a pure virtual, or a BlueprintNativeEvent for Blueprint children), a non-virtual public entry that enforces the rules, and protected tools marked BlueprintCallable with meta = (BlueprintProtected).",
-    "whenNot": "When the variants differ only in numbers, use data (Type Object) instead of fifty classes. When the base class keeps growing helpers for every new subclass, split helpers into components or provider objects before it becomes a dumping ground.",
+    "whenNot": "When the variants differ only in numbers, use data (Type Object) instead of a class per variant. When the base class keeps growing tools for every new subclass, move single-use tools back into their subclass and group related tools into a helper object before the base becomes a dumping ground. When the capability must mix across unrelated actors, use components.",
     "useCaseQuestIds": [
       "p8-trap-family",
       "p8-interactables"
@@ -910,15 +910,15 @@
       {
         "id": "subclass-sandbox-recall-1",
         "type": "multiple-choice",
-        "prompt": "In Subclass Sandbox, which methods are usually protected and non-virtual on the base?",
+        "prompt": "On the base class of a Subclass Sandbox family, which functions are usually protected and non-virtual?",
         "choices": [
-          "The provided helper operations",
-          "The sandbox method subclasses override",
+          "The shared tools subclasses call",
+          "The hook each subclass overrides",
           "The constructor only",
           "Nothing; everything is public"
         ],
         "answerIndex": 0,
-        "explanation": "Helpers are protected so only subclasses use them, and non-virtual because they are shared tools, not extension points."
+        "explanation": "Tools are protected so only the family uses them, and non-virtual so no subclass can change how they work; the hook is the part meant to be overridden."
       },
       {
         "id": "subclass-sandbox-recall-2",
@@ -927,18 +927,18 @@
         "acceptedAnswers": [
           "ActivateAbility"
         ],
-        "explanation": "ActivateAbility is the sandbox method; everything it needs comes from the base."
+        "explanation": "ActivateAbility is the hook; the shared setup before it and helpers such as CommitAbility come from the base."
       },
       {
         "id": "subclass-sandbox-recall-3",
         "type": "explain-in-one-sentence",
         "prompt": "In one sentence, explain how Subclass Sandbox reduces coupling.",
-        "modelAnswer": "Subclasses talk only to the base class's helpers, so the coupling to engine systems lives in one place instead of in every subclass.",
+        "modelAnswer": "Subclasses call only the base class's tools, so the links to engine systems live in the base instead of in every subclass.",
         "rubric": [
           "Says subclasses depend on the base instead of on many systems",
           "Names the base as the single place coupling lives"
         ],
-        "explanation": "Fifty subclasses with one dependency each beats fifty subclasses with five dependencies each."
+        "explanation": "Twenty traps that each depend only on the base are cheaper to change than twenty traps that each depend on five systems."
       },
       {
         "id": "subclass-sandbox-recall-4",
@@ -958,7 +958,7 @@
       {
         "id": "subclass-sandbox-scenario-1",
         "type": "which-pattern",
-        "prompt": "Designers want to author dozens of trap types (spikes, fire jets, falling logs), each with custom logic but all needing damage, sound, and camera shake. Which pattern gives them a safe toolbox?",
+        "prompt": "Designers want to author dozens of arena trap types (spikes, flame jets, falling logs), each with custom logic but all needing damage, cues, and camera shake that follow the arena's rules. Which pattern gives them a safe toolbox?",
         "choices": [
           "component",
           "facade",
@@ -980,7 +980,7 @@
             "why": "A facade simplifies one subsystem's API; here a base class supplies several subsystems to subclasses."
           }
         ],
-        "explanation": "A UDojoTrapBase with protected helpers and one overridable Trigger method."
+        "explanation": "An abstract trap base with protected tools and one overridable Trigger hook."
       },
       {
         "id": "subclass-sandbox-scenario-2",

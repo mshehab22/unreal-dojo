@@ -1235,4 +1235,9 @@ total                                       39.2  PASSED
   - The obvious chest (ignores TakeItem's answer): fails only `LockedWithoutAKey`. One unrelated engine warning (the iOS device probe on this Mac) landed on a World 2 test in that run.
   - Content verifier: no problems; no A72 warnings for World 8. `npm run typecheck` passes; `npm test` 838 passed, 24 skipped.
   - Originality: the World 8 quests, solutions, and card have no 6-word or 5-word run in common with the research's Subclass Sandbox section, after rewording.
-- Not done: no boss (A781). `p8-many-kinds-one-toolbox` requires a World 6 quest until World 7 merges (A789). No screenshots (editor runs with `-NullRHI` on this Mac). Windows unverified. Decisions A780 to A789.
+- Not done: no boss (A781). No screenshots (editor runs with `-NullRHI` on this Mac). Windows unverified. Decisions A780 to A789.
+
+### Rebase and card audit
+- Rebased onto main at f39cb0d (World 7 and Pack 1 World 5 merged); main's glossary and pattern-card lines were kept, and World 8's three glossary entries were added on top. `p8-many-kinds-one-toolbox` now requires `p7-flags-to-modes` (A789).
+- Every item on the subclass-sandbox card was checked for leftover source examples. The chapter's names for the two halves of the pattern ("sandbox method", "provided operations") were replaced with this world's own words, hook and tools, in `subclass-sandbox-recall-1`, `-recall-2`, and `-recall-3`, in the card's `whenNot`, in the interactables brief, and in the three bases' class comments. `subclass-sandbox-scenario-1` now names arena traps and cues.
+- Engine, UE 5.8.3, fresh sandboxes under the engine lock with all eight patterns worlds together: reference solutions 72 of 72 pass; starters compile and 58 of 72 fail, with every World 7 and World 8 quest failing at least one test. Verifier no problems (one expected Pack 4 gate warning), `npm run typecheck` passes, `npm test` 838 passed, 24 skipped.
