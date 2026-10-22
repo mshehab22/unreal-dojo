@@ -3890,6 +3890,6 @@
       "tqueue",
       "game-thread"
     ],
-    "firstQuestId": "p6-gate-tallies"
+    "firstQuestId": "p6-event-queue-card"
   }
 ]
