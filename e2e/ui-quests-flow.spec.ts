@@ -508,6 +508,31 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await expect(window.getByTestId("last-submit")).toHaveAttribute("data-passed", "true");
 });
 
+test("the last Submit comes back from the save after another quest's Submit replaced the loot hand-off", async () =>
+{
+	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
+	await openFake("#/quest?id=f1-score-keeper");
+	await waitForEditor(window.getByTestId("build-quest"));
+
+	// A Submit that does not compile.
+	await selectInEditor(window.getByTestId("build-quest").getByTestId("code-editor"), "#pragma once");
+	await typeInEditor("#pragma once\n{");
+	await window.getByTestId("submit-button").click();
+	await expect(window.getByTestId("loot-review")).toContainText("did not compile", { timeout: 20_000 });
+
+	// Another quest's Submit replaces the in-memory loot hand-off.
+	await window.evaluate(`location.hash = "#/quest?id=f1-practice-bell"`);
+	await waitForEditor(window.getByTestId("build-quest"));
+	await window.getByTestId("submit-button").click();
+	await expect(window.getByTestId("screen-loot")).toBeVisible({ timeout: 20_000 });
+
+	// Back on the first quest, the run column reads its last Submit from the stored attempt (A814).
+	await window.evaluate(`location.hash = "#/quest?id=f1-score-keeper"`);
+	await waitForEditor(window.getByTestId("build-quest"));
+	await expect(window.getByTestId("run-result")).toContainText("Last submit: did not compile");
+	await expect(window.getByTestId("build-log")).toContainText("error");
+});
+
 test("two failed submits offer the Parsons fallback, which opens a one-item drill", async () =>
 {
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
@@ -520,6 +545,14 @@ test("two failed submits offer the Parsons fallback, which opens a one-item dril
 	await window.getByTestId("submit-button").click();
 	await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "false", { timeout: 20_000 });
 	await expect(window.getByTestId("loot-next")).toBeFocused();
+
+	// Coming back to the window refetches in the background; that must neither disable Next nor take focus from where the learner left it (A817).
+	await window.getByTestId("loot-improve").focus();
+	await window.evaluate("window.dispatchEvent(new Event('focus'))");
+	await window.waitForTimeout(500);
+	await expect(window.getByTestId("loot-improve")).toBeFocused();
+	await expect(window.getByTestId("loot-next")).toBeEnabled();
+
 	await window.getByTestId("loot-improve").click();
 	await waitForEditor(window.getByTestId("build-quest"));
 	await expect(window.getByTestId("run-result")).toHaveAttribute("data-source", "submit");

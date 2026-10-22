@@ -1268,3 +1268,9 @@ total                                       39.2  PASSED
 - What changed: the run column now also reads the last Submit from your saved attempts (the save already keeps each Submit's result), so after a reload or restart it still says "Last submit: did not compile" with the log. Next takes the keyboard as soon as it knows where it goes, so Enter moves on again. Review dates now read like "Next reviews due now, tomorrow and in 5 days": each day once, no counts, and anything already due says "due now". The sample data keeps past due times and each Submit's result the way the real save does.
 - Proof (rebased on main 7798025): `npm run typecheck` passes; `npm test` 71 files, 857 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 27 passed, three runs in a row. A reload cannot be shown with the sample data (it lives in the page), so unit tests cover it.
 - Decisions made: A814 to A816.
+
+### Fix round 2
+- What the reviewer asked for: coming back to the window (for example from Unreal) briefly disabled Next and then gave it the keyboard again, so the next Enter could skip ahead; and an end-to-end check of the last Submit coming back from the save.
+- What changed: Next is worked out once when the loot screen opens and then stays put; switching back to the window no longer moves the keyboard. The end-to-end flow now submits a quest that does not compile, submits another quest, goes back, and finds "Last submit: did not compile" with the log, read from the save. A true restart is covered by M2.4's real-bridge relaunch.
+- Proof: `npm run typecheck` passes; `npm test` 71 files, 857 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 28 passed, three runs in a row.
+- Decisions made: A817 and A818.

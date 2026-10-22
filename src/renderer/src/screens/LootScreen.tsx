@@ -1,6 +1,6 @@
 // The loot screen after a graded attempt: the score counting up, XP itemized, everything that changed, the review, the alternative after a pass, and Improve, See it run, Next.
 import { ArrowRightIcon, MonitorPlayIcon, WrenchIcon } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useNavigate, useRouteParameters } from "@/app/router/useRoute";
 import { AppErrorView } from "@/components/AppErrorView";
@@ -39,13 +39,26 @@ export function LootScreen()
 	const openEditor = useDojoAction((client, id: string) => client.openEditor(id), [QUERY_KEYS.environment]);
 	const retry = useDojoAction((client, attemptId: string) => client.retryReview(attemptId), [QUERY_KEYS.progress]);
 
-	// Next waits for the map and the fresh availability, so it never flashes "Back to the map" before the next quest is known.
-	const nextKnown = packs.data !== undefined && availability.data !== undefined && !availability.isLoading;
+	// Next waits for the map and the first availability fetch since this screen opened, so it never flashes "Back to the map" before the next quest is known.
+	// After that it stays known: a background refetch (window focus) neither disables it nor moves the keyboard (A817).
+	const sawAvailabilityFetch = useRef(false);
+	const [nextKnown, setNextKnown] = useState(false);
+	const focusedNext = useRef(false);
 
-	// Next takes the keyboard once it knows where it goes (a disabled button cannot hold focus), so Enter moves on.
+	if (availability.isLoading) sawAvailabilityFetch.current = true;
+
 	useEffect(() =>
 	{
-		if (nextKnown) nextButton.current?.focus();
+		if (!nextKnown && sawAvailabilityFetch.current && !availability.isLoading && availability.data !== undefined && packs.data !== undefined) setNextKnown(true);
+	}, [nextKnown, availability.isLoading, availability.data, packs.data]);
+
+	// Next takes the keyboard once, when it first becomes known (a disabled button cannot hold focus), so Enter moves on.
+	useEffect(() =>
+	{
+		if (!nextKnown || focusedNext.current) return;
+
+		focusedNext.current = true;
+		nextButton.current?.focus();
 	}, [nextKnown]);
 
 	if (!entry || entry.quest.id !== questId)

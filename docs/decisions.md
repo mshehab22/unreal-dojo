@@ -4,6 +4,12 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A818 2026-10-21 The stored-attempt path is tested end to end without a reload (M2.2b fix round 2, Lead request)
+The fake's state lives in the page, so a reload cannot show A814. The e2e drives the same path instead: a Submit of f1-score-keeper that does not compile, then a Submit of f1-practice-bell (which replaces the loot hand-off), then back to f1-score-keeper, where the run column must say "Last submit: did not compile" with the error in the build log. A true restart is covered by M2.4's real-bridge relaunch. Reverse cost: none.
+
+### A817 2026-10-21 Next is known once and focused once (M2.2b fix round 2, builder-ui-quests)
+A815 tied Next to `!availability.isLoading`, so every window-focus refetch disabled Next for a moment and then focused it again, pulling the keyboard away from Improve or the reflection box. Now Next becomes known after the first availability fetch since the loot screen opened (the same pattern as `BuildQuestView`'s fresh read) and stays known; background refetches neither disable it nor move focus. It is focused a single time, behind a ref guard. The e2e focuses Improve, sends a window focus event, and expects Improve to keep focus. Reverse cost: none.
+
 ### A816 2026-10-21 Next reviews name each day once, with no counts; past times read "due now" (M2.2b fix round 1, Lead decision)
 A811's counts ("3 reviews tomorrow") claimed more than the data holds: `nextDueDates` carries only the three soonest times. Now the line reads "Next reviews due now, tomorrow and in 5 days": each distinct day once, in time order, no counts, keeping the "Next reviews" label so it never reads like the "Next: <quest>" button. Any past or current time reads "due now" (`lib/dueGroups.ts`; the shared `formatDue` used by the Studio is unchanged). The fake now answers `nextDueDates` as the progress service does, the three soonest schedule times with past ones kept. Reverse cost: none.
 
