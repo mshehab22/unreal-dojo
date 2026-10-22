@@ -151,8 +151,8 @@ Stages: waiting, building, review, fixes, testing, merged. Only the Lead edits t
 Mohammad asked to pause all work. Every builder was told to stop at a safe point, release the engine lock, commit work in progress on its own branch (no merges), and stay idle; reviewers were told to stop and hand back partial findings. Main is green at the last merge (M2.4 follow-up). To resume, the Lead re-sends each task from the board below:
 - In review when paused (reviews restart from the partial reports): M1.6g @ f76037a, M2.1e @ cacb7ac, M3.4 @ 2d320b9, Pack 2 World 9 @ 9131a6f.
 - M2.1e partial review: all eight issues fixed and every default check passes on a merge with main (28 of 28 e2e, hover test 15 of 15). Left: the engine integration tests under the lock (compare against main's 3 known createSandbox failures); PASS if no new failures. One small non-blocking fix to send with the merge: `SandboxBuildTracker.receive()` should reset `failedChecks` and `isUnreachable`.
-- In fixes: Pack 1 World 6 (m4-p1-world6, five fixes sent), M1.3c (createSandbox integration failure, cause not yet reported).
-- Building: Pack 2 World 10 (m4-p2-world10), Pack 3 World 6 (m3-2-pack3-world6, paused behind World 6 fixes).
+- In fixes: Pack 1 World 6 at 8a492c0 (fixes 1 to 4 done, verifier and tests pass; left: the engine proof with the reference and an `XPCurve != nullptr` variant, each twice in one editor, then main's --engine run and fix 5, the real numbers in iterations). M1.3c (createSandbox integration failure, cause not yet reported).
+- Building: Pack 2 World 10 (m4-p2-world10), Pack 3 World 6 at WIP 79c9373 (pack `mechanics`, world `delegates`, 7 quests, all references and the boss director and tests written, decisions A870 to A873, originality checked; left: first engine build, mutations, starters, --engine, iterations, typecheck and test, rebase).
 - Waiting on others: M2.2c drill copy (after M1.6g), M3.4b screens (after M3.4), the full real-engine learner-flow rerun (after M1.6g, M2.1e, M1.3c).
 
 ## Ready to playtest
