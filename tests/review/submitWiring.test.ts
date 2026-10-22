@@ -244,7 +244,7 @@ describe("AttemptReviewService", () =>
 		const { service, received } = followUps();
 
 		await expect(service.explainFinding({ attemptId: "attempt-1", findingIndex: 0 })).resolves.toBe("Because nothing hears it.");
-		expect(received.explain[0]).toEqual({ cacheKey: "attempt-1:2026-10-21T10:00:00.000Z:0", brief: "Build a health component.", finding: codeReview("claude-code").findings[0], files: { "Health.cpp": "// code" } });
+		expect(received.explain[0]).toEqual({ cacheKey: expect.stringMatching(/^attempt-1:2026-10-21T10:00:00\.000Z:0:[0-9a-f]{16}$/), brief: "Build a health component.", finding: codeReview("claude-code").findings[0], files: { "Health.cpp": "// code" } });
 	});
 
 	it("grades a reflection answer against the review's question with its summary as context", async () =>
@@ -309,6 +309,7 @@ describe("review IPC routing", () =>
 
 			return { run: sampleRun(), outcome: OUTCOME, review: codeReview("claude-code") } as Awaited<ReturnType<ReviewHandlerService["submitQuest"]>>;
 		},
+		retryReview: async (attemptId) => ({ ...codeReview("claude-code"), summary: `retried ${attemptId}` }),
 	};
 
 	it("answers the four review methods from the review service", async () =>
@@ -422,6 +423,7 @@ describe("M1.7c fix round 1", () =>
 
 				return { run: sampleRun(), outcome: OUTCOME } as Awaited<ReturnType<ReviewHandlerService["submitQuest"]>>;
 			},
+			retryReview: async () => { throw new Error("not used"); },
 		};
 
 		const handlersByChannel = new Map<string, WrappedHandler>();

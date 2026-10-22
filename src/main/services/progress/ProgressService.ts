@@ -18,6 +18,7 @@ import type {
 	RulesSnapshot,
 } from "@shared/types/progress";
 import type { CodeReview } from "@shared/types/review";
+import type { RunResult } from "@shared/types/run";
 
 import { AppErrorException } from "../../errors/AppErrorException";
 import { AttemptFileRules } from "./AttemptFileRules";
@@ -68,6 +69,9 @@ export interface AttemptInput
 
 	/** The files of a Submit, stored on the attempt record within the caps of `AttemptFileRules` (A467). Ignored when `isSubmit` is false. */
 	files?: Record<string, string>;
+
+	/** The engine's verdict of a Submit, stored on the attempt record with its compiler output capped, so Retry review needs no new build (A740). Ignored when `isSubmit` is false. */
+	run?: RunResult;
 
 	/** Items to review in the same step before the attempt is priced, for example a concept quest's terms, so unlocks they cause appear in the outcome. */
 	itemReviews?: { itemId: string; quality: number; context?: ReviewContext }[];
@@ -461,6 +465,7 @@ export class ProgressService
 			const attempt: AttemptRecord = { attemptId: `attempt-${before.attempts.length + 1}`, questId: quest.id, at: now.toISOString(), score: input.score, passed: input.passed, xpGained: xp.total };
 			if (input.review) attempt.review = structuredClone(input.review);
 			if (input.isSubmit && input.files) attempt.files = this.attemptFileRules.capFiles(input.files);
+			if (input.isSubmit && input.run) attempt.run = this.attemptFileRules.capRun(input.run);
 			next.attempts = this.attemptFileRules.pruneOlderDetails([...next.attempts, attempt], quest.id);
 
 			const unlockedQuestIds = new UnlockGraph(allQuests).newlyUnlocked(this.unlockState(unlockBaseline), this.unlockState(next));
@@ -629,6 +634,21 @@ export class ProgressService
 
 				return this.withQuest(progress, questId, { status, submittedPlan: structuredClone(plan), breakdownPlan: structuredClone(plan) });
 			});
+		});
+	}
+
+	/** Replaces the stored code review of one attempt after Retry review (A741). Score, pass, XP, and every other part of the save stay as they are. Answers the updated attempt. */
+	replaceAttemptReview(attemptId: string, review: CodeReview): Promise<AttemptRecord>
+	{
+		return this.enqueue(async () =>
+		{
+			const current = this.progress.attempts.find((attempt) => attempt.attemptId === attemptId);
+			if (!current) throw new AppErrorException("attempt-not-found", "That attempt is not in your save.", "Open the quest again and submit it to get a fresh review.", attemptId);
+
+			const updated: AttemptRecord = { ...current, review: structuredClone(review) };
+			await this.commit((progress) => ({ ...progress, attempts: progress.attempts.map((attempt) => (attempt.attemptId === attemptId ? updated : attempt)) }));
+
+			return structuredClone(updated);
 		});
 	}
 

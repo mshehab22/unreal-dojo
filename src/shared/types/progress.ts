@@ -135,6 +135,9 @@ export interface AttemptRecord
 
 	/** The files submitted, on build, refactor, and boss Submits only, capped and kept for the quest's last five such attempts (A467). */
 	files?: Record<string, string>;
+
+	/** The engine's verdict of the Submit, so Retry review can review the stored files again without a new build (A740). Compiler output capped; pruned with `files` and `review`. */
+	run?: RunResult;
 }
 
 /** One spaced review of one item, appended forever so FSRS can replace SM-2 later without a migration. */

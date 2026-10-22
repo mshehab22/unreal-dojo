@@ -11,16 +11,15 @@ import { Button } from "@/components/ui/button";
 import { QUERY_KEYS } from "@/data/queryKeys";
 import { useDojoAction } from "@/data/useDojoAction";
 import { useDojoQuery } from "@/data/useDojoQuery";
-import { useQuestRun } from "@/data/useQuestRun";
 import { indexQuests } from "@/lib/questIndex";
 
 import { BreakdownGradeSection } from "./quests/loot/BreakdownGradeSection";
 import { CodeReviewSection } from "./quests/loot/CodeReviewSection";
 import { ConceptResultsSection } from "./quests/loot/ConceptResultsSection";
-import { mergeRetriedReview } from "./quests/loot/mergeRetriedReview";
 import { ProgressChanges } from "./quests/loot/ProgressChanges";
 import { ScoreCountUp } from "./quests/loot/ScoreCountUp";
 import { useLootStore } from "./quests/loot/useLootStore";
+import { withRetriedReview } from "./quests/loot/withRetriedReview";
 import { XpBreakdownList } from "./quests/loot/XpBreakdownList";
 
 /** Shows the latest attempt's loot for `?quest=`. Without one (a reload), it says so and points back. */
@@ -34,7 +33,7 @@ export function LootScreen()
 	const packs = useDojoQuery(QUERY_KEYS.packs, (client) => client.listPacks());
 	const patternCards = useDojoQuery(QUERY_KEYS.patternCards, (client) => client.getPatternCards());
 	const openEditor = useDojoAction((client, id: string) => client.openEditor(id), [QUERY_KEYS.environment]);
-	const retry = useQuestRun((client, request) => client.submitQuest(request), [QUERY_KEYS.progress]);
+	const retry = useDojoAction((client, attemptId: string) => client.retryReview(attemptId), [QUERY_KEYS.progress]);
 
 	if (!entry || entry.quest.id !== questId)
 	{
@@ -56,14 +55,14 @@ export function LootScreen()
 	const questTitles = new Map([...(index?.values() ?? [])].map((found) => [found.quest.id, found.quest.title]));
 	const alternative = quest.kind === "build" || quest.kind === "refactor" ? quest.alternative : quest.kind === "breakdown" ? quest.alternativeNote : null;
 
-	/** Submits the same files again for the review that timed out, and shows the new loot in place. */
+	/** Asks the reviewer again about this attempt's stored files, with no new build, and shows the new review in place (A740). */
 	const retryReview = async (): Promise<void> =>
 	{
 		if (detail.kind !== "build") return;
 
-		const again = await retry.start(quest.id, detail.files);
+		const review = await retry.run(outcome.attempt.attemptId);
 
-		if (again) showLoot(mergeRetriedReview(entry, again, detail.files));
+		if (review) showLoot(withRetriedReview(entry, review));
 	};
 
 	return (
@@ -87,7 +86,7 @@ export function LootScreen()
 						<p className="text-sm text-paper-muted">
 							{detail.run.compiled ? `Tests ${detail.run.testsPassed} of ${detail.run.testsTotal} passed.` : "It did not compile, so there is no review this time. The compiler output is on the quest screen."}
 						</p>
-						{detail.review && <CodeReviewSection review={detail.review} attemptId={outcome.attempt.attemptId} onRetryReview={() => void retryReview()} isRetrying={retry.status === "running"} />}
+						{detail.review && <CodeReviewSection review={detail.review} attemptId={outcome.attempt.attemptId} onRetryReview={() => void retryReview()} isRetrying={retry.isPending} />}
 						{retry.error && <AppErrorView error={retry.error} onRetry={() => void retryReview()} />}
 					</>
 				)}

@@ -11,7 +11,7 @@ import { FakeDojoApi } from "../../src/renderer/src/data/fake/FakeDojoApi";
 import { judgeBuild, testNamesIn } from "../../src/renderer/src/data/fake/FakeBuildJudge";
 import { gradeParsons, gradeQuestion } from "../../src/renderer/src/data/fake/FakeItemGrader";
 import { matchRequiredPieces } from "../../src/renderer/src/data/fake/FakeReviews";
-import { mergeRetriedReview } from "../../src/renderer/src/screens/quests/loot/mergeRetriedReview";
+import { withRetriedReview } from "../../src/renderer/src/screens/quests/loot/withRetriedReview";
 import { buildFakeWorldFixture } from "../../tools/fake/buildFakeWorldFixture";
 
 /** The training dummy's files with both gaps filled. */
@@ -154,30 +154,30 @@ describe("fake quest flows", () =>
 	});
 });
 
-describe("Retry review on the loot screen (A356)", () =>
+describe("Retry review on the loot screen (A740, A741)", () =>
 {
-	it("keeps a paid pass's loot and takes the new review; a failed first attempt shows the retry's own loot", async () =>
+	it("reviews the recorded attempt again without a new attempt; the loot, score, pass, and attempt id stay, and only the review changes", async () =>
 	{
 		const fake = new FakeDojoApi("quests");
 		await fake.updateSettings({ reviewProvider: "claude-code" });
 		const files = await solvedDummyFiles(fake);
 		const quest = await fake.getQuest("f1-training-dummy");
 		const first = await fake.submitQuest({ runId: "a", questId: quest.id, files });
-		const retried = await fake.submitQuest({ runId: "b", questId: quest.id, files });
-		const previous = { quest, outcome: first.outcome, detail: { kind: "build" as const, run: first.run, files } };
+		const attemptsBefore = (await fake.getProgress()).attempts.length;
 
-		const merged = mergeRetriedReview(previous, retried, files);
+		expect(first.review?.retryReviewSuggested).toBe(true);
 
-		expect(first.outcome.xp.total).toBeGreaterThan(0);
-		expect(retried.outcome.xp.total).toBe(0);
-		expect(merged.outcome.xp.total).toBe(first.outcome.xp.total);
-		expect(merged.outcome.attempt.attemptId).toBe(retried.outcome.attempt.attemptId);
-		expect(merged.outcome.attempt.score).toBe(first.outcome.attempt.score);
-		expect(merged.outcome.attempt.passed).toBe(true);
-		expect(merged.detail.kind === "build" && merged.detail.review?.provider).toBe("claude-code");
+		const review = await fake.retryReview(first.outcome.attempt.attemptId);
+		const entry = withRetriedReview({ quest, outcome: first.outcome, detail: { kind: "build", run: first.run, files, ...(first.review ? { review: first.review } : {}) } }, review);
+		const progress = await fake.getProgress();
 
-		const failedFirst = { ...previous, outcome: { ...first.outcome, attempt: { ...first.outcome.attempt, passed: false } } };
-		expect(mergeRetriedReview(failedFirst, retried, files).outcome).toBe(retried.outcome);
+		expect(review.provider).toBe("claude-code");
+		expect(progress.attempts).toHaveLength(attemptsBefore);
+		expect(progress.attempts.at(-1)?.review?.provider).toBe("claude-code");
+		expect(entry.outcome.xp.total).toBe(first.outcome.xp.total);
+		expect(entry.outcome.attempt).toMatchObject({ attemptId: first.outcome.attempt.attemptId, score: first.outcome.attempt.score, passed: first.outcome.attempt.passed });
+		expect(entry.detail.kind === "build" && entry.detail.review?.provider).toBe("claude-code");
+		await expect(fake.retryReview("attempt-missing")).rejects.toMatchObject({ code: "attempt-not-found" });
 	}, 20_000);
 });
 

@@ -3,7 +3,7 @@ import type { ContentStatus, GlossaryAlias, LearnerQuest, LearnerWorld, PackOutl
 import type { GlossaryEntry, PatternCard } from "@shared/types/content";
 import type { EngineInstall, EnvironmentStatus, SandboxSetupResult, ToolchainCheck } from "@shared/types/engine";
 import type { SubmitOutcome } from "@shared/types/progress";
-import type { ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
+import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
 import type { BuildProgressEvent, RunRequest, RunResult, SyntaxCheckResult } from "@shared/types/run";
 import type { Settings, SettingsPatch } from "@shared/types/settings";
 
@@ -97,6 +97,9 @@ export interface ReviewHandlerService
 
 	/** Runs, reviews, and records a build or refactor Submit. `onRecording` ends the run in the registry once recording starts, so a late cancel cannot report a saved Submit as cancelled (A601). */
 	submitQuest(request: RunRequest, onProgress: ProgressListener, signal: AbortSignal, onRecording?: () => void): Promise<SubmitOutcome>;
+
+	/** Reviews an earlier Submit's stored files and run again, with no new build, and replaces its stored review (A740, A741). */
+	retryReview(attemptId: string): Promise<CodeReview>;
 }
 
 /** The part of SettingsService the handlers use, so tests can pass a fake. */
@@ -304,5 +307,6 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		testClaudeCode: { argumentSchemas: [], handle: () => dependencies.getReviewHandlers().testClaudeCode() },
 		explainFinding: { argumentSchemas: [findingExplanationRequestSchema], handle: (request) => dependencies.getReviewHandlers().explainFinding(request) },
 		answerReflection: { argumentSchemas: [reflectionAnswerRequestSchema], handle: (request) => dependencies.getReviewHandlers().answerReflection(request) },
+		retryReview: { argumentSchemas: [idSchema], handle: (attemptId) => dependencies.getReviewHandlers().retryReview(attemptId) },
 	};
 }

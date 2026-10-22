@@ -1,4 +1,6 @@
 // The two follow-ups on a stored code review: "why is this a finding?" and grading the learner's answer to the reflection question.
+import { createHash } from "node:crypto";
+
 import type { AttemptRecord } from "@shared/types/progress";
 import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest } from "@shared/types/review";
 
@@ -36,7 +38,7 @@ export class AttemptReviewService
 	{
 	}
 
-	/** Explains in plain English why a finding is a finding. Cached by attempt id, attempt time, and finding index. */
+	/** Explains in plain English why a finding is a finding. Cached by attempt id, attempt time, finding index, and the finding's own text. */
 	async explainFinding(request: FindingExplanationRequest): Promise<string>
 	{
 		const { attempt, review } = this.reviewedAttempt(request.attemptId);
@@ -44,9 +46,11 @@ export class AttemptReviewService
 
 		if (!finding) throw new AppErrorException("attempt-not-found", "That finding is not in this review.", "Open the review again and pick a finding from the list.", `finding ${request.findingIndex} of ${review.findings.length}`);
 
+		// Attempt ids restart at attempt-1 after a progress reset, so the attempt's time is part of the key (A600); Retry review replaces the findings, so their text is too (A742).
+		const findingHash = createHash("sha256").update(JSON.stringify(finding)).digest("hex").slice(0, 16);
+
 		return this.graders.explainFinding({
-			// Attempt ids restart at attempt-1 after a progress reset, so the attempt's time is part of the key (A600).
-			cacheKey: `${request.attemptId}:${attempt.at}:${request.findingIndex}`,
+			cacheKey: `${request.attemptId}:${attempt.at}:${request.findingIndex}:${findingHash}`,
 			brief: await this.sources.questBrief(attempt.questId),
 			finding,
 			files: this.sources.submittedFiles(attempt),
