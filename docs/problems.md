@@ -47,3 +47,5 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 (Move entries here with the fix in one line.)
 
 - 2026-10-21, first-run build hang seen once (M2.4, ui-core): UBT succeeded in 25 s but the renderer got only 3 progress events and never the createSandbox answer, and sat at 0:00 for 20 minutes while other UBT runs were active. Not reproduced in four later runs. Investigation and a status-query fallback are in M2.1e. Review: cause still unknown; a known silent case is Build.sh waiting on `-WaitMutex` while another UBT runs. M2.1e adds main-process run logs so the next one can be traced.
+
+- 2026-10-21, engine integration tests fail on main (unreal-pipeline, M1.3c): with DOJO_ENGINE_ROOT set, the three createSandbox tests fail; the cold build answers not ok in about 220 ms while the quest runs pass. The default `npm test` skips these, so merges did not catch it. Reviewers now run them when a branch touches IPC or the services they use.
