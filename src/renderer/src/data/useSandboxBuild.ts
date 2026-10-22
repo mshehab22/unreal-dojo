@@ -1,71 +1,45 @@
-// Runs one sandbox create or rebuild: makes the run id, follows its progress, keeps the result, and can cancel it.
-import { useCallback, useState } from "react";
+// Runs one sandbox create or rebuild for a screen through a SandboxBuildTracker, which recovers lost events and lost answers (A822).
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { SandboxSetupResult } from "@shared/types/engine";
-import type { AppError } from "@shared/types/errors";
-import type { BuildProgressEvent } from "@shared/types/run";
 
 import { dojo } from "./activeClient";
 import type { DojoClient } from "./DojoClient";
 import { queryCache } from "./QueryCache";
 import { QUERY_KEYS } from "./queryKeys";
-import { toAppError } from "./toAppError";
-import { useBuildProgress } from "./useBuildProgress";
+import { SandboxBuildTracker, type SandboxBuildSnapshot, type SandboxBuildStatus } from "./SandboxBuildTracker";
 
-/** Where a sandbox build stands. */
-export type SandboxBuildStatus = "idle" | "running" | "succeeded" | "failed" | "cancelled" | "errored";
+export type { SandboxBuildStatus };
 
 /** The build's state and controls. */
-export interface SandboxBuild
+export interface SandboxBuild extends SandboxBuildSnapshot
 {
-	status: SandboxBuildStatus;
-	progress: BuildProgressEvent | null;
-	result: SandboxSetupResult | null;
-	error: AppError | null;
 	start: () => void;
 	cancel: () => void;
+	checkStatus: () => void;
 }
 
-/** Wraps `operation(client, runId)` (createSandbox or rebuildSandbox) as a startable, cancellable build. */
+/** Wraps `operation(client, runId)` (createSandbox or rebuildSandbox) as a startable, cancellable, self-checking build. */
 export function useSandboxBuild(operation: (client: DojoClient, runId: string) => Promise<SandboxSetupResult>): SandboxBuild
 {
-	const [runId, setRunId] = useState<string | null>(null);
-	const [status, setStatus] = useState<SandboxBuildStatus>("idle");
-	const [result, setResult] = useState<SandboxSetupResult | null>(null);
-	const [error, setError] = useState<AppError | null>(null);
-	const progress = useBuildProgress(runId);
+	const trackerReference = useRef<SandboxBuildTracker | null>(null);
+	const [snapshot, setSnapshot] = useState<SandboxBuildSnapshot | null>(null);
 
-	const start = useCallback(() =>
+	// One tracker for the component's life; the operation is fixed for it too.
+	trackerReference.current ??= new SandboxBuildTracker(dojo(), (runId) => operation(dojo(), runId), (next) =>
 	{
-		const nextRunId = crypto.randomUUID();
+		setSnapshot(next);
 
-		setRunId(nextRunId);
-		setStatus("running");
-		setResult(null);
-		setError(null);
+		if (next.status === "succeeded" || next.status === "failed") void queryCache.invalidate([QUERY_KEYS.settings, QUERY_KEYS.environment]);
+	});
 
-		operation(dojo(), nextRunId).then(
-			(answer) =>
-			{
-				setResult(answer);
-				setStatus(answer.ok ? "succeeded" : "failed");
-				void queryCache.invalidate([QUERY_KEYS.settings, QUERY_KEYS.environment]);
-			},
-			(thrown: unknown) =>
-			{
-				const appError = toAppError(thrown);
+	const tracker = trackerReference.current;
 
-				setError(appError);
-				setStatus(appError.code === "run-cancelled" ? "cancelled" : "errored");
-			},
-		);
-		// The operation is fixed for the component's life.
-	}, []);
+	useEffect(() => () => tracker.dispose(), [tracker]);
 
-	const cancel = useCallback(() =>
-	{
-		if (runId) void dojo().cancelRun(runId);
-	}, [runId]);
+	const start = useCallback(() => tracker.start(), [tracker]);
+	const cancel = useCallback(() => tracker.cancel(), [tracker]);
+	const checkStatus = useCallback(() => void tracker.checkStatus(), [tracker]);
 
-	return { status, progress, result, error, start, cancel };
+	return { ...(snapshot ?? tracker.current()), start, cancel, checkStatus };
 }

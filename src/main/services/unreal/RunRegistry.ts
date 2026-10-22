@@ -1,11 +1,51 @@
 // Tracks running operations by the renderer's run id so `cancelRun` can stop them, and so quitting stops them all.
+import type { BuildProgressEvent, RunAnswer, RunStatus } from "@shared/types/run";
+
 import { AppErrorException } from "../../errors/AppErrorException";
+
+/** How many finished runs are remembered for `status`, newest kept. */
+const REMEMBERED_FINISHED_RUNS = 20;
 
 /** One abort controller per running operation. */
 export class RunRegistry
 {
 	private readonly controllers = new Map<string, AbortController>();
+	private readonly lastEvents = new Map<string, BuildProgressEvent>();
+	private readonly finished = new Map<string, RunAnswer>();
 	private settleWaiters: (() => void)[] = [];
+
+	/** Remembers the latest progress event of a running operation, for `status`. */
+	recordProgress(event: BuildProgressEvent): void
+	{
+		if (this.controllers.has(event.runId)) this.lastEvents.set(event.runId, event);
+	}
+
+	/** Remembers how a run ended, so a window that missed the answer can still read it (A820). Only the newest few are kept. */
+	recordAnswer(runId: string, answer: RunAnswer): void
+	{
+		this.finished.delete(runId);
+		this.finished.set(runId, answer);
+
+		for (const oldest of this.finished.keys())
+		{
+			if (this.finished.size <= REMEMBERED_FINISHED_RUNS) break;
+
+			this.finished.delete(oldest);
+			this.lastEvents.delete(oldest);
+		}
+	}
+
+	/** Where a run stands: running with its last event, finished with its answer, or unknown. */
+	status(runId: string): RunStatus
+	{
+		const lastEvent = this.lastEvents.get(runId) ?? null;
+		const answer = this.finished.get(runId);
+
+		if (this.controllers.has(runId)) return { runId, state: "running", lastEvent, answer: null };
+		if (answer) return { runId, state: "finished", lastEvent, answer };
+
+		return { runId, state: "unknown", lastEvent: null, answer: null };
+	}
 
 	/** Registers a run and returns its cancel signal. Throws `run-already-exists` for a run id in use. */
 	begin(runId: string): AbortSignal

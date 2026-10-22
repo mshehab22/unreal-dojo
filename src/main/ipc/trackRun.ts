@@ -1,6 +1,9 @@
-// Runs a long operation under the renderer's run id: registers it for cancel, stamps its progress events, and turns a cancel into `run-cancelled`.
+// Runs a long operation under the renderer's run id: registers it for cancel, stamps its progress events, turns a cancel into `run-cancelled`,
+// and remembers the last event and the answer for `getRunStatus` (A820).
+import type { AppError } from "@shared/types/errors";
 import type { BuildProgressEvent } from "@shared/types/run";
 
+import { AppErrorException } from "../errors/AppErrorException";
 import { runCancelled } from "../services/unreal/sandboxErrors";
 import type { ProgressListener } from "../services/unreal/ProgressUpdate";
 import type { RunRegistry } from "../services/unreal/RunRegistry";
@@ -13,14 +16,41 @@ export async function trackRun<Value>(runId: string, registry: RunRegistry, send
 
 	try
 	{
-		const value = await operation((update) => sendProgress({ ...update, runId, elapsedMs: Date.now() - startedAt }), signal);
+		const value = await operation((update) =>
+		{
+			const event = { ...update, runId, elapsedMs: Date.now() - startedAt };
+
+			registry.recordProgress(event);
+			sendProgress(event);
+		}, signal);
 
 		if (signal.aborted) throw runCancelled();
 
+		registry.recordAnswer(runId, { ok: true, value });
+
 		return value;
+	}
+	catch (thrown)
+	{
+		registry.recordAnswer(runId, { ok: false, error: rememberedError(thrown) });
+
+		throw thrown;
 	}
 	finally
 	{
 		registry.end(runId);
 	}
+}
+
+/** The AppError a failed run is remembered with; anything that is not one is remembered as `unexpected`, as the IPC wrapper reports it. */
+function rememberedError(thrown: unknown): AppError
+{
+	if (thrown instanceof AppErrorException) return { ...thrown.appError };
+
+	return {
+		code: "unexpected",
+		message: "Something went wrong in Unreal Dojo while doing that.",
+		suggestedAction: "Try again. If it keeps happening, restart the app and report it with the details.",
+		detail: thrown instanceof Error ? thrown.message : String(thrown),
+	};
 }

@@ -253,6 +253,7 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		},
 		checkSnippetSyntax: { argumentSchemas: [syntaxCheckRequestSchema], handle: (request) => dependencies.getQuestRunService().checkSnippetSyntax(request.code) },
 		cancelRun: { argumentSchemas: [idSchema], handle: (runId) => dependencies.runRegistry.cancel(runId) },
+		getRunStatus: { argumentSchemas: [idSchema], handle: (runId) => dependencies.runRegistry.status(runId) },
 
 		getProgress: { argumentSchemas: [], handle: () => progressService.getProgress() },
 		getRules: { argumentSchemas: [], handle: () => progressService.getRules() },

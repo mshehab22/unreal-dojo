@@ -6,6 +6,7 @@ import type { EngineInstall, SandboxFolderChoice } from "@shared/types/engine";
 
 import { AppErrorView } from "@/components/AppErrorView";
 import { BuildProgressView } from "@/components/BuildProgressView";
+import { QuietBuildNotice } from "@/components/QuietBuildNotice";
 import { Button } from "@/components/ui/button";
 import { useSandboxBuild } from "@/data/useSandboxBuild";
 import { buildOutcome } from "@/lib/buildOutcome";
@@ -60,7 +61,8 @@ export function BuildStep({ engine, folder, onBack, onNext }: BuildStepProps)
 				</>
 			}
 		>
-			{build.status !== "idle" && build.status !== "errored" && <BuildProgressView event={build.progress} outcome={buildOutcome(build.status)} />}
+			{build.status !== "idle" && build.status !== "errored" && <BuildProgressView event={build.progress} outcome={buildOutcome(build.status)} elapsedMs={build.elapsedMs} />}
+			{build.status === "running" && build.isQuiet && <QuietBuildNotice silentForMs={build.silentForMs} isChecking={build.isChecking} onCheck={build.checkStatus} />}
 			{build.status === "idle" && (
 				<p className="rounded-lg border border-line bg-raised/50 p-4 text-sm text-paper-muted">
 					You can keep using your computer while it builds. Cancelling is safe; the next start picks up from a clean copy.

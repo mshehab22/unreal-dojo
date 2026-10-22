@@ -140,6 +140,15 @@ Options: an app flag or environment variable that calls `app.setPath("userData",
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A822 2026-10-21 The window's build view recovers on its own instead of waiting for events (M2.1e, builder-ui-core)
+The first-run build relied on two things only: progress events and the `createSandbox` answer. Its clock moved only with events, so when both stopped the screen sat at "0:00" forever, with nothing to press. Options: a longer wait with a timeout error (still no way to know the build passed); poll `getRunStatus` on a fixed timer from the start (traffic on every build); ask only when quiet. Chosen: `SandboxBuildTracker` subscribes before calling (so no early event is missed), ticks its own clock every second, marks the build quiet after 15 s without an event or a status answer, asks main then and every 15 s while quiet, and settles exactly once from whichever arrives first, the call's answer or a finished status. A run main no longer knows ends with a plain error and a restart. The screen shows "No word from the build for m:ss" with a Check status button. The tracker has no React in it, so the recovery is unit tested with a hand-moved clock. Reverse cost: low; the Settings rebuild uses the same hook.
+
+### A821 2026-10-21 A fake scenario where the first build goes quiet (M2.1e, builder-ui-core)
+To prove recovery end to end, the fake gained `first-build-goes-quiet`: it forwards only the three setup events, never answers `createSandbox`, but finishes the build and reports it through `getRunStatus` (answered after 2 s, so the quiet notice is visible). The e2e drives it from "Start the build" to "built". Reverse cost: none.
+
+### A820 2026-10-21 `getRunStatus(runId)`: main remembers each run's last event and its answer (M2.1e, builder-ui-core; touches shell-ipc)
+Investigating the tester's hang (UBT done in 25 s, the window stuck after 3 events for 20 min): main resolves the build on the process exit event and kills it after 15 minutes, so main answers within that time. A 20-minute freeze means the window lost the answer or stopped hearing, and it had no way to ask. Options: re-send progress on a timer; a status query. Chosen: the query, the smallest change. `RunRegistry` keeps each running run's last event and the answer of the newest 20 finished runs; `trackRun` records both; `getRunStatus` returns `{ runId, state: running | finished | unknown, lastEvent, answer }`, with `RunStatus` and `RunAnswer` in `src/shared/types/run.ts`. Shell-ipc files touched: `src/shared/ipc.ts`, `src/shared/types/run.ts`, `src/main/ipc/createHandlers.ts`, `src/main/ipc/trackRun.ts`, `src/main/services/unreal/RunRegistry.ts`, plus `docs/systems/app-shell.md`. Reverse cost: low.
+
 ### A789 2026-10-21 World 8 was built in this session's own worktree, from main at a825d04 (author-patterns, M4.P2.8)
 As in A769: the session's file tools write only inside its own worktree, so `m4-p2-world8` is checked out there. It was first cut from main at a825d04, the Lead's World 8 start commit one past the e5ab9e5 named in the brief. After World 7 and Pack 1 World 5 merged, the branch was rebased onto main at f39cb0d and `p8-many-kinds-one-toolbox` now requires World 7's first quest, `p7-flags-to-modes`. Reverse cost: one line.
 
@@ -169,6 +178,7 @@ Reverse cost: none.
 
 ### A780 2026-10-21 Decision block A780 to A799 from the Lead (author-patterns, M4.P2.8)
 Assigned under A71; this world uses A780 to A789. Reverse cost: none.
+
 ### A769 2026-10-21 World 7 was built in this session's own worktree (author-patterns, M4.P2.7)
 The brief asked for branch `m4-p2-world7` in its own worktree from main. A second worktree was created, but this session's file tools may only write inside the session's own worktree, so the branch was checked out there instead (the session's previous branch, `m4-p2-world6`, was merged and clean) and the extra worktree removed. The branch starts from main at 3136ecf, one Lead commit after the 4c20ec6 named in the brief. Reverse cost: none.
 
