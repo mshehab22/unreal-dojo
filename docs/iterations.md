@@ -1231,7 +1231,7 @@ total                                       39.2  PASSED
 - Also: new `abstract-specifier`, `blueprint-protected`, and `tactoriterator` glossary entries, and the card's two use cases and two new items (A788).
 - Proof, UE 5.8.3 on the MacBook Air, fresh copies of the sandbox template, commands from the unreal-pipeline spec, under the shared engine lock:
   - Reference solutions for the patterns worlds on this branch (1 to 6 and 8): build succeeded, 63 of 63 tests passed (9 new), no warnings.
-  - Starters: all compile; 52 of 63 fail. On the World 8 side, two tests pass on their starters, and each of the three quests still fails at least one test: the spike trap test (the spike trap is the worked quest's given model) and the hazard boulder test (working starter).
+  - Starters: all compile; 52 of 63 fail. On the World 8 side, three tests pass on their starters, and each of the three quests still fails at least one test: the spike trap test and the base-is-only-a-toolbox test (the worked quest gives that code), and the hazard boulder test (working starter). Count corrected by the Lead from the review.
   - The obvious chest (ignores TakeItem's answer): fails only `LockedWithoutAKey`. One unrelated engine warning (the iOS device probe on this Mac) landed on a World 2 test in that run.
   - Content verifier: no problems; no A72 warnings for World 8. `npm run typecheck` passes; `npm test` 838 passed, 24 skipped.
   - Originality: the World 8 quests, solutions, and card have no 6-word or 5-word run in common with the research's Subclass Sandbox section, after rewording.
