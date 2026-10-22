@@ -1351,5 +1351,23 @@ total                                       39.2  PASSED
 *The paid hint kept; the self-explanations were not (bug 1 below).*
 
 - Bugs found (sent to the Lead with owners): (1) on the real bridge the self-explanations of a build quest are never saved, so the gate locks again after a reload or restart (`ProgressService.saveQuestDraft` drops `selfExplanations`; the fake keeps them); (2) the World 1 term gate (fixed by A72); (3) with Tests-only review, a drill's explain items count as misses in the summary ("4 of 6", "2 items are due for review") although they are only self-checked and not scheduled; (4) a Submit that does not compile leaves no compiler output on the quest screen afterwards, only "not passed yet, score 0"; (5) the loot screen repeats "Next reviews tomorrow, tomorrow, tomorrow"; (6) the first-run build step hung once (above).
+- Known failures: three expectations the fixes will change are wrapped as known failures that name their task, so the spec can merge now: self-explanations survive a restart (M1.6g), a drill answered right reports nothing due for review when it had an explain item (M2.2b and M1.6g), and the loot screen lists each review date once (M2.2b). Each records an annotation while the bug stands and fails the run once the fix lands, as a reminder to make it a plain expectation. These wrappers were added after the passing run and have not yet run against the engine; the next full run (after M1.6g, M2.2b, and M2.1e merge) covers them.
+
+### Ready to playtest: the first world, start to finish (real engine)
+What you need: this Mac with Unreal Engine 5.8 at `~/Applications/UE_5.8` (already there), about 45 minutes, and no other Unreal work running.
+1. Start from a fresh app: in Terminal, `cd ~/Projects/unreal-dojo`, `npm install`, `npm run build`, then `npm run dev`. If the app opens on "Welcome back", go to Settings, press "Reset progress" and confirm, then go to Title.
+2. Title: type a studio name, press "Set up your studio".
+3. Pick the engine: the list shows UE 5.8.3 at `~/Applications/UE_5.8`; select it and press "Use this engine". A note about the Metal toolchain is fine.
+4. Choose a folder: press "Choose a folder", pick or create an empty folder (for example `~/DojoPlaytest`), then "Use this folder".
+5. Press "Start the build". It copies the sandbox and builds it once, usually under a minute on this Mac (the screen allows up to 15). Press "Continue" when it says it passed. If it sits at "Starting the first full build" with the clock at 0:00 for more than two minutes, that is bug M2.1e: note it, quit, and start again.
+6. "Open the editor once": press "Skip for now" (or "Open the editor" to see it launch, which takes a few minutes). Then press "Enter your studio".
+7. Settings: under Review provider choose "Tests only" (or keep Auto if Claude Code is signed in and you want written reviews).
+8. World Map: press the first stage, "UObjects, actors, and the class default object". Pick a guess and press "Lock in my guess", then "Read the card". Hover a highlighted word to see its card. Press "Answer the questions", answer, press "Submit answers", then "See your loot". "Next" opens the next stage. Do the next three stages the same way.
+9. Studio: press "Start drill", answer each item, press "Check" then "Next", and finish.
+10. World Map: open "A training dummy the console can strike". Fill in why each marked line is there, press "Run" (it builds and the test fails, which is expected), press "Reveal hint 1", and fill the two gaps: in the header add `UFUNCTION(BlueprintCallable, Category = "Dummy")` above `void Strike();`; in the source replace the "Your code" comment with `if (IsKnockedDown()) return;`, `HitsTaken++;`, `RefreshLabel();`. Press "Run" (passes), then "Submit". The loot shows the score, the XP minus the hint, and the next stage unlocked.
+11. Carry on through the world to "Plan a dash with a cooldown": add pieces with names and purposes, press "Submit plan", compare with the reference, add what you missed and a short note, and grade it. The boss stage, "The training yard", opens.
+12. Quit the app and start it again (`npm run dev`). The Title says welcome back with your name, the World Map shows your passed stages, and the training dummy still shows the hint you bought. Known bug M1.6g: the marked-line explanations are asked for again.
+What to look for: anything confusing, slow, or wrong. Note the step number for each.
+
 - Decisions made: A640 to A645 in `docs/decisions.md`.
 - Not done or left for later: the boss itself is not played; the windowed editor buttons are never clicked (A643); unverified on Windows.

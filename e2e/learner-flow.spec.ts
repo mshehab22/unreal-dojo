@@ -8,7 +8,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmdirS
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import type { ElectronApplication, Locator, Page } from "@playwright/test";
+import type { ElectronApplication, Locator, Page, TestInfo } from "@playwright/test";
 
 import { answerParsons, answerQuestion, readAnswerKey, type AnswerKey } from "./support/answerKey";
 import { stubOpenDialog } from "./support/dialogStubs";
@@ -64,11 +64,31 @@ let window: Page;
 let electronApp: ElectronApplication;
 let camera: ProofCamera;
 let answers: AnswerKey;
+let testInfo: TestInfo;
 
 /** Screenshots the page into test-results/; a passing run with SAVE_PROOF=1 also writes it to docs/iterations/m2-4-<name>.jpg. */
 async function saveScreenshot(name: string): Promise<void>
 {
 	await camera.capture(window, `m2-4-${name}.png`, { proofFileName: `m2-4-${name}.jpg`, proofFormat: "jpeg" });
+}
+
+/**
+ * An expectation a reported bug still breaks. While the bug stands, the check fails quietly and the run records a "known failure" annotation
+ * naming the fix task; once the fix lands and the check passes, the test fails so the mark is dropped and the check becomes a plain expectation.
+ */
+async function expectKnownFailure(task: string, description: string, check: () => Promise<void>): Promise<void>
+{
+	try
+	{
+		await check();
+	}
+	catch (error)
+	{
+		testInfo.annotations.push({ type: "known failure", description: `${task}: ${description} (${String(error).split("\n")[0]})` });
+		return;
+	}
+
+	throw new Error(`Known failure fixed: ${task}: ${description}. Remove the expectKnownFailure wrapper so this is a normal expectation.`);
 }
 
 /** Forces the page to render at an exact size, independent of how large the OS lets the window be (A90). */
@@ -265,12 +285,14 @@ async function runDrill(proofName?: string): Promise<number>
 	const position = await window.getByTestId("drill-position").innerText();
 	const total = Number(/\/\s*(\d+)/.exec(position)?.[1] ?? "0");
 
+	let explainItems = 0;
+
 	for (let index = 0; index < total; index++)
 	{
 		const item = window.getByTestId("drill-item");
 
 		if ((await item.getAttribute("data-source")) === "parsons") await answerParsons(answers, item);
-		else await answerQuestion(answers, item.getByTestId("question"));
+		else if ((await answerQuestion(answers, item.getByTestId("question"))).type === "explain-in-one-sentence") explainItems++;
 
 		await window.getByRole("button", { name: "Check" }).click();
 		await expect(item.getByTestId("question-feedback")).toBeVisible({ timeout: 30_000 });
@@ -278,8 +300,15 @@ async function runDrill(proofName?: string): Promise<number>
 		await window.getByRole("button", { name: index === total - 1 ? "Finish the drill" : "Next" }).click();
 	}
 
-	await expect(window.getByTestId("drill-summary")).toBeVisible();
+	const summary = window.getByTestId("drill-summary");
+	await expect(summary).toBeVisible();
 	if (proofName) await saveScreenshot(`${proofName}-summary`);
+
+	// Every answer came from the content, so nothing should be reported as missed; today a self-checked explain item counts as a miss.
+	if (explainItems > 0) await expectKnownFailure("M2.2b and M1.6g", "a drill answered right reports no item due for review", async () =>
+	{
+		await expect(summary).not.toContainText("due for review", { timeout: 1_000 });
+	});
 
 	return total;
 }
@@ -404,6 +433,11 @@ async function buildFailHintPass(): Promise<void>
 	await expect(window.getByTestId("code-review")).toHaveAttribute("data-provider", "tests-only");
 	await expect(window.getByTestId("unlocked")).toContainText(QUESTS.enums.title);
 	await saveScreenshot("34-build-loot");
+
+	await expectKnownFailure("M2.2b", "the loot screen lists each review date once", async () =>
+	{
+		await expect(window.getByTestId("screen-loot")).not.toContainText(/Next reviews.*\b(\w+), \1\b/, { timeout: 1_000 });
+	});
 }
 
 /** The breakdown: the first plan, submitted, compared with the reference, revised with the two missing pieces and a note, graded. */
@@ -449,6 +483,7 @@ test.describe("the learner flow against the real bridge and a real engine", () =
 		window = dojo.window;
 		electronApp = dojo.electronApp;
 		camera = testCamera;
+		testInfo = test.info();
 		answers = readAnswerKey();
 
 		const pickedFolder = realpathSync(mkdtempSync(join(tmpdir(), "dojo-m2-4-sandbox-")));
@@ -518,6 +553,12 @@ test.describe("the learner flow against the real bridge and a real engine", () =
 				await waitForEditor();
 				await expect(window.getByTestId("hint-text")).toHaveCount(1);
 				await saveScreenshot("72-restart-build-kept");
+
+				// The marked-line explanations were written before the pass, so the gate should still be open after the restart.
+				await expectKnownFailure("M1.6g", "self-explanations survive a restart", async () =>
+				{
+					await expect(window.getByTestId("self-explanation-gate")).toHaveAttribute("data-open", "true", { timeout: 2_000 });
+				});
 				finished = true;
 			}
 			finally
