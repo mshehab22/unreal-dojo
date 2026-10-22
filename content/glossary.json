@@ -2708,7 +2708,8 @@
       "blend-space",
       "anim-notify",
       "skeletal-mesh-component"
-    ]
+    ],
+    "firstQuestId": "p7-state-card"
   },
   {
     "id": "state-machine",
@@ -2903,7 +2904,8 @@
       "ai-controller",
       "nav-mesh",
       "pawn-sensing"
-    ]
+    ],
+    "firstQuestId": "p7-state-card"
   },
   {
     "id": "blackboard",

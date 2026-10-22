@@ -109,7 +109,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.P2.4 Pack 2 World 4 (Double Buffer) | content-patterns | author-patterns (session) | merged | merged | Text fix round checked by the Lead; new game-thread glossary entry |
 | M4.P2.5 Pack 2 World 5 (Command) | content-patterns | author-patterns (session) | merged 235f773 | merged | 2 rounds; planner moved into play (D13) |
 | M4.P2.6 Pack 2 World 6 (Event Queue) | content-patterns | author-patterns (session) | merged | merged | Review: engine 9/9 pass; fix the card audio wording (D13), ParallelFor accuracy, parallel-for term |
-| M4.P2.7 Pack 2 World 7 (State) | content-patterns | author-patterns (session) | m4-p2-world7 @ 4fd6e5e | review | 63 of 63 on UE 5.8.3; decisions A760 to A779 |
+| M4.P2.7 Pack 2 World 7 (State) | content-patterns | author-patterns (session) | merged | merged | 63 of 63 on UE 5.8.3; review found two one-line fixes (book example left in state-recall-1, two missing firstQuestIds), applied by the Lead on main |
 | M4.P2.8 Pack 2 World 8 (Subclass Sandbox) | content-patterns | author-patterns (session) | m4-p2-world8 | building | Decisions A780 to A799 |
 | M1.4 Fast loop (MCP) | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged 2b31811 | merged | 2 fix rounds; fast re-run 65 ms to 2.4 s on the Mac |
 | M1.4b Fast loop wiring | unreal-pipeline | unreal-locator (session "M1.1 PlatformPaths...") | merged | merged | Passed; real app open-editor and quit verified with Playwright |

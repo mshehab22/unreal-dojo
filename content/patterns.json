@@ -789,7 +789,7 @@
           "The object is in exactly one state at a time"
         ],
         "answerIndex": 3,
-        "explanation": "One current state rules out impossible combinations like jumping and crouching at once."
+        "explanation": "One current state rules out impossible combinations like a drawbridge that is jammed and still moving at once."
       },
       {
         "id": "state-recall-2",
