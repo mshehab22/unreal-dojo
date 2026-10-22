@@ -1,11 +1,13 @@
-// M2.2b: repeated review dates collapse into counts, and the loot screen's Next only goes to a quest that is open.
+// M2.2b: review dates named once each, the last Submit restored from the save, and the loot screen's Next only going to a quest that is open.
 import { describe, expect, it } from "vitest";
 
 import type { QuestOutline } from "@shared/types/catalog";
-import type { QuestAvailability } from "@shared/types/progress";
+import type { PlayerProgress, QuestAvailability } from "@shared/types/progress";
 
+import { FakeDojoApi } from "../../src/renderer/src/data/fake/FakeDojoApi";
 import { describeDueGroups } from "../../src/renderer/src/lib/dueGroups";
 import { nextOpenQuest } from "../../src/renderer/src/lib/nextOpenQuest";
+import { lastSubmitResult } from "../../src/renderer/src/screens/quests/build/lastSubmitResult";
 
 /** A fixed "now" so the words do not depend on the clock. */
 const NOW = new Date("2026-10-21T12:00:00");
@@ -30,15 +32,44 @@ function standing(status: QuestAvailability["status"]): QuestAvailability
 
 describe("describeDueGroups", () =>
 {
-	it("collapses repeated days into a count, in time order", () =>
+	it("names each day once, in time order, without claiming a count (the list holds only the soonest few)", () =>
 	{
-		expect(describeDueGroups([daysLater(1), daysLater(5), daysLater(1), daysLater(1)], NOW)).toBe("3 reviews tomorrow, 1 review in 5 days");
+		expect(describeDueGroups([daysLater(1), daysLater(5), daysLater(1), daysLater(1)], NOW)).toBe("tomorrow and in 5 days");
 	});
 
-	it("says one review plainly", () =>
+	it("says a past or current time is due now", () =>
 	{
-		expect(describeDueGroups([daysLater(3)], NOW)).toBe("1 review in 3 days");
+		expect(describeDueGroups([daysLater(-2), daysLater(0), daysLater(3)], NOW)).toBe("due now and in 3 days");
+		expect(describeDueGroups([daysLater(1)], NOW)).toBe("tomorrow");
 	});
+});
+
+describe("lastSubmitResult (A814)", () =>
+{
+	const run = { ok: false, compiled: false, compilerOutput: "error C2059", tests: [], testsPassed: 0, testsTotal: 0, durationMs: 1, loop: "headless" as const };
+
+	it("falls back to the quest's latest stored attempt when the loot hand-off is gone (a reload)", async () =>
+	{
+		const progress = { attempts: [
+			{ attemptId: "a", questId: "q", at: "", score: 0, passed: false, xpGained: 0, run: { ...run, compilerOutput: "older" } },
+			{ attemptId: "b", questId: "other", at: "", score: 0, passed: false, xpGained: 0, run },
+			{ attemptId: "c", questId: "q", at: "", score: 0, passed: false, xpGained: 0, run },
+		] } as unknown as PlayerProgress;
+
+		expect(lastSubmitResult("q", null, progress)?.compilerOutput).toBe("error C2059");
+		expect(lastSubmitResult("none", null, progress)).toBeNull();
+	});
+
+	it("keeps the run on the fake's build attempts, as the progress service does (A740)", async () =>
+	{
+		const fake = new FakeDojoApi("quests");
+		await fake.submitQuest({ runId: "r", questId: "f1-score-keeper", files: { "DojoF1ScoreKeeper.h": "{" } });
+		const progress = await fake.getProgress();
+		const result = lastSubmitResult("f1-score-keeper", null, progress);
+
+		expect(result?.compiled).toBe(false);
+		expect(result?.compilerOutput).toContain("error");
+	}, 20_000);
 });
 
 describe("nextOpenQuest", () =>

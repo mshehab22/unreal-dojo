@@ -1,12 +1,18 @@
-// Groups due times that read the same ("tomorrow", "in 3 days") so a list says "3 reviews tomorrow" instead of repeating the word.
+// Says when the next reviews come without repeating a day: "due now, tomorrow and in 5 days". The list holds only the soonest few times, so it never claims a count (A811).
 import { formatDue } from "./formatting";
 
-/** Due times as words with counts, in time order: "3 reviews tomorrow, 1 review in 5 days". */
+/** How one due time reads here: anything already due (past or within the half hour) is "due now", later times as formatDue says them. */
+function whenDue(dueAt: string, now: Date): string
+{
+	return new Date(dueAt).getTime() - now.getTime() < 30 * 60_000 ? "due now" : formatDue(dueAt, now);
+}
+
+/** The distinct ways the times read, in time order, joined as a sentence ("due now, tomorrow and in 5 days"). */
 export function describeDueGroups(dueTimes: readonly string[], now: Date = new Date()): string
 {
-	const counts = new Map<string, number>();
+	const words = [...new Set([...dueTimes].sort().map((dueAt) => whenDue(dueAt, now)))];
 
-	for (const dueAt of [...dueTimes].sort()) counts.set(formatDue(dueAt, now), (counts.get(formatDue(dueAt, now)) ?? 0) + 1);
+	if (words.length <= 1) return words[0] ?? "";
 
-	return [...counts.entries()].map(([when, count]) => `${count} ${count === 1 ? "review" : "reviews"} ${when}`).join(", ");
+	return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
 }

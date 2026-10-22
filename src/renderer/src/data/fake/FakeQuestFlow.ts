@@ -145,7 +145,7 @@ export class FakeQuestFlow
 		const testShare = run.testsTotal === 0 ? 0 : run.testsPassed / run.testsTotal;
 		const score = run.compiled ? Math.round(testShare * 60 + (review?.score ?? 0) * 0.4) : 0;
 		const passed = run.ok && score >= rules.passScore;
-		const outcome = this.record({ quest, score, passed, compiled: run.compiled, movesSpree: true, ...(review ? { review } : {}) }, "build");
+		const outcome = this.record({ quest, score, passed, compiled: run.compiled, movesSpree: true, files: { ...request.files }, run, ...(review ? { review } : {}) }, "build");
 		this.submittedRuns.set(outcome.attempt.attemptId, { quest, run });
 
 		return { run, ...(review ? { review } : {}), outcome };

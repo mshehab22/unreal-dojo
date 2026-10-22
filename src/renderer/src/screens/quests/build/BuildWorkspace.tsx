@@ -27,6 +27,7 @@ import { FailedSubmitOffers } from "./FailedSubmitOffers";
 import { HintSpells } from "./HintSpells";
 import { LastSubmitCard } from "./LastSubmitCard";
 import { RunColumn } from "./RunColumn";
+import { lastSubmitResult } from "./lastSubmitResult";
 import { markedLinesOf } from "./markedLines";
 import { SelfExplanationGate } from "./SelfExplanationGate";
 
@@ -87,8 +88,13 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 	const [explanations, setExplanations] = useState<Record<string, string>>(savedExplanations);
 	const [gateOpen, setGateOpen] = useState(() => quest.scaffold !== "worked" || markedEntries.every((entry) => isExplained(savedExplanations[entry.key])));
 	const [briefOpen, setBriefOpen] = useState(() => window.innerWidth >= WIDE_ENOUGH_FOR_BRIEF);
-	// The last result shown in the run column: a Run, or the last Submit kept in the loot store (so Improve after a failed Submit shows its compiler output and tests).
-	const [lastResult, setLastResult] = useState<ShownResult | null>(() => (lootEntry?.quest.id === quest.id && lootEntry.detail.kind === "build" ? { result: lootEntry.detail.run, source: "submit" } : null));
+	// The last result shown in the run column: a Run, or the last Submit (from the loot hand-off or the stored attempt), so Improve or a reload after a failed Submit shows its compiler output and tests.
+	const [lastResult, setLastResult] = useState<ShownResult | null>(() =>
+	{
+		const submitted = lastSubmitResult(quest.id, lootEntry, initialProgress);
+
+		return submitted ? { result: submitted, source: "submit" } : null;
+	});
 
 	// Paid hints come back with the quest (A502); a reveal in this window adds its text at once.
 	const [hintTexts, setHintTexts] = useState<readonly string[]>(() => quest.revealedHints ?? []);

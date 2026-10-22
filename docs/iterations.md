@@ -1246,7 +1246,7 @@ total                                       39.2  PASSED
 ## M2.2b Quest flow bugs from the real-engine run (ui-quests, builder-ui-quests)
 - What changed:
   - After a Submit that does not compile (or fails its tests), Improve now shows that Submit's result beside the code: "Last submit: did not compile" with the build log open, or the failed tests with their messages. A later Run replaces it, labelled "Last run". The loot screen's wording now points there.
-  - The loot screen counts repeated review dates: "3 reviews tomorrow, 1 review in 5 days" instead of "tomorrow, tomorrow, tomorrow".
+  - The loot screen no longer repeats review dates ("tomorrow, tomorrow, tomorrow"); see fix round 1 for the final wording.
   - Next on the loot screen goes to the next quest in the world that is actually open, skipping locked and passed ones, or says "Back to the map" when none is. It waits until it knows, so it never shows the wrong target first.
   - A build quest now opens from a fresh read of your saved work, so a draft saved since the screen last loaded is what you see and what Submit sends.
 - Proof (MacBook Air M5, from main f39cb0d): `npm run typecheck` passes; `npm test` 70 files, 842 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 27 passed, three runs in a row.
@@ -1255,10 +1255,16 @@ total                                       39.2  PASSED
 *Improve after a Submit that did not compile: the run column shows that Submit's compiler output.*
 
 ![[m2-2-concept-loot.jpg|800]]
-*Concept loot: Next names the next open quest; review dates are listed with counts.*
+*Concept loot: Next names the next open quest; each review day is named once.*
 
 ![[m2-2-breakdown-loot.jpg|800]]
 *Breakdown loot: the next quest by order is the locked boss, so Next goes back to the map.*
 
 - Decisions made: A810 to A813.
 - Not done or left for later: the drill summary still counts self-checked explain items as misses under tests-only review; that waits for M1.6g's new drill result field to reach main.
+
+### Fix round 1
+- What the reviewer and the Lead asked for: the last Submit's compiler output must survive a reload or restart; Next lost the keyboard focus while it waited; and the review dates claimed counts the data cannot back.
+- What changed: the run column now also reads the last Submit from your saved attempts (the save already keeps each Submit's result), so after a reload or restart it still says "Last submit: did not compile" with the log. Next takes the keyboard as soon as it knows where it goes, so Enter moves on again. Review dates now read like "Next reviews due now, tomorrow and in 5 days": each day once, no counts, and anything already due says "due now". The sample data keeps past due times and each Submit's result the way the real save does.
+- Proof (rebased on main 7798025): `npm run typecheck` passes; `npm test` 71 files, 857 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 27 passed, three runs in a row. A reload cannot be shown with the sample data (it lives in the page), so unit tests cover it.
+- Decisions made: A814 to A816.

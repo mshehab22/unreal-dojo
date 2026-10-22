@@ -1,5 +1,6 @@
 // The loot screen after a graded attempt: the score counting up, XP itemized, everything that changed, the review, the alternative after a pass, and Improve, See it run, Next.
 import { ArrowRightIcon, MonitorPlayIcon, WrenchIcon } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 import { useNavigate, useRouteParameters } from "@/app/router/useRoute";
 import { AppErrorView } from "@/components/AppErrorView";
@@ -27,6 +28,7 @@ import { XpBreakdownList } from "./quests/loot/XpBreakdownList";
 export function LootScreen()
 {
 	const navigate = useNavigate();
+	const nextButton = useRef<HTMLButtonElement>(null);
 	const questId = useRouteParameters()["quest"] ?? "";
 	const entry = useLootStore((state) => state.entry);
 	const showLoot = useLootStore((state) => state.show);
@@ -36,6 +38,15 @@ export function LootScreen()
 	const patternCards = useDojoQuery(QUERY_KEYS.patternCards, (client) => client.getPatternCards());
 	const openEditor = useDojoAction((client, id: string) => client.openEditor(id), [QUERY_KEYS.environment]);
 	const retry = useDojoAction((client, attemptId: string) => client.retryReview(attemptId), [QUERY_KEYS.progress]);
+
+	// Next waits for the map and the fresh availability, so it never flashes "Back to the map" before the next quest is known.
+	const nextKnown = packs.data !== undefined && availability.data !== undefined && !availability.isLoading;
+
+	// Next takes the keyboard once it knows where it goes (a disabled button cannot hold focus), so Enter moves on.
+	useEffect(() =>
+	{
+		if (nextKnown) nextButton.current?.focus();
+	}, [nextKnown]);
 
 	if (!entry || entry.quest.id !== questId)
 	{
@@ -54,9 +65,6 @@ export function LootScreen()
 	const index = packs.data ? indexQuests(packs.data) : null;
 	const location = index?.get(quest.id);
 	const nextQuest = location && availability.data ? nextOpenQuest(location.world.quests, quest.order, availability.data) : null;
-
-	// Next waits for the map and the fresh availability, so it never flashes "Back to the map" before the next quest is known.
-	const nextKnown = packs.data !== undefined && availability.data !== undefined && !availability.isLoading;
 	const questTitles = new Map([...(index?.values() ?? [])].map((found) => [found.quest.id, found.quest.title]));
 	const alternative = quest.kind === "build" || quest.kind === "refactor" ? quest.alternative : quest.kind === "breakdown" ? quest.alternativeNote : null;
 
@@ -115,7 +123,7 @@ export function LootScreen()
 						See it run
 					</Button>
 				)}
-				<Button variant="pack" autoFocus disabled={!nextKnown} onClick={() => (nextQuest ? navigate("quest", { id: nextQuest.id }) : navigate("worldMap"))} data-testid="loot-next">
+				<Button ref={nextButton} variant="pack" disabled={!nextKnown} onClick={() => (nextQuest ? navigate("quest", { id: nextQuest.id }) : navigate("worldMap"))} data-testid="loot-next">
 					{!nextKnown ? "Next" : nextQuest ? `Next: ${nextQuest.title}` : "Back to the map"}
 					<ArrowRightIcon />
 				</Button>

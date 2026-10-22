@@ -101,7 +101,7 @@ export function ProgressChanges({ outcome, rules, patternCards, questTitles }: P
 			{outcome.nextDueDates.length > 0 && (
 				<p className="flex items-center gap-2 text-paper-muted">
 					<CalendarClockIcon className="size-4 text-pack" />
-					Next: {describeDueGroups(outcome.nextDueDates)}
+					Next reviews {describeDueGroups(outcome.nextDueDates)}
 				</p>
 			)}
 		</div>

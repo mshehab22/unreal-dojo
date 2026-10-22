@@ -4,6 +4,15 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A816 2026-10-21 Next reviews name each day once, with no counts; past times read "due now" (M2.2b fix round 1, Lead decision)
+A811's counts ("3 reviews tomorrow") claimed more than the data holds: `nextDueDates` carries only the three soonest times. Now the line reads "Next reviews due now, tomorrow and in 5 days": each distinct day once, in time order, no counts, keeping the "Next reviews" label so it never reads like the "Next: <quest>" button. Any past or current time reads "due now" (`lib/dueGroups.ts`; the shared `formatDue` used by the Studio is unchanged). The fake now answers `nextDueDates` as the progress service does, the three soonest schedule times with past ones kept. Reverse cost: none.
+
+### A815 2026-10-21 Next takes focus once it is known (M2.2b fix round 1, builder-ui-quests)
+A812 disabled Next until availability loads, so its `autoFocus` landed on nothing and Enter no longer moved on. Now a ref and an effect focus Next when it becomes known (and only then, so Retry review or Why? keep focus after they run). Reverse cost: none.
+
+### A814 2026-10-21 The last Submit survives a reload: read from the stored attempt (M2.2b fix round 1, builder-ui-quests)
+A810 took the last Submit only from the in-memory loot hand-off, so a reload or restart lost the compiler output again. The progress service already keeps a capped `run` and the `files` on build attempts (A740), and `getProgress` returns them, so no shared type changed. `screens/quests/build/lastSubmitResult.ts` takes the loot hand-off when it is for this quest, otherwise the quest's latest attempt that has a `run`; `BuildWorkspace` seeds the run column with it (from the fresh read of A813). The fake ledger now keeps `files` and `run` on build attempts the same way. The e2e cannot show a reload with the fake (its state lives in the page), so unit tests cover it: the helper with no hand-off, and the fake keeping the run of a Submit that did not compile. Reverse cost: none.
+
 ### A813 2026-10-21 A build quest opens from a fresh read of the save (M2.2b, builder-ui-quests)
 The build workspace took its starting files from the renderer's cached progress, which can be older than a draft saved since, and a Submit then sent the older files. Options: read the draft again at Submit time (a second source of truth beside the editor); open the workspace only from a fresh read. Chosen: the second. `BuildQuestView` waits, once, for the progress refetch that opening a quest starts, so the editor starts from the draft as saved now; from then on the editor is what Submit sends (its own autosave keeps the save in step). Reverse cost: none.
 
@@ -12,6 +21,7 @@ Next went to the next quest by order even when it was locked. Chosen: the first 
 
 ### A811 2026-10-21 Repeated review dates are counted (M2.2b, builder-ui-quests)
 The loot screen listed "tomorrow, tomorrow, tomorrow". Chosen: due times are grouped by how they read, in time order, with a count: "3 reviews tomorrow, 1 review in 5 days" (`lib/dueGroups.ts`). Reverse cost: none.
+Fix round 1: the counts are gone; see A816.
 
 ### A810 2026-10-21 The run column shows the last Submit's result (M2.2b, builder-ui-quests)
 After a Submit that did not compile, Improve showed only "not passed yet, score 0", and the loot screen sent the learner to compiler output that was not there. Chosen: the run column starts from the last Submit kept in the loot store, labelled "Last submit", with its tests or "did not compile" and the build log open; a Run replaces it, labelled "Last run". The loot screen now says Improve shows the compiler output beside the code. The fake already answers a non-compiling Submit with compiler output like the real bridge, so it needed no change. Reverse cost: none.

@@ -201,8 +201,9 @@ test("a concept quest: predict, the card with hover terms and the example, quest
 	await expect(window.getByTestId("progress-changes")).toBeVisible();
 	await saveScreenshot("concept-loot");
 
-	// Review dates come grouped with counts, never "tomorrow, tomorrow, tomorrow" (M2.2b).
-	await expect(window.getByTestId("progress-changes")).toContainText(/\d+ reviews? /);
+	// Review dates name each day once, never "tomorrow, tomorrow, tomorrow" (A811).
+	await expect(window.getByTestId("progress-changes")).toContainText("Next reviews");
+	await expect(window.getByTestId("progress-changes")).not.toContainText(/(tomorrow|in \d+ days?|in \d+ hours?), \1/);
 
 	// Next goes to the next quest in the world.
 	await window.getByTestId("loot-next").click();
@@ -477,6 +478,9 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	// Submit: the review times out into tests-only with Retry review; the retry gets the mentor's review.
 	await window.getByTestId("submit-button").click();
 	await expect(window.getByTestId("screen-loot")).toBeVisible({ timeout: 20_000 });
+
+	// Next holds the keyboard once it knows where it goes, so Enter moves on (A812).
+	await expect(window.getByTestId("loot-next")).toBeFocused();
 	await expect(window.getByTestId("review-fallback")).toBeVisible();
 	await window.getByTestId("retry-review").click();
 	await expect(window.getByTestId("code-review")).toHaveAttribute("data-provider", "claude-code", { timeout: 20_000 });
@@ -515,6 +519,7 @@ test("two failed submits offer the Parsons fallback, which opens a one-item dril
 	// First submit: the starter builds and its test fails. Improve shows that Submit's tests in the run column (M2.2b).
 	await window.getByTestId("submit-button").click();
 	await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "false", { timeout: 20_000 });
+	await expect(window.getByTestId("loot-next")).toBeFocused();
 	await window.getByTestId("loot-improve").click();
 	await waitForEditor(window.getByTestId("build-quest"));
 	await expect(window.getByTestId("run-result")).toHaveAttribute("data-source", "submit");
