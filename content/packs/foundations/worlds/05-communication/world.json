@@ -1,0 +1,5 @@
+{
+	"id": "communication",
+	"title": "Communication",
+	"summary": "The yard's devices start talking: levers announce pulls, lamps listen, crates answer whoever interacts, cooldowns tell you when they are ready, and a drone follows smoothly at any frame rate. Learn delegates, interfaces, timers, and Tick, and when each is the right channel."
+}

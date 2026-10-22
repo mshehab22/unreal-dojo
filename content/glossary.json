@@ -1353,7 +1353,7 @@
       "unbinding-delegates",
       "timer-manager"
     ],
-    "firstQuestId": "p1-multicast-delegates"
+    "firstQuestId": "f2-destroy-and-lifetime"
   },
   {
     "id": "tick",
@@ -1374,7 +1374,7 @@
       "timer-manager",
       "delegate"
     ],
-    "firstQuestId": "p2-frame-time"
+    "firstQuestId": "f5-tick-and-deltatime"
   },
   {
     "id": "deltatime",
@@ -1393,7 +1393,7 @@
       "fmath",
       "timer-manager"
     ],
-    "firstQuestId": "p2-frame-time"
+    "firstQuestId": "f5-tick-and-deltatime"
   },
   {
     "id": "tick-groups",
@@ -1413,7 +1413,7 @@
       "primary-actor-tick",
       "physics-simulation"
     ],
-    "firstQuestId": "p2-frame-time"
+    "firstQuestId": "f5-tick-and-deltatime"
   },
   {
     "id": "tick-prerequisite",
@@ -1491,7 +1491,7 @@
       "timer-manager",
       "object-pool"
     ],
-    "firstQuestId": "p2-frame-time"
+    "firstQuestId": "f4-components"
   },
   {
     "id": "timer-handle",
@@ -1508,7 +1508,8 @@
       "timer-manager",
       "endplay",
       "tick"
-    ]
+    ],
+    "firstQuestId": "f5-timers"
   },
   {
     "id": "timer-manager",
@@ -1528,7 +1529,8 @@
       "tick",
       "world",
       "delegate"
-    ]
+    ],
+    "firstQuestId": "f5-timers"
   },
   {
     "id": "delegate",
@@ -1550,7 +1552,8 @@
       "dynamic-multicast-delegate",
       "broadcast",
       "uinterface"
-    ]
+    ],
+    "firstQuestId": "f5-delegates"
   },
   {
     "id": "multicast-delegate",
@@ -1570,7 +1573,7 @@
       "broadcast",
       "unbinding-delegates"
     ],
-    "firstQuestId": "p1-multicast-delegates"
+    "firstQuestId": "f5-delegates"
   },
   {
     "id": "dynamic-delegate",
@@ -1588,7 +1591,8 @@
       "dynamic-multicast-delegate",
       "ufunction",
       "reflection"
-    ]
+    ],
+    "firstQuestId": "f5-delegates"
   },
   {
     "id": "dynamic-multicast-delegate",
@@ -1609,7 +1613,7 @@
       "overlap-event",
       "multicast-delegate"
     ],
-    "firstQuestId": "p1-multicast-delegates"
+    "firstQuestId": "f5-delegates"
   },
   {
     "id": "adddynamic",
@@ -1629,7 +1633,7 @@
       "overlap-event",
       "beginplay"
     ],
-    "firstQuestId": "p1-multicast-delegates"
+    "firstQuestId": "f5-binding-and-unbinding"
   },
   {
     "id": "broadcast",
@@ -1646,7 +1650,7 @@
       "dynamic-multicast-delegate",
       "delegate"
     ],
-    "firstQuestId": "p1-multicast-delegates"
+    "firstQuestId": "f5-binding-and-unbinding"
   },
   {
     "id": "unbinding-delegates",
@@ -1667,7 +1671,7 @@
       "multicast-delegate",
       "delegate"
     ],
-    "firstQuestId": "p1-multicast-delegates"
+    "firstQuestId": "f5-binding-and-unbinding"
   },
   {
     "id": "blueprintassignable",
@@ -1685,7 +1689,7 @@
       "broadcast",
       "user-widget"
     ],
-    "firstQuestId": "p1-multicast-delegates"
+    "firstQuestId": "f5-binding-and-unbinding"
   },
   {
     "id": "uinterface",
@@ -1704,7 +1708,8 @@
       "cast",
       "delegate",
       "blueprintnativeevent"
-    ]
+    ],
+    "firstQuestId": "f5-interfaces"
   },
   {
     "id": "iinterface",
@@ -1721,7 +1726,8 @@
       "uinterface",
       "blueprintnativeevent",
       "cast"
-    ]
+    ],
+    "firstQuestId": "f5-interfaces"
   },
   {
     "id": "cast",
