@@ -645,6 +645,9 @@ export class ProgressService
 			const current = this.progress.attempts.find((attempt) => attempt.attemptId === attemptId);
 			if (!current) throw new AppErrorException("attempt-not-found", "That attempt is not in your save.", "Open the quest again and submit it to get a fresh review.", attemptId);
 
+			// A newer Submit may have pruned this attempt to its summary while the reviewer was thinking; a review then stays off it like its files (A604, A745).
+			if (!current.files || !current.run) throw new AppErrorException("attempt-not-found", "This attempt's code is no longer stored, so its review was not kept.", "Submit the quest again to get a fresh review.", attemptId);
+
 			const updated: AttemptRecord = { ...current, review: structuredClone(review) };
 			await this.commit((progress) => ({ ...progress, attempts: progress.attempts.map((attempt) => (attempt.attemptId === attemptId ? updated : attempt)) }));
 

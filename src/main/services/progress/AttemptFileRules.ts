@@ -2,17 +2,13 @@
 import type { AttemptRecord } from "@shared/types/progress";
 import type { RunResult } from "@shared/types/run";
 
+import { keepForReview, MAXIMUM_COMPILER_OUTPUT_LENGTH, MAXIMUM_TEST_MESSAGE_LENGTH } from "../review/reviewInputLimits";
+
 /** Longest single stored file, in characters (about 64 KB of source). */
 export const MAXIMUM_STORED_FILE_LENGTH = 64 * 1024;
 
 /** Most characters stored for one attempt, across its files (about 256 KB). */
 export const MAXIMUM_STORED_ATTEMPT_LENGTH = 256 * 1024;
-
-/** Longest stored compiler output, in characters: the same cut the review input makes, so a retried review reads what the first one read. */
-export const MAXIMUM_STORED_COMPILER_OUTPUT_LENGTH = 8000;
-
-/** Longest stored test message, in characters. */
-export const MAXIMUM_STORED_TEST_MESSAGE_LENGTH = 1000;
 
 /** How many of a quest's latest attempts keep their files, code review, and run result; older ones keep only score, pass, and XP. */
 export const STORED_DETAIL_ATTEMPTS_PER_QUEST = 5;
@@ -43,12 +39,16 @@ export class AttemptFileRules
 		return kept;
 	}
 
-	/** Copies a run result with its compiler output cut at 8000 characters and each test message at 1000; everything else is kept as it is (A740). */
+	/**
+	 * Copies a run result keeping only what the review input reads (A740, A744): the compiler output trimmed and kept to one character past the
+	 * review's cut, and each test message the same way, so a retried review shows the same text and the same "(cut off)" mark as the first one.
+	 * Everything else is kept as it is.
+	 */
 	capRun(run: RunResult): RunResult
 	{
 		const copy = structuredClone(run);
-		copy.compilerOutput = copy.compilerOutput.slice(0, MAXIMUM_STORED_COMPILER_OUTPUT_LENGTH);
-		copy.tests = copy.tests.map((test) => (test.message !== undefined && test.message.length > MAXIMUM_STORED_TEST_MESSAGE_LENGTH ? { ...test, message: test.message.slice(0, MAXIMUM_STORED_TEST_MESSAGE_LENGTH) } : test));
+		copy.compilerOutput = keepForReview(copy.compilerOutput, MAXIMUM_COMPILER_OUTPUT_LENGTH, true);
+		copy.tests = copy.tests.map((test) => (test.message === undefined ? test : { ...test, message: keepForReview(test.message, MAXIMUM_TEST_MESSAGE_LENGTH, false) }));
 
 		return copy;
 	}

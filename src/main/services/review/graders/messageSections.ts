@@ -2,8 +2,7 @@
 import type { BreakdownPlan } from "@shared/types/progress";
 import type { RunResult } from "@shared/types/run";
 
-/** Longest compiler output sent to the model, in characters. The pipeline already filters it; this is a last guard. */
-const MAXIMUM_COMPILER_OUTPUT_LENGTH = 8000;
+import { cutForReview, MAXIMUM_COMPILER_OUTPUT_LENGTH, MAXIMUM_TEST_MESSAGE_LENGTH } from "../reviewInputLimits";
 
 /** Breaks any closing tag inside learner text (`</file>` becomes `< /file>`), so a file cannot end its own section early. Code stays readable. */
 export function neutralizeClosingTags(text: string): string
@@ -43,23 +42,22 @@ export function fileSections(files: Record<string, string>): string
 	return names.map((name) => `<file name="${name.replace(/[<>"]/g, "")}">\n${neutralizeClosingTags(withLineNumbers(files[name] ?? ""))}\n</file>`).join("\n\n");
 }
 
-/** The engine's verdict as plain lines: build, pass count, and each test with its message. */
+/** The engine's verdict as plain lines: build, pass count, and each test with its message, a long message cut at 1000 characters with a mark (A744). */
 export function testResultLines(run: RunResult): string
 {
 	const header = [`Compiled: ${run.compiled ? "yes" : "no"}`, `Tests passed: ${run.testsPassed} of ${run.testsTotal}`];
-	const tests = run.tests.map((test) => `- ${test.passed ? "PASS" : "FAIL"} ${test.name}${test.message ? `: ${test.message}` : ""}`);
+	const tests = run.tests.map((test) => `- ${test.passed ? "PASS" : "FAIL"} ${test.name}${test.message ? `: ${cutForReview(test.message, MAXIMUM_TEST_MESSAGE_LENGTH, " ")}` : ""}`);
 
 	return [...header, ...tests].join("\n");
 }
 
-/** The filtered compiler output, cut to a safe length. */
+/** The filtered compiler output, trimmed and cut to a safe length with a mark. */
 export function compilerOutputText(run: RunResult): string
 {
 	const output = run.compilerOutput.trim();
 	if (output.length === 0) return "(no warnings)";
-	if (output.length <= MAXIMUM_COMPILER_OUTPUT_LENGTH) return output;
 
-	return `${output.slice(0, MAXIMUM_COMPILER_OUTPUT_LENGTH)}\n(cut off)`;
+	return cutForReview(output, MAXIMUM_COMPILER_OUTPUT_LENGTH, "\n");
 }
 
 /** A breakdown plan as readable lines: pieces with kind, label, and purpose, then arrows by label. */

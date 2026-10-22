@@ -9,7 +9,8 @@ import type { RunRequest, RunResult } from "@shared/types/run";
 
 import { createHandlers, type HandlerDependencies, type ReviewHandlerService } from "../../src/main/ipc/createHandlers";
 import { registerHandlers, type WrappedHandler } from "../../src/main/ipc/registerHandlers";
-import { AttemptFileRules, MAXIMUM_STORED_COMPILER_OUTPUT_LENGTH, STORED_DETAIL_ATTEMPTS_PER_QUEST } from "../../src/main/services/progress/AttemptFileRules";
+import { AttemptFileRules, STORED_DETAIL_ATTEMPTS_PER_QUEST } from "../../src/main/services/progress/AttemptFileRules";
+import { CUT_OFF_MARK, MAXIMUM_COMPILER_OUTPUT_LENGTH, MAXIMUM_TEST_MESSAGE_LENGTH } from "../../src/main/services/review/reviewInputLimits";
 import { ProgressService } from "../../src/main/services/progress/ProgressService";
 import { createReviewHandlers, type ReviewHandlers } from "../../src/main/services/review/createReviewHandlers";
 import { BreakdownGrader } from "../../src/main/services/review/graders/BreakdownGrader";
@@ -87,6 +88,28 @@ describe("retryReview", () =>
 		expect(after.quests["w1.health"]).toEqual(before.quests["w1.health"]);
 	});
 
+	it("reads the same compiler output and test messages as the first review, with the same (cut off) marks, when both are longer than the cut (A744)", async () =>
+	{
+		const longRun = passingRun();
+		longRun.compilerOutput = `\n   ${"warning C4458: declaration hides class member. ".repeat(400)}\n`;
+		longRun.tests = [{ name: "Dojo.W1.HealthComponent.TakesDamage", passed: true, message: "note ".repeat(600) }, { name: "Dojo.W1.HealthComponent.BroadcastsChange", passed: true }];
+		const claudeCode = new ScriptedProvider("claude-code", [recorded("code-review", "good.json"), recorded("code-review", "good.json")], { id: "claude-code", available: true });
+		const { handlers } = wiring({ claudeCode, run: longRun });
+
+		const submit = await handlers.submitQuest(REQUEST, () => undefined, new AbortController().signal);
+		await handlers.retryReview(submit.outcome.attempt.attemptId);
+
+		/** One tagged section of a prompt. */
+		const section = (message: string | undefined, tag: string): string => message?.match(new RegExp(`<${tag}>[\\s\\S]*?</${tag}>`))?.[0] ?? "";
+		const [first, retried] = claudeCode.requests.map((request) => request.userMessage);
+
+		expect(section(first, "compiler_output")).toContain(CUT_OFF_MARK);
+		expect(section(first, "test_results")).toContain(CUT_OFF_MARK);
+		expect(section(retried, "compiler_output")).toBe(section(first, "compiler_output"));
+		expect(section(retried, "test_results")).toBe(section(first, "test_results"));
+		expect(retried).toBe(first);
+	});
+
 	it("keeps A70 on a retry: the API reviews only all-passed attempts; Claude Code reviews one with failing tests", async () =>
 	{
 		const failing = sampleRun();
@@ -146,7 +169,7 @@ describe("the run stored on Submit attempts", () =>
 		const { service, store } = createTestProgressService();
 		const quest = makeQuest({ id: "w1.health", kind: "build" });
 		const longRun = passingRun();
-		longRun.compilerOutput = "w".repeat(MAXIMUM_STORED_COMPILER_OUTPUT_LENGTH + 500);
+		longRun.compilerOutput = "w".repeat(MAXIMUM_COMPILER_OUTPUT_LENGTH + 500);
 
 		for (let index = 1; index <= STORED_DETAIL_ATTEMPTS_PER_QUEST + 1; index++) await service.recordAttempt({ quest, score: 100, passed: true, compiled: true, isSubmit: true, files: { "A.h": `${index}` }, run: longRun }, [quest]);
 		const notSubmit = await service.recordAttempt({ quest, score: 100, passed: true, compiled: true, isSubmit: false, run: longRun }, [quest]);
@@ -155,18 +178,20 @@ describe("the run stored on Submit attempts", () =>
 		const attempts = reloaded.getProgress().attempts;
 
 		expect(attempts[0]?.run).toBeUndefined();
-		expect(attempts[1]?.run?.compilerOutput).toHaveLength(MAXIMUM_STORED_COMPILER_OUTPUT_LENGTH);
+		expect(attempts[1]?.run?.compilerOutput).toHaveLength(MAXIMUM_COMPILER_OUTPUT_LENGTH + 1);
 		expect(attempts[1]?.run).toMatchObject({ ok: true, testsPassed: 2, testsTotal: 2, loop: "fast" });
 		expect(notSubmit.attempt.run).toBeUndefined();
 	});
 
-	it("capRun cuts long test messages and keeps everything else", () =>
+	it("capRun keeps one character past each review cut, trims the compiler output, and keeps everything else", () =>
 	{
-		const run = sampleRun({ tests: [{ name: "A.B", passed: false, message: "m".repeat(5000) }] });
+		const run = sampleRun({ compilerOutput: `\n\n  ${"c".repeat(MAXIMUM_COMPILER_OUTPUT_LENGTH + 50)}  \n`, tests: [{ name: "A.B", passed: false, message: "m".repeat(5000) }, { name: "A.C", passed: true }] });
 		const capped = new AttemptFileRules().capRun(run);
 
-		expect(capped.tests[0]?.message).toHaveLength(1000);
-		expect({ ...capped, tests: [] }).toEqual({ ...run, tests: [] });
+		expect(capped.compilerOutput).toBe("c".repeat(MAXIMUM_COMPILER_OUTPUT_LENGTH + 1));
+		expect(capped.tests[0]?.message).toHaveLength(MAXIMUM_TEST_MESSAGE_LENGTH + 1);
+		expect(capped.tests[1]).toEqual({ name: "A.C", passed: true });
+		expect({ ...capped, tests: [], compilerOutput: "" }).toEqual({ ...run, tests: [], compilerOutput: "" });
 		expect(run.tests[0]?.message).toHaveLength(5000);
 	});
 
@@ -174,8 +199,9 @@ describe("the run stored on Submit attempts", () =>
 	{
 		const { service } = createTestProgressService();
 		const quest = makeQuest({ id: "w1.health", kind: "build" });
-		const first = await service.recordAttempt({ quest, score: 70, passed: true, compiled: true, isSubmit: true }, [quest]);
-		const second = await service.recordAttempt({ quest, score: 80, passed: true, compiled: true, isSubmit: true }, [quest]);
+		const stored = { files: { "A.h": "x" }, run: passingRun() };
+		const first = await service.recordAttempt({ quest, score: 70, passed: true, compiled: true, isSubmit: true, ...stored }, [quest]);
+		const second = await service.recordAttempt({ quest, score: 80, passed: true, compiled: true, isSubmit: true, ...stored }, [quest]);
 		const review = { provider: "claude-code", summary: "new" } as CodeReview;
 
 		const updated = await service.replaceAttemptReview(first.attempt.attemptId, review);
@@ -183,6 +209,22 @@ describe("the run stored on Submit attempts", () =>
 		expect(updated).toEqual({ ...first.attempt, review });
 		expect(service.getProgress().attempts[1]).toEqual(second.attempt);
 		await expectAppError(service.replaceAttemptReview("attempt-9", review), "attempt-not-found");
+	});
+
+	it("replaceAttemptReview does not write onto an attempt a newer Submit pruned while the retry waited (A745)", async () =>
+	{
+		const { service } = createTestProgressService();
+		const quest = makeQuest({ id: "w1.health", kind: "build" });
+		const stored = { files: { "A.h": "x" }, run: passingRun() };
+		const oldest = await service.recordAttempt({ quest, score: 70, passed: true, compiled: true, isSubmit: true, ...stored }, [quest]);
+
+		// Five newer Submits prune the oldest to its summary, as one can while a slow retry is waiting on the reviewer.
+		for (let index = 0; index < STORED_DETAIL_ATTEMPTS_PER_QUEST; index++) await service.recordAttempt({ quest, score: 70, passed: true, compiled: true, isSubmit: true, ...stored }, [quest]);
+
+		const error = await expectAppError(service.replaceAttemptReview(oldest.attempt.attemptId, { provider: "claude-code", summary: "late" } as CodeReview), "attempt-not-found");
+
+		expect(error.appError.message).toMatch(/no longer stored/);
+		expect(service.getProgress().attempts[0]).not.toHaveProperty("review");
 	});
 });
 
