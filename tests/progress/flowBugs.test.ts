@@ -1,16 +1,19 @@
 // M1.6g fixes from the real-engine flow: self-explanations survive a restart, self-checked explain items are not misses, and Run and Submit refuse a locked quest (A800 to A802).
 import { describe, expect, it } from "vitest";
 
-import type { DrillItem } from "@shared/types/content";
-import type { ItemResponse } from "@shared/types/progress";
+import type { ConceptQuest, DrillItem } from "@shared/types/content";
+import type { ItemResponse, SubmitOutcome } from "@shared/types/progress";
+import type { RunResult } from "@shared/types/run";
 
 import { ContentCatalog } from "../../src/main/content/ContentCatalog";
 import { createHandlers, type HandlerDependencies } from "../../src/main/ipc/createHandlers";
 import { ProgressContentService } from "../../src/main/services/progress/ProgressContentService";
 import { ProgressService } from "../../src/main/services/progress/ProgressService";
 import { ProgressStore } from "../../src/main/services/progress/ProgressStore";
+import { SettingsService } from "../../src/main/services/settings/SettingsService";
 import { RunRegistry } from "../../src/main/services/unreal/RunRegistry";
-import { createTestProgressContent, fakeGraders, fixtureContent } from "../support/contentFixture";
+import { FakeSecretEncryptor, FakeSettingsChecks, MemorySettingsStore } from "../settings/settingsFakes";
+import { conceptQuest, createTestProgressContent, fakeGraders, fixtureContent } from "../support/contentFixture";
 import { FixedClock } from "../support/FixedClock";
 import { MemoryFileSystem } from "../support/MemoryFileSystem";
 import { localMoment } from "../support/progressFixtures";
@@ -30,20 +33,45 @@ async function startApp(fileSystem: MemoryFileSystem, runs: string[] = [])
 	const loaded = fixtureContent();
 	const catalog = new ContentCatalog({ root: "/fixture", folderExists: async () => true, loadContent: async () => loaded });
 	const content = new ProgressContentService(catalog, service, fakeGraders(), new SequenceRandom(), () => "session-1");
-	const handlers = createHandlers({
+	const dependencies: HandlerDependencies = {
 		getAppVersion: () => "1.0.0",
 		getEngineLocator: unused,
 		getContentCatalog: () => catalog,
 		pickFolder: async () => null,
 		progressService: service,
-		progressContentService: content,
+		getSandboxService: unused,
+		getQuestRunService: () => ({
+			runQuest: async (questId) =>
+			{
+				runs.push(`run ${questId}`);
+				return { compiled: true } as RunResult;
+			},
+			checkSnippetSyntax: unused,
+			rebuildSandbox: unused,
+			removeQuestFiles: unused,
+		}),
+		getEditorService: unused,
 		runRegistry: new RunRegistry(),
 		sendProgress: () => undefined,
-		getQuestRunService: () => ({ runQuest: async (questId: string) => { runs.push(`run ${questId}`); return { compiled: true }; }, checkSnippetSyntax: unused }),
-		getReviewHandlers: () => ({ submitQuest: async (request: { questId: string }) => { runs.push(`submit ${request.questId}`); return {}; } }),
-	} as unknown as HandlerDependencies);
+		progressContentService: content,
+		settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
+		readEnvironmentStatus: unused,
+		getReviewHandlers: () => ({
+			getProviderStatuses: unused,
+			testClaudeCode: unused,
+			explainFinding: unused,
+			answerReflection: unused,
+			submitQuest: async (request) =>
+			{
+				runs.push(`submit ${request.questId}`);
+				return {} as SubmitOutcome;
+			},
+			retryReview: unused,
+		}),
+	};
+	const handlers = createHandlers(dependencies);
 
-	return { handlers, service, content };
+	return { handlers, service, content, dependencies };
 }
 
 /** A right answer for a fixture drill item. */
@@ -117,6 +145,44 @@ describe("self-checked explain items (A801)", () =>
 		expect(outcome.correctCount).toBe(outcome.totalCount);
 	});
 
+	it("pays no drill XP, streak, or daily credit when the only due item was self-checked, however many times the drill runs", async () =>
+	{
+		// A copy of the concept quest that only teaches term.e through one explain question (the fixture objects are shared, so they are not changed).
+		const content = fixtureContent();
+		const world = content.packs[0]?.worlds[0];
+		if (!world) throw new Error("expected world 1");
+		const explainOnly: ConceptQuest = { ...conceptQuest, terms: ["term.e"], questions: [{ id: "q-explain", type: "explain-in-one-sentence", prompt: "Explain term.e", modelAnswer: "It does e.", rubric: [], explanation: "" }] };
+		world.quests = world.quests.map((quest) => (quest.id === "w1-concept" ? explainOnly : quest));
+
+		const { content: progressContent, service } = createTestProgressContent({ content, graders: fakeGraders("tests-only", "incorrect"), prepare: (progress) =>
+		{
+			progress.quests["w1-concept"] = { status: "passed", bestScore: 100, attempts: 1, hintsRevealed: 0, revealedHints: [], solutionViewed: false, seerStoneSpent: false, effortXpGranted: false, savedFiles: {}, lastAttemptAt: "2026-10-20T09:00:00.000Z" };
+			progress.memory["term.e"] = { ease: 2.5, intervalDays: 1, repetitions: 1, mastery: "familiar", lastReviewedAt: "2026-10-20T08:00:00.000Z" };
+			progress.schedule["term.e"] = "2026-10-21T06:00:00.000Z";
+		} });
+		await progressContent.getDailyQuest();
+		await progressContent.getDailyQuest();
+		await service.chooseDailyOffer(0);
+
+		for (let round = 0; round < 4; round++)
+		{
+			const session = await progressContent.startDrill({ kind: "due" });
+			expect(session.items.map((item) => item.itemId)).toEqual(["term.e"]);
+
+			const [item] = session.items;
+			if (!item) throw new Error("expected the explain item");
+			expect((await progressContent.answerDrillItem({ sessionId: session.sessionId, itemId: item.itemId, response: { kind: "text", text: "It does e." } })).selfChecked).toBe(true);
+
+			expect(await progressContent.finishDrill(session.sessionId)).toMatchObject({ xpGained: 0, selfCheckedCount: 1, totalCount: 0 });
+		}
+
+		const progress = service.getProgress();
+		expect(progress.xp).toBe(0);
+		expect(progress.streak.count).toBe(0);
+		expect(progress.daily.done).toBe(false);
+		expect(progress.schedule["term.e"]).toBe("2026-10-21T06:00:00.000Z");
+	});
+
 	it("counts an AI-graded explain item normally (selfCheckedCount 0)", async () =>
 	{
 		const { content, clock } = createTestProgressContent({ graders: fakeGraders("claude-code", "correct") });
@@ -150,6 +216,22 @@ describe("Run and Submit check the quest is open (A802)", () =>
 		await expect(handlers.runQuest.handle(request("w1-build"))).rejects.toMatchObject({ appError: { code: "quest-locked", message: "Pass w1-concept first." } });
 		await expect(handlers.submitQuest.handle(request("w1-build"))).rejects.toMatchObject({ appError: { code: "quest-locked" } });
 		await expect(handlers.runQuest.handle(request("no-such-quest"))).rejects.toMatchObject({ appError: { code: "quest-not-found" } });
+		expect(runs).toEqual([]);
+	});
+
+	it("finds the run when a cancel lands during the availability check, answers run-cancelled, and never starts the build (A803)", async () =>
+	{
+		const runs: string[] = [];
+		const { handlers, content, dependencies } = await startApp(new MemoryFileSystem(), runs);
+		let releaseCheck = (): void => undefined;
+		content.assertQuestOpen = () => new Promise<void>((resolve) => { releaseCheck = resolve; });
+
+		const running = handlers.runQuest.handle(request("w1-build"));
+		await Promise.resolve();
+		dependencies.runRegistry.cancel("run-w1-build");
+		releaseCheck();
+
+		await expect(running).rejects.toMatchObject({ appError: { code: "run-cancelled" } });
 		expect(runs).toEqual([]);
 	});
 

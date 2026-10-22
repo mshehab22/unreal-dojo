@@ -431,7 +431,7 @@ describe("M1.7c fix round 1", () =>
 		const unused = (): never => { throw new Error("not used"); };
 		registerHandlers({ handle: (channel, listener) => void handlersByChannel.set(channel, listener as WrappedHandler) }, createHandlers({
 			getAppVersion: () => "1.0.0", getEngineLocator: unused, getContentCatalog: unused, pickFolder: async () => null, progressService: {}, progressContentService: { assertQuestOpen: async () => undefined }, getSandboxService: unused,
-			runRegistry: registry, sendProgress: () => undefined, settingsService: {}, readEnvironmentStatus: unused, getReviewHandlers: () => review,
+			getQuestRunService: unused, getEditorService: unused, runRegistry: registry, sendProgress: () => undefined, settingsService: {}, readEnvironmentStatus: unused, getReviewHandlers: () => review,
 		} as unknown as HandlerDependencies));
 		const invoke = (channel: string, ...methodArguments: unknown[]): Promise<IpcResponse<unknown>> => (handlersByChannel.get(channel) as unknown as (event: object, ...rest: unknown[]) => Promise<IpcResponse<unknown>>)({}, ...methodArguments);
 

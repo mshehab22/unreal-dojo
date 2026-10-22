@@ -274,9 +274,9 @@ export class ProgressContentService
 	{
 		const variants = await this.composeSession(request);
 		const scheduledDue = new Set(this.progress.getScheduledDueItemIds());
-		const rewarded = request.kind !== "parsons-fallback" && variants.some((variant) => scheduledDue.has(variant.itemId));
+		const dueInSession = request.kind === "parsons-fallback" ? [] : variants.map((variant) => variant.itemId).filter((itemId) => scheduledDue.has(itemId));
 
-		return structuredClone(this.sessions.open(request, variants, rewarded).session);
+		return structuredClone(this.sessions.open(request, variants, dueInSession).session);
 	}
 
 	/** Grades one drill answer and reschedules its item. An explain item self-checked without an AI grader is not scheduled (A318). */
@@ -337,13 +337,16 @@ export class ProgressContentService
 
 		if (!complete || request.kind === "parsons-fallback") return this.progress.unrewardedDrillOutcome(totals);
 
-		if (request.kind !== "test-out") return this.progress.finishDrill(totals, { rewarded: stored.rewarded });
+		// A self-checked item is not rescheduled and stays due, so it never earns the reward: otherwise every drill holding it would pay again (A801).
+		const rewarded = [...stored.scheduledDueItemIds].some((itemId) => stored.answers.has(itemId) && !stored.selfChecked.has(itemId));
+
+		if (request.kind !== "test-out") return this.progress.finishDrill(totals, { rewarded });
 
 		const { quests } = await this.view();
 
 		const worldKey = worldKeyOf(request.packId, request.worldId);
 
-		return this.progress.finishDrill(totals, { rewarded: stored.rewarded, testOut: { worldKey, termIds: testOutTermsOf(quests, request.packId, request.worldId) } });
+		return this.progress.finishDrill(totals, { rewarded, testOut: { worldKey, termIds: testOutTermsOf(quests, request.packId, request.worldId) } });
 	}
 
 	/** Adds `revealedHints` (texts in reveal order) to a build or refactor quest; other kinds are returned as they are. */

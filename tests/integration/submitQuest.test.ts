@@ -87,7 +87,7 @@ describe.skipIf(!HAS_ENGINE)(`submitQuest against ${ENGINE_ROOT || "no engine"}`
 				getQuestRunService: () => services.questRunService,
 				runRegistry: new RunRegistry(),
 				sendProgress: (event) => events.push(event),
-				progressContentService: {} as never,
+				progressContentService: { assertQuestOpen: async () => undefined } as never,
 				settingsService: {} as never,
 				readEnvironmentStatus: () => { throw new Error("not used"); },
 				getReviewHandlers: () => reviewHandlers,

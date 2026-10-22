@@ -32,6 +32,7 @@ import {
 	settingsPatchSchema,
 	syntaxCheckRequestSchema,
 } from "./requestSchemas";
+import { runCancelled } from "../services/unreal/sandboxErrors";
 import { trackRun } from "./trackRun";
 
 /** What the handlers need from the outside world. Grows as services are built; tests pass fakes. */
@@ -203,6 +204,14 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 {
 	const { progressService, progressContentService } = dependencies;
 
+	/** Checks the quest is open (A802), then stops with `run-cancelled` if the run was cancelled while it checked. */
+	const openQuestOrCancel = async (questId: string, signal: AbortSignal): Promise<void> =>
+	{
+		await progressContentService.assertQuestOpen(questId);
+
+		if (signal.aborted) throw runCancelled();
+	};
+
 	return {
 		getAppVersion: { argumentSchemas: [], handle: () => dependencies.getAppVersion() },
 
@@ -245,22 +254,22 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 
 		runQuest: {
 			argumentSchemas: [runRequestSchema],
-			// A locked or unknown quest is refused before any build starts, the same check opening it makes (A802).
-			handle: async (request) =>
+			// The run is registered first, so a cancel during the availability check finds it; a locked or unknown quest is then refused before any build starts (A802, A803).
+			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, async (onProgress, signal) =>
 			{
-				await progressContentService.assertQuestOpen(request.questId);
+				await openQuestOrCancel(request.questId, signal);
 
-				return trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getQuestRunService().runQuest(request.questId, request.files, onProgress, signal));
-			},
+				return dependencies.getQuestRunService().runQuest(request.questId, request.files, onProgress, signal);
+			}),
 		},
 		submitQuest: {
 			argumentSchemas: [runRequestSchema],
-			handle: async (request) =>
+			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, async (onProgress, signal) =>
 			{
-				await progressContentService.assertQuestOpen(request.questId);
+				await openQuestOrCancel(request.questId, signal);
 
-				return trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getReviewHandlers().submitQuest(request, onProgress, signal, () => dependencies.runRegistry.end(request.runId)));
-			},
+				return dependencies.getReviewHandlers().submitQuest(request, onProgress, signal, () => dependencies.runRegistry.end(request.runId));
+			}),
 		},
 		checkSnippetSyntax: { argumentSchemas: [syntaxCheckRequestSchema], handle: (request) => dependencies.getQuestRunService().checkSnippetSyntax(request.code) },
 		cancelRun: { argumentSchemas: [idSchema], handle: (runId) => dependencies.runRegistry.cancel(runId) },
