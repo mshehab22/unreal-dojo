@@ -770,10 +770,13 @@
     "id": "state",
     "title": "State",
     "intent": "Organize an actor's behavior by the mode it is in right now (a door that is locked, closed, opening, or open), so each mode owns its own reactions and the actor can only move between modes along transitions you wrote down.",
-    "problem": "A character controller grows a pile of booleans (bIsJumping, bIsCrouching, bIsDashing) and every input handler checks combinations of them. Impossible combinations slip through: crouch-jumping mid-dash, or opening a door that is already opening.",
+    "problem": "An arena drawbridge grows a pile of booleans (bIsUp, bIsMoving, bIsJammed) and every input checks combinations of them. Impossible combinations slip through: a bridge that reports it is jammed and still moving, or a gate told to open while it is already opening.",
     "unrealForm": "Movement modes on UCharacterMovementComponent are an enum state machine. Animation Blueprints have visual state machines, and State Trees and Behavior Trees handle AI. In gameplay C++ you write a UENUM for the states plus a switch, or a state object per mode with Enter, Tick, and Exit, and you keep entry and exit actions on the state so transitions stay in one place.",
     "whenNot": "Two or three independent flags that never conflict do not need a machine. Rich AI that must weigh many goals outgrows a flat state machine; reach for Behavior Trees or State Trees.",
-    "useCaseQuestIds": [],
+    "useCaseQuestIds": [
+      "p7-prize-kiosk",
+      "p7-ballista"
+    ],
     "recall": [
       {
         "id": "state-recall-1",
@@ -791,7 +794,7 @@
       {
         "id": "state-recall-2",
         "type": "fill-blank",
-        "prompt": "A state machine that remembers previous states on a stack so it can return to them (such as resuming a run after firing) is called a ___ automaton.",
+        "prompt": "An arena guard who is stunned should, when the stun wears off, go back to whatever it was doing before, patrolling or chasing. A machine that keeps earlier modes on a stack to return to them is called a ___ automaton.",
         "acceptedAnswers": [
           "pushdown",
           "push-down",
@@ -807,6 +810,19 @@
         "bugLine": 7,
         "fix": "A locked door should ignore Interact (or play a rattle) until it is unlocked; it must not move to EDS_Opening.",
         "explanation": "Each state decides which inputs it accepts. Locked accepting Interact defeats the lock."
+      },
+      {
+        "id": "state-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A ballista keeps three mode objects, made once and reused. Its aiming mode tracks how far the aim has come. Where must that progress be reset so an interrupted aim never carries over?",
+        "choices": [
+          "In the aiming mode's Enter, which runs on every way into the mode",
+          "In the ballista's constructor",
+          "In the fire order handler",
+          "Nowhere; reused objects start fresh automatically"
+        ],
+        "answerIndex": 0,
+        "explanation": "Enter runs each time the mode becomes current, whichever input led there, so it is the one place that sees every new visit."
       }
     ],
     "scenarios": [
@@ -840,7 +856,7 @@
       {
         "id": "state-scenario-2",
         "type": "which-pattern",
-        "prompt": "A character can run, jump, and slide, and independently aim or not aim with a weapon. Putting every combination into one enum explodes to a dozen states. What variant fixes this?",
+        "prompt": "An arena guard has an activity (patrolling, chasing, or searching) and, independently, carries a torch or not. Putting every pairing into one enum doubles the modes, and every new activity doubles again. What variant fixes this?",
         "choices": [
           "component",
           "observer",
@@ -851,18 +867,31 @@
         "distractorNotes": [
           {
             "choice": "component",
-            "why": "Splitting into components helps organize code, but the specific fix is running two state machines side by side."
+            "why": "Splitting the guard into components helps organize code, but the specific fix is two small machines running side by side."
           },
           {
             "choice": "subclass-sandbox",
-            "why": "A sandbox base does not reduce the number of mode combinations."
+            "why": "A sandbox base gives subclasses safe operations; it does not reduce the number of mode combinations."
           },
           {
             "choice": "observer",
-            "why": "Notifications do not reduce the combinatorial state count."
+            "why": "Announcing changes does not reduce how many combined modes exist."
           }
         ],
-        "explanation": "Concurrent state machines: one for movement, one for the weapon, each with its own small set of states."
+        "explanation": "Run two machines, one for the activity and one for the torch, and add explicit checks only where they interact."
+      },
+      {
+        "id": "state-scenario-3",
+        "type": "multiple-choice",
+        "prompt": "An arena banner is either raised or lowered, with no data and no other rules. A teammate proposes an abstract banner mode class with Raised and Lowered subclasses. What is the better call?",
+        "choices": [
+          "Use the mode classes for consistency",
+          "A single boolean with a guard against raising twice",
+          "A StateTree asset",
+          "A pushdown stack of banner modes"
+        ],
+        "answerIndex": 1,
+        "explanation": "Two modes with no data cannot form an impossible combination; a boolean says everything the classes would."
       }
     ]
   },

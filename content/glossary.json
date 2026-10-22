@@ -2726,7 +2726,8 @@
       "anim-instance",
       "uenum",
       "blend-space",
-      "anim-notify"
+      "anim-notify",
+      "finite-state-machine"
     ]
   },
   {
@@ -3891,5 +3892,45 @@
       "game-thread"
     ],
     "firstQuestId": "p6-event-queue-card"
+  },
+  {
+    "id": "finite-state-machine",
+    "term": "Finite State Machine",
+    "aliases": [
+      "finite state machine",
+      "finite state machines",
+      "FSM",
+      "gameplay state machine"
+    ],
+    "category": "framework",
+    "short": "A design where an object is always in exactly one of a fixed set of modes, and each mode decides how the object answers each input.",
+    "long": "A finite state machine has a fixed list of modes, exactly one current mode, inputs that arrive one at a time, and for each mode a set of rules saying which inputs move it to which other mode. Inputs a mode has no rule for are ignored. In Unreal gameplay code it is usually a UENUM with a switch per input, or one UObject class per mode; the character movement component's movement modes and StateTree assets are engine examples. It is different from the Animation Blueprint state machine, which chooses poses.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/overview-of-state-tree-in-unreal-engine?application_version=5.8",
+    "related": [
+      "uenum",
+      "state-tree",
+      "state-machine"
+    ],
+    "firstQuestId": "p7-flags-to-modes"
+  },
+  {
+    "id": "state-tree",
+    "term": "StateTree",
+    "aliases": [
+      "State Tree",
+      "UStateTreeComponent",
+      "StateTree asset",
+      "SendStateTreeEvent"
+    ],
+    "category": "AI",
+    "short": "An engine plugin for data-driven, hierarchical state machines: states arranged in a tree, each with tasks and transitions, edited as an asset.",
+    "long": "StateTree lets you build a state machine as an asset in the editor. States sit in a tree, so a parent state can hold rules its children share; each state runs tasks while it is active, and transitions with conditions move between states, triggered by task results, conditions, or events sent from C++ with UStateTreeComponent's SendStateTreeEvent. A StateTree component on an actor or AI controller runs it. It suits AI and gameplay flows a designer wants to rearrange and debug visually, with C++ supplying the actions.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/state-tree-in-unreal-engine?application_version=5.8",
+    "related": [
+      "behavior-tree",
+      "finite-state-machine",
+      "gameplay-tags"
+    ],
+    "firstQuestId": "p7-state-card"
   }
 ]

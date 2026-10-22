@@ -1,0 +1,5 @@
+{
+	"id": "state",
+	"title": "One mode at a time",
+	"summary": "The arena's prize kiosk, its ballista, its drawbridge, and its champion all behave differently depending on what they are doing right now. Learn to give each one a single current mode, let the mode decide what every input means, and keep each mode's code and data together."
+}
