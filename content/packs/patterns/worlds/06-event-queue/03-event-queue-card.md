@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: [event-queue]
 skills: [event-queue]
-terms: [tqueue, multicast-delegate, tick-groups, game-thread, timer-manager]
+terms: [tqueue, multicast-delegate, tick-groups, game-thread, timer-manager, parallel-for]
 prerequisites: [p6-knockout-herald]
 xp: 25
 estimatedMinutes: 8

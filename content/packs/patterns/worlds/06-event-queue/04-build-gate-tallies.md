@@ -1,6 +1,6 @@
 ---
 id: p6-gate-tallies
-title: Gate reports from worker threads, a few per tick
+title: Gate reports from many threads, a few per tick
 order: 4
 kind: build
 scaffold: stub
@@ -19,13 +19,13 @@ concepts:
 
 # Brief
 
-When you press Play and run `ke * SimulateGates`, forty gate reports arrive at once from worker threads, and the attendance board's label climbs over the next ten frames to its total instead of jumping in one.
+When you press Play and run `ke * SimulateGates`, forty gate reports land in the board's mailbox at once, submitted from several threads, and the attendance board's label climbs over the next ten frames to its total instead of jumping in one.
 
-The arena's ticket gates are counted on worker threads, away from gameplay. Each counter sends an `FDojoP6GateReport` (which gate, how many tickets) whenever it likes, possibly several at the same instant from different threads. The board's counts may only be touched on the game thread. So between them sits a mailbox: a `TQueue` in multi-producer mode, which many threads may add to at once and one thread may take from.
+The arena's ticket gates are counted away from gameplay. Each counter sends an `FDojoP6GateReport` (which gate, how many tickets), possibly several at the same instant from different threads. In this quest `SimulateGates` stands in for the counters with `ParallelFor`, which runs the forty submissions on worker threads and on the calling game thread at the same time, and returns only once all forty are in the mailbox. The board's counts may only be touched on the game thread, and it applies the reports at its own pace on later ticks. So between them sits a mailbox: a `TQueue` in multi-producer mode, which many threads may add to at once and one thread may take from.
 
-The declarations, the constructor, `BeginPlay`, `Tick`, the getters, the label, and `SimulateGates` (the worker side) are given. Yours:
+The declarations, the constructor, `BeginPlay`, `Tick`, the getters, the label, and `SimulateGates` (the counters' side) are given. Yours:
 
-- `SubmitReport` adds a report to the mailbox. It runs on worker threads, so it does nothing else.
+- `SubmitReport` adds a report to the mailbox. It may run on any thread, several at once, so it does nothing else.
 - `ApplyReports` runs on the game thread each tick. It takes reports out oldest first, counts every one it takes, adds each report's tickets to its gate and to the attendance, drops reports for gates that do not exist, and refreshes the label.
 - A burst of reports must not all land in one frame: `ApplyReports` takes at most `ReportsPerTick` reports per call, and the rest wait for later ticks.
 
@@ -49,7 +49,7 @@ Place a `DojoP6AttendanceBoard` in the sandbox map, press Play, open the console
 
 class UTextRenderComponent;
 
-/** One gate's ticket report, made on a worker thread and carried by value to the game thread. */
+/** One gate's ticket report, made on any thread and carried by value to the game thread. */
 USTRUCT(BlueprintType)
 struct FDojoP6GateReport
 {
@@ -64,7 +64,7 @@ struct FDojoP6GateReport
 	int32 Tickets = 0;
 };
 
-/** The arena's attendance board: gate counters on worker threads submit reports at any moment, and the game thread applies a few per tick. */
+/** The arena's attendance board: gate counters on any thread submit reports at any moment, and the game thread applies a few per tick. */
 UCLASS()
 class ADojoP6AttendanceBoard : public AActor
 {
@@ -93,7 +93,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Attendance")
 	void ApplyReports();
 
-	/** Sends ten reports per gate from worker threads, to try the board out. */
+	/** Submits ten reports per gate from several threads at once through ParallelFor, to try the board out; returns once all are queued. */
 	UFUNCTION(BlueprintCallable, Category = "Attendance")
 	void SimulateGates();
 
@@ -175,7 +175,7 @@ void ADojoP6AttendanceBoard::SimulateGates()
 {
 	const int32 Gates = GateCount;
 
-	// The gate counters run on worker threads; each only submits, and never touches the board's counts.
+	// ParallelFor runs these submissions on worker threads and on this thread, and returns once all are queued; each only submits, and never touches the board's counts.
 	ParallelFor(Gates * 10, [this, Gates](int32 Index)
 	{
 		FDojoP6GateReport Report;
@@ -266,7 +266,7 @@ bool FDojo_P6_GateTallies_AFewReportsPerTick::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P6_GateTallies_ReportsFromManyThreads, "Dojo.P6.GateTallies.ReportsFromManyThreads", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Two hundred reports submitted from worker threads at once all arrive, never more than four per tick. */
+/** Two hundred reports submitted from several threads at once through ParallelFor all arrive, never more than four per tick. */
 bool FDojo_P6_GateTallies_ReportsFromManyThreads::RunTest(const FString& Parameters)
 {
 	using namespace DojoP6GateTalliesTest;
@@ -332,7 +332,7 @@ bool FDojo_P6_GateTallies_UnknownGatesDropped::RunTest(const FString& Parameters
 
 # Rubric
 
-- SubmitReport only enqueues into the multi-producer queue; worker threads never touch the board's counts.
+- SubmitReport only enqueues into the multi-producer queue; the submitting threads never touch the board's counts.
 - ApplyReports takes reports oldest first and at most ReportsPerTick per call; the rest wait in order.
 - Every report taken is counted, and reports for unknown gates are dropped without changing tickets.
 - Reports carry their data by value, so nothing on the game thread reads worker-thread memory.

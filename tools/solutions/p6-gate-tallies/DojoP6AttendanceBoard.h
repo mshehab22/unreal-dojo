@@ -7,7 +7,7 @@
 
 class UTextRenderComponent;
 
-/** One gate's ticket report, made on a worker thread and carried by value to the game thread. */
+/** One gate's ticket report, made on any thread and carried by value to the game thread. */
 USTRUCT(BlueprintType)
 struct FDojoP6GateReport
 {
@@ -22,7 +22,7 @@ struct FDojoP6GateReport
 	int32 Tickets = 0;
 };
 
-/** The arena's attendance board: gate counters on worker threads submit reports at any moment, and the game thread applies a few per tick (Event Queue: a thread-safe mailbox drained at a pace the board chooses). */
+/** The arena's attendance board: gate counters on any thread submit reports at any moment, and the game thread applies a few per tick (Event Queue: a thread-safe mailbox drained at a pace the board chooses). */
 UCLASS()
 class ADojoP6AttendanceBoard : public AActor
 {
@@ -51,7 +51,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Attendance")
 	void ApplyReports();
 
-	/** Sends ten reports per gate from worker threads, to try the board out. */
+	/** Submits ten reports per gate from several threads at once through ParallelFor, to try the board out; returns once all are queued. */
 	UFUNCTION(BlueprintCallable, Category = "Attendance")
 	void SimulateGates();
 

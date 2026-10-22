@@ -638,8 +638,8 @@
     "id": "event-queue",
     "title": "Event Queue",
     "intent": "Put a mailbox between the code that raises an event and the code that reacts to it, so the reaction happens at a moment the receiver picks, such as the end of the frame, instead of in the middle of the sender's call.",
-    "problem": "Observer delivers news instantly, inside the sender's call. Sometimes that is the wrong moment: a burst of explosions all ask for the same sound in one frame, a handler spawns actors while physics iterates, or work arrives on a background thread that must be handled on the game thread.",
-    "unrealForm": "Unreal gives you the containers (TQueue, TCircularQueue) and several engine-level queues: AsyncTask to the game thread, FTimerManager, and the audio engine's concurrency rules. What you build: a gameplay event queue a subsystem drains at end of tick, a ring buffer that merges duplicate requests (damage numbers, UI toasts, sound cues), and a thread-safe handoff from worker threads.",
+    "problem": "Observer delivers news instantly, inside the sender's call. Sometimes that is the wrong moment: a knocked-out fighter is halfway through leaving the arena when its listeners run, ticket counters on worker threads produce reports that only the game thread may apply, or fifty hits on one target in a frame each ask for their own damage number.",
+    "unrealForm": "Unreal gives you the containers (TQueue in single- or multi-producer mode, TCircularQueue with a fixed capacity) and engine-level queues you do not need to write: AsyncTask to the game thread and the timer manager. What you build: a gameplay mailbox an actor or subsystem empties at a chosen point such as TG_PostUpdateWork, a handoff that lets worker threads submit results the game thread applies at its own pace, and a per-frame list that combines requests for the same target (damage numbers per target) before showing them.",
     "whenNot": "If listeners can safely react immediately, a delegate is simpler. If the sender needs a reply, a queue takes that away. Remember events must carry all the data they need because the world may change before they are handled, and a central queue is still global state.",
     "useCaseQuestIds": [
       "p6-knockout-herald",
@@ -662,14 +662,13 @@
       {
         "id": "event-queue-recall-2",
         "type": "fill-blank",
-        "prompt": "A fixed-capacity queue that reuses one block of memory by wrapping around its end, such as Unreal's TCircularQueue, is called a ___ buffer.",
+        "prompt": "The arena herald announces its knockouts in the ___ tick group, after every other actor in the frame has ticked.",
         "acceptedAnswers": [
-          "ring",
-          "circular",
-          "ring buffer",
-          "circular buffer"
+          "TG_PostUpdateWork",
+          "PostUpdateWork",
+          "Post Update Work"
         ],
-        "explanation": "A ring buffer avoids shifting elements and never allocates after setup."
+        "explanation": "Choosing the last tick group gives the herald one fixed moment per frame, when every fighter has already had its turn."
       },
       {
         "id": "event-queue-recall-3",

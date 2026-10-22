@@ -53,7 +53,7 @@ void ADojoP6AttendanceBoard::SimulateGates()
 {
 	const int32 Gates = GateCount;
 
-	// The gate counters run on worker threads; each only submits, and never touches the board's counts.
+	// ParallelFor runs these submissions on worker threads and on this thread, and returns once all are queued; each only submits, and never touches the board's counts.
 	ParallelFor(Gates * 10, [this, Gates](int32 Index)
 	{
 		FDojoP6GateReport Report;
