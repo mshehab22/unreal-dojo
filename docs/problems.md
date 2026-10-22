@@ -45,3 +45,5 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 - 2026-10-21, unreal-pipeline: "nothing has been verified against a real engine yet". Solved by M1.2a: the template builds and its test passes headless on the Mac with UE 5.8.3.
 
 (Move entries here with the fix in one line.)
+
+- 2026-10-21, first-run build hang seen once (M2.4, ui-core): UBT succeeded in 25 s but the renderer got only 3 progress events and never the createSandbox answer, and sat at 0:00 for 20 minutes while other UBT runs were active. Not reproduced in four later runs. Investigation and a status-query fallback are in M2.1e.
