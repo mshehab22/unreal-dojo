@@ -638,10 +638,13 @@
     "id": "event-queue",
     "title": "Event Queue",
     "intent": "Put a mailbox between the code that raises an event and the code that reacts to it, so the reaction happens at a moment the receiver picks, such as the end of the frame, instead of in the middle of the sender's call.",
-    "problem": "Observer delivers news instantly, inside the sender's call. Sometimes that is the wrong moment: a burst of explosions all ask for the same sound in one frame, a handler spawns actors while physics iterates, or work arrives on a background thread that must be handled on the game thread.",
-    "unrealForm": "Unreal gives you the containers (TQueue, TCircularQueue) and several engine-level queues: AsyncTask to the game thread, FTimerManager, and the audio engine's concurrency rules. What you build: a gameplay event queue a subsystem drains at end of tick, a ring buffer that merges duplicate requests (damage numbers, UI toasts, sound cues), and a thread-safe handoff from worker threads.",
+    "problem": "Observer delivers news instantly, inside the sender's call. Sometimes that is the wrong moment: a knocked-out fighter is halfway through leaving the arena when its listeners run, ticket counters on worker threads produce reports that only the game thread may apply, or fifty hits on one target in a frame each ask for their own damage number.",
+    "unrealForm": "Unreal gives you the containers (TQueue in single- or multi-producer mode, TCircularQueue with a fixed capacity) and engine-level queues you do not need to write: AsyncTask to the game thread and the timer manager. What you build: a gameplay mailbox an actor or subsystem empties at a chosen point such as TG_PostUpdateWork, a handoff that lets worker threads submit results the game thread applies at its own pace, and a per-frame list that combines requests for the same target (damage numbers per target) before showing them.",
     "whenNot": "If listeners can safely react immediately, a delegate is simpler. If the sender needs a reply, a queue takes that away. Remember events must carry all the data they need because the world may change before they are handled, and a central queue is still global state.",
-    "useCaseQuestIds": [],
+    "useCaseQuestIds": [
+      "p6-knockout-herald",
+      "p6-gate-tallies"
+    ],
     "recall": [
       {
         "id": "event-queue-recall-1",
@@ -659,14 +662,13 @@
       {
         "id": "event-queue-recall-2",
         "type": "fill-blank",
-        "prompt": "A fixed-size queue that wraps its head and tail indices around the end of an array is called a ___ buffer.",
+        "prompt": "The arena herald announces its knockouts in the ___ tick group, after every other actor in the frame has ticked.",
         "acceptedAnswers": [
-          "ring",
-          "circular",
-          "ring buffer",
-          "circular buffer"
+          "TG_PostUpdateWork",
+          "PostUpdateWork",
+          "Post Update Work"
         ],
-        "explanation": "A ring buffer avoids shifting elements and never allocates after setup."
+        "explanation": "Choosing the last tick group gives the herald one fixed moment per frame, when every fighter has already had its turn."
       },
       {
         "id": "event-queue-recall-3",
@@ -679,13 +681,26 @@
           "Concludes the event should be self-contained"
         ],
         "explanation": "Time decoupling means the sender's context is gone when the receiver runs."
+      },
+      {
+        "id": "event-queue-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A herald announces a frame's knockouts, and one listener posts a new knockout while hearing an announcement. What makes sure that new knockout waits for the next announcement?",
+        "choices": [
+          "Announcing in a later tick group",
+          "Moving the whole mailbox into a local batch before the first listener runs",
+          "Using a dynamic delegate instead of a native one",
+          "Posting with a timer"
+        ],
+        "answerIndex": 1,
+        "explanation": "Once the batch is taken, the mailbox is empty and anything posted during the announcement lands there for the next round."
       }
     ],
     "scenarios": [
       {
         "id": "event-queue-scenario-1",
         "type": "which-pattern",
-        "prompt": "A grenade hits fifteen crates in one frame and each crate requests the same breaking sound, which stacks into a deafening spike. You want to merge identical requests and play at most one per frame. Which pattern?",
+        "prompt": "A one-second blizzard of hits lands on the same training dummy, and each hit asks for a floating damage number. Fifty overlapping numbers make an unreadable smear. You want each frame's hits on one target combined into a single number shown at the end of the frame. Which pattern?",
         "choices": [
           "event-queue",
           "flyweight",
@@ -696,18 +711,18 @@
         "distractorNotes": [
           {
             "choice": "observer",
-            "why": "Delegates would fire each request immediately, which is the spike you have now."
+            "why": "Delegates would show each number the moment its hit lands, which is the smear you have now."
           },
           {
             "choice": "flyweight",
-            "why": "Sharing the sound asset saves memory but does not merge the play requests."
+            "why": "Sharing one widget class or font saves memory but does not combine the hits into one number."
           },
           {
             "choice": "singleton",
-            "why": "A global audio manager can still play every request immediately; the merge needs a buffer."
+            "why": "A global number manager could still show every hit as it arrives; combining them needs the hits held until the end of the frame."
           }
         ],
-        "explanation": "Buffer the requests, merge duplicates, and drain once per frame."
+        "explanation": "Hold the frame's hit requests, combine those for the same target, and show the totals once at the end of the frame."
       },
       {
         "id": "event-queue-scenario-2",
@@ -735,6 +750,19 @@
           }
         ],
         "explanation": "A thread-safe queue (TQueue in single-producer or multi-producer mode) drained on the game thread."
+      },
+      {
+        "id": "event-queue-scenario-3",
+        "type": "multiple-choice",
+        "prompt": "A pressure plate should light its own lamp the instant it is stepped on, on the game thread, and nothing else cares. A teammate proposes posting a LampRequest to an arena-wide queue drained at the end of the frame. What is the better call?",
+        "choices": [
+          "Use the queue so every request goes through one place",
+          "Have the plate call its lamp directly, or broadcast a delegate the lamp binds to",
+          "Post the request from a worker thread",
+          "Drain the queue twice per frame"
+        ],
+        "answerIndex": 1,
+        "explanation": "Nothing here needs a different moment, thread, or batch, so a queue only adds delay and a global; react now."
       }
     ]
   },
