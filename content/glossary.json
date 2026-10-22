@@ -3993,5 +3993,59 @@
       "world"
     ],
     "firstQuestId": "p8-many-kinds-one-toolbox"
+  },
+  {
+    "id": "findcomponentbyclass",
+    "term": "FindComponentByClass",
+    "aliases": [
+      "GetComponentByClass",
+      "FindComponentByClass<T>"
+    ],
+    "category": "components",
+    "short": "Asks an actor for the first component of a given class it carries, or nullptr when it has none.",
+    "long": "Code that has an actor and needs one of its abilities asks for the part instead of casting the actor: Actor->FindComponentByClass<UHealthComponent>() returns that actor's health component whatever kind of actor it is. It searches the actor's component list each call, so code that asks often can keep the result. GetComponentByClass does the same, and has a Blueprint node, Get Component by Class.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/AActor/FindComponentByClass?application_version=5.8",
+    "related": [
+      "actor-component",
+      "actor",
+      "cast"
+    ],
+    "firstQuestId": "p9-one-prop-too-many-jobs"
+  },
+  {
+    "id": "blueprint-function-library",
+    "term": "Blueprint Function Library",
+    "aliases": [
+      "UBlueprintFunctionLibrary",
+      "function library"
+    ],
+    "category": "framework",
+    "short": "A class of static functions that C++ and every Blueprint graph can call, with no object to create first.",
+    "long": "Derive from UBlueprintFunctionLibrary and mark static functions BlueprintCallable or BlueprintPure, and they appear as nodes in every graph. It suits helpers that belong to no single actor, such as assembling a kind of prop from parts or formatting a score. The engine's own Gameplay Statics and Kismet Math Library are function libraries.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UBlueprintFunctionLibrary?application_version=5.8",
+    "related": [
+      "blueprintcallable",
+      "gameplay-statics",
+      "kismet-math-library"
+    ],
+    "firstQuestId": "p9-one-prop-too-many-jobs"
+  },
+  {
+    "id": "initialize-component",
+    "term": "InitializeComponent",
+    "aliases": [
+      "bWantsInitializeComponent",
+      "OnRegister"
+    ],
+    "category": "components",
+    "short": "A component's startup step that runs after it registers and before any BeginPlay, for components that ask for it.",
+    "long": "When an actor spawns or its level starts play, each of its components first gets OnRegister (which also runs in the editor), then every component with bWantsInitializeComponent set to true gets InitializeComponent, then the actor and its components get BeginPlay. State that other components may read in their BeginPlay, such as a stamina pool filled to full, is ready if it is set in InitializeComponent. A component registered later on an actor that is already playing gets all three steps inside its RegisterComponent call.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UActorComponent/InitializeComponent?application_version=5.8",
+    "related": [
+      "actor-component",
+      "beginplay",
+      "register-component"
+    ],
+    "firstQuestId": "p9-component-card"
   }
 ]
