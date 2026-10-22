@@ -1274,3 +1274,82 @@ total                                       39.2  PASSED
 - What changed: Next is worked out once when the loot screen opens and then stays put; switching back to the window no longer moves the keyboard. The end-to-end flow now submits a quest that does not compile, submits another quest, goes back, and finds "Last submit: did not compile" with the log, read from the save. A true restart is covered by M2.4's real-bridge relaunch.
 - Proof: `npm run typecheck` passes; `npm test` 71 files, 857 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 28 passed, three runs in a row.
 - Decisions made: A817 and A818.
+
+## M2.4 End-to-end learner flow (qa-and-ci, tester)
+- What changed: a new test plays a brand new learner through the whole first world of the real app with the real Unreal Engine, not the stand-in data: set up the studio and the sandbox, read a concept card and hover a term, predict and pass four concept quests, do a drill, fail a build, buy a hint, type the fix, pass it, pass the rest of the world, plan the dash breakdown, compare it with the reference and revise it, see the boss unlock, then close the app and open it again to check everything was kept. It only runs when asked for, because it needs Unreal and takes about 35 minutes; the normal test run skips it.
+- How to see it: `npm run build`, then `DOJO_E2E_ENGINE=1 npx playwright test e2e/learner-flow.spec.ts` (details and options in `docs/systems/qa-and-ci.md`). The playtest steps for Mohammad are in the Lead's "Ready to playtest" list.
+- What went wrong and how it was solved: the first run (before A72 merged) showed World 1's first build locked behind a term taught only in World 2; reported, fixed by the Lead's decision A72 and builder-rules' M1.6e, and the recorded run goes through without any drill detour. A run before the rebase hung on the first-run build step (the engine finished in 25 s but the screen never updated); it did not happen again in three later runs on the rebased code, so it is logged as seen once. The test saved a reference solution behind the screen's back and the screen kept its older copy; it now reloads first (A642). The test held the shared engine lock for the whole run at first; it now takes it only around the sandbox build, each Run, and each Submit (A640).
+- Proof: the full flow passed once on the rebased branch in 35.5 minutes (MacBook Air M5, UE 5.8.3, Tests-only review), including waits for other sessions' engine work. Typecheck passes; unit tests 829 passed and 24 skipped; content verifier no problems (14 warnings, all in content); build passes; the default end-to-end suite 27 passed with the new flow skipped. The pictures below are that passing run's screenshots, converted to 1280-wide JPGs (the run itself was not started with `SAVE_PROOF=1`).
+
+![[m2-4-01-title-fresh.jpg|800]]
+*A fresh learner names the studio.*
+
+![[m2-4-02-first-run-engine.jpg|800]]
+*The real engine locator found UE 5.8.3 in ~/Applications.*
+
+![[m2-4-03-first-run-building.jpg|800]]
+*The first full sandbox build, in the temp folder the stubbed folder picker returned.*
+
+![[m2-4-04-first-run-built.jpg|800]]
+*The build passed.*
+
+![[m2-4-05-studio-fresh.jpg|800]]
+*Into the Studio, after skipping the windowed editor step.*
+
+![[m2-4-10-concept-predict.jpg|800]]
+*Concept quest 1: a prediction before the card.*
+
+![[m2-4-10-concept-hover-term.jpg|800]]
+*A glossary term's hover card on the card step.*
+
+![[m2-4-10-concept-results.jpg|800]]
+*Every question graded right.*
+
+![[m2-4-10-concept-loot.jpg|800]]
+*Loot, with the next quest unlocked.*
+
+![[m2-4-20-drill-item.jpg|800]]
+*A drill item, graded.*
+
+![[m2-4-20-drill-summary.jpg|800]]
+*The drill summary (4 of 6: see bug 3 below).*
+
+![[m2-4-30-build-run-fails.jpg|800]]
+*The training dummy build: Run on the starter fails in the real engine.*
+
+![[m2-4-31-build-hint.jpg|800]]
+*A hint bought.*
+
+![[m2-4-32-build-fixed-in-editor.jpg|800]]
+*Both fixes typed into Monaco.*
+
+![[m2-4-33-build-run-passes.jpg|800]]
+*Run passes.*
+
+![[m2-4-34-build-loot.jpg|800]]
+*Submit: passed, 100 score, +34 XP after the 6 XP hint, the next quest unlocked.*
+
+![[m2-4-50-breakdown-plan.jpg|800]]
+*The breakdown's first plan.*
+
+![[m2-4-51-breakdown-compare.jpg|800]]
+*Compared with the reference.*
+
+![[m2-4-52-breakdown-loot.jpg|800]]
+*Revised and graded: passed, two pattern cards, the boss unlocked.*
+
+![[m2-4-60-map-boss-unlocked.jpg|800]]
+*The map: 11 of 12 passed, the boss open.*
+
+![[m2-4-70-restart-title.jpg|800]]
+*After a restart on the same data: welcome back.*
+
+![[m2-4-71-restart-map.jpg|800]]
+*Progress kept: 11 of 12 passed.*
+
+![[m2-4-72-restart-build-kept.jpg|800]]
+*The paid hint kept; the self-explanations were not (bug 1 below).*
+
+- Bugs found (sent to the Lead with owners): (1) on the real bridge the self-explanations of a build quest are never saved, so the gate locks again after a reload or restart (`ProgressService.saveQuestDraft` drops `selfExplanations`; the fake keeps them); (2) the World 1 term gate (fixed by A72); (3) with Tests-only review, a drill's explain items count as misses in the summary ("4 of 6", "2 items are due for review") although they are only self-checked and not scheduled; (4) a Submit that does not compile leaves no compiler output on the quest screen afterwards, only "not passed yet, score 0"; (5) the loot screen repeats "Next reviews tomorrow, tomorrow, tomorrow"; (6) the first-run build step hung once (above).
+- Decisions made: A640 to A645 in `docs/decisions.md`.
+- Not done or left for later: the boss itself is not played; the windowed editor buttons are never clicked (A643); unverified on Windows.

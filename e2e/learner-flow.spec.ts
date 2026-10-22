@@ -1,7 +1,8 @@
 // M2.4: a fresh learner's whole first world against the REAL bridge and a real Unreal Engine: first-run setup, a hover term, concept quests with
 // a prediction, drills, a build that fails, takes a hint, and passes, a breakdown submitted and revised, loot, the next quest unlocking, and a restart
 // that keeps everything. Opt-in: it needs an engine and takes many minutes, so it only runs with DOJO_E2E_ENGINE=1 (docs/systems/qa-and-ci.md).
-// Optional: DOJO_E2E_ENGINE_PATH (default ~/Applications/UE_5.8), DOJO_E2E_ENGINE_LOCK (a folder made with mkdir as a machine-wide engine lock).
+// Optional: DOJO_E2E_ENGINE_PATH (default ~/Applications/UE_5.8), DOJO_E2E_ENGINE_LOCK (a folder made with mkdir as a machine-wide engine lock, held only
+// around the steps that run Unreal: the sandbox build, each Run, each Submit).
 // With SAVE_PROOF=1 a passing run writes its pictures to docs/iterations/m2-4-*.jpg. Page scripts are strings: e2e is typechecked without the DOM library.
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmdirSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -12,7 +13,7 @@ import type { ElectronApplication, Locator, Page } from "@playwright/test";
 import { answerParsons, answerQuestion, readAnswerKey, type AnswerKey } from "./support/answerKey";
 import { stubOpenDialog } from "./support/dialogStubs";
 import { expect, test } from "./support/dojoTest";
-import { closeDojo, closeDojoKeepingData, launchDojo } from "./support/launchDojo";
+import { closeDojoKeepingData, launchDojo } from "./support/launchDojo";
 import type { ProofCamera } from "./support/ProofCamera";
 
 const ENABLED = process.env["DOJO_E2E_ENGINE"] === "1";
@@ -27,9 +28,6 @@ const SANDBOX_BUILD_TIMEOUT_MS = 20 * 60_000;
 
 /** One Run or Submit of a build quest: an incremental build plus a headless test run. */
 const ENGINE_RUN_TIMEOUT_MS = 10 * 60_000;
-
-/** Drills to try before giving up on a term reaching Familiar (an explain item does not count with tests-only review, A318). */
-const MAXIMUM_DRILLS_PER_GATE = 6;
 
 /** World 1's quests by id, with the titles the stage nodes use as their labels. */
 const QUESTS = {
@@ -97,6 +95,12 @@ async function stageNode(quest: WorldQuest): Promise<Locator>
 	return window.locator(`[data-testid="stage-node"][aria-label^=${JSON.stringify(`${quest.title}:`)}]`);
 }
 
+/** Fails unless the quest's stage node is open on the World Map. */
+async function expectUnlocked(quest: WorldQuest): Promise<void>
+{
+	await expect(await stageNode(quest)).not.toHaveAttribute("data-status", "locked");
+}
+
 /** Opens a quest from its World Map stage node, the way a learner does. */
 async function openQuest(quest: WorldQuest): Promise<void>
 {
@@ -132,6 +136,21 @@ function releaseEngineLock(): void
 	if (ENGINE_LOCK) rmdirSync(ENGINE_LOCK);
 }
 
+/** Holds the engine lock only while `step` runs Unreal (a sandbox build, a Run, a Submit), so other sessions can use the engine in between. */
+async function withEngineLock<Value>(step: () => Promise<Value>): Promise<Value>
+{
+	await takeEngineLock();
+
+	try
+	{
+		return await step();
+	}
+	finally
+	{
+		releaseEngineLock();
+	}
+}
+
 /** Title, the first-run steps with the real engine and a stubbed folder picker, the first full sandbox build, into the Studio. */
 async function firstRunSetup(pickedFolder: string): Promise<void>
 {
@@ -157,10 +176,13 @@ async function firstRunSetup(pickedFolder: string): Promise<void>
 	await window.getByRole("button", { name: "Use this folder" }).click();
 
 	await expect(window.getByTestId("first-run-build")).toBeVisible();
-	await window.getByRole("button", { name: "Start the build" }).click();
-	await expect(window.getByTestId("build-progress")).toHaveAttribute("data-phase", "building", { timeout: 60_000 });
-	await saveScreenshot("03-first-run-building");
-	await expect(window.getByTestId("build-succeeded")).toBeVisible({ timeout: SANDBOX_BUILD_TIMEOUT_MS });
+	await withEngineLock(async () =>
+	{
+		await window.getByRole("button", { name: "Start the build" }).click();
+		await expect(window.getByTestId("build-progress")).toHaveAttribute("data-phase", "building", { timeout: 60_000 });
+		await saveScreenshot("03-first-run-building");
+		await expect(window.getByTestId("build-succeeded")).toBeVisible({ timeout: SANDBOX_BUILD_TIMEOUT_MS });
+	});
 	await saveScreenshot("04-first-run-built");
 	await window.getByRole("button", { name: "Continue" }).click();
 
@@ -233,25 +255,6 @@ async function passConceptQuest(quest: WorldQuest, proofPrefix?: string): Promis
 	if (proofPrefix) await saveScreenshot(`${proofPrefix}-loot`);
 }
 
-/** Queues a glossary term for the next drill from its Codex entry ("Drill me"): filter the list, open the entry whose id matches, press Drill me. */
-async function queueTermFromCodex(termId: string): Promise<void>
-{
-	await goTo("#/codex", "screen-codex");
-	await window.getByRole("textbox", { name: "Filter the Codex" }).fill(termId.replace(/-/g, " "));
-
-	const rows = window.getByTestId("codex-list").getByRole("button");
-	const entry = window.getByTestId("codex-entry");
-	await expect(rows.first()).toBeVisible();
-
-	for (let index = 0; index < (await rows.count()) && (await entry.getAttribute("data-term")) !== termId; index++) await rows.nth(index).click();
-
-	await expect(entry).toHaveAttribute("data-term", termId);
-
-	const drillMe = entry.getByRole("button", { name: "Drill me" });
-	if (await drillMe.count()) await drillMe.click();
-	await expect(window.getByTestId("drill-queued")).toBeVisible();
-}
-
 /** One due drill from the Studio, every item answered right from the content; returns how many items it had. */
 async function runDrill(proofName?: string): Promise<number>
 {
@@ -279,26 +282,6 @@ async function runDrill(proofName?: string): Promise<number>
 	if (proofName) await saveScreenshot(`${proofName}-summary`);
 
 	return total;
-}
-
-/** Drills until the quest's term gate opens (the stage node stops saying "to Familiar in a drill"), queueing the terms it names. */
-async function drillUntilOpen(quest: WorldQuest, proofName?: string): Promise<void>
-{
-	for (let drill = 0; drill < MAXIMUM_DRILLS_PER_GATE; drill++)
-	{
-		const node = await stageNode(quest);
-		const label = (await node.getAttribute("aria-label")) ?? "";
-		const gate = /Get (.+) to Familiar in a drill first/.exec(label);
-
-		if ((await node.getAttribute("data-status")) !== "locked") return;
-		if (!gate) throw new Error(`${quest.id} is locked for another reason: ${label}`);
-
-		for (const termId of (gate[1] ?? "").split(/,\s*|\s+and\s+/).filter((part) => part.length > 0)) await queueTermFromCodex(termId);
-
-		await runDrill(drill === 0 ? proofName : undefined);
-	}
-
-	await expect(await stageNode(quest)).not.toHaveAttribute("data-status", "locked");
 }
 
 /** Fills every self-explanation box of a worked build and opens the gaps, when the quest has the gate. */
@@ -341,15 +324,21 @@ async function selectInEditor(text: string): Promise<void>
 /** Runs the quest's tests (an incremental build plus a headless run) and waits for the verdict. */
 async function runTests(expectedOk: boolean): Promise<void>
 {
-	await window.getByTestId("run-button").click();
-	await expect(window.getByTestId("run-result")).toHaveAttribute("data-ok", String(expectedOk), { timeout: ENGINE_RUN_TIMEOUT_MS });
+	await withEngineLock(async () =>
+	{
+		await window.getByTestId("run-button").click();
+		await expect(window.getByTestId("run-result")).toHaveAttribute("data-ok", String(expectedOk), { timeout: ENGINE_RUN_TIMEOUT_MS });
+	});
 }
 
 /** Submits the build and waits for its loot screen. */
 async function submitBuild(): Promise<void>
 {
-	await window.getByTestId("submit-button").click();
-	await expect(window.getByTestId("screen-loot")).toBeVisible({ timeout: ENGINE_RUN_TIMEOUT_MS });
+	await withEngineLock(async () =>
+	{
+		await window.getByTestId("submit-button").click();
+		await expect(window.getByTestId("screen-loot")).toBeVisible({ timeout: ENGINE_RUN_TIMEOUT_MS });
+	});
 }
 
 /** The reference solution's files for a build quest (tools/solutions/<quest id>/, top-level files only). */
@@ -364,11 +353,23 @@ function referenceSolution(questId: string): Record<string, string>
 async function passBuildWithReferenceSolution(quest: WorldQuest): Promise<void>
 {
 	await window.evaluate(`window.dojo.saveQuestDraft(${JSON.stringify({ questId: quest.id, files: referenceSolution(quest.id) })})`);
+
+	// The renderer caches progress, and a draft saved straight through the bridge does not refresh that cache; a reload does.
+	await window.reload();
+	await window.waitForLoadState("domcontentloaded");
 	await openQuest(quest);
 	await waitForEditor();
 	await explainMarkedLines();
 	await submitBuild();
-	await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "true");
+
+	// A failed reference build is a content or pipeline bug, not a learner mistake: show the compiler output it left on the quest screen.
+	if ((await window.getByTestId("screen-loot").getAttribute("data-passed")) !== "true")
+	{
+		await window.getByTestId("loot-improve").click();
+		await waitForEditor();
+		const log = await window.getByTestId("build-quest").innerText();
+		throw new Error(`${quest.id} did not pass with its reference solution. Quest screen after the submit:\n${log.slice(-4000)}`);
+	}
 }
 
 /** The showcase build (the training dummy): Run fails on the starter, a hint is bought, both gaps are typed in Monaco, Run passes, Submit, loot. */
@@ -451,7 +452,7 @@ test.describe("the learner flow against the real bridge and a real engine", () =
 		answers = readAnswerKey();
 
 		const pickedFolder = realpathSync(mkdtempSync(join(tmpdir(), "dojo-m2-4-sandbox-")));
-		await takeEngineLock();
+		let finished = false;
 
 		try
 		{
@@ -468,24 +469,20 @@ test.describe("the learner flow against the real bridge and a real engine", () =
 			await passConceptQuest(QUESTS.uproperty);
 			await passConceptQuest(QUESTS.ufunction);
 
-			// The first build also needs its terms at Familiar; a drill gets them there (and is the drill step of the flow).
-			const dummyNode = await stageNode(QUESTS.trainingDummy);
-			await saveScreenshot("20-map-term-gate");
-			await expect(dummyNode).toHaveAttribute("data-status", /locked|available/);
-			await drillUntilOpen(QUESTS.trainingDummy, "21-drill");
+			// A drill: the terms of the passed concept quests come back as practice.
+			await runDrill("20-drill");
 
+			// Every quest opens once the one before it is passed: terms only gate a quest when an earlier concept quest teaches them (A72).
+			await expectUnlocked(QUESTS.trainingDummy);
 			await buildFailHintPass();
 
-			// The rest of World 1 up to the breakdown: concepts, builds from their reference solutions, and term drills where a build asks for them.
+			// The rest of World 1 up to the breakdown: concepts, and builds passed from their reference solutions.
 			await passConceptQuest(QUESTS.enums);
-			await drillUntilOpen(QUESTS.popupTarget);
 			await passBuildWithReferenceSolution(QUESTS.popupTarget);
 			await passConceptQuest(QUESTS.cast);
-			await drillUntilOpen(QUESTS.scoreKeeper);
 			await passBuildWithReferenceSolution(QUESTS.scoreKeeper);
-			await drillUntilOpen(QUESTS.practiceBell);
 			await passBuildWithReferenceSolution(QUESTS.practiceBell);
-			await drillUntilOpen(QUESTS.dash);
+			await expectUnlocked(QUESTS.dash);
 
 			await breakdownSubmitAndRevise();
 
@@ -493,47 +490,46 @@ test.describe("the learner flow against the real bridge and a real engine", () =
 			await expect(await stageNode(QUESTS.boss)).not.toHaveAttribute("data-status", "locked");
 			await expect(await stageNode(QUESTS.trainingDummy)).toHaveAttribute("data-status", "passed");
 			await saveScreenshot("60-map-boss-unlocked");
+
+			// Restart on the same userData: the learner, the settings, the passed quests, and the paid hint all come back.
+			await closeDojoKeepingData(dojo);
+			const restarted = await launchDojo(dojo.userDataFolder);
+
+			try
+			{
+				window = restarted.window;
+				electronApp = restarted.electronApp;
+				await window.emulateMedia({ reducedMotion: "reduce" });
+				await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
+
+				await goTo("#/", "screen-title");
+				await expect(window.getByTestId("returning-start")).toContainText("Playtester");
+				await saveScreenshot("70-restart-title");
+
+				const passedNodes = window.locator('[data-testid="contract-card"][data-world="objects-and-reflection"] [data-testid="stage-node"][data-status="passed"]');
+				await goTo("#/world-map", "screen-worldMap");
+				await expect(passedNodes).toHaveCount(11);
+				await saveScreenshot("71-restart-map");
+
+				await goTo("#/settings", "screen-settings");
+				await expect(window.getByRole("radiogroup", { name: "Review provider" }).getByRole("radio", { name: "Tests only" })).toHaveAttribute("aria-checked", "true");
+
+				await openQuest(QUESTS.trainingDummy);
+				await waitForEditor();
+				await expect(window.getByTestId("hint-text")).toHaveCount(1);
+				await saveScreenshot("72-restart-build-kept");
+				finished = true;
+			}
+			finally
+			{
+				await restarted.electronApp.close();
+			}
 		}
 		finally
 		{
-			releaseEngineLock();
-		}
-
-		// Restart on the same userData: the learner, the settings, the passed quests, and the paid hint all come back.
-		const userDataFolder = dojo.userDataFolder;
-		await closeDojoKeepingData(dojo);
-		const restarted = await launchDojo(userDataFolder);
-
-		try
-		{
-			window = restarted.window;
-			electronApp = restarted.electronApp;
-			await window.emulateMedia({ reducedMotion: "reduce" });
-			await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
-
-			await goTo("#/", "screen-title");
-			await expect(window.getByTestId("returning-start")).toContainText("Playtester");
-			await saveScreenshot("70-restart-title");
-
-			const passedNodes = window.locator('[data-testid="contract-card"][data-world="objects-and-reflection"] [data-testid="stage-node"][data-status="passed"]');
-			await goTo("#/world-map", "screen-worldMap");
-			await expect(passedNodes).toHaveCount(11);
-			await saveScreenshot("71-restart-map");
-
-			await goTo("#/settings", "screen-settings");
-			await expect(window.getByRole("radiogroup", { name: "Review provider" }).getByRole("radio", { name: "Tests only" })).toHaveAttribute("aria-checked", "true");
-
-			await openQuest(QUESTS.trainingDummy);
-			await waitForEditor();
-			await expect(window.getByTestId("hint-text")).toHaveCount(1);
-			await saveScreenshot("72-restart-build-kept");
-		}
-		finally
-		{
-			// The fixture closes the first session and deletes the userData folder; the restarted one closes here.
-			await restarted.electronApp.close();
-			await closeDojo(dojo).catch(() => undefined);
-			rmSync(pickedFolder, { recursive: true, force: true });
+			// The fixture closes the first session after photographing a failure, and deletes its userData folder. A failed run keeps its sandbox.
+			if (finished) rmSync(pickedFolder, { recursive: true, force: true });
+			else console.log(`kept the sandbox for inspection: ${pickedFolder}`);
 		}
 	});
 });
