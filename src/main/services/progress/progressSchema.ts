@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type { BreakdownPlan, DailyQuestState, ItemMemory, PlayerProgress, QuestProgress, ReviewLogEntry } from "@shared/types/progress";
 import type { CodeReview } from "@shared/types/review";
+import type { RunResult } from "@shared/types/run";
 
 /** Mastery levels. */
 const masterySchema = z.enum(["attempted", "familiar", "proficient", "mastered"]);
@@ -27,6 +28,19 @@ const codeReviewSchema: z.ZodType<CodeReview> = z.object({
 	provider: z.enum(["claude-code", "anthropic-api", "tests-only"]),
 	fallbackReason: z.string().optional(),
 	retryReviewSuggested: z.boolean().optional(),
+});
+
+/** The engine's verdict stored on a Submit attempt for Retry review (A740). Same fields as `RunResult`; optional on the attempt, so older saves load. */
+const runResultSchema: z.ZodType<RunResult> = z.object({
+	ok: z.boolean(),
+	compiled: z.boolean(),
+	compilerOutput: z.string(),
+	tests: z.array(z.object({ name: z.string(), passed: z.boolean(), message: z.string().optional(), durationMs: z.number().optional() })),
+	testsPassed: z.int().min(0),
+	testsTotal: z.int().min(0),
+	durationMs: z.number(),
+	loop: z.enum(["fast", "headless"]),
+	error: z.string().optional(),
 });
 
 /** One quest's progress. */
@@ -90,7 +104,7 @@ export const playerProgressSchema: z.ZodType<PlayerProgress> = z.object({
 	patternCards: z.record(z.string(), z.object({ tier: z.enum(["bronze", "silver", "gold"]), useCasesPassed: z.array(z.string()) })),
 	skills: z.record(z.string(), z.object({ points: z.number().min(0), mastery: masterySchema })),
 	quests: z.record(z.string(), questProgressSchema),
-	attempts: z.array(z.object({ attemptId: z.string(), questId: z.string(), at: momentSchema, score: z.number(), passed: z.boolean(), xpGained: z.int(), review: codeReviewSchema.optional(), files: z.record(z.string(), z.string()).optional() })),
+	attempts: z.array(z.object({ attemptId: z.string(), questId: z.string(), at: momentSchema, score: z.number(), passed: z.boolean(), xpGained: z.int(), review: codeReviewSchema.optional(), files: z.record(z.string(), z.string()).optional(), run: runResultSchema.optional() })),
 	reviewLog: z.array(reviewLogEntrySchema),
 	schedule: z.record(z.string(), momentSchema),
 	memory: z.record(z.string(), itemMemorySchema).default({}),

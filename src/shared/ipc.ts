@@ -25,7 +25,7 @@ import type {
 	SubmitOutcome,
 	WorldTestOutStatus,
 } from "./types/progress";
-import type { ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "./types/review";
+import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "./types/review";
 import type { BuildProgressEvent, RunRequest, RunResult, SandboxSetupRequest, SyntaxCheckRequest, SyntaxCheckResult } from "./types/run";
 import type { Settings, SettingsPatch } from "./types/settings";
 
@@ -202,6 +202,9 @@ export interface DojoInvokeApi
 
 	/** Grades the learner's one-sentence answer to a review's reflection question. Free. */
 	answerReflection(request: ReflectionAnswerRequest): Promise<ExplainGrade>;
+
+	/** Reviews an earlier Submit's stored files and test results again, with no new build or test run, and answers the new review. It replaces that attempt's stored review; score, pass, and XP stay (A740, A741). */
+	retryReview(attemptId: string): Promise<CodeReview>;
 }
 
 /** Stops a subscription started by `onBuildProgress`. */
@@ -271,6 +274,7 @@ export const IPC_CHANNELS = {
 	testClaudeCode: "dojo:testClaudeCode",
 	explainFinding: "dojo:explainFinding",
 	answerReflection: "dojo:answerReflection",
+	retryReview: "dojo:retryReview",
 } as const satisfies { [Method in DojoMethod]: `dojo:${Method}` };
 
 /** Every DojoInvokeApi method name, in declaration order. */

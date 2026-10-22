@@ -41,7 +41,7 @@ export class CodeAttemptRecorder
 		const reviewScore = review && review.provider !== "tests-only" ? review.score : null;
 		const result = { compiled: run.compiled, testsPassed: run.testsPassed, testsTotal: run.testsTotal, reviewScore };
 
-		// The review and the files are stored on the attempt record for the follow-ups (A466, A467).
-		return this.sources.recordAttempt({ quest, score: this.passRules.codeScore(result), passed: this.passRules.isCodePass(result), compiled: run.compiled, isSubmit: true, review, files: submission.files }, quests);
+		// The review, the files, and the run are stored on the attempt record for the follow-ups and Retry review (A466, A467, A740).
+		return this.sources.recordAttempt({ quest, score: this.passRules.codeScore(result), passed: this.passRules.isCodePass(result), compiled: run.compiled, isSubmit: true, review, files: submission.files, run }, quests);
 	}
 }

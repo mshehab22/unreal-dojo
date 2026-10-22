@@ -27,7 +27,7 @@ import type {
 	SubmitOutcome,
 } from "@shared/types/progress";
 import { worldKeyOf } from "@shared/types/progress";
-import type { ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest } from "@shared/types/review";
+import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest } from "@shared/types/review";
 import type { BuildProgressEvent, RunRequest, RunResult, SyntaxCheckRequest, SyntaxCheckResult } from "@shared/types/run";
 import type { Settings } from "@shared/types/settings";
 
@@ -82,6 +82,9 @@ export class FakeQuestFlow
 	private readonly drills = new FakeDrillSessions();
 	private readonly shownPlans = new Map<string, { plan: BreakdownPlan; referencePlanIndex: number }>();
 	private reviewTimedOut = false;
+
+	/** The run of each recorded Submit, by attempt id, so Retry review can review it again without a new run (A740). */
+	private readonly submittedRuns = new Map<string, { quest: LearnerQuest; run: RunResult }>();
 
 	constructor(private readonly host: FakeQuestHost)
 	{
@@ -143,6 +146,7 @@ export class FakeQuestFlow
 		const score = run.compiled ? Math.round(testShare * 60 + (review?.score ?? 0) * 0.4) : 0;
 		const passed = run.ok && score >= rules.passScore;
 		const outcome = this.record({ quest, score, passed, compiled: run.compiled, movesSpree: true, ...(review ? { review } : {}) }, "build");
+		this.submittedRuns.set(outcome.attempt.attemptId, { quest, run });
 
 		return { run, ...(review ? { review } : {}), outcome };
 	}
@@ -388,6 +392,21 @@ export class FakeQuestFlow
 		if (!attempt) throw fail("invalid-payload", "That attempt is not recorded.", "Open the review again.");
 
 		return gradeSentence(request.answer, this.quest(attempt.questId).concepts.join(" "));
+	}
+
+	/** Reviews a recorded Submit again from its stored run and replaces the attempt's review; score, pass, and XP stay (A741). */
+	retryReview(attemptId: string): CodeReview
+	{
+		const submitted = this.submittedRuns.get(attemptId);
+		const progress = this.host.progress();
+		const attempt = progress.attempts.find((candidate) => candidate.attemptId === attemptId);
+
+		if (!submitted || !attempt || !submitted.run.compiled) throw fail("attempt-not-found", "This attempt's code is no longer stored, so it cannot be reviewed again.", "Submit the quest again to get a fresh review.");
+
+		const review = this.review(submitted.quest, submitted.run);
+		progress.attempts = progress.attempts.map((candidate) => (candidate.attemptId === attemptId ? { ...candidate, review } : candidate));
+
+		return review;
 	}
 
 	// Helpers

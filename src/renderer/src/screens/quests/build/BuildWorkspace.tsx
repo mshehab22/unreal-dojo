@@ -19,8 +19,8 @@ import { useQuestRun } from "@/data/useQuestRun";
 import { hasShortcutModifier, modifierKeyLabel } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
-import { mergeRetriedReview } from "../loot/mergeRetriedReview";
 import { useLootStore } from "../loot/useLootStore";
+import { withRetriedReview } from "../loot/withRetriedReview";
 import { BriefColumn } from "./BriefColumn";
 import { EditorColumn } from "./EditorColumn";
 import { FailedSubmitOffers } from "./FailedSubmitOffers";
@@ -88,7 +88,7 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 	const autosave = useDraftAutosave({ questId: quest.id, files, ...(markedEntries.length > 0 ? { selfExplanations: explanations } : {}) });
 	const run = useQuestRun((client, request) => client.runQuest(request));
 	const submit = useQuestRun((client, request) => client.submitQuest(request), [QUERY_KEYS.progress, QUERY_KEYS.availability, QUERY_KEYS.drillSummary, QUERY_KEYS.daily]);
-	const retry = useQuestRun((client, request) => client.submitQuest(request), [QUERY_KEYS.progress]);
+	const retry = useDojoAction((client, attemptId: string) => client.retryReview(attemptId), [QUERY_KEYS.progress]);
 	const reveal = useDojoAction((client, hintIndex: number) => client.revealHint(quest.id, hintIndex), [QUERY_KEYS.progress, questKey(quest.id)]);
 	const openEditor = useDojoAction((client) => client.openEditor(quest.id), [QUERY_KEYS.environment]);
 
@@ -144,14 +144,14 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 		navigate("loot", { quest: quest.id });
 	};
 
-	/** Submits the last submitted files again to ask for the review that timed out (A300). */
+	/** Asks the reviewer again about the last Submit's stored files, with no new build, for the review that timed out (A300, A740). */
 	const retryReview = async (): Promise<void> =>
 	{
 		if (!lastSubmit || lastSubmit.detail.kind !== "build") return;
 
-		const outcome = await retry.start(quest.id, lastSubmit.detail.files);
+		const review = await retry.run(lastSubmit.outcome.attempt.attemptId);
 
-		if (outcome) showLoot(mergeRetriedReview(lastSubmit, outcome, lastSubmit.detail.files));
+		if (review) showLoot(withRetriedReview(lastSubmit, review));
 	};
 
 	/** Asks for the hint after the ones shown, by index, so a stale screen or a double click gets that hint again for free instead of buying another (A501). */
@@ -264,7 +264,7 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 						onSubmit={() => void startSubmit()}
 						onOpenEditor={() => void openEditor.run()}
 						isOpeningEditor={openEditor.isPending}
-						lastSubmit={lastSubmit && <LastSubmitCard outcome={lastSubmit.outcome} review={lastSubmit.detail.kind === "build" ? lastSubmit.detail.review : undefined} onOpenLoot={() => navigate("loot", { quest: quest.id })} onRetryReview={() => void retryReview()} isRetrying={retry.status === "running"} />}
+						lastSubmit={lastSubmit && <LastSubmitCard outcome={lastSubmit.outcome} review={lastSubmit.detail.kind === "build" ? lastSubmit.detail.review : undefined} onOpenLoot={() => navigate("loot", { quest: quest.id })} onRetryReview={() => void retryReview()} isRetrying={retry.isPending} />}
 						hints={<HintSpells hintCount={quest.hintCount} revealed={hintTexts} nextCost={Math.round(quest.xp * rules.hintCostShare)} onReveal={() => void revealHint()} isRevealing={reveal.isPending} />}
 						offers={!isPassed && failedSubmits >= rules.failedSubmitsBeforeOffers ? <FailedSubmitOffers questId={quest.id} failedSubmits={failedSubmits} seerStones={progress.seerStones} hasParsons={(quest.parsons?.length ?? 0) > 0} /> : undefined}
 					/>

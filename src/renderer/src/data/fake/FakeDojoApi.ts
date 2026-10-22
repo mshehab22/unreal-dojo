@@ -28,7 +28,7 @@ import type {
 	WorldTestOutStatus,
 } from "@shared/types/progress";
 import { worldKeyOf } from "@shared/types/progress";
-import type { ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
+import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
 import type { BuildProgressEvent, RunRequest, RunResult, SandboxSetupRequest, SyntaxCheckRequest, SyntaxCheckResult } from "@shared/types/run";
 import type { Settings, SettingsPatch } from "@shared/types/settings";
 
@@ -473,6 +473,12 @@ export class FakeDojoApi implements DojoClient
 	answerReflection(request: ReflectionAnswerRequest): Promise<ExplainGrade>
 	{
 		return answerFrom(() => this.quests.answerReflection(request));
+	}
+
+	/** Reviews a recorded Submit again without a new run. */
+	retryReview(attemptId: string): Promise<CodeReview>
+	{
+		return answerFrom(() => this.quests.retryReview(attemptId));
 	}
 
 	// Progress events
