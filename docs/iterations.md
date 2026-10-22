@@ -1119,3 +1119,11 @@ total                                       39.2  PASSED
   - The verifier on main's content: 100 files, no problems, 14 warnings. No world on main shares an id.
 - Decisions made: A710.
 
+## M1.8f Queued items from the M0.4 re-review (content-engine, builder-content-engine)
+- What changed: of the three items queued for M1.8, two were already done on main. The third is now written down: the authoring guide says how glossary terms link inside inline code. Normal terms link only when the whole code span is one term. Code-only terms such as `check` and `super` link only that way, so authors put them in backticks when they want a hover card.
+- Status of each item:
+  1. The which-pattern question needs at least 2 choices. Already done in M1.8; the schema has `choices: textList(2)`.
+  2. The proximity lantern example registers its sphere before attaching it. Already done, and confirmed again with `--engine ~/Applications/UE_5.8 --quest example-build-blank-proximity-lantern` on main 9f49f6a, under the shared engine lock (19:59 to 20:01). It built all 40 reference solutions, the example's solution passed its test, and its starter failed. 109 s.
+  3. Normal terms in inline code. Fixed: added to `docs/systems/content-authoring.md`. The rule itself was already in the content-engine spec (A200).
+- Proof: the verifier run above, no problems; only documentation changed.
+
