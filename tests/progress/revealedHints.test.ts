@@ -11,14 +11,14 @@ import { toRuleQuests } from "../../src/main/services/progress/toRuleQuests";
 import { toPackOutlines } from "../../src/main/content/contentViews";
 import { fakeGraders, fixtureContent } from "../support/contentFixture";
 import { FixedClock } from "../support/FixedClock";
-import { MemoryFileSystem } from "../support/MemoryFileSystem";
+import { MEMORY_SAVE_PATH, MEMORY_USER_DATA_FOLDER, MemoryFileSystem } from "../support/MemoryFileSystem";
 import { localMoment } from "../support/progressFixtures";
 import { SequenceRandom } from "../support/SequenceRandom";
 
 /** One app start on a shared in-memory disk: the save is loaded from it like the real app does at launch. */
 async function startApp(fileSystem: MemoryFileSystem, clock: FixedClock)
 {
-	const store = new ProgressStore(fileSystem, "/user-data");
+	const store = new ProgressStore(fileSystem, MEMORY_USER_DATA_FOLDER);
 	const service = await ProgressService.openOrRefuse(store, clock, new SequenceRandom());
 	const content = fixtureContent();
 	const catalog = new ContentCatalog({ root: "/fixture", folderExists: async () => true, loadContent: async () => content });
@@ -129,8 +129,8 @@ describe("save migration from version 1", () =>
 	it("loads a version 1 save from disk, and writes it back as version 2", async () =>
 	{
 		const fileSystem = new MemoryFileSystem();
-		fileSystem.files.set("/user-data/progress.json", JSON.stringify(versionOneSave()));
-		const store = new ProgressStore(fileSystem, "/user-data");
+		fileSystem.files.set(MEMORY_SAVE_PATH, JSON.stringify(versionOneSave()));
+		const store = new ProgressStore(fileSystem, MEMORY_USER_DATA_FOLDER);
 
 		const loaded = await store.load(localMoment(2026, 10, 21));
 		expect(loaded.recovery).toBe("none");
@@ -138,7 +138,7 @@ describe("save migration from version 1", () =>
 		expect(loaded.progress.quests["w1-build"]).toMatchObject({ hintsRevealed: 2, revealedHints: [0, 1] });
 
 		await store.save(loaded.progress);
-		expect(JSON.parse(fileSystem.files.get("/user-data/progress.json") ?? "{}").version).toBe(2);
+		expect(JSON.parse(fileSystem.files.get(MEMORY_SAVE_PATH) ?? "{}").version).toBe(2);
 	});
 
 	it("leaves a current save and anything that is not a save unchanged", () =>
@@ -156,7 +156,7 @@ describe("revealed hints on a refused save", () =>
 	it("still answers getQuest and getWorld, with no revealed hints, when the save could not be opened (A133)", async () =>
 	{
 		const fileSystem = new MemoryFileSystem();
-		fileSystem.files.set("/user-data/progress.json", JSON.stringify({ version: 99 }));
+		fileSystem.files.set(MEMORY_SAVE_PATH, JSON.stringify({ version: 99 }));
 		const { service, progressContent } = await startApp(fileSystem, new FixedClock(localMoment(2026, 10, 21, 9)));
 
 		expect(service.getRefusal()?.code).toBe("save-failed");

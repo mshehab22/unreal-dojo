@@ -9,18 +9,18 @@ import { AppErrorException } from "../../src/main/errors/AppErrorException";
 import { createNewProgress } from "../../src/main/services/progress/createNewProgress";
 import { NodeFileSystem } from "../../src/main/services/progress/NodeFileSystem";
 import { ProgressStore } from "../../src/main/services/progress/ProgressStore";
-import { MemoryFileSystem } from "../support/MemoryFileSystem";
+import { MEMORY_SAVE_PATH, MEMORY_USER_DATA_FOLDER, MemoryFileSystem } from "../support/MemoryFileSystem";
 import { localMoment } from "../support/progressFixtures";
 
 const now = localMoment(2026, 10, 21);
-const savePath = "/user-data/progress.json";
+const savePath = MEMORY_SAVE_PATH;
 
 /** A store on an in-memory disk. */
 function memoryStore(): { store: ProgressStore; fileSystem: MemoryFileSystem }
 {
 	const fileSystem = new MemoryFileSystem();
 
-	return { store: new ProgressStore(fileSystem, "/user-data"), fileSystem };
+	return { store: new ProgressStore(fileSystem, MEMORY_USER_DATA_FOLDER), fileSystem };
 }
 
 /** A save with a recognizable name and XP. */

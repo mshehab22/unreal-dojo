@@ -1,5 +1,12 @@
 // An in-memory FileSystem for tests, with switches that simulate a crash at a chosen step of a write.
+import { join } from "node:path";
 import type { FileSystem } from "../../src/main/services/progress/FileSystem";
+
+/** The in-memory user data folder the progress tests hand to ProgressStore. */
+export const MEMORY_USER_DATA_FOLDER = "/user-data";
+
+/** Where ProgressStore keeps the save inside the in-memory folder, spelled with the platform separator the store itself uses. */
+export const MEMORY_SAVE_PATH = join(MEMORY_USER_DATA_FOLDER, "progress.json");
 
 /** The write steps a test can make fail. */
 export type CrashPoint = "none" | "mid-temp-write" | "before-rename";

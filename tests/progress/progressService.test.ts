@@ -7,7 +7,7 @@ import { ProgressStore } from "../../src/main/services/progress/ProgressStore";
 
 import { createRulesSnapshot, HOVER_INJECTION_THRESHOLD, MASTERY_THRESHOLDS, STUDIO_COSMETICS } from "../../src/main/services/progress/rules";
 import { FixedClock } from "../support/FixedClock";
-import { MemoryFileSystem } from "../support/MemoryFileSystem";
+import { MEMORY_SAVE_PATH, MEMORY_USER_DATA_FOLDER, MemoryFileSystem } from "../support/MemoryFileSystem";
 import { createTestProgressService, localMoment, makeQuest } from "../support/progressFixtures";
 import { SequenceRandom } from "../support/SequenceRandom";
 
@@ -30,7 +30,7 @@ describe("ProgressService attempts", () =>
 		expect(outcome.spree).toEqual({ current: 1, best: 1, armorUsed: false });
 		expect(outcome.streak.count).toBe(1);
 		expect(outcome.unlockedQuestIds).toEqual(["q2"]);
-		expect(JSON.parse(fileSystem.files.get("/user-data/progress.json") ?? "{}").xp).toBe(100);
+		expect(JSON.parse(fileSystem.files.get(MEMORY_SAVE_PATH) ?? "{}").xp).toBe(100);
 	});
 
 	it("pays nothing for a repeat and does not add skill points again", async () =>
@@ -385,27 +385,27 @@ describe("ProgressService refused save", () =>
 	{
 		const fileSystem = new MemoryFileSystem();
 		const futureSave = JSON.stringify({ version: 99 });
-		fileSystem.files.set("/user-data/progress.json", futureSave);
+		fileSystem.files.set(MEMORY_SAVE_PATH, futureSave);
 
-		const service = await ProgressService.openOrRefuse(new ProgressStore(fileSystem, "/user-data"), new FixedClock(localMoment(2026, 10, 21)), new SequenceRandom());
+		const service = await ProgressService.openOrRefuse(new ProgressStore(fileSystem, MEMORY_USER_DATA_FOLDER), new FixedClock(localMoment(2026, 10, 21)), new SequenceRandom());
 
 		expect(service.getRefusal()?.code).toBe("save-failed");
 		expect(() => service.getProgress()).toThrow(AppErrorException);
 		await expect(service.setPlayerName("x")).rejects.toMatchObject({ appError: { code: "save-failed" } });
 		expect(service.getRules().dailyDueCap).toBe(20);
-		expect(fileSystem.files.get("/user-data/progress.json")).toBe(futureSave);
+		expect(fileSystem.files.get(MEMORY_SAVE_PATH)).toBe(futureSave);
 	});
 
 	it("opens refused, without quarantining, when the disk will not read the save", async () =>
 	{
 		const fileSystem = new MemoryFileSystem();
-		fileSystem.files.set("/user-data/progress.json", "{}");
+		fileSystem.files.set(MEMORY_SAVE_PATH, "{}");
 		fileSystem.readErrorCode = "EBUSY";
 
-		const service = await ProgressService.openOrRefuse(new ProgressStore(fileSystem, "/user-data"), new FixedClock(localMoment(2026, 10, 21)), new SequenceRandom());
+		const service = await ProgressService.openOrRefuse(new ProgressStore(fileSystem, MEMORY_USER_DATA_FOLDER), new FixedClock(localMoment(2026, 10, 21)), new SequenceRandom());
 
 		expect(service.getRefusal()?.detail).toMatch(/EBUSY/);
-		expect([...fileSystem.files.keys()]).toEqual(["/user-data/progress.json"]);
+		expect([...fileSystem.files.keys()]).toEqual([MEMORY_SAVE_PATH]);
 	});
 });
 
