@@ -259,6 +259,28 @@ describe("SandboxBuildTracker", () =>
 		expect(tracker.current().isUnreachable).toBe(false);
 	});
 
+	it("a progress event clears earlier failed checks, so the next quiet stretch starts from a clean slate", async () =>
+	{
+		const main = new FakeMain();
+		const clock = new ManualClock();
+		const { tracker } = track(main, clock, neverAnswers);
+
+		tracker.start();
+		main.statusNeverAnswers = true;
+		await clock.advance(30_000 * FAILED_CHECKS_BEFORE_UNREACHABLE);
+
+		expect(tracker.current().isUnreachable).toBe(true);
+
+		// Output arrives: the warning clears at once, and one more failed check later does not bring it back.
+		main.emit(event("[50/418] Compile DojoGameMode.cpp", 90_000));
+
+		expect(tracker.current()).toMatchObject({ isUnreachable: false, isQuiet: false });
+
+		await clock.advance(QUIET_AFTER_MS + STATUS_TIMEOUT_MS);
+
+		expect(tracker.current()).toMatchObject({ isQuiet: true, isUnreachable: false });
+	});
+
 	it("ends with a plain error pointing to Settings when main no longer knows a first-run build", async () =>
 	{
 		const main = new FakeMain();

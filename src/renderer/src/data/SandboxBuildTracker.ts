@@ -272,9 +272,11 @@ export class SandboxBuildTracker
 	{
 		if (event.runId !== runId || runId !== this.runId || this.settled) return;
 
+		// An arriving event proves the connection to main works, so earlier failed status checks no longer count.
 		this.knownEventCount += 1;
 		this.lastOutputAt = this.clock.now();
-		this.update({ ...this.snapshot, progress: event, isQuiet: false, isConfirmedRunning: false, silentForMs: 0, elapsedMs: this.elapsed(event) });
+		this.failedChecks = 0;
+		this.update({ ...this.snapshot, progress: event, isQuiet: false, isConfirmedRunning: false, isUnreachable: false, silentForMs: 0, elapsedMs: this.elapsed(event) });
 	}
 
 	/** Advances the clock; when no new output came for a while, marks the build quiet and asks main, then again every CHECK_AGAIN_AFTER_MS. */
