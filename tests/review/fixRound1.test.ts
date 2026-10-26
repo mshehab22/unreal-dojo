@@ -1,6 +1,6 @@
 // M1.7 fix round 1: provider failover, prompt injection guard, Windows tree kill, safe cleanup, label matching, line numbers, abortable 429 wait, and the stripped CLI environment.
 import { EventEmitter } from "node:events";
-import { chmodSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { PassThrough } from "node:stream";
 
@@ -201,29 +201,29 @@ describe("fix 3: Windows stops the whole tree, and cleanup never hides the resul
 	it("a temp folder that cannot be removed does not replace the review's answer", async () =>
 	{
 		const temporaryRoot = makeTestFolder("dojo-cleanup-test-");
+		const removeAttempts: string[] = [];
 
-		// The runner locks the parent folder while the review runs, so removing the review folder afterwards fails.
 		const runner: IProcessRunner = {
 			run: async (_command: string, args: string[], options: ProcessRunOptions): Promise<ProcessRunResult> =>
-			{
-				if (args[0] !== "--version") chmodSync(temporaryRoot, 0o555);
+				({ exitCode: 0, stdout: args[0] === "--version" ? "2.1.304" : recorded("claude-code", "success-structured.json"), stderr: "", timedOut: false, cancelled: options.signal?.aborted ?? false }),
+		};
 
-				return { exitCode: 0, stdout: args[0] === "--version" ? "2.1.304" : recorded("claude-code", "success-structured.json"), stderr: "", timedOut: false, cancelled: options.signal?.aborted ?? false };
-			},
+		// Removal fails the way a virus scanner holding a file does. A read-only folder is not used, because chmod stops nothing on Windows.
+		const removeFolder = async (folder: string): Promise<void> =>
+		{
+			removeAttempts.push(folder);
+			throw new Error("EBUSY: resource busy or locked");
 		};
 
 		const locator = new ClaudeCodeLocator({ platform: "darwin", env: { PATH: "/fake/bin" }, homeFolder: "/Users/learner", isExecutable: (filePath) => filePath === "/fake/bin/claude" });
-		const provider = new ClaudeCodeProvider(locator, runner, { temporaryRoot, timeoutMs: 1000 });
+		const provider = new ClaudeCodeProvider(locator, runner, { temporaryRoot, timeoutMs: 1000, removeFolder });
 
-		try
-		{
-			await expect(provider.complete({ systemPrompt: "s", userMessage: "u", jsonSchema: {} })).resolves.toContain("\"verdict\":\"correct\"");
-			expect(readdirSync(temporaryRoot)).toHaveLength(1);
-		}
-		finally
-		{
-			chmodSync(temporaryRoot, 0o755);
-		}
+		await expect(provider.complete({ systemPrompt: "s", userMessage: "u", jsonSchema: {} })).resolves.toContain("\"verdict\":\"correct\"");
+
+		// The cleanup was tried on the review's own folder, and the folder it could not remove is still there.
+		expect(removeAttempts).toHaveLength(1);
+		expect(removeAttempts[0]).toContain(temporaryRoot);
+		expect(readdirSync(temporaryRoot)).toHaveLength(1);
 	});
 });
 

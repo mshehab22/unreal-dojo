@@ -48,6 +48,15 @@ export interface ClaudeCodeProviderOptions
 
 	/** The environment the CLI starts from, before the API key variables are removed. */
 	environment: Record<string, string | undefined>;
+
+	/** Deletes a review's temp folder. Tests replace it with one that fails, because an undeletable folder cannot be made portably (chmod does nothing on Windows). */
+	removeFolder: (folder: string) => Promise<void>;
+}
+
+/** Deletes a folder and everything in it, retrying briefly because a virus scanner can hold a file on Windows. */
+async function removeFolderWithRetries(folder: string): Promise<void>
+{
+	await rm(folder, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 }
 
 /** Copies an environment without the variables that would switch Claude Code to API billing. */
@@ -61,11 +70,11 @@ export function reviewEnvironment(environment: Record<string, string | undefined
 }
 
 /** Removes a review's temp folder. A failure here (a virus scanner holding a file on Windows) is ignored so it never replaces the review's own result. */
-async function removeQuietly(folder: string): Promise<void>
+async function removeQuietly(folder: string, removeFolder: (folder: string) => Promise<void>): Promise<void>
 {
 	try
 	{
-		await rm(folder, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+		await removeFolder(folder);
 	}
 	catch
 	{
@@ -132,7 +141,7 @@ export class ClaudeCodeProvider implements IReviewProvider
 	/** Keeps the locator and the process runner, which tests replace. */
 	constructor(private readonly locator: ClaudeCodeLocator, private readonly processRunner: IProcessRunner, options: Partial<ClaudeCodeProviderOptions> = {})
 	{
-		this.options = { timeoutMs: REVIEW_TIMEOUT_MS, temporaryRoot: tmpdir(), environment: process.env, ...options };
+		this.options = { timeoutMs: REVIEW_TIMEOUT_MS, temporaryRoot: tmpdir(), environment: process.env, removeFolder: removeFolderWithRetries, ...options };
 	}
 
 	/** Finds the CLI and reads its version. Available only when found and new enough. */
@@ -172,7 +181,7 @@ export class ClaudeCodeProvider implements IReviewProvider
 		}
 		finally
 		{
-			await removeQuietly(reviewFolder);
+			await removeQuietly(reviewFolder, this.options.removeFolder);
 		}
 	}
 
