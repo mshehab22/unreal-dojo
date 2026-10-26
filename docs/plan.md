@@ -158,7 +158,7 @@ Mohammad will use the app on Windows and will not reinstall UE on the Mac. Every
 - The real-engine learner flow (`DOJO_E2E_ENGINE=1`, e2e/learner-flow.spec.ts), adapted to Windows paths.
 - M1.5-style Windows pipeline verification: Build.bat, UnrealEditor-Cmd.exe, Live Coding fast loop, the VS workload checks, nsis packaging, and every "unverified on Windows" item in problems.md.
 
-To get there, Mohammad picks one: (a) `gh auth login` on the Mac so the Lead can push a private GitHub repository, then clone it on Windows and open it in Claude Code; or (b) enable SSH on the Windows machine and save it as an SSH connection in this app, so sessions started here run there.
+The repository is on GitHub, private: https://github.com/mshehab22/unreal-dojo (A78). Mohammad pushes `main` with GitHub Desktop. Next on Windows: install Git, Node 24, and UE 5.8, clone the repository with GitHub Desktop, run `npm install`, and open the folder in Claude Code; the engine proofs listed above (and in problems.md and each world's iterations entry) run there.
 
 ## Engine missing, 2026-10-26 (A75)
 
