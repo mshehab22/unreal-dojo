@@ -204,6 +204,10 @@ describe("a fallback answer is never kept (A855)", () =>
 
 		const fallback = await handlers.explainFinding({ attemptId, findingIndex: 0 });
 		expect(fallback).toContain("took longer than 180 seconds");
+
+		// A follow-up is asked again from the same screen, so its timeout says "Ask again", never "Retry review" (A954).
+		expect(fallback).toContain("Press Ask again to try once more.");
+		expect(fallback).not.toContain("Retry review");
 		expect(progress.getProgress().attempts[0]).not.toHaveProperty("explanations");
 
 		await expect(handlers.explainFinding({ attemptId, findingIndex: 0 })).resolves.toBe("The real answer.");
@@ -220,7 +224,10 @@ describe("a fallback answer is never kept (A855)", () =>
 		const submit = await handlers.submitQuest(REQUEST, () => undefined, new AbortController().signal);
 		const request = { attemptId: submit.outcome.attempt.attemptId, answer: "The delegate keeps the HUD out of gameplay." };
 
-		await expect(handlers.answerReflection(request)).resolves.toMatchObject({ provider: "tests-only", retryReviewSuggested: true });
+		const timedOut = await handlers.answerReflection(request);
+		expect(timedOut).toMatchObject({ provider: "tests-only", retryReviewSuggested: true });
+		expect(timedOut.fallbackReason).toContain("Press Ask again to try once more.");
+		expect(timedOut.fallbackReason).not.toContain("Retry review");
 		expect(progress.getProgress().attempts[0]).not.toHaveProperty("reflection");
 
 		await expect(handlers.answerReflection(request)).resolves.toMatchObject({ provider: "claude-code", verdict: "correct" });

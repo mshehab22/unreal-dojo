@@ -15,13 +15,13 @@ interface FindingRowProps
 	readonly findingIndex: number;
 }
 
-/** Title, where it points, detail, and the Why? answer once asked. */
+/** Title, where it points, detail, and the Why? answer once asked, with Ask again after it. */
 export function FindingRow({ finding, attemptId, findingIndex }: FindingRowProps)
 {
 	const [explanation, setExplanation] = useState<string | null>(null);
 	const explain = useDojoAction((client) => client.explainFinding({ attemptId, findingIndex }));
 
-	/** Asks why, once. */
+	/** Asks why. A fallback answer is never kept (A855), so asking again can reach a reviewer; a kept AI answer comes back at once, still free (A953). */
 	const askWhy = async (): Promise<void> =>
 	{
 		const answer = await explain.run();
@@ -41,10 +41,10 @@ export function FindingRow({ finding, attemptId, findingIndex }: FindingRowProps
 						</span>
 					)}
 				</span>
-				{finding.severity !== "praise" && !explanation && (
+				{finding.severity !== "praise" && (
 					<Button size="sm" variant="ghost" onClick={() => void askWhy()} disabled={explain.isPending} data-testid="finding-why">
 						<HelpCircleIcon />
-						{explain.isPending ? "Asking" : "Why? (free)"}
+						{explain.isPending ? "Asking" : explanation ? "Ask again (free)" : "Why? (free)"}
 					</Button>
 				)}
 			</div>

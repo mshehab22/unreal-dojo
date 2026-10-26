@@ -76,12 +76,18 @@ interface FailoverOptions
 
 	/** True when a bad or refused reply should fall back to tests only with a retry hint instead of failing the call. */
 	fallBackOnBadReply?: boolean;
+
+	/** What a timeout tells the learner to do, in place of the error's own "Press Retry review" (follow-ups are asked again, not retried, A954). */
+	timeoutAction?: string;
 }
+
+/** What a follow-up's timeout says to do: "Why?" and the reflection are asked again from the same screen (A954). */
+export const FOLLOW_UP_TIMEOUT_ACTION = "Press Ask again to try once more. Your tests still count.";
 
 /** The failover rule of a follow-up: the paid API is skipped with a reason when the attempt's tests did not all pass (A70, A851, A852). */
 function followUpFailover(options: FollowUpOptions): FailoverOptions
 {
-	return { skipReason: (provider) => (provider.id === "anthropic-api" && !options.allowPaidApi ? API_FOLLOW_UP_REASON : null) };
+	return { skipReason: (provider) => (provider.id === "anthropic-api" && !options.allowPaidApi ? API_FOLLOW_UP_REASON : null), timeoutAction: FOLLOW_UP_TIMEOUT_ACTION };
 }
 
 /** The tiny request the Settings "Test" button sends through Claude Code, to prove the login works end to end. */
@@ -209,7 +215,7 @@ export class ReviewService
 
 				const { code, message, suggestedAction } = error.appError;
 
-				if (code === "review-timeout") return useTestsOnly({ reason: `${message} ${suggestedAction}`, retryReviewSuggested: true });
+				if (code === "review-timeout") return useTestsOnly({ reason: `${message} ${options.timeoutAction ?? suggestedAction}`, retryReviewSuggested: true });
 				if (options.fallBackOnBadReply && BAD_REPLY_CODES.has(code)) return useTestsOnly({ reason: `${message} The tests-only review stands in; press Retry review to ask again.`, retryReviewSuggested: true });
 				if (!PROVIDER_UNAVAILABLE_CODES.has(code)) throw error;
 

@@ -30,7 +30,7 @@ describe("the fake's review extras", () =>
 		expect(alternative?.reviewHint).toBeTruthy();
 	}, 20_000);
 
-	it("with Tests only: the review, Why? and the reflection fall back with the reason, nothing is kept, and the alternative has no hint", async () =>
+	it("with Tests only: the review, Why? and the reflection fall back like the real bridge, nothing is kept, and the alternative has no hint", async () =>
 	{
 		const fake = new FakeDojoApi("quests");
 		await fake.updateSettings({ reviewProvider: "tests-only" });
@@ -43,10 +43,28 @@ describe("the fake's review extras", () =>
 		const reflection = await fake.answerReflection({ attemptId, answer: "Designers tune the score from the editor because the list is reflected." });
 		const attempt = (await fake.getProgress()).attempts.find((candidate) => candidate.attemptId === attemptId);
 
+		// As the real ProviderSelector answers Tests only: no fallbackReason, and the tests-only provider's own words (A953).
+		expect(submitted.review?.fallbackReason).toBeUndefined();
 		expect(why).toContain("An AI reviewer can check this");
-		expect(reflection).toMatchObject({ provider: "tests-only", fallbackReason: expect.stringContaining("Settings") });
+		expect(reflection).toEqual({ score: 70, verdict: "partly", note: "Self-check: reread your sentence against the question and your code.", provider: "tests-only" });
 		expect(attempt?.explanations ?? {}).toEqual({});
 		expect(attempt?.reflection).toBeUndefined();
 		expect((await fake.getQuestAlternative("f1-score-keeper"))?.reviewHint).toBeUndefined();
+	}, 20_000);
+
+	it("with Claude Code: the first reflection times out into a self-check that offers Ask again, and asking again gets an AI grade that is kept (A954)", async () =>
+	{
+		const fake = new FakeDojoApi("quests");
+		await fake.updateSettings({ reviewProvider: "claude-code" });
+		const submitted = await fake.submitQuest({ runId: "r", questId: "f1-score-keeper", files: await passingScoreKeeperFiles(fake) });
+		const request = { attemptId: submitted.outcome.attempt.attemptId, answer: "Casting each entry keeps the keeper from trusting whatever a designer put in the list." };
+
+		const timedOut = await fake.answerReflection(request);
+		const askedAgain = await fake.answerReflection(request);
+		const attempt = (await fake.getProgress()).attempts.find((candidate) => candidate.attemptId === request.attemptId);
+
+		expect(timedOut).toMatchObject({ provider: "tests-only", retryReviewSuggested: true, fallbackReason: expect.stringContaining("Press Ask again") });
+		expect(askedAgain.provider).toBe("claude-code");
+		expect(attempt?.reflection?.grade.provider).toBe("claude-code");
 	}, 20_000);
 });

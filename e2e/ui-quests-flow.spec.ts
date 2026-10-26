@@ -589,6 +589,14 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await expect(window.getByTestId("finding-explanation")).toBeVisible();
 	await window.getByTestId("reflection").getByRole("textbox").fill("Designers tune the strikes in the Details panel because the function and property are reflected.");
 	await window.getByTestId("reflection").getByRole("button", { name: "Send my answer" }).click();
+
+	// The first reflection times out (as the first review did): a self-check with the reason and Ask again, which then gets Claude Code's grade (A954).
+	await expect(window.getByTestId("reflection-grade")).toHaveAttribute("data-provider", "tests-only");
+	await expect(window.getByTestId("reflection-fallback")).toContainText("Press Ask again");
+	await expect(window.getByTestId("reflection-fallback")).not.toContainText("Retry review");
+	await window.getByTestId("reflection").scrollIntoViewIfNeeded();
+	await saveScreenshot("loot-reflection-timeout");
+	await window.getByTestId("reflection-ask-again").click();
 	await expect(window.getByTestId("reflection-grade")).toHaveAttribute("data-provider", "claude-code");
 
 	// The alternative comes from getQuestAlternative after the pass, with the AI reviewer's pointer (A850).
@@ -620,7 +628,7 @@ test("a build: explain the marked lines, Run fails, a hint, fix, Run passes, Sub
 	await expect(window.getByTestId("reflection-grade")).toBeVisible();
 });
 
-test("with Tests only, Why? and the reflection answer as self-checks with the reason, and the alternative has no reviewer hint (A855, A950)", async () =>
+test("with Tests only, Why? answers with the reason and can be asked again, the reflection is a self-check, and the alternative has no reviewer hint (A855, A950, A953)", async () =>
 {
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
 	await openFake("#/settings");
@@ -641,7 +649,10 @@ test("with Tests only, Why? and the reflection answer as self-checks with the re
 	await expect(window.getByTestId("screen-loot")).toHaveAttribute("data-passed", "true", { timeout: 20_000 });
 	await expect(window.getByTestId("code-review")).toHaveAttribute("data-provider", "tests-only");
 
-	// Why? still answers, with the reason no AI could explain it.
+	// Why? still answers, with the reason no AI could explain it; that answer is not kept, so it can be asked again (A953).
+	await window.getByTestId("finding-why").first().click();
+	await expect(window.getByTestId("finding-explanation")).toContainText("An AI reviewer can check this");
+	await expect(window.getByTestId("finding-why").first()).toHaveText(/Ask again \(free\)/);
 	await window.getByTestId("finding-why").first().click();
 	await expect(window.getByTestId("finding-explanation")).toContainText("An AI reviewer can check this");
 
@@ -650,7 +661,9 @@ test("with Tests only, Why? and the reflection answer as self-checks with the re
 	await window.getByTestId("reflection-send").click();
 	await expect(window.getByTestId("reflection-grade")).toHaveAttribute("data-provider", "tests-only");
 	await expect(window.getByTestId("reflection-grade")).toContainText("Not graded");
-	await expect(window.getByTestId("reflection-fallback")).toContainText("Settings");
+	await expect(window.getByTestId("reflection-grade")).toContainText("Self-check: reread your sentence against the question and your code.");
+	await expect(window.getByTestId("reflection-fallback")).toHaveCount(0);
+	await expect(window.getByTestId("reflection-ask-again")).toHaveCount(0);
 
 	// The alternative opens after the pass; a tests-only review gives no reviewer hint.
 	await expect(window.getByTestId("loot-alternative")).toBeVisible();
