@@ -130,7 +130,7 @@ describe.skipIf(!HAS_ENGINE)(`fast loop wiring against ${ENGINE_ROOT || "no engi
 				getReviewHandlers: () => { throw new Error("not used"); },
 				runRegistry,
 				sendProgress: (event) => events.push(event),
-				progressContentService: {} as never,
+				progressContentService: { assertQuestOpen: async () => undefined } as never,
 				settingsService: {} as never,
 				readEnvironmentStatus: () => { throw new Error("not used"); },
 			}),

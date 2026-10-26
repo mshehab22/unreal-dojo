@@ -2,7 +2,7 @@
 import type { PackOutline } from "@shared/types/catalog";
 import type { AuthoredQuest, PatternCard } from "@shared/types/content";
 import type { AttemptOutcome, AttemptRecord, PlayerProgress, SubmitOutcome } from "@shared/types/progress";
-import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
+import type { CodeReview, ExplainGrade, FindingExplanationRequest, QuestAlternative, ReflectionAnswerRequest, ReflectionRecord, ReviewProviderStatus } from "@shared/types/review";
 import type { RunRequest, RunResult } from "@shared/types/run";
 
 import type { AttemptInput } from "../progress/ProgressService";
@@ -10,6 +10,7 @@ import type { RuleQuest } from "../progress/RuleQuest";
 import type { ProgressListener } from "../unreal/ProgressUpdate";
 import { AttemptReviewService } from "./AttemptReviewService";
 import { CodeAttemptRecorder } from "./CodeAttemptRecorder";
+import { QuestAlternativeService } from "./QuestAlternativeService";
 import { QuestSubmitService } from "./QuestSubmitService";
 import { ReviewRetryService } from "./ReviewRetryService";
 import type { ReviewService } from "./ReviewService";
@@ -34,6 +35,9 @@ export interface ReviewHandlers
 
 	/** Reviews an earlier Submit's stored files and run again, with no new build, and replaces its stored review (A740, A741). */
 	retryReview(attemptId: string): Promise<CodeReview>;
+
+	/** A passed quest's alternative, or null when its kind has none; alternative-locked before a pass (A850). */
+	getQuestAlternative(questId: string): Promise<QuestAlternative | null>;
 }
 
 /** What the review handlers are built from. */
@@ -49,12 +53,17 @@ export interface ReviewHandlerSources
 		getPatternCards(): Promise<PatternCard[]>;
 	};
 
-	/** The learner's save, `recordAttempt`, and `replaceAttemptReview` (ProgressService). */
+	/** The learner's save, `recordAttempt`, `replaceAttemptReview`, and the follow-up stores (ProgressService). */
 	progress: {
 		getProgress(): PlayerProgress;
 		recordAttempt(input: AttemptInput, allQuests: RuleQuest[]): Promise<AttemptOutcome>;
 		replaceAttemptReview(attemptId: string, review: CodeReview): Promise<AttemptRecord>;
+		saveFindingExplanation(attemptId: string, findingKey: string, explanation: string): Promise<void>;
+		saveReflection(attemptId: string, reflection: ReflectionRecord): Promise<void>;
 	};
+
+	/** The time now, for reflection records. Defaults to the system clock. */
+	now?: () => Date;
 
 	/** The runner path `runQuest` uses (M1.3b). */
 	runQuest: (request: RunRequest, onProgress: ProgressListener, signal: AbortSignal) => Promise<RunResult>;
@@ -70,7 +79,7 @@ function briefOf(quest: AuthoredQuest | undefined): string
 	return "";
 }
 
-/** Wires the follow-ups, Submit, and Retry review together. */
+/** Wires the follow-ups, Submit, Retry review, and the alternative together. */
 export function createReviewHandlers(sources: ReviewHandlerSources): ReviewHandlers
 {
 	const { reviewService, content, progress } = sources;
@@ -82,9 +91,14 @@ export function createReviewHandlers(sources: ReviewHandlerSources): ReviewHandl
 			// Only the files stored on the attempt itself, never the draft, which can change after Submit (A467).
 			submittedFiles: (attempt) => attempt.files ?? {},
 			questBrief: async (questId) => briefOf(await content.getAuthoredQuest(questId)),
+			saveExplanation: (attemptId, findingKey, explanation) => progress.saveFindingExplanation(attemptId, findingKey, explanation),
+			saveReflection: (attemptId, reflection) => progress.saveReflection(attemptId, reflection),
+			now: sources.now ?? (() => new Date()),
 		},
 		reviewService,
 	);
+
+	const alternatives = new QuestAlternativeService({ getAuthoredQuest: (questId) => content.getAuthoredQuest(questId), getProgress: () => progress.getProgress() });
 
 	const recorder = new CodeAttemptRecorder({ listPacks: () => content.listPacks(), recordAttempt: (input, allQuests) => progress.recordAttempt(input, allQuests) });
 
@@ -111,5 +125,6 @@ export function createReviewHandlers(sources: ReviewHandlerSources): ReviewHandl
 		answerReflection: (request) => followUps.answerReflection(request),
 		submitQuest: (request, onProgress, signal, onRecording) => submitter.submit(request, onProgress, signal, onRecording),
 		retryReview: (attemptId) => retrier.retry(attemptId),
+		getQuestAlternative: (questId) => alternatives.getAlternative(questId),
 	};
 }

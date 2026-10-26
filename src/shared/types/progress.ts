@@ -1,6 +1,6 @@
 // The learner's save file and everything the rules return after an attempt. See docs/systems/progress-and-rules.md.
 
-import type { BreakdownGrade, CodeReview, ExplainGrade } from "./review";
+import type { BreakdownGrade, CodeReview, ExplainGrade, ReflectionRecord } from "./review";
 import type { RunResult } from "./run";
 
 /** Where a quest stands for this learner. */
@@ -138,6 +138,12 @@ export interface AttemptRecord
 
 	/** The engine's verdict of the Submit, so Retry review can review the stored files again without a new build (A740). Compiler output capped; pruned with `files` and `review`. */
 	run?: RunResult;
+
+	/** "Why is this a finding?" answers already given for this attempt's review, by `<findingIndex>:<finding hash>`, so asking again after a reload is free and never paid twice (A851). Pruned with `review`; cleared when Retry review replaces it. */
+	explanations?: Record<string, string>;
+
+	/** The learner's answer to the review's reflection question and its grade (A852). Kept when older details are pruned: it is the learner's own sentence. */
+	reflection?: ReflectionRecord;
 }
 
 /** One spaced review of one item, appended forever so FSRS can replace SM-2 later without a migration. */
@@ -518,8 +524,11 @@ export interface DrillItemResult
 	/** The item answered. */
 	itemId: string;
 
-	/** True when the answer was right (for explain items: the grade was correct). */
+	/** True when the answer was right (for explain items: the grade was correct). False for a self-checked item, which is not a miss: see `selfChecked`. */
 	correct: boolean;
+
+	/** True for an explain item only self-checked (tests-only): not graded, not scheduled, and not "due for review" (A801). Absent otherwise. */
+	selfChecked?: boolean;
 
 	/** SM-2 quality recorded (0 to 5). */
 	quality: number;
@@ -559,11 +568,14 @@ export interface DrillOutcome
 	/** Streak after the drill. */
 	streak: { count: number; milestoneReached?: number };
 
-	/** Items answered right, out of the total. */
+	/** Graded items answered right, out of `totalCount`. */
 	correctCount: number;
 
-	/** Items in the drill. */
+	/** Graded items in the drill: every item except the self-checked ones. */
 	totalCount: number;
+
+	/** Explain items only self-checked because no AI reviewer graded them (tests-only). They are neither right nor wrong and not scheduled, so they are never "due for review" (A318, A460, A801). */
+	selfCheckedCount: number;
 
 	/** When the next item is due (ISO 8601), or null when nothing is scheduled. */
 	nextDueAt: string | null;

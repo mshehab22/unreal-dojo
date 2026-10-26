@@ -80,7 +80,8 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 	runRegistry: new RunRegistry(),
 	sendProgress: () => undefined,
 	// The progress content service reads the same fake catalog, so getWorld and getQuest answer from it.
-	progressContentService: createTestProgressContent({ source: { ...FAKE_CONTENT_CATALOG, getAuthoredQuest: async () => undefined } }).content,
+	// Run and Submit check the quest is open first (A802); the fake catalog has no quests, so these tests treat every quest as open.
+	progressContentService: Object.assign(createTestProgressContent({ source: { ...FAKE_CONTENT_CATALOG, getAuthoredQuest: async () => undefined } }).content, { assertQuestOpen: async () => undefined }),
 	settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
 	readEnvironmentStatus: async () => ({ engine: null, sandbox: { path: null, ready: false }, reviewProvider: null, loopMode: "auto", editorConnected: false }),
 	getReviewHandlers: () => ({
@@ -90,6 +91,7 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 		answerReflection: async () => ({ score: 70, verdict: "partly", note: "n", provider: "tests-only" }),
 		submitQuest: async () => { throw new Error("not used"); },
 		retryReview: async () => { throw new Error("not used"); },
+		getQuestAlternative: async () => null,
 	}),
 };
 
