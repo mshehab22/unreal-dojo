@@ -1451,3 +1451,7 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 - Proof: unit tests for the message, for a cancel during the pause (one launch, cancelled, no raw lines), and for the duration across attempts; `npm test` and the end-to-end suite pass (counts in the report).
 - Still open: integration run pending: engine not installed. Engine work moves to the Windows desktop (A76). The two crash markers ("Unhandled exception." and "Log file:") are from UBT 5.8.3 on macOS and are unverified on Windows.
 
+### Follow-up: two test notes from the M1.3c re-review
+- What changed: two unit tests, no product change. One cancels while the pause before a retry is already waiting, so only the pause's abort listener can end it. With that listener removed, this test is the only one that fails. The other checks that a timed-out build whose lines all fell through the filter keeps the raw-lines tail and the 15 minute message.
+- Proof: typecheck passes; `npm test` 909 passed, 24 skipped (the engine tests).
+
