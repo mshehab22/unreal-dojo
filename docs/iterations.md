@@ -1527,3 +1527,10 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 *The reflection's timeout: a self-check with the reason and Ask again; "Why?" above shows Ask again (free).*
 
 - Decisions made: A953 and A954.
+
+## M2.1f World Map hover test flake (ui-core, builder-ui-core)
+- What was asked: the test that hovers a locked stage still failed now and then on GitHub CI, with the stage it had found disappearing before the scroll.
+- What was going on: each world's path of stages first lays out six per row before it knows how wide its card is, then lays out again once it does. The second layout rebuilds the stages, so a stage the test found during the first one was gone a moment later.
+- What changed: the path now marks itself as settled once it has measured its card. The test waits for every path to be settled, then scrolls to the locked stage and hovers it in one retried step that finds the stage again each time. Nothing changes on screen for the learner.
+- Proof (MacBook Air M5, from main 8097a32, hidden test windows): the hover test run 20 times in a row, 20 passed; the whole ui-core screens spec 12 passed; `npm run typecheck` passes; `npm test` 78 files, 922 passed, 24 skipped; `npm run build` passes. No new screenshots: the existing locked-stage proof is unchanged.
+- Decisions made: A980.
