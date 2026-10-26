@@ -1,6 +1,6 @@
 // The one entry point for AI review: picks a provider per call and routes each grader to it, or to tests only.
 import type { AppErrorCode } from "@shared/types/errors";
-import type { BreakdownGrade, CodeReview, ExplainGrade, ReviewProviderStatus } from "@shared/types/review";
+import type { BreakdownGrade, CodeReview, ExplainGrade, ReviewProviderId, ReviewProviderStatus } from "@shared/types/review";
 
 import { AppErrorException } from "../../errors/AppErrorException";
 import { BreakdownGrader } from "./graders/BreakdownGrader";
@@ -37,6 +37,16 @@ export interface ReviewGraders
 
 	/** Reflection answers. Optional so callers that never grade one need not build it; the service makes one when absent. */
 	reflectionGrader?: ReflectionGrader;
+}
+
+/** A finding explanation and who gave it, inside main only: the IPC answer stays the text (A855). */
+export interface FindingExplanationAnswer
+{
+	/** The explanation. */
+	text: string;
+
+	/** Who answered: an AI provider, or tests-only when none could (a fallback, never kept). */
+	provider: ReviewProviderId;
 }
 
 /** How a free follow-up on a stored review may be answered (A851, A852). */
@@ -155,10 +165,17 @@ export class ReviewService
 		return this.withProvider((provider) => this.reflectionGrader.grade(provider, input, signal), (fallback) => this.testsOnly.gradeExplain(selfCheck, fallback), followUpFailover(options));
 	}
 
-	/** Explains a finding in plain English. Free, no XP effect, cached per finding. The paid API answers only when `options` allows it (A851). */
-	explainFinding(input: FindingExplanationInput, signal?: AbortSignal, options: FollowUpOptions = { allowPaidApi: true }): Promise<string>
+	/**
+	 * Explains a finding in plain English. Free, no XP effect, cached per finding. The paid API answers only when `options` allows it (A851);
+	 * `options` is required so no caller can skip A70 by default (A856). Answers who answered, so the caller keeps only an AI explanation (A855).
+	 */
+	explainFinding(input: FindingExplanationInput, options: FollowUpOptions, signal?: AbortSignal): Promise<FindingExplanationAnswer>
 	{
-		return this.withProvider((provider) => this.graders.findingExplainer.explain(provider, input, signal), (fallback) => this.testsOnly.explainFinding(input, fallback), followUpFailover(options));
+		return this.withProvider(
+			async (provider) => ({ text: await this.graders.findingExplainer.explain(provider, input, signal), provider: provider.id }),
+			(fallback) => ({ text: this.testsOnly.explainFinding(input, fallback), provider: this.testsOnly.id }),
+			followUpFailover(options),
+		);
 	}
 
 	/**

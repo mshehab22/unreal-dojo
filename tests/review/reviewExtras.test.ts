@@ -20,6 +20,7 @@ import { loadPrompt } from "../../src/main/services/review/prompts/loadPrompt";
 import { TestsOnlyProvider } from "../../src/main/services/review/providers/TestsOnlyProvider";
 import { QuestAlternativeService } from "../../src/main/services/review/QuestAlternativeService";
 import { ProviderSelector } from "../../src/main/services/review/ProviderSelector";
+import { timeoutError } from "../../src/main/services/review/reviewErrors";
 import { API_FOLLOW_UP_REASON, ReviewService } from "../../src/main/services/review/ReviewService";
 import { RunRegistry } from "../../src/main/services/unreal/RunRegistry";
 import { FixedClock } from "../support/FixedClock";
@@ -137,6 +138,7 @@ describe("kept finding explanations (A851)", () =>
 		const explanation = await failing.handlers.explainFinding({ attemptId: failedSubmit.outcome.attempt.attemptId, findingIndex: 0 });
 		expect(explanation).toContain(API_FOLLOW_UP_REASON);
 		expect(failingApi.requests).toHaveLength(0);
+		expect(failing.progress.getProgress().attempts[0]).not.toHaveProperty("explanations");
 
 		const passingApi = new ScriptedProvider("anthropic-api", [recorded("code-review", "good.json"), "{\"explanation\": \"From the API.\"}"], { id: "anthropic-api", available: true });
 		const passing = wiring({ anthropicApi: passingApi });
@@ -188,6 +190,55 @@ describe("kept finding explanations (A851)", () =>
 		await service.saveFindingExplanation("attempt-9", "0:abc", "Never kept.");
 
 		expect(service.getProgress().attempts[0]).not.toHaveProperty("explanations");
+	});
+});
+
+describe("a fallback answer is never kept (A855)", () =>
+{
+	it("Why?: a timeout answers the tests-only text without keeping it, and the next ask reaches Claude Code and is kept", async () =>
+	{
+		const claudeCode = new ScriptedProvider("claude-code", [recorded("code-review", "good.json"), timeoutError("Claude Code took longer than 180 seconds and was stopped."), "{\"explanation\": \"The real answer.\"}"], { id: "claude-code", available: true });
+		const { handlers, progress } = wiring({ claudeCode });
+		const submit = await handlers.submitQuest(REQUEST, () => undefined, new AbortController().signal);
+		const attemptId = submit.outcome.attempt.attemptId;
+
+		const fallback = await handlers.explainFinding({ attemptId, findingIndex: 0 });
+		expect(fallback).toContain("took longer than 180 seconds");
+		expect(progress.getProgress().attempts[0]).not.toHaveProperty("explanations");
+
+		await expect(handlers.explainFinding({ attemptId, findingIndex: 0 })).resolves.toBe("The real answer.");
+		expect(claudeCode.requests).toHaveLength(3);
+		expect(Object.values(progress.getProgress().attempts[0]?.explanations ?? {})).toEqual(["The real answer."]);
+		await expect(handlers.explainFinding({ attemptId, findingIndex: 0 })).resolves.toBe("The real answer.");
+		expect(claudeCode.requests).toHaveLength(3);
+	});
+
+	it("reflection: a timed-out self-check is not kept, so sending the same sentence again (the suggested retry) reaches Claude Code", async () =>
+	{
+		const claudeCode = new ScriptedProvider("claude-code", [recorded("code-review", "good.json"), timeoutError("Claude Code took longer than 180 seconds and was stopped."), REFLECTION_REPLY], { id: "claude-code", available: true });
+		const { handlers, progress } = wiring({ claudeCode });
+		const submit = await handlers.submitQuest(REQUEST, () => undefined, new AbortController().signal);
+		const request = { attemptId: submit.outcome.attempt.attemptId, answer: "The delegate keeps the HUD out of gameplay." };
+
+		await expect(handlers.answerReflection(request)).resolves.toMatchObject({ provider: "tests-only", retryReviewSuggested: true });
+		expect(progress.getProgress().attempts[0]).not.toHaveProperty("reflection");
+
+		await expect(handlers.answerReflection(request)).resolves.toMatchObject({ provider: "claude-code", verdict: "correct" });
+		expect(claudeCode.requests).toHaveLength(3);
+		expect(progress.getProgress().attempts[0]?.reflection?.grade.provider).toBe("claude-code");
+	});
+
+	it("reflection: a tests-only grade kept by an older build is not reused for the same sentence", async () =>
+	{
+		const claudeCode = new ScriptedProvider("claude-code", [recorded("code-review", "good.json"), REFLECTION_REPLY], { id: "claude-code", available: true });
+		const { handlers, progress } = wiring({ claudeCode });
+		const submit = await handlers.submitQuest(REQUEST, () => undefined, new AbortController().signal);
+		const answer = "The delegate keeps the HUD out of gameplay.";
+
+		await progress.saveReflection(submit.outcome.attempt.attemptId, { answer, grade: { score: 70, verdict: "partly", note: "Self-check.", provider: "tests-only" }, at: "2026-10-21T12:00:00.000Z" });
+
+		await expect(handlers.answerReflection({ attemptId: submit.outcome.attempt.attemptId, answer })).resolves.toMatchObject({ provider: "claude-code" });
+		expect(claudeCode.requests).toHaveLength(2);
 	});
 });
 

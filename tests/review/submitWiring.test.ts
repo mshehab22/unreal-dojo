@@ -231,7 +231,7 @@ describe("AttemptReviewService", () =>
 		const service = new AttemptReviewService(
 			{ attempts: () => attempts, submittedFiles: () => ({ "Health.cpp": "// code" }), questBrief: async () => "Build a health component.", saveExplanation: async () => undefined, saveReflection: async () => undefined, now: () => new Date("2026-10-21T12:00:00.000Z") },
 			{
-				explainFinding: async (input) => { received.explain.push(input); return "Because nothing hears it."; },
+				explainFinding: async (input) => { received.explain.push(input); return { text: "Because nothing hears it.", provider: "claude-code" as const }; },
 				gradeReflection: async (input) => { received.grade.push(input); return { score: 85, verdict: "correct", note: "Yes.", provider: "claude-code" }; },
 			},
 		);
@@ -395,7 +395,7 @@ describe("M1.7c fix round 1", () =>
 		const provider = new ScriptedProvider("claude-code", ["{\"explanation\": \"First save.\"}", "{\"explanation\": \"After the reset.\"}"]);
 		let attempts: AttemptRecord[] = [{ attemptId: "attempt-1", questId: "w1.health", at: "2026-10-21T10:00:00.000Z", score: 80, passed: true, xpGained: 100, review: codeReview("claude-code"), files: {} }];
 		const sources = { attempts: () => attempts, submittedFiles: () => ({}), questBrief: async () => "", saveExplanation: async () => undefined, saveReflection: async () => undefined, now: () => new Date() };
-		const service = new AttemptReviewService(sources, { explainFinding: (input) => explainer.explain(provider, input), gradeReflection: async () => { throw new Error("not used"); } });
+		const service = new AttemptReviewService(sources, { explainFinding: async (input) => ({ text: await explainer.explain(provider, input), provider: "claude-code" as const }), gradeReflection: async () => { throw new Error("not used"); } });
 
 		await expect(service.explainFinding({ attemptId: "attempt-1", findingIndex: 0 })).resolves.toBe("First save.");
 

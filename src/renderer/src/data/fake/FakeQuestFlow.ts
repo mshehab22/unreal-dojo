@@ -412,11 +412,13 @@ export class FakeQuestFlow
 
 		if (!attempt?.review) throw fail("attempt-not-found", "That attempt has no code review.", "Only build and refactor submits have a review to ask about.");
 		if (answer.length === 0) throw fail("invalid-payload", "Write one sentence to answer the question.", "Type your answer, then send it.");
-		if (attempt.reflection?.answer === answer) return attempt.reflection.grade;
+		if (attempt.reflection?.answer === answer && attempt.reflection.grade.provider !== "tests-only") return attempt.reflection.grade;
 
 		const grade = gradeSentence(answer, this.quest(attempt.questId).concepts.join(" "));
 		const reflection = { answer, grade, at: new Date().toISOString() };
-		progress.attempts = progress.attempts.map((candidate) => (candidate.attemptId === attempt.attemptId ? { ...candidate, reflection } : candidate));
+
+		// Like the real one, only an AI grade is kept, so a self-check never blocks a later real grade (A855).
+		if (grade.provider !== "tests-only") progress.attempts = progress.attempts.map((candidate) => (candidate.attemptId === attempt.attemptId ? { ...candidate, reflection } : candidate));
 
 		return grade;
 	}

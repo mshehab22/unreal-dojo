@@ -6,7 +6,7 @@ import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAns
 
 import { AppErrorException } from "../../errors/AppErrorException";
 import type { FindingExplanationInput, ReflectionGradeInput } from "./ReviewInputs";
-import type { FollowUpOptions } from "./ReviewService";
+import type { FindingExplanationAnswer, FollowUpOptions } from "./ReviewService";
 
 /** What the follow-ups need from the rest of the app, as functions so tests pass plain data. */
 export interface AttemptReviewSources
@@ -33,8 +33,8 @@ export interface AttemptReviewSources
 /** The review service calls the follow-ups use. `ReviewService` meets it. */
 export interface FollowUpGraders
 {
-	/** Explains one finding, cached per finding; the paid API only when `options` allows it. */
-	explainFinding(input: FindingExplanationInput, signal: AbortSignal | undefined, options: FollowUpOptions): Promise<string>;
+	/** Explains one finding, cached per finding; the paid API only when `options` allows it. Answers who answered. */
+	explainFinding(input: FindingExplanationInput, options: FollowUpOptions): Promise<FindingExplanationAnswer>;
 
 	/** Grades one reflection answer; the paid API only when `options` allows it. */
 	gradeReflection(input: ReflectionGradeInput, options: FollowUpOptions): Promise<ExplainGrade>;
@@ -48,7 +48,10 @@ export class AttemptReviewService
 	{
 	}
 
-	/** Explains in plain English why a finding is a finding. An explanation kept on the attempt is answered again for free; a new one is kept (A851). */
+	/**
+	 * Explains in plain English why a finding is a finding. An explanation kept on the attempt is answered again for free (A851).
+	 * Only an AI provider's answer is kept: a tests-only fallback (no reviewer set up, a timeout, the A70 skip) is answered but not kept, so the next ask can reach the AI (A855).
+	 */
 	async explainFinding(request: FindingExplanationRequest): Promise<string>
 	{
 		const { attempt, review } = this.reviewedAttempt(request.attemptId);
@@ -63,20 +66,20 @@ export class AttemptReviewService
 		const kept = attempt.explanations?.[findingKey];
 		if (kept !== undefined) return kept;
 
-		const explanation = await this.graders.explainFinding(
+		const answer = await this.graders.explainFinding(
 			{ cacheKey: `${request.attemptId}:${attempt.at}:${findingKey}`, brief: await this.sources.questBrief(attempt.questId), finding, files: this.sources.submittedFiles(attempt) },
-			undefined,
 			this.followUpOptions(attempt),
 		);
 
-		await this.sources.saveExplanation(request.attemptId, findingKey, explanation);
+		if (answer.provider !== "tests-only") await this.sources.saveExplanation(request.attemptId, findingKey, answer.text);
 
-		return explanation;
+		return answer.text;
 	}
 
 	/**
 	 * Grades the learner's one-sentence answer to the review's reflection question, reading their submitted code (A852, A853).
-	 * The answer and grade are kept on the attempt; sending the same sentence again answers the kept grade for free, and a new sentence is graded and replaces it.
+	 * An AI grade is kept on the attempt; sending the same sentence again answers the kept grade for free, and a new sentence is graded and replaces it.
+	 * A tests-only self-check (no reviewer set up, a timeout, the A70 skip) is answered but neither kept nor reused, so the suggested retry can reach the AI (A855).
 	 */
 	async answerReflection(request: ReflectionAnswerRequest): Promise<ExplainGrade>
 	{
@@ -84,11 +87,11 @@ export class AttemptReviewService
 		const answer = request.answer.trim();
 
 		if (answer.length === 0) throw new AppErrorException("invalid-payload", "Write one sentence to answer the question.", "Type your answer, then send it.");
-		if (attempt.reflection?.answer === answer) return attempt.reflection.grade;
+		if (attempt.reflection?.answer === answer && attempt.reflection.grade.provider !== "tests-only") return attempt.reflection.grade;
 
 		const grade = await this.graders.gradeReflection({ question: review.reflectionQuestion, reviewSummary: review.summary, files: this.sources.submittedFiles(attempt), answer }, this.followUpOptions(attempt));
 
-		await this.sources.saveReflection(request.attemptId, { answer, grade, at: this.sources.now().toISOString() });
+		if (grade.provider !== "tests-only") await this.sources.saveReflection(request.attemptId, { answer, grade, at: this.sources.now().toISOString() });
 
 		return grade;
 	}
