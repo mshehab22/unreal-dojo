@@ -1466,3 +1466,21 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 - Decisions: A970 (the hidden window switch and its opt-out), A971 (the app fits its starting size to the screen).
 - Not done: not tried on Windows. Some proof pictures already in `docs/iterations/` are older than their screens (the breakdown loot screen, for example); they were left as they are.
 
+
+
+## M2.2c Drill summary copy for self-checked items (ui-quests, builder-ui-quests)
+- What changed: with Tests only as the reviewer, nothing can judge a one-sentence explanation, so it is self-checked. The drill now treats it as neither right nor a miss:
+  - The item says "Not graded: compare your sentence with the model answer" and "Not scheduled: it stays in your drills until a reviewer can grade it", never "due for review".
+  - The finish card's score and its "due for review" line count graded items only, so a drill where every graded item was right says nothing is due. Self-checked items get their own line: "1 explained in your own words, not graded".
+  - A drill where nothing could be graded shows how many were explained (for example "2 explained") instead of "0/0".
+  - Concept quests read the same way: "4 of 4 right, 1 explained in your own words", and the loot list says "explained in your own words, not graded".
+  - The sample data now behaves like the real progress service when Tests only is chosen.
+- Proof (MacBook Air M5, from main 344b758): `npm run typecheck` passes; `npm test` 75 files, 886 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 30 passed and 1 skipped (the real-engine learner flow, which needs an engine), three runs in a row.
+
+![[m2-2-drill-explain-self-checked.jpg|800]]
+*With Tests only: the explain item is not graded and not scheduled.*
+
+![[m2-2-drill-summary-self-checked.jpg|800]]
+*The finish card counts only graded items (answered wrong on purpose here) and names the self-checked one on its own line.*
+
+- Decisions made: A940 to A942.

@@ -297,6 +297,51 @@ test("a drill with every item type, Parsons distractors marked, and the finish c
 	await saveScreenshot("drill-summary");
 });
 
+test("with Tests only, the drill's explain item is self-checked: not graded, not due, named on the finish card (A801, A940)", async () =>
+{
+	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
+	await openFake("#/settings");
+	await window.getByRole("radiogroup", { name: "Review provider" }).getByRole("radio", { name: "Tests only" }).click();
+	await expect(window.getByRole("radiogroup", { name: "Review provider" }).getByRole("radio", { name: "Tests only" })).toHaveAttribute("aria-checked", "true");
+	await window.evaluate(`location.hash = "#/drill?kind=due"`);
+	await expect(window.getByTestId("drill-position")).toContainText("1 /");
+
+	const total = Number((await window.getByTestId("drill-position").textContent())?.split("/")[1]?.trim() ?? "0");
+
+	for (let index = 0; index < total; index++)
+	{
+		const item = window.getByTestId("drill-item");
+		const type = (await item.getAttribute("data-source")) === "parsons" ? "parsons" : await item.getByTestId("question").getAttribute("data-type");
+
+		if (type === "parsons") await item.locator('[data-testid="parsons-pool-line"][data-line-id="line-0"]').click();
+		else if (type === "multiple-choice" || type === "which-pattern") await item.getByTestId("choice").first().click();
+		else if (type === "fill-blank") await item.getByTestId("fill-blank-input").fill("GENERATED_BODY");
+		else if (type === "spot-the-bug") await item.getByTestId("bug-line").first().click();
+		else await item.getByTestId("explain-input").fill("Blueprint and the console can only call a function by name once reflection knows about it.");
+
+		await window.getByRole("button", { name: "Check" }).click();
+		await expect(item.getByTestId("question-feedback")).toBeVisible();
+
+		if (type === "explain-in-one-sentence")
+		{
+			// Not graded and not scheduled: no "due for review" for a sentence nothing could judge.
+			await expect(item.getByTestId("question-feedback")).toHaveAttribute("data-self-checked", "true");
+			await expect(item.getByTestId("question-feedback")).toContainText("Not graded");
+			await expect(item.getByTestId("question-feedback")).not.toContainText("Due for review");
+			await expect(item.getByTestId("next-due-line")).toContainText("Not scheduled");
+			await saveScreenshot("drill-explain-self-checked");
+		}
+
+		await window.getByRole("button", { name: index === total - 1 ? "Finish the drill" : "Next" }).click();
+	}
+
+	const summary = window.getByTestId("drill-summary");
+	await expect(summary).toBeVisible();
+	await expect(window.getByTestId("drill-self-checked")).toContainText("1 explained in your own words, not graded");
+	await expect(window.getByTestId("drill-score")).toContainText(`/${total - 1}`);
+	await saveScreenshot("drill-summary-self-checked");
+});
+
 test("a breakdown: plan on the board, submit, compare with a reference, revise with a note, graded loot", async () =>
 {
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);

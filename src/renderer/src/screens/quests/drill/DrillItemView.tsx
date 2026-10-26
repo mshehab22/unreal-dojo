@@ -49,8 +49,8 @@ export function DrillItemView({ item, response, onChange, result, disabled, patt
 			)}
 			{result && (
 				<p data-testid="next-due-line" className="text-xs text-paper-faint">
-					Comes back {formatDue(result.nextDueAt)}.
-					{result.masteryChange && ` ${MASTERY_NAMES[result.masteryChange.after]} for now, due for review.`}
+					{result.selfChecked ? "Not scheduled: it stays in your drills until a reviewer can grade it." : `Comes back ${formatDue(result.nextDueAt)}.`}
+					{!result.selfChecked && result.masteryChange && ` ${MASTERY_NAMES[result.masteryChange.after]} for now, due for review.`}
 				</p>
 			)}
 		</div>

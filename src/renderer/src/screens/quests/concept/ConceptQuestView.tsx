@@ -63,7 +63,10 @@ export function ConceptQuestView({ quest }: ConceptQuestViewProps)
 		navigate("loot", { quest: quest.id });
 	};
 
-	const correctCount = outcome?.results.filter((result) => result.correct).length ?? 0;
+	// Self-checked explain answers are neither right nor wrong (A801): the line counts graded answers and names the rest.
+	const gradedResults = outcome?.results.filter((result) => !result.selfChecked) ?? [];
+	const correctCount = gradedResults.filter((result) => result.correct).length;
+	const selfCheckedCount = (outcome?.results.length ?? 0) - gradedResults.length;
 
 	return (
 		<div data-testid="concept-quest" className="flex flex-col gap-6">
@@ -90,7 +93,8 @@ export function ConceptQuestView({ quest }: ConceptQuestViewProps)
 								<TrophyIcon className="size-6 text-pack" />
 								<div className="flex flex-col">
 									<span className="font-display text-xl font-semibold">
-										{correctCount} of {outcome.results.length} right
+										{correctCount} of {gradedResults.length} right
+										{selfCheckedCount > 0 && <span className="text-base font-normal text-paper-muted">, {selfCheckedCount} explained in your own words</span>}
 									</span>
 									<span className="text-sm text-paper-muted">{outcome.outcome.attempt.passed ? "Passed. The terms join your drills." : "Not passed yet. The misses come back in your next drill."}</span>
 								</div>
