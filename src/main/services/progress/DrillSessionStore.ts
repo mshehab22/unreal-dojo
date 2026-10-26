@@ -15,8 +15,11 @@ export interface StoredDrillSession
 	/** Whether each answered item was right, by item id. Items count once. */
 	answers: Map<string, boolean>;
 
-	/** True when the session held at least one scheduled due item, so finishing it pays drill XP and streak credit (A320). */
-	rewarded: boolean;
+	/** Item ids answered but only self-checked (no AI grader): left out of the right and wrong counts (A801). */
+	selfChecked: Set<string>;
+
+	/** The session's items that were scheduled due when it started. Finishing pays drill XP and streak credit only when one of them was answered and graded, not self-checked (A320, A801). */
+	scheduledDueItemIds: Set<string>;
 }
 
 /** Holds open sessions by id. */
@@ -30,14 +33,15 @@ export class DrillSessionStore
 	{}
 
 	/** Opens a session for the request with these variants, in order. */
-	open(request: DrillRequest, variants: DrillVariant[], rewarded: boolean): StoredDrillSession
+	open(request: DrillRequest, variants: DrillVariant[], scheduledDueItemIds: string[]): StoredDrillSession
 	{
 		const sessionId = this.createId();
 		const stored: StoredDrillSession = {
 			session: { sessionId, request, items: variants.map((variant) => ({ itemId: variant.itemId, item: variant.item })) },
 			variants: new Map(variants.map((variant) => [variant.itemId, variant])),
 			answers: new Map(),
-			rewarded,
+			selfChecked: new Set(),
+			scheduledDueItemIds: new Set(scheduledDueItemIds),
 		};
 
 		this.sessions.set(sessionId, stored);

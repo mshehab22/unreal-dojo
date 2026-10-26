@@ -48,7 +48,8 @@ Last updated by M0.2c (settings service).
 
 ### Processes and files
 - `src/main/index.ts`: composition root. Waits for `app.whenReady()`, opens the `ProgressService` on `<userData>/progress.json` (M1.6), calls `registerHandlers()`, opens the window, reopens it from the macOS dock, quits when all windows close on Windows.
-- `src/main/window/createMainWindow.ts`: the one `BrowserWindow`. 1440x900 (the OS caps it to the screen's work area), minimum 1100x700, background `#0b0d12`, `hiddenInset` title bar on macOS, `contextIsolation` on, `nodeIntegration` off, `sandbox` on. Shown on `ready-to-show`. New windows are denied and outside links (`http`, `https`) go to the system browser; in-page navigation away from the app is blocked the same way. Loads `ELECTRON_RENDERER_URL` in dev, `out/renderer/index.html` when built.
+- `src/main/window/createMainWindow.ts`: the one `BrowserWindow`. 1440x900 fitted to the primary screen's work area by the app itself (never below the minimum, A971), minimum 1100x700, background `#0b0d12`, `hiddenInset` title bar on macOS, `contextIsolation` on, `nodeIntegration` off, `sandbox` on. Shown on `ready-to-show`. New windows are denied and outside links (`http`, `https`) go to the system browser; in-page navigation away from the app is blocked the same way. Loads `ELECTRON_RENDERER_URL` in dev, `out/renderer/index.html` when built. In a hidden e2e run (`DOJO_TEST_HIDDEN_WINDOW=1`, see `docs/systems/qa-and-ci.md`) the window is never shown, cannot take focus (`focusable: false`), still paints (`paintWhenInitiallyHidden`), and runs unthrottled (`backgroundThrottling: false`); `index.ts` calls `keepTestRunOffDesktop()` (`src/main/window/keepTestRunOffDesktop.ts`) before `whenReady`, which sets the macOS activation policy to "prohibited" (A970, A972).
+- `src/main/window/testWindowMode.ts`: `isHiddenTestWindow(environment, isPackaged)`, true when `DOJO_TEST_HIDDEN_WINDOW=1`, `DOJO_TEST_SHOW_WINDOW` is not `1`, and the app is not packaged. Tested in `tests/window/testWindowMode.test.ts`.
 - `src/main/ipc/`: the IPC boundary (see "IPC surface" below). `createHandlers.ts` builds the table with one `HandlerDefinition` per method (a zod schema per argument plus the answering function); `registerHandlers.ts` wraps each one and registers it on its channel; `requestSchemas.ts` holds the zod schemas, each typed against its shared type (A83); `sendBuildProgress.ts` pushes progress events to every window.
 - `src/main/errors/AppErrorException.ts`: what services throw to send a specific `AppError` to the renderer (A84).
 - `src/main/content/`: the content the renderer reads (A220). `resolveContentRoot.ts` picks `<appPath>/content` in dev and `<process.resourcesPath>/content` when packaged (A13). `ContentCatalog.ts` loads the folder once through the content-engine's `ContentLoader`, starting in the background at startup, and answers every content request from memory; `createContentCatalog.ts` wires it to the real loader and file system. `contentViews.ts` makes the World Map outlines and the learner quests (hint texts left out, A222). `buildGlossaryAliases.ts` makes the flat alias table (A223).
@@ -70,7 +71,7 @@ How a call travels (A80):
 3. The handler runs. Whatever it throws (an `AppErrorException`, a plain `Error`, a rejected promise, anything) becomes `{ ok: false, error }`; an unknown throw is code `unexpected` and is logged in main. Main never crashes on a renderer call.
 4. The preload unwraps: `ok` resolves the promise with the value, otherwise the promise rejects with the plain `AppError` object. Renderer code uses `try` and `isAppError(error)` and shows it in the one `AppError` component.
 
-Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) take a `runId` the renderer makes with `crypto.randomUUID()` (A82). Progress arrives as `BuildProgressEvent { runId, phase, elapsedMs, lastLine, percent?, loop?, loopReason? }` on `dojo:event:buildProgress`; `window.dojo.onBuildProgress(listener)` returns the unsubscribe function. `cancelRun(runId)` stops it, and the cancelled call rejects with `run-cancelled`. The final result comes back on the call's own promise.
+Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) take a `runId` the renderer makes with `crypto.randomUUID()` (A82). Progress arrives as `BuildProgressEvent { runId, phase, elapsedMs, lastLine, percent?, loop?, loopReason? }` on `dojo:event:buildProgress`; `window.dojo.onBuildProgress(listener)` returns the unsubscribe function. `cancelRun(runId)` stops it, and the cancelled call rejects with `run-cancelled`. The final result comes back on the call's own promise. `getRunStatus(runId)` answers how a run stands for a window that stopped hearing from it: `running` with its last progress event and event count, `finished` with its answer (kept for the newest 20 runs), or `unknown` (A820). `trackRun` records both in the `RunRegistry`.
 
 | Group | Method | Answer | Built by |
 | --- | --- | --- | --- |
@@ -90,6 +91,7 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Runs | `submitQuest(request)` | `SubmitOutcome` (run, review, loot), streams progress | done (M1.7c, on M1.3b's run path) |
 | Runs | `checkSnippetSyntax(request)` | `SyntaxCheckResult` for the concept scratch buffer | M1.3 |
 | Runs | `cancelRun(runId)` | nothing | M1.3 |
+| Runs | `getRunStatus(runId)` | `RunStatus` | M2.1e |
 | Progress | `getProgress()`, `resetProgress()` | `PlayerProgress` | done (M1.6) |
 | Progress | `getRules()` | `RulesSnapshot` (every rule constant the UI shows) | done (M1.6) |
 | Progress | `getQuestAvailability()` | status and locked reason per quest id | done (M1.6b) |
@@ -114,15 +116,16 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Drills | `answerDrillItem(answer)` | `DrillItemResult` | done (M1.6b; AI grading when the review service is wired, A318) |
 | Drills | `finishDrill(sessionId)` | `DrillOutcome` | done (M1.6b) |
 | Review | `getReviewProviders()`, `testClaudeCode()` | `ReviewProviderStatus[]`, `ReviewProviderStatus` | done (M1.7c) |
-| Review | `explainFinding(request)` | plain-English text | done (M1.7c) |
-| Review | `answerReflection(request)` | `ExplainGrade` | done (M1.7c) |
+| Review | `explainFinding(request)` | plain-English text; kept on the attempt, so a repeat is free (A851) | done (M1.7c, M3.4) |
+| Review | `answerReflection(request)` | `ExplainGrade`; the answer and grade are kept on the attempt as `reflection`, and the same sentence again answers the kept grade (A852) | done (M1.7c, M3.4) |
 | Review | `retryReview(attemptId)` | `CodeReview`; reviews the stored Submit again with no new build and replaces its stored review (score, pass, XP stay) | done (M1.7d) |
+| Review | `getQuestAlternative(questId)` | `QuestAlternative` or null; `alternative-locked` before a pass; no AI call (A850) | done (M3.4) |
 
 Every method answers for real; the last stubs went with M1.4b and M1.7c, and `notImplemented.ts` was removed with them. The `not-implemented` AppError code stays for features a later task may stub again. The Parsons fallback offer and the self-explanation gate are renderer-only (A89).
 
 Content is read once at startup (A220). A file with problems is left out and listed in `getContentStatus().problems`; the rest still loads. Only a missing content folder or a load that throws makes the content methods reject, with `content-invalid` ("Unreal Dojo could not find its lessons."), and the next call tries the load again. Main never crashes on bad content.
 
-`explainFinding`, `answerReflection`, and `retryReview` find the review by attempt id: `AttemptRecord.review` holds the `CodeReview` of every build, refactor, or boss Submit that compiled, and `AttemptRecord.files` and `AttemptRecord.run` hold what that review read, on the quest's last five Submits (A740).
+`explainFinding`, `answerReflection`, and `retryReview` find the review by attempt id: `AttemptRecord.review` holds the `CodeReview` of every build, refactor, or boss Submit that compiled, and `AttemptRecord.files` and `AttemptRecord.run` hold what that review read, on the quest's last five Submits (A740). `AttemptRecord.explanations` and `AttemptRecord.reflection` keep the follow-ups' answers (A851, A852).
 
 The wrapper always returns a fresh copy of an AppError with only `code`, `message`, `suggestedAction`, and `detail`, so an extra property on a thrown error (a function, a class instance) cannot make the answer fail to clone and turn into `ipc-failed`.
 

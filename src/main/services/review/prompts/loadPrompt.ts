@@ -3,9 +3,10 @@ import breakdownGraderPrompt from "./breakdown-grader.md?raw";
 import codeReviewPrompt from "./code-review.md?raw";
 import explainGraderPrompt from "./explain-grader.md?raw";
 import findingExplainerPrompt from "./finding-explainer.md?raw";
+import reflectionGraderPrompt from "./reflection-grader.md?raw";
 
-/** The four system prompts, one per grader. */
-export type PromptName = "code-review" | "breakdown-grader" | "explain-grader" | "finding-explainer";
+/** The five system prompts, one per grader. */
+export type PromptName = "code-review" | "breakdown-grader" | "explain-grader" | "finding-explainer" | "reflection-grader";
 
 /** One loaded prompt: its version from the header comment and the text sent to the model. */
 export interface LoadedPrompt
@@ -29,6 +30,7 @@ const RAW_PROMPTS: Record<PromptName, string> = {
 	"breakdown-grader": breakdownGraderPrompt,
 	"explain-grader": explainGraderPrompt,
 	"finding-explainer": findingExplainerPrompt,
+	"reflection-grader": reflectionGraderPrompt,
 };
 
 /** Parses one prompt file. Throws at startup if a file lost its header or names the wrong prompt, so a broken prompt never reaches a learner. */

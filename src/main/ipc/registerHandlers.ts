@@ -34,8 +34,8 @@ function copyAppError(error: AppError): AppError
 	return copy;
 }
 
-/** Turns anything a handler threw into an AppError. Known AppErrors pass through as clean copies; anything else becomes `unexpected`. */
-function toAppError(method: DojoMethod, thrown: unknown): AppError
+/** Turns anything thrown into an AppError. Known AppErrors pass through as clean copies; anything else becomes `unexpected`, its detail prefixed with `context`. Also used by `trackRun` (A820). */
+export function toAppError(context: string, thrown: unknown): AppError
 {
 	if (thrown instanceof AppErrorException) return copyAppError(thrown.appError);
 	if (isAppError(thrown)) return copyAppError(thrown);
@@ -46,7 +46,7 @@ function toAppError(method: DojoMethod, thrown: unknown): AppError
 		code: "unexpected",
 		message: "Something went wrong in Unreal Dojo while doing that.",
 		suggestedAction: "Try again. If it keeps happening, restart the app and report it with the details.",
-		detail: `${method}: ${detail}`,
+		detail: `${context}: ${detail}`,
 	};
 }
 

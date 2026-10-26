@@ -72,25 +72,6 @@ async function saveScreenshot(name: string): Promise<void>
 	await camera.capture(window, `m2-4-${name}.png`, { proofFileName: `m2-4-${name}.jpg`, proofFormat: "jpeg" });
 }
 
-/**
- * An expectation a reported bug still breaks. While the bug stands, the check fails quietly and the run records a "known failure" annotation
- * naming the fix task; once the fix lands and the check passes, the test fails so the mark is dropped and the check becomes a plain expectation.
- */
-async function expectKnownFailure(task: string, description: string, check: () => Promise<void>): Promise<void>
-{
-	try
-	{
-		await check();
-	}
-	catch (error)
-	{
-		testInfo.annotations.push({ type: "known failure", description: `${task}: ${description} (${String(error).split("\n")[0]})` });
-		return;
-	}
-
-	throw new Error(`Known failure fixed: ${task}: ${description}. Remove the expectKnownFailure wrapper so this is a normal expectation.`);
-}
-
 /** Forces the page to render at an exact size, independent of how large the OS lets the window be (A90). */
 async function setViewport(width: number, height: number): Promise<void>
 {
@@ -313,11 +294,8 @@ async function runDrill(proofName?: string): Promise<number>
 	await expect(summary).toBeVisible();
 	if (proofName) await saveScreenshot(`${proofName}-summary`);
 
-	// Every answer came from the content, so nothing should be reported as missed; today a self-checked explain item counts as a miss.
-	if (explainItems > 0) await expectKnownFailure("M2.2b and M1.6g", "a drill answered right reports no item due for review", async () =>
-	{
-		await expect(summary).not.toContainText("due for review", { timeout: 1_000 });
-	});
+	// Every answer came from the content, so nothing is reported as missed; a self-checked explain item is not a miss (A801).
+	if (explainItems > 0) await expect(summary).not.toContainText("due for review", { timeout: 1_000 });
 
 	return total;
 }
@@ -563,11 +541,8 @@ test.describe("the learner flow against the real bridge and a real engine", () =
 				await expect(window.getByTestId("hint-text")).toHaveCount(1);
 				await saveScreenshot("72-restart-build-kept");
 
-				// The marked-line explanations were written before the pass, so the gate should still be open after the restart.
-				await expectKnownFailure("M1.6g", "self-explanations survive a restart", async () =>
-				{
-					await expect(window.getByTestId("self-explanation-gate")).toHaveAttribute("data-open", "true", { timeout: 2_000 });
-				});
+				// The marked-line explanations were written before the pass, so the gate is still open after the restart (A800).
+				await expect(window.getByTestId("self-explanation-gate")).toHaveAttribute("data-open", "true", { timeout: 2_000 });
 				finished = true;
 			}
 			catch (error)

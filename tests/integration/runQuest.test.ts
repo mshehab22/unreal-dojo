@@ -72,7 +72,7 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 				getEditorService: () => services.editorService,
 				runRegistry: new RunRegistry(),
 				sendProgress: (event) => events.push(event),
-				progressContentService: {} as never,
+				progressContentService: { assertQuestOpen: async () => undefined } as never,
 				settingsService: {} as never,
 				readEnvironmentStatus: () => { throw new Error("not used"); },
 				getReviewHandlers: () => { throw new Error("not used"); },

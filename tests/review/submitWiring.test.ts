@@ -15,7 +15,7 @@ import { AttemptReviewService } from "../../src/main/services/review/AttemptRevi
 import { CodeAttemptRecorder } from "../../src/main/services/review/CodeAttemptRecorder";
 import { codeReviewInputFrom, isReviewedCodeQuest, type ReviewedCodeQuest } from "../../src/main/services/review/codeReviewInputFrom";
 import { QuestSubmitService, type CodeAttemptSubmission } from "../../src/main/services/review/QuestSubmitService";
-import type { CodeReviewInput, ExplainGradeInput, FindingExplanationInput } from "../../src/main/services/review/ReviewInputs";
+import type { CodeReviewInput, FindingExplanationInput, ReflectionGradeInput } from "../../src/main/services/review/ReviewInputs";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
 import { RunRegistry } from "../../src/main/services/unreal/RunRegistry";
 import { BreakdownGrader } from "../../src/main/services/review/graders/BreakdownGrader";
@@ -32,6 +32,40 @@ import { refusedError } from "../../src/main/services/review/reviewErrors";
 import { API_FAILING_TESTS_REASON } from "../../src/main/services/review/ReviewService";
 import { makeQuest } from "../support/progressFixtures";
 import { expectAppError, fixedSettings, passingRun, recorded, sampleCodeInput, sampleRun, ScriptedProvider } from "./reviewTestKit";
+import { SettingsService } from "../../src/main/services/settings/SettingsService";
+import { FakeSecretEncryptor, FakeSettingsChecks, MemorySettingsStore } from "../settings/settingsFakes";
+import { createTestProgressContent } from "../support/contentFixture";
+
+/** Throws if a dependency the test does not expect is used. */
+const unused = (): never =>
+{
+	throw new Error("not used");
+};
+
+/**
+ * Every handler dependency for the submit wiring tests: the given review service, run registry, and progress sink, real progress and
+ * settings services, a progress content service that treats every quest as open (these tests submit made-up quests, A802), and throwing
+ * stubs for everything else.
+ */
+function submitWiringDependencies(review: ReviewHandlerService, runRegistry: RunRegistry, sendProgress: (event: BuildProgressEvent) => void): HandlerDependencies
+{
+	return {
+		getAppVersion: () => "1.0.0",
+		getEngineLocator: unused,
+		getContentCatalog: unused,
+		pickFolder: async () => null,
+		progressService: createTestProgressService().service,
+		getSandboxService: unused,
+		getQuestRunService: unused,
+		getEditorService: unused,
+		runRegistry,
+		sendProgress,
+		progressContentService: Object.assign(createTestProgressContent().content, { assertQuestOpen: async () => undefined }),
+		settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
+		readEnvironmentStatus: unused,
+		getReviewHandlers: () => review,
+	};
+}
 
 /** A build quest with the fields the review reads. */
 function buildQuest(overrides: Partial<ReviewedCodeQuest> = {}): ReviewedCodeQuest
@@ -227,12 +261,12 @@ describe("AttemptReviewService", () =>
 	/** The service over fixed attempts, recording what the graders receive. */
 	function followUps()
 	{
-		const received = { explain: [] as FindingExplanationInput[], grade: [] as ExplainGradeInput[] };
+		const received = { explain: [] as FindingExplanationInput[], grade: [] as ReflectionGradeInput[] };
 		const service = new AttemptReviewService(
-			{ attempts: () => attempts, submittedFiles: () => ({ "Health.cpp": "// code" }), questBrief: async () => "Build a health component." },
+			{ attempts: () => attempts, submittedFiles: () => ({ "Health.cpp": "// code" }), questBrief: async () => "Build a health component.", saveExplanation: async () => undefined, saveReflection: async () => undefined, now: () => new Date("2026-10-21T12:00:00.000Z") },
 			{
-				explainFinding: async (input) => { received.explain.push(input); return "Because nothing hears it."; },
-				gradeExplain: async (input) => { received.grade.push(input); return { score: 85, verdict: "correct", note: "Yes.", provider: "claude-code" }; },
+				explainFinding: async (input) => { received.explain.push(input); return { text: "Because nothing hears it.", provider: "claude-code" as const }; },
+				gradeReflection: async (input) => { received.grade.push(input); return { score: 85, verdict: "correct", note: "Yes.", provider: "claude-code" }; },
 			},
 		);
 
@@ -247,12 +281,12 @@ describe("AttemptReviewService", () =>
 		expect(received.explain[0]).toEqual({ cacheKey: expect.stringMatching(/^attempt-1:2026-10-21T10:00:00\.000Z:0:[0-9a-f]{16}$/), brief: "Build a health component.", finding: codeReview("claude-code").findings[0], files: { "Health.cpp": "// code" } });
 	});
 
-	it("grades a reflection answer against the review's question with its summary as context", async () =>
+	it("grades a reflection answer against the review's question, its summary, and the submitted files", async () =>
 	{
 		const { service, received } = followUps();
 
 		await expect(service.answerReflection({ attemptId: "attempt-1", answer: "So the HUD can listen." })).resolves.toMatchObject({ verdict: "correct" });
-		expect(received.grade[0]).toEqual({ prompt: "Why a delegate?", context: "Code review summary: Clean split.", answer: "So the HUD can listen." });
+		expect(received.grade[0]).toEqual({ question: "Why a delegate?", reviewSummary: "Clean split.", files: { "Health.cpp": "// code" }, answer: "So the HUD can listen." });
 	});
 
 	it("answers attempt-not-found for an unknown attempt, an attempt without a review, and a finding past the end", async () =>
@@ -273,22 +307,7 @@ describe("review IPC routing", () =>
 		const sent: BuildProgressEvent[] = [];
 		const handlersByChannel = new Map<string, WrappedHandler>();
 		const registrar: IpcHandleRegistrar = { handle: (channel, listener) => { handlersByChannel.set(channel, listener as WrappedHandler); } };
-		const unused = (): never => { throw new Error("not used"); };
-
-		const dependencies = {
-			getAppVersion: () => "1.0.0",
-			getEngineLocator: unused,
-			getContentCatalog: unused,
-			pickFolder: async () => null,
-			progressService: {},
-			progressContentService: {},
-			getSandboxService: unused,
-			runRegistry: new RunRegistry(),
-			sendProgress: (event: BuildProgressEvent) => sent.push(event),
-			settingsService: {},
-			readEnvironmentStatus: unused,
-			getReviewHandlers: () => review,
-		} as unknown as HandlerDependencies;
+		const dependencies = submitWiringDependencies(review, new RunRegistry(), (event) => sent.push(event));
 
 		registerHandlers(registrar, createHandlers(dependencies));
 
@@ -310,6 +329,7 @@ describe("review IPC routing", () =>
 			return { run: sampleRun(), outcome: OUTCOME, review: codeReview("claude-code") } as Awaited<ReturnType<ReviewHandlerService["submitQuest"]>>;
 		},
 		retryReview: async (attemptId) => ({ ...codeReview("claude-code"), summary: `retried ${attemptId}` }),
+		getQuestAlternative: async (questId) => ({ questId, markdown: "An alternative." }),
 	};
 
 	it("answers the four review methods from the review service", async () =>
@@ -393,7 +413,8 @@ describe("M1.7c fix round 1", () =>
 		const explainer = new FindingExplainer();
 		const provider = new ScriptedProvider("claude-code", ["{\"explanation\": \"First save.\"}", "{\"explanation\": \"After the reset.\"}"]);
 		let attempts: AttemptRecord[] = [{ attemptId: "attempt-1", questId: "w1.health", at: "2026-10-21T10:00:00.000Z", score: 80, passed: true, xpGained: 100, review: codeReview("claude-code"), files: {} }];
-		const service = new AttemptReviewService({ attempts: () => attempts, submittedFiles: () => ({}), questBrief: async () => "" }, { explainFinding: (input) => explainer.explain(provider, input), gradeExplain: async () => { throw new Error("not used"); } });
+		const sources = { attempts: () => attempts, submittedFiles: () => ({}), questBrief: async () => "", saveExplanation: async () => undefined, saveReflection: async () => undefined, now: () => new Date() };
+		const service = new AttemptReviewService(sources, { explainFinding: async (input) => ({ text: await explainer.explain(provider, input), provider: "claude-code" as const }), gradeReflection: async () => { throw new Error("not used"); } });
 
 		await expect(service.explainFinding({ attemptId: "attempt-1", findingIndex: 0 })).resolves.toBe("First save.");
 
@@ -424,15 +445,12 @@ describe("M1.7c fix round 1", () =>
 				return { run: sampleRun(), outcome: OUTCOME } as Awaited<ReturnType<ReviewHandlerService["submitQuest"]>>;
 			},
 			retryReview: async () => { throw new Error("not used"); },
+			getQuestAlternative: async () => { throw new Error("not used"); },
 		};
 
 		const handlersByChannel = new Map<string, WrappedHandler>();
 		const registry = new RunRegistry();
-		const unused = (): never => { throw new Error("not used"); };
-		registerHandlers({ handle: (channel, listener) => void handlersByChannel.set(channel, listener as WrappedHandler) }, createHandlers({
-			getAppVersion: () => "1.0.0", getEngineLocator: unused, getContentCatalog: unused, pickFolder: async () => null, progressService: {}, progressContentService: {}, getSandboxService: unused,
-			runRegistry: registry, sendProgress: () => undefined, settingsService: {}, readEnvironmentStatus: unused, getReviewHandlers: () => review,
-		} as unknown as HandlerDependencies));
+		registerHandlers({ handle: (channel, listener) => void handlersByChannel.set(channel, listener as WrappedHandler) }, createHandlers(submitWiringDependencies(review, registry, () => undefined)));
 		const invoke = (channel: string, ...methodArguments: unknown[]): Promise<IpcResponse<unknown>> => (handlersByChannel.get(channel) as unknown as (event: object, ...rest: unknown[]) => Promise<IpcResponse<unknown>>)({}, ...methodArguments);
 
 		const submit = invoke(IPC_CHANNELS.submitQuest, { runId: "run-9", questId: "w1.health", files: { "Health.cpp": "// code" } });

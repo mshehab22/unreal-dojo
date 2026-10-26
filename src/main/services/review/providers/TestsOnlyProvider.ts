@@ -171,9 +171,9 @@ export class TestsOnlyProvider
 		return withReason<ExplainGrade>({ score: SELF_CHECK_SCORE, verdict: "partly", note: comparison, provider: this.id }, fallback);
 	}
 
-	/** Repeats the finding's own detail, since there is no AI to ask. */
-	explainFinding(input: FindingExplanationInput): string
+	/** Repeats the finding's own detail, since there is no AI to ask, with why no AI answered when there is a reason (A70, A851). */
+	explainFinding(input: FindingExplanationInput, fallback: TestsOnlyFallback = {}): string
 	{
-		return `${input.finding.detail} ${SET_UP_AI_NOTE}`;
+		return `${input.finding.detail} ${fallback.reason ?? SET_UP_AI_NOTE}`;
 	}
 }

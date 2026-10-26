@@ -5,9 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useRouteParameters } from "@/app/router/useRoute";
 import { AppErrorView } from "@/components/AppErrorView";
 import { Panel } from "@/components/Panel";
-import { PatternChips } from "@/components/quests/PatternChips";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { TermText } from "@/components/TermText";
 import { Button } from "@/components/ui/button";
 import { QUERY_KEYS } from "@/data/queryKeys";
 import { useDojoAction } from "@/data/useDojoAction";
@@ -15,6 +13,7 @@ import { useDojoQuery } from "@/data/useDojoQuery";
 import { nextOpenQuest } from "@/lib/nextOpenQuest";
 import { indexQuests } from "@/lib/questIndex";
 
+import { AlternativePanel } from "./quests/loot/AlternativePanel";
 import { BreakdownGradeSection } from "./quests/loot/BreakdownGradeSection";
 import { CodeReviewSection } from "./quests/loot/CodeReviewSection";
 import { ConceptResultsSection } from "./quests/loot/ConceptResultsSection";
@@ -37,7 +36,7 @@ export function LootScreen()
 	const availability = useDojoQuery(QUERY_KEYS.availability, (client) => client.getQuestAvailability());
 	const patternCards = useDojoQuery(QUERY_KEYS.patternCards, (client) => client.getPatternCards());
 	const openEditor = useDojoAction((client, id: string) => client.openEditor(id), [QUERY_KEYS.environment]);
-	const retry = useDojoAction((client, attemptId: string) => client.retryReview(attemptId), [QUERY_KEYS.progress]);
+	const retry = useDojoAction((client, attemptId: string) => client.retryReview(attemptId), [QUERY_KEYS.progress, QUERY_KEYS.alternative]);
 
 	// Next waits for the map and the first availability fetch since this screen opened, so it never flashes "Back to the map" before the next quest is known.
 	// After that it stays known: a background refetch (window focus) neither disables it nor moves the keyboard (A817).
@@ -79,7 +78,6 @@ export function LootScreen()
 	const location = index?.get(quest.id);
 	const nextQuest = location && availability.data ? nextOpenQuest(location.world.quests, quest.order, availability.data) : null;
 	const questTitles = new Map([...(index?.values() ?? [])].map((found) => [found.quest.id, found.quest.title]));
-	const alternative = quest.kind === "build" || quest.kind === "refactor" ? quest.alternative : quest.kind === "breakdown" ? quest.alternativeNote : null;
 
 	/** Asks the reviewer again about this attempt's stored files, with no new build, and shows the new review in place (A740). */
 	const retryReview = async (): Promise<void> =>
@@ -118,12 +116,7 @@ export function LootScreen()
 				)}
 			</Panel>
 
-			{passed && alternative && (
-				<Panel title="An alternative" testId="loot-alternative">
-					<PatternChips patternIds={quest.patterns} />
-					<TermText markdown={alternative} />
-				</Panel>
-			)}
+			{passed && <AlternativePanel questId={quest.id} patternIds={quest.patterns} />}
 
 			<div className="flex flex-wrap gap-2 pb-4">
 				<Button variant="secondary" onClick={() => navigate("quest", { id: quest.id })} data-testid="loot-improve">

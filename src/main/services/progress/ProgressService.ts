@@ -17,7 +17,7 @@ import type {
 	QuestProgress,
 	RulesSnapshot,
 } from "@shared/types/progress";
-import type { CodeReview } from "@shared/types/review";
+import type { CodeReview, ReflectionRecord } from "@shared/types/review";
 import type { RunResult } from "@shared/types/run";
 
 import { AppErrorException } from "../../errors/AppErrorException";
@@ -100,8 +100,11 @@ export interface DrillFinishOptions
 /** Drill totals the drill session hands over when it finishes. */
 export interface DrillTotals
 {
-	/** Items answered right. */
+	/** Items answered right, among the graded ones. */
 	correctCount: number;
+
+	/** Explain items only self-checked (no AI grader): neither right nor wrong, and not scheduled (A801). 0 when left out. */
+	selfCheckedCount?: number;
 
 	/** Items in the drill. */
 	totalCount: number;
@@ -247,7 +250,7 @@ export class ProgressService
 		});
 	}
 
-	/** Autosaves a quest in progress. Marks an untouched quest in progress. */
+	/** Autosaves a quest in progress (files, breakdown board, worked-level self-explanations, A800). Marks an untouched quest in progress. */
 	saveQuestDraft(draft: QuestDraft): Promise<void>
 	{
 		return this.enqueue(async () =>
@@ -259,20 +262,21 @@ export class ProgressService
 
 				if (draft.files) next.savedFiles = { ...draft.files };
 				if (draft.breakdownPlan) next.breakdownPlan = structuredClone(draft.breakdownPlan);
+				if (draft.selfExplanations) next.selfExplanations = { ...draft.selfExplanations };
 
 				return { ...progress, quests: { ...progress.quests, [draft.questId]: next } };
 			});
 		});
 	}
 
-	/** Throws away a quest's draft (files, board, note). Score, attempts, hints, and status stay. */
+	/** Throws away a quest's draft (files, board, note, self-explanations). Score, attempts, hints, and status stay. */
 	resetQuest(questId: string): Promise<QuestProgress>
 	{
 		return this.enqueue(async () =>
 		{
 			await this.commit((progress) =>
 			{
-				const { breakdownPlan: _plan, revisionNote: _note, ...rest } = this.questProgressOf(progress, questId);
+				const { breakdownPlan: _plan, revisionNote: _note, selfExplanations: _explanations, ...rest } = this.questProgressOf(progress, questId);
 
 				return { ...progress, quests: { ...progress.quests, [questId]: { ...rest, savedFiles: {} } } };
 			});
@@ -551,6 +555,7 @@ export class ProgressService
 				xpGained,
 				streak,
 				correctCount: totals.correctCount,
+				selfCheckedCount: totals.selfCheckedCount ?? 0,
 				totalCount: totals.totalCount,
 				nextDueAt: this.nextDueDates(next)[0] ?? null,
 				testedOutWorldIds,
@@ -648,10 +653,41 @@ export class ProgressService
 			// A newer Submit may have pruned this attempt to its summary while the reviewer was thinking; a review then stays off it like its files (A604, A745).
 			if (!current.files || !current.run) throw new AppErrorException("attempt-not-found", "This attempt's code is no longer stored, so its review was not kept.", "Submit the quest again to get a fresh review.", attemptId);
 
-			const updated: AttemptRecord = { ...current, review: structuredClone(review) };
+			// The stored explanations explained the old findings, so they go with the old review (A851).
+			const { explanations: _oldExplanations, ...rest } = current;
+			const updated: AttemptRecord = { ...rest, review: structuredClone(review) };
 			await this.commit((progress) => ({ ...progress, attempts: progress.attempts.map((attempt) => (attempt.attemptId === attemptId ? updated : attempt)) }));
 
 			return structuredClone(updated);
+		});
+	}
+
+	/**
+	 * Keeps one "why is this a finding?" answer on its attempt, by `<findingIndex>:<finding hash>` (A851). Free: no XP, no other change.
+	 * Does nothing when the attempt is gone or no longer holds a review (pruned while the explainer was thinking).
+	 */
+	saveFindingExplanation(attemptId: string, findingKey: string, explanation: string): Promise<void>
+	{
+		return this.enqueue(async () =>
+		{
+			const current = this.progress.attempts.find((attempt) => attempt.attemptId === attemptId);
+			if (!current?.review) return;
+
+			const updated: AttemptRecord = { ...current, explanations: { ...current.explanations, [findingKey]: explanation } };
+			await this.commit((progress) => ({ ...progress, attempts: progress.attempts.map((attempt) => (attempt.attemptId === attemptId ? updated : attempt)) }));
+		});
+	}
+
+	/** Keeps the learner's reflection answer and its grade on the attempt, replacing an earlier one (A852). Free: no XP, no other change. Does nothing for an attempt no longer in the save. */
+	saveReflection(attemptId: string, reflection: ReflectionRecord): Promise<void>
+	{
+		return this.enqueue(async () =>
+		{
+			const current = this.progress.attempts.find((attempt) => attempt.attemptId === attemptId);
+			if (!current) return;
+
+			const updated: AttemptRecord = { ...current, reflection: structuredClone(reflection) };
+			await this.commit((progress) => ({ ...progress, attempts: progress.attempts.map((attempt) => (attempt.attemptId === attemptId ? updated : attempt)) }));
 		});
 	}
 
@@ -696,6 +732,7 @@ export class ProgressService
 			xpGained: 0,
 			streak: { count: this.streakRules.countAt(this.progress.streak, this.clock.now()) },
 			correctCount: totals.correctCount,
+			selfCheckedCount: totals.selfCheckedCount ?? 0,
 			totalCount: totals.totalCount,
 			nextDueAt: this.nextDueDates(this.progress)[0] ?? null,
 			testedOutWorldIds: [],
