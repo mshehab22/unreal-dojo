@@ -1421,3 +1421,19 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 - What changed: the branch was rebased onto main (both sides of the iterations kept). The submit wiring tests build every dependency in one typed helper, with no cast. In `e2e/learner-flow.spec.ts` the drill-summary check ("no item due for review") and the restart check (the self-explanation gate is still open) are plain expectations now; the known-failure helper had no other use and was removed, and the qa-and-ci spec says so.
 - Proof: typecheck passes. Unit tests: 866 passed and 24 skipped. Build passes. End-to-end: 28 passed and 1 skipped (the opt-in learner flow).
 - Not verified: Unreal Engine 5.8 is no longer installed on this Mac (`~/Applications/UE_5.8` is gone, though the Epic launcher's list still names it), so the engine integration tests skipped themselves (24 skipped, 0 run) and the opt-in learner flow, which would prove the two checks above against a real engine, could not run. Both need a rerun once the engine is back. Round 1's run of the three engine tests (11 of 11) was on the code before this round, which changed only tests and docs.
+
+## M4.P2.11 Pack 2 World 11, Flyweight (content-patterns, author-patterns)
+- What changed: an eleventh Patterns world, "Thousands for the price of one", with the full mini-arc for Flyweight (six quests), set in a full arena. What thousands of copies share is stored once and read-only, and each copy keeps only what differs. Two Unreal forms: small gameplay structs that index shared definitions, and `UInstancedStaticMeshComponent` drawing one shared mesh as many instances. Built away from the source chapter's forest and terrain grid; the card's forest problem and its terrain-tile recall item were rewritten (A922, A926).
+- The quests and their observables:
+  - Three thousand fans, three thousand copies of the same scarf (concept): duplicated style data, store it once, shared means read-only, and instancing for drawing.
+  - A crowd of small fans and a few shared styles (build, worked): the learner writes GetLoudness. Half-excited fans in styles cheering at 1, 2, and 3 read 3000, and raising the Drummers to 4 makes the whole crowd 4000.
+  - Share the common part, keep the differences (concept): the card, with intrinsic and extrinsic state, assets, ISM and HISM, per-instance custom data, and how Flyweight differs from Type Object.
+  - Stands drawn as instances, and seats that break (build, stub): forty seats in four rising rows from one component. Breaking seats 3, 10, and 39 leaves exactly the other thirty-seven. Its deliberate failure: removing instance N to break seat N (A924).
+  - Forty torches, forty components, one mesh (refactor): the same twelve torches, now one instanced component instead of twelve mesh components.
+  - When sharing costs more than it saves (concept): few copies, per-copy changes, instances that need physics or logic, and measuring first.
+- Also: a new `instanced-static-mesh` glossary entry and the card audit (A926).
+- Proof:
+  - Content verifier: no problems, and no A72 warnings for World 11. `npm run typecheck` passes; `npm test` 882 passed, 24 skipped.
+  - Engine proof: pending: engine not installed (A75). Not compiled anywhere yet; to be built and run on the Windows desktop: every solution passes, every starter fails, and the obvious BreakSeat fails only `BrokenSeatsLeaveTheRest`.
+  - Originality: the n-gram check against the source chapter is pending, because the PDF is gone. The 6-word and 5-word check against the research's Flyweight section found only Unreal API phrasing, which was reworded, and a manual read found none of the chapter's examples.
+- Not done: the engine proof and the source n-gram check. No screenshots. `p11-thousands-of-the-same` requires a World 8 quest until Worlds 9 and 10 merge (A927). Decisions A920 to A927.
