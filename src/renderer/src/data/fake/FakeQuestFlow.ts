@@ -369,7 +369,7 @@ export class FakeQuestFlow
 
 		const nextDueAt = Object.values(progress.schedule).filter((dueAt) => new Date(dueAt).getTime() > Date.now()).sort()[0] ?? null;
 
-		return { xpGained: pays ? rules.drillXp : 0, streak: { count: progress.streak.count }, correctCount, totalCount: session.items.length, nextDueAt, testedOutWorldIds: testedOut, ...(chest ? { chest } : {}) };
+		return { xpGained: pays ? rules.drillXp : 0, streak: { count: progress.streak.count }, correctCount, totalCount: session.items.length, selfCheckedCount: 0, nextDueAt, testedOutWorldIds: testedOut, ...(chest ? { chest } : {}) };
 	}
 
 	// Review follow-ups

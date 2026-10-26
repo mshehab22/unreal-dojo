@@ -32,6 +32,40 @@ import { refusedError } from "../../src/main/services/review/reviewErrors";
 import { API_FAILING_TESTS_REASON } from "../../src/main/services/review/ReviewService";
 import { makeQuest } from "../support/progressFixtures";
 import { expectAppError, fixedSettings, passingRun, recorded, sampleCodeInput, sampleRun, ScriptedProvider } from "./reviewTestKit";
+import { SettingsService } from "../../src/main/services/settings/SettingsService";
+import { FakeSecretEncryptor, FakeSettingsChecks, MemorySettingsStore } from "../settings/settingsFakes";
+import { createTestProgressContent } from "../support/contentFixture";
+
+/** Throws if a dependency the test does not expect is used. */
+const unused = (): never =>
+{
+	throw new Error("not used");
+};
+
+/**
+ * Every handler dependency for the submit wiring tests: the given review service, run registry, and progress sink, real progress and
+ * settings services, a progress content service that treats every quest as open (these tests submit made-up quests, A802), and throwing
+ * stubs for everything else.
+ */
+function submitWiringDependencies(review: ReviewHandlerService, runRegistry: RunRegistry, sendProgress: (event: BuildProgressEvent) => void): HandlerDependencies
+{
+	return {
+		getAppVersion: () => "1.0.0",
+		getEngineLocator: unused,
+		getContentCatalog: unused,
+		pickFolder: async () => null,
+		progressService: createTestProgressService().service,
+		getSandboxService: unused,
+		getQuestRunService: unused,
+		getEditorService: unused,
+		runRegistry,
+		sendProgress,
+		progressContentService: Object.assign(createTestProgressContent().content, { assertQuestOpen: async () => undefined }),
+		settingsService: new SettingsService(new MemorySettingsStore(), new FakeSecretEncryptor(), new FakeSettingsChecks()),
+		readEnvironmentStatus: unused,
+		getReviewHandlers: () => review,
+	};
+}
 
 /** A build quest with the fields the review reads. */
 function buildQuest(overrides: Partial<ReviewedCodeQuest> = {}): ReviewedCodeQuest
@@ -273,22 +307,7 @@ describe("review IPC routing", () =>
 		const sent: BuildProgressEvent[] = [];
 		const handlersByChannel = new Map<string, WrappedHandler>();
 		const registrar: IpcHandleRegistrar = { handle: (channel, listener) => { handlersByChannel.set(channel, listener as WrappedHandler); } };
-		const unused = (): never => { throw new Error("not used"); };
-
-		const dependencies = {
-			getAppVersion: () => "1.0.0",
-			getEngineLocator: unused,
-			getContentCatalog: unused,
-			pickFolder: async () => null,
-			progressService: {},
-			progressContentService: {},
-			getSandboxService: unused,
-			runRegistry: new RunRegistry(),
-			sendProgress: (event: BuildProgressEvent) => sent.push(event),
-			settingsService: {},
-			readEnvironmentStatus: unused,
-			getReviewHandlers: () => review,
-		} as unknown as HandlerDependencies;
+		const dependencies = submitWiringDependencies(review, new RunRegistry(), (event) => sent.push(event));
 
 		registerHandlers(registrar, createHandlers(dependencies));
 
@@ -428,11 +447,7 @@ describe("M1.7c fix round 1", () =>
 
 		const handlersByChannel = new Map<string, WrappedHandler>();
 		const registry = new RunRegistry();
-		const unused = (): never => { throw new Error("not used"); };
-		registerHandlers({ handle: (channel, listener) => void handlersByChannel.set(channel, listener as WrappedHandler) }, createHandlers({
-			getAppVersion: () => "1.0.0", getEngineLocator: unused, getContentCatalog: unused, pickFolder: async () => null, progressService: {}, progressContentService: {}, getSandboxService: unused,
-			runRegistry: registry, sendProgress: () => undefined, settingsService: {}, readEnvironmentStatus: unused, getReviewHandlers: () => review,
-		} as unknown as HandlerDependencies));
+		registerHandlers({ handle: (channel, listener) => void handlersByChannel.set(channel, listener as WrappedHandler) }, createHandlers(submitWiringDependencies(review, registry, () => undefined)));
 		const invoke = (channel: string, ...methodArguments: unknown[]): Promise<IpcResponse<unknown>> => (handlersByChannel.get(channel) as unknown as (event: object, ...rest: unknown[]) => Promise<IpcResponse<unknown>>)({}, ...methodArguments);
 
 		const submit = invoke(IPC_CHANNELS.submitQuest, { runId: "run-9", questId: "w1.health", files: { "Health.cpp": "// code" } });
