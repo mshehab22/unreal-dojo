@@ -413,7 +413,7 @@ bool FDojo_M6_QuestTracker_ClocksPerQuest::RunTest(const FString& Parameters)
 
 - Every state change goes through one function that stores it and broadcasts OnQuestStateChanged; nothing else broadcasts it.
 - Each timed quest has its own handle in a map, set with a timer delegate whose payload is the quest.
-- Completing a quest clears its clock, and the time-up handler ignores quests that are not active.
+- A timed quest finished in time is never failed by its clock, and a late clock changes nothing.
 - Completing a quest makes every Locked quest that requires it Available.
 - A secret quest is never offered and starts itself on its first reported item.
 - ResetQuests and Deinitialize leave no clock running.

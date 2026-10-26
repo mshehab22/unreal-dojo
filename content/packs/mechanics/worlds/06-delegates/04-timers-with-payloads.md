@@ -64,7 +64,7 @@ void ADojoBombSquad::Defuse(ADojoBomb* Bomb)
 
 void ADojoBombSquad::HandleFuseOut(ADojoBomb* Bomb)
 {
-	if (IsValid(Bomb) && !Bomb->IsDefused()) Bomb->Explode();
+	if (IsValid(Bomb)) Bomb->Explode();
 }
 ```
 

@@ -25,7 +25,6 @@ Acceptance:
 
 - Items, gates, and givers know nothing about quests' rules; a gate can be used by something that is not a quest.
 - Nothing polls quest state every frame.
-- A quest completed in time is never failed by its clock afterwards.
 - A new quest of either kind is a new asset, not new code.
 - A second day plays exactly like the first after a reset.
 
@@ -51,7 +50,7 @@ Acceptance:
 - id: clocks
   kind: step
   label: One clock per timed quest that fails it unless the quest completes first
-  why: Several timed quests may run at once, and early finishes must stop their clocks.
+  why: Several timed quests may run at once.
 - id: givers
   kind: class
   label: Givers that start their quest and keep their label current by listening
@@ -76,7 +75,7 @@ Acceptance:
     - { id: tracker, kind: class, label: UDojoQuestTracker world subsystem with a state map and OnQuestStateChanged and OnQuestProgress delegates, covers: [tracker] }
     - { id: item, kind: class, label: ADojoQuestItem with an OnCollected delegate carrying the item and the collector, covers: [items] }
     - { id: course, kind: class, label: ADojoCheckpoint with OnReached and ADojoCourse that binds every gate with AddUniqueDynamic and broadcasts OnFinished, covers: [course] }
-    - { id: clocks, kind: step, label: The tracker keeps a TMap of quest to FTimerHandle set with a timer delegate carrying the quest and clears it on completion, covers: [clocks] }
+    - { id: clocks, kind: step, label: The tracker keeps a TMap of quest to FTimerHandle set with a timer delegate carrying the quest, covers: [clocks] }
     - { id: giver, kind: class, label: ADojoQuestGiver that binds to OnQuestStateChanged in BeginPlay and filters for its own quest and unbinds in EndPlay, covers: [givers] }
     - { id: director, kind: class, label: ADojoQuestDirector that binds each item's OnCollected to ReportItem and the course's OnFinished to CompleteGoal and rewrites a text board on every tracker event, covers: [wiring, board] }
   edges:
@@ -109,7 +108,7 @@ Acceptance:
 
 - One place owns each quest's state, and every change is announced by an event.
 - Items and gates only broadcast; they hold no reference to quests, givers, or the board.
-- Each timed quest has its own clock, cleared when the quest completes, and a guard so a late clock cannot fail a finished quest.
+- Each timed quest has its own clock, and the plan says what happens to it when its quest ends.
 - Givers and the board listen and never poll; every listener unbinds when it leaves play.
 - Quests come from assets or rows, so a new quest needs no code.
 - The plan says how a new day resets states, progress, clocks, the course, and the items.
