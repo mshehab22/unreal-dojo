@@ -15,7 +15,7 @@ import { AttemptReviewService } from "../../src/main/services/review/AttemptRevi
 import { CodeAttemptRecorder } from "../../src/main/services/review/CodeAttemptRecorder";
 import { codeReviewInputFrom, isReviewedCodeQuest, type ReviewedCodeQuest } from "../../src/main/services/review/codeReviewInputFrom";
 import { QuestSubmitService, type CodeAttemptSubmission } from "../../src/main/services/review/QuestSubmitService";
-import type { CodeReviewInput, ExplainGradeInput, FindingExplanationInput } from "../../src/main/services/review/ReviewInputs";
+import type { CodeReviewInput, FindingExplanationInput, ReflectionGradeInput } from "../../src/main/services/review/ReviewInputs";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
 import { RunRegistry } from "../../src/main/services/unreal/RunRegistry";
 import { BreakdownGrader } from "../../src/main/services/review/graders/BreakdownGrader";
@@ -261,12 +261,12 @@ describe("AttemptReviewService", () =>
 	/** The service over fixed attempts, recording what the graders receive. */
 	function followUps()
 	{
-		const received = { explain: [] as FindingExplanationInput[], grade: [] as ExplainGradeInput[] };
+		const received = { explain: [] as FindingExplanationInput[], grade: [] as ReflectionGradeInput[] };
 		const service = new AttemptReviewService(
-			{ attempts: () => attempts, submittedFiles: () => ({ "Health.cpp": "// code" }), questBrief: async () => "Build a health component." },
+			{ attempts: () => attempts, submittedFiles: () => ({ "Health.cpp": "// code" }), questBrief: async () => "Build a health component.", saveExplanation: async () => undefined, saveReflection: async () => undefined, now: () => new Date("2026-10-21T12:00:00.000Z") },
 			{
-				explainFinding: async (input) => { received.explain.push(input); return "Because nothing hears it."; },
-				gradeExplain: async (input) => { received.grade.push(input); return { score: 85, verdict: "correct", note: "Yes.", provider: "claude-code" }; },
+				explainFinding: async (input) => { received.explain.push(input); return { text: "Because nothing hears it.", provider: "claude-code" as const }; },
+				gradeReflection: async (input) => { received.grade.push(input); return { score: 85, verdict: "correct", note: "Yes.", provider: "claude-code" }; },
 			},
 		);
 
@@ -281,12 +281,12 @@ describe("AttemptReviewService", () =>
 		expect(received.explain[0]).toEqual({ cacheKey: expect.stringMatching(/^attempt-1:2026-10-21T10:00:00\.000Z:0:[0-9a-f]{16}$/), brief: "Build a health component.", finding: codeReview("claude-code").findings[0], files: { "Health.cpp": "// code" } });
 	});
 
-	it("grades a reflection answer against the review's question with its summary as context", async () =>
+	it("grades a reflection answer against the review's question, its summary, and the submitted files", async () =>
 	{
 		const { service, received } = followUps();
 
 		await expect(service.answerReflection({ attemptId: "attempt-1", answer: "So the HUD can listen." })).resolves.toMatchObject({ verdict: "correct" });
-		expect(received.grade[0]).toEqual({ prompt: "Why a delegate?", context: "Code review summary: Clean split.", answer: "So the HUD can listen." });
+		expect(received.grade[0]).toEqual({ question: "Why a delegate?", reviewSummary: "Clean split.", files: { "Health.cpp": "// code" }, answer: "So the HUD can listen." });
 	});
 
 	it("answers attempt-not-found for an unknown attempt, an attempt without a review, and a finding past the end", async () =>
@@ -329,6 +329,7 @@ describe("review IPC routing", () =>
 			return { run: sampleRun(), outcome: OUTCOME, review: codeReview("claude-code") } as Awaited<ReturnType<ReviewHandlerService["submitQuest"]>>;
 		},
 		retryReview: async (attemptId) => ({ ...codeReview("claude-code"), summary: `retried ${attemptId}` }),
+		getQuestAlternative: async (questId) => ({ questId, markdown: "An alternative." }),
 	};
 
 	it("answers the four review methods from the review service", async () =>
@@ -412,7 +413,8 @@ describe("M1.7c fix round 1", () =>
 		const explainer = new FindingExplainer();
 		const provider = new ScriptedProvider("claude-code", ["{\"explanation\": \"First save.\"}", "{\"explanation\": \"After the reset.\"}"]);
 		let attempts: AttemptRecord[] = [{ attemptId: "attempt-1", questId: "w1.health", at: "2026-10-21T10:00:00.000Z", score: 80, passed: true, xpGained: 100, review: codeReview("claude-code"), files: {} }];
-		const service = new AttemptReviewService({ attempts: () => attempts, submittedFiles: () => ({}), questBrief: async () => "" }, { explainFinding: (input) => explainer.explain(provider, input), gradeExplain: async () => { throw new Error("not used"); } });
+		const sources = { attempts: () => attempts, submittedFiles: () => ({}), questBrief: async () => "", saveExplanation: async () => undefined, saveReflection: async () => undefined, now: () => new Date() };
+		const service = new AttemptReviewService(sources, { explainFinding: async (input) => ({ text: await explainer.explain(provider, input), provider: "claude-code" as const }), gradeReflection: async () => { throw new Error("not used"); } });
 
 		await expect(service.explainFinding({ attemptId: "attempt-1", findingIndex: 0 })).resolves.toBe("First save.");
 
@@ -443,6 +445,7 @@ describe("M1.7c fix round 1", () =>
 				return { run: sampleRun(), outcome: OUTCOME } as Awaited<ReturnType<ReviewHandlerService["submitQuest"]>>;
 			},
 			retryReview: async () => { throw new Error("not used"); },
+			getQuestAlternative: async () => { throw new Error("not used"); },
 		};
 
 		const handlersByChannel = new Map<string, WrappedHandler>();

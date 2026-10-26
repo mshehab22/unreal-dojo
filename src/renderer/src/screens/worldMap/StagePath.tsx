@@ -17,7 +17,10 @@ interface StagePathProps
 	readonly rematchShare: number;
 }
 
-/** Rows of stages in equal columns; the line in each row runs from its first stage's center to its last. */
+/**
+ * Rows of stages in equal columns; the line in each row runs from its first stage's center to its last. The first paint guesses six per row
+ * until the card is measured, then the rows regroup and the stages remount; `data-measured` says the layout has settled (A980).
+ */
 export function StagePath({ quests, availability, rematchShare }: StagePathProps)
 {
 	const [reference, width] = useElementWidth<HTMLDivElement>();
@@ -25,7 +28,7 @@ export function StagePath({ quests, availability, rematchShare }: StagePathProps
 	const columns = rows[0]?.length ?? 1;
 
 	return (
-		<div ref={reference} data-testid="stage-path" data-rows={rows.length} className="flex min-w-0 flex-col gap-5">
+		<div ref={reference} data-testid="stage-path" data-rows={rows.length} data-measured={width > 0} className="flex min-w-0 flex-col gap-5">
 			{rows.map((row, rowIndex) =>
 			{
 				const columnShare = 100 / columns;

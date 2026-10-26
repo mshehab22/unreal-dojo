@@ -11,6 +11,7 @@ A desktop app (Windows and macOS) that teaches Unreal Engine C++ through practic
 - `docs/iterations.md`: builder entries per task, plain English with screenshots.
 - `docs/product.md`: vision, learner model, curriculum, game design. The "why".
 - `docs/systems/*.md`: one spec per system. Builders build from these; reviewers review against these.
+- `docs/lead/handbook.md` and `docs/lead/reviewer-brief.md`: how the Lead runs the loop (merge script `tools/lead/merge.sh`, engine lock, background-only tests, the Windows setup) and the brief every reviewer reads first.
 - `research/`: the source studies (GameDev.tv exercise design, Nystrom's patterns, gamified learning platforms, tooling and stack, Unreal concepts inventory, glossary seed). Content authors read the one for their pack before writing.
 
 ## How this project is run

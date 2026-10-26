@@ -10,6 +10,9 @@ interface OpenSession
 {
 	session: DrillSession;
 	correctByItem: Map<string, boolean>;
+
+	/** Explain items only self-checked (tests-only): neither right nor wrong (A801). */
+	selfChecked: Set<string>;
 }
 
 /** The first question of a given type in a concept quest, with the quest. */
@@ -81,7 +84,7 @@ export class FakeDrillSessions
 		const session: DrillSession = { sessionId: `fake-drill-${this.nextNumber}`, request, items };
 
 		this.nextNumber += 1;
-		this.open.set(session.sessionId, { session, correctByItem: new Map() });
+		this.open.set(session.sessionId, { session, correctByItem: new Map(), selfChecked: new Set() });
 
 		return session;
 	}
@@ -92,10 +95,14 @@ export class FakeDrillSessions
 		return this.open.get(sessionId)?.session.items.find((candidate) => candidate.itemId === itemId);
 	}
 
-	/** Remembers whether an item was answered right. */
-	recordAnswer(sessionId: string, itemId: string, correct: boolean): void
+	/** Remembers whether an item was answered right, and whether it was only self-checked. */
+	recordAnswer(sessionId: string, itemId: string, correct: boolean, selfChecked = false): void
 	{
-		this.open.get(sessionId)?.correctByItem.set(itemId, correct);
+		const open = this.open.get(sessionId);
+
+		open?.correctByItem.set(itemId, correct);
+
+		if (selfChecked) open?.selfChecked.add(itemId);
 	}
 
 	/** Ends a session and returns it with its answers; undefined when it is not open. */

@@ -1,6 +1,6 @@
 // The learner's save file and everything the rules return after an attempt. See docs/systems/progress-and-rules.md.
 
-import type { BreakdownGrade, CodeReview, ExplainGrade } from "./review";
+import type { BreakdownGrade, CodeReview, ExplainGrade, ReflectionRecord } from "./review";
 import type { RunResult } from "./run";
 
 /** Where a quest stands for this learner. */
@@ -138,6 +138,12 @@ export interface AttemptRecord
 
 	/** The engine's verdict of the Submit, so Retry review can review the stored files again without a new build (A740). Compiler output capped; pruned with `files` and `review`. */
 	run?: RunResult;
+
+	/** "Why is this a finding?" answers already given for this attempt's review, by `<findingIndex>:<finding hash>`, so asking again after a reload is free and never paid twice (A851). Pruned with `review`; cleared when Retry review replaces it. */
+	explanations?: Record<string, string>;
+
+	/** The learner's answer to the review's reflection question and its grade (A852). Kept when older details are pruned: it is the learner's own sentence. */
+	reflection?: ReflectionRecord;
 }
 
 /** One spaced review of one item, appended forever so FSRS can replace SM-2 later without a migration. */

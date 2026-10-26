@@ -33,8 +33,10 @@ export class ReferenceSolutions
 	private folderReader(): BossFolderReader
 	{
 		const fileSystem = this.fileSystem;
+		const paths = this.paths;
 
 		return {
+			join: (...parts) => paths.join(...parts),
 			listFolder: async (folder) =>
 			{
 				const entries = await fileSystem.listEntries(folder);
