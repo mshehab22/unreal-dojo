@@ -62,6 +62,15 @@ export interface FakeQuestHost
 	openQuestIds(): Set<string>;
 }
 
+/** What the fake says when no AI reviewer is set up, in the tests-only provider's words. */
+const NO_REVIEWER_NOTE = "An AI reviewer can check this for you once Claude Code or an API key is set up in Settings.";
+
+/** The tests-only provider's note on a reflection it cannot grade (a self-check with no model answer). */
+const SELF_CHECK_NOTE = "Self-check: reread your sentence against the question and your code.";
+
+/** What a follow-up's timeout says to do, as the review service words it for follow-ups (A954). */
+const FOLLOW_UP_TIMEOUT_ACTION = "Press Ask again to try once more. Your tests still count.";
+
 /** An AppError the fake rejects with. */
 function fail(code: AppError["code"], message: string, suggestedAction: string): AppError
 {
@@ -92,6 +101,7 @@ export class FakeQuestFlow
 	private readonly drills = new FakeDrillSessions();
 	private readonly shownPlans = new Map<string, { plan: BreakdownPlan; referencePlanIndex: number }>();
 	private reviewTimedOut = false;
+	private reflectionTimedOut = false;
 
 	/** The run of each recorded Submit, by attempt id, so Retry review can review it again without a new run (A740). */
 	private readonly submittedRuns = new Map<string, { quest: LearnerQuest; run: RunResult }>();
@@ -414,6 +424,9 @@ export class FakeQuestFlow
 		const kept = attempt.explanations?.[key];
 		if (kept !== undefined) return kept;
 
+		// With Tests only, no AI can explain: the finding's detail and why, answered but never kept, so a later ask reaches a reviewer (A855).
+		if (this.host.settings().reviewProvider === "tests-only") return `${finding.detail} ${NO_REVIEWER_NOTE}`;
+
 		const explanation = `${finding.title}: ${finding.detail} Reviewers flag this because the next person to read the class, often you in a month, should not have to rebuild the reasoning from the code alone.`;
 		progress.attempts = progress.attempts.map((candidate) => (candidate.attemptId === attempt.attemptId ? { ...candidate, explanations: { ...candidate.explanations, [key]: explanation } } : candidate));
 
@@ -430,6 +443,17 @@ export class FakeQuestFlow
 		if (!attempt?.review) throw fail("attempt-not-found", "That attempt has no code review.", "Only build and refactor submits have a review to ask about.");
 		if (answer.length === 0) throw fail("invalid-payload", "Write one sentence to answer the question.", "Type your answer, then send it.");
 		if (attempt.reflection?.answer === answer && attempt.reflection.grade.provider !== "tests-only") return attempt.reflection.grade;
+
+		// With Tests only, nothing can grade the sentence: a self-check with the reason, never kept (A855).
+		if (this.host.settings().reviewProvider === "tests-only") return { score: 70, verdict: "partly", note: SELF_CHECK_NOTE, provider: "tests-only" };
+
+		// With Claude Code chosen, the first reflection times out like the first review, so the self-check offers Ask again (A300, A954).
+		if (this.host.settings().reviewProvider === "claude-code" && !this.reflectionTimedOut)
+		{
+			this.reflectionTimedOut = true;
+
+			return { score: 70, verdict: "partly", note: SELF_CHECK_NOTE, provider: "tests-only", fallbackReason: `Claude Code did not answer within 3 minutes. ${FOLLOW_UP_TIMEOUT_ACTION}`, retryReviewSuggested: true };
+		}
 
 		const grade = gradeSentence(answer, this.quest(attempt.questId).concepts.join(" "));
 		const reflection = { answer, grade, at: new Date().toISOString() };
@@ -524,6 +548,9 @@ export class FakeQuestFlow
 
 			return { ...reviewCode(quest, run, "tests-only", "Claude Code did not answer within 3 minutes. Press Retry review to ask again."), score: Math.round((run.testsPassed / Math.max(1, run.testsTotal)) * 100) };
 		}
+
+		// With Tests only chosen, the review is graded by the tests alone and says why, as the review service does (no retry suggested: nothing timed out).
+		if (this.host.settings().reviewProvider === "tests-only") return { ...reviewCode(quest, run, "tests-only"), score: Math.round((run.testsPassed / Math.max(1, run.testsTotal)) * 100) };
 
 		return reviewCode(quest, run, "claude-code");
 	}

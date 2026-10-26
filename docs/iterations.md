@@ -1498,3 +1498,32 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 - What changed: the line now says the item "stays in your drills until a reviewer can grade it". The sample data pays and tests out only when at least one answer was graded, as the real app does. The Tests-only end-to-end flow now answers every graded item right and checks the score reads 6/6, no "due for review" line, and the self-checked line.
 - Proof (rebased on main e931972): `npm run typecheck` passes; `npm test` 76 files, 915 passed, 24 skipped. After M0.1b (hidden test windows) landed and a rebase onto main 3175628: `npm test` 77 files, 919 passed, 24 skipped; `npm run build` passes; `npm run test:e2e` 30 passed and 1 skipped (the opt-in real-engine learner flow), run once with hidden windows, including the new all-right Tests-only test; the two self-checked pictures were re-shot from it.
 - Decisions made: A943 and A944.
+
+
+
+## M3.4b Review extras on the loot screen (ui-quests, builder-ui-quests)
+- What changed: the three review follow-ups that M3.4 added on the main side now show on screen.
+  - The alternative after a pass comes from its own call, so it only exists once the quest is passed. When an AI reviewer wrote a pointer, it shows under the alternative as "Your reviewer suggests: ...". Retrying a review refreshes it.
+  - The reflection answer is kept: open the loot screen again later and your sentence and its grade are still there. Change the sentence and "Send the new answer" grades the new one.
+  - With no AI reviewer set up (Tests only), "Why?" still answers, with the finding's detail and the reason no AI explained it, and the reflection shows as a self-check with the reason, never as a grade. Neither is kept, so once a reviewer is set up the next ask reaches it.
+  - The sample data behaves like the real review service in all of these cases.
+- Proof (MacBook Air M5, from main 3175628, hidden test windows): `npm run typecheck` passes; `npm test` 77 files, 915 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 30 passed and 1 skipped (the opt-in real-engine learner flow), run once.
+
+![[m2-2-build-loot-alternative.jpg|800]]
+*After a pass with Claude Code: the alternative and the reviewer's pointer; the reflection graded by Claude Code above it.*
+
+![[m2-2-loot-review-extras-tests-only.jpg|800]]
+*With Tests only: "Why?" answers with the reason and can be asked again, the reflection is a self-check in the reviewer's own words, and the alternative has no reviewer pointer.*
+
+- Decisions made: A950 to A952.
+- Left for content-engine: no screen reads `alternative` or `alternativeNote` from the quest any more, so the catalog can stop sending them before a pass (A850).
+
+### Fix round 1
+- What the reviewer and the Lead asked for: the sample data added a "set up a reviewer" reason under Tests only that the real app does not give, and worded the reflection self-check differently; "Why?" could not be asked again after a fallback answer, which is never kept; and the reflection's timeout and "Ask again" were never shown.
+- What changed: the sample data now answers exactly like the real app under Tests only. "Why?" keeps its button as "Ask again (free)" after an answer. When a reviewer times out on "Why?" or the reflection, the reason now says "Press Ask again to try once more" instead of pointing at Retry review, which those two do not have (a one-line change where the review service builds the reason). The sample data's first reflection with Claude Code times out, so the screens show the self-check with Ask again, and asking again gets Claude Code's grade.
+- Proof (rebased on main 8b5a82a): `npm run typecheck` passes; `npm test` 78 files, 922 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` with hidden windows: 31 passed and 1 skipped (the opt-in real-engine learner flow).
+
+![[m2-2-loot-reflection-timeout.jpg|800]]
+*The reflection's timeout: a self-check with the reason and Ask again; "Why?" above shows Ask again (free).*
+
+- Decisions made: A953 and A954.
