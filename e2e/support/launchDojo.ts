@@ -32,7 +32,8 @@ export async function launchDojo(existingUserDataFolder?: string): Promise<DojoS
 
 	try
 	{
-		electronApp = await electron.launch({ args: [resolve("."), `--user-data-dir=${userDataFolder}`] });
+		// DOJO_TEST_HIDDEN_WINDOW keeps the window off screen and out of focus (A970); run with DOJO_TEST_SHOW_WINDOW=1 to watch it.
+		electronApp = await electron.launch({ args: [resolve("."), `--user-data-dir=${userDataFolder}`], env: { ...process.env, DOJO_TEST_HIDDEN_WINDOW: "1" } });
 		const window = await electronApp.firstWindow();
 
 		await window.waitForLoadState("domcontentloaded");

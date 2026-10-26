@@ -4,6 +4,12 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A971 2026-10-26 The app fits its starting size to the screen itself (M0.1b, builder-shell)
+Options: keep asking for 1440x900 and let the OS shrink it; compute the size from the primary screen's work area before creating the window; loosen the smoke test for hidden windows. Chosen: compute it, 1440x900 shrunk to the work area and never below 1100x700, the same rule as `expectedWindowSize` in the e2e harness (A117). macOS only shrinks a window when it is shown, so a hidden test window stayed 900 tall on an 841-point work area and the smoke test failed; Windows never shrank it at all. Now a shown window, a hidden one, and a Windows window all start at the same fitted size. Reverse cost: none.
+
+### A970 2026-10-26 E2e windows open hidden; DOJO_TEST_SHOW_WINDOW=1 brings them back (M0.1b, builder-shell, under A77)
+Every `_electron` launch used to open a full-size window that came to the front, so Mohammad could not use the Mac while sessions ran e2e. Options: move the window off screen; hide it with a test-only switch; run e2e headless in a separate desktop session. Chosen: a switch read by the main process. With `DOJO_TEST_HIDDEN_WINDOW=1` (set by `e2e/support/launchDojo.ts` on every launch) the window is created with `show: false`, `paintWhenInitiallyHidden: true`, `focusable: false`, and `backgroundThrottling: false`, is never shown or focused, and on macOS `app.dock.hide()` runs before `whenReady`. `DOJO_TEST_SHOW_WINDOW=1` overrides it for someone who wants to watch. Packaged builds ignore both, so a stray variable can never make an installed app invisible. Proof on the M5 Air: during a full run, a window-list sampler (every 100 ms, 1,100 samples) saw no app window on screen and the front app never changed; with the opt-out it saw the window at once. Not tried on Windows, where there is no Dock and `focusable: false` behaves differently. Reverse cost: none.
+
 ### A818 2026-10-21 The stored-attempt path is tested end to end without a reload (M2.2b fix round 2, Lead request)
 The fake's state lives in the page, so a reload cannot show A814. The e2e drives the same path instead: a Submit of f1-score-keeper that does not compile, then a Submit of f1-practice-bell (which replaces the loot hand-off), then back to f1-score-keeper, where the run column must say "Last submit: did not compile" with the error in the build log. A true restart is covered by M2.4's real-bridge relaunch. Reverse cost: none.
 
