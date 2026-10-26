@@ -1466,3 +1466,11 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 - Decisions: A970 (the hidden window switch and its opt-out), A971 (the app fits its starting size to the screen).
 - Not done: not tried on Windows. Some proof pictures already in `docs/iterations/` are older than their screens (the breakdown loot screen, for example); they were left as they are.
 
+## M0.1c Test launches never appear as an app (app-shell, builder-shell)
+- After M0.1b no test window appeared, but the Lead's checks still caught the test app listed as a visible app for a moment now and then. A small watcher showed why: each launch spent its first tenth of a second as an ordinary app, before any of the app's own code had run, and the later switch to a background app was only halfway (it still allowed a menu bar).
+- Now the test app tells macOS it may never become active, and the test harness starts it from a copy of Electron that macOS treats as a background app from the very first moment. The copy is made once, in about two seconds, and reused after that. Watching the window with `DOJO_TEST_SHOW_WINDOW=1` still uses the normal Electron.
+- How to see it: run `npm run build` then `npm run test:e2e` while using the Mac; nothing appears, not even in the Dock or the menu bar.
+- Proof: typecheck passes; unit tests pass; end-to-end 29 passed and 1 skipped (the opt-in real-engine flow). During a full run, the visible-app list was polled every second (95 samples) and every 0.3 seconds (209 samples): the test app never appeared, and it was never the front app, while Mohammad was using other apps. The on-screen window check (1,100 samples) saw no app window. A process watcher saw all 39 launches start as a background app and end as one that can never become active; none was ever an ordinary app, active, or the menu bar owner. Before this change the same watcher saw every launch start as an ordinary app. Screenshots still render in full; compared with a run that showed its window, the only differences are drill and question answers the app shuffles on purpose and a few pixels around animated parts. Nothing visible changed in the app, so there is no new picture.
+- Decisions: A972 (the never-active setting), A973 (the background copy of Electron for test runs).
+- Not done: not tried on Windows; nothing there changed.
+

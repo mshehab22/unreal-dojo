@@ -4,6 +4,12 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A973 2026-10-26 Hidden macOS e2e runs launch a background copy of Electron.app (M0.1c, builder-shell)
+Even with A972, every launch spent its first tenth of a second as a regular app, before any app code runs, because Electron.app's Info.plist starts it that way; System Events lists it as visible then (never active, never the menu bar owner). Options: accept that; edit `node_modules/electron/dist/Electron.app` in place (lost on every install, and it would also change `npm run dev`); keep a separate copy with `LSUIElement` set and point Playwright's `executablePath` at it. Chosen: the copy. `e2e/support/backgroundElectron.ts` builds it once per Electron version under `node_modules/.cache/dojo-e2e/` (about 2 s, then reused), and `launchDojo()` uses it on macOS unless `DOJO_TEST_SHOW_WINDOW=1`. Electron's ad-hoc signature does not seal Info.plist, so no re-signing is needed. `-ApplePersistenceIgnoreState YES` was not used: it only skips window restoration and does not change activation. Reverse cost: none (delete the file and the cache folder).
+
+### A972 2026-10-26 A hidden macOS test app is "prohibited", without dock.hide() (M0.1c, builder-shell)
+Options: keep `app.dock.hide()` (policy "accessory"); set the activation policy to "prohibited"; both. Chosen: "prohibited" alone, as the first statement of `start()`: no Dock icon, no menu bar, and the app can never become active. Calling `dock.hide()` afterwards set the policy back to "accessory" (seen with a process watcher), so it was removed. Nothing in the e2e suite broke. Reverse cost: none.
+
 ### A971 2026-10-26 The app fits its starting size to the screen itself (M0.1b, builder-shell)
 Options: keep asking for 1440x900 and let the OS shrink it; compute the size from the primary screen's work area before creating the window; loosen the smoke test for hidden windows. Chosen: compute it, 1440x900 shrunk to the work area and never below 1100x700, the same rule as `expectedWindowSize` in the e2e harness (A117). macOS only shrinks a window when it is shown, so a hidden test window stayed 900 tall on an 841-point work area and the smoke test failed; Windows never shrank it at all. Now a shown window, a hidden one, and a Windows window all start at the same fitted size. Reverse cost: none.
 

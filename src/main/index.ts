@@ -32,6 +32,7 @@ import { SettingsService } from "./services/settings/SettingsService";
 import { RunRegistry } from "./services/unreal/RunRegistry";
 import { stopEngineWorkBeforeQuit } from "./services/unreal/stopEngineWorkBeforeQuit";
 import { createMainWindow } from "./window/createMainWindow";
+import { keepTestRunOffDesktop } from "./window/keepTestRunOffDesktop";
 import { isHiddenTestWindow } from "./window/testWindowMode";
 
 /** Opens the native folder picker over the focused window. Resolves null when the learner cancels. */
@@ -61,8 +62,8 @@ async function pathExists(path: string): Promise<boolean>
 /** Starts the app once Electron is ready and reopens the window when the macOS dock icon is clicked. */
 async function start(): Promise<void>
 {
-	// Before anything else, so a hidden e2e run never shows a Dock icon or switches apps on macOS, not even while starting (A970).
-	if (isHiddenTestWindow(process.env, app.isPackaged)) app.dock?.hide();
+	// Before anything else, so a hidden e2e run never shows a Dock icon, takes the menu bar, or switches apps on macOS, not even while starting (A970, A972).
+	if (isHiddenTestWindow(process.env, app.isPackaged)) keepTestRunOffDesktop();
 
 	await app.whenReady();
 
