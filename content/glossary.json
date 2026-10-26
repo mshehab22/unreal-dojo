@@ -3472,7 +3472,8 @@
       "uclass",
       "tsubclassof",
       "cdo"
-    ]
+    ],
+    "firstQuestId": "p10-type-object-when-not"
   },
   {
     "id": "level-blueprint",
