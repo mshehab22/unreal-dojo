@@ -161,7 +161,10 @@ describe("ProgressStore", () =>
 	});
 });
 
-describe("ProgressStore on the real disk", () =>
+// Each real save fsyncs the file and flushes the folder, which can take seconds on slow CI disks (macOS runners), so these tests get more than the default 5 s.
+const REAL_DISK_TIMEOUT_MS = 30_000;
+
+describe("ProgressStore on the real disk", { timeout: REAL_DISK_TIMEOUT_MS }, () =>
 {
 	let folder = "";
 
