@@ -9,7 +9,7 @@ The system spec in `docs/systems/`, `docs/product.md`, `docs/decisions.md`, and 
 ## How to work
 
 - **Your own worktree.** Work in a detached worktree: `git worktree add --detach <scratch folder>/<name> <commit>`. For a temp merge with main, merge main into that detached worktree. Never edit the main checkout, never commit to any branch, never push. Remove your worktrees with `git worktree remove --force` and `git worktree prune` when done.
-- **Install.** Run `npm ci` in your worktree before the checks. If the Electron app is missing afterwards, run `node node_modules/electron/install.js`.
+- **Install.** Run `npm ci` in your worktree before the checks, unless the Lead's brief gives you a `node_modules` junction to a shared folder: then never run `npm ci` or `npm install` (it empties the shared folder for every session), and before `git worktree remove`, delete the junction with `cmd //c rmdir node_modules`. If the Electron app is missing afterwards, run `node node_modules/electron/install.js`.
 - **Checks:** `npm run typecheck`, `npm test`, `npx tsx tools/verify-content.ts`, `npm run build`, and `npm run test:e2e`. A known load flake fails about one run in twelve: if exactly one e2e test fails, rerun once before blaming the branch.
 - **Background only (A77).** e2e opens its windows hidden. Never set `DOJO_TEST_SHOW_WINDOW`, never run `npm run dev`, and never launch the app any other way: the person at the computer is using it.
 - **Engine runs.** Only one at a time on a machine. Take the lock the Lead names in your brief before any Unreal build, headless test, or `--engine` run, and release it as soon as the run ends, also on failure. Never launch the windowed editor.
