@@ -152,6 +152,8 @@ Stages: waiting, building, review, fixes, testing, merged. Only the Lead edits t
 
 ## Moving engine work to Windows (A76)
 
+A new Lead on Windows starts with `docs/lead/handbook.md`: setup, the loop, the merge script, the engine lock, and what waits for the engine.
+
 Mohammad will use the app on Windows and will not reinstall UE on the Mac. Everything that needs Unreal runs on the Windows desktop from now on. Waiting there:
 - Engine proofs for content: Pack 1 World 6, Pack 2 Worlds 9 and 10 (steps in problems.md), Pack 3 World 6 (M3.2), and every later world.
 - The integration suite (`tests/integration`, `--no-file-parallelism`) for M1.3c, M1.6g, M2.1e, M3.4.
