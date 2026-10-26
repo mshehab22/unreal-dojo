@@ -34,6 +34,7 @@ import type { Settings } from "@shared/types/settings";
 
 import { levelStanding } from "../../lib/levels";
 
+import { drillReward } from "./drillReward";
 import { judgeBuild } from "./FakeBuildJudge";
 import { FakeDrillSessions } from "./FakeDrillSessions";
 import { gradeDrillItem, gradeQuestion } from "./FakeItemGrader";
@@ -374,11 +375,12 @@ export class FakeQuestFlow
 		const rules = this.host.rules();
 		const { session, correctByItem, selfChecked } = finished;
 		const answeredAll = correctByItem.size === session.items.length;
-		const pays = answeredAll && session.request.kind !== "parsons-fallback";
 
 		// Self-checked items leave both counts and are reported on their own (A801).
 		const correctCount = [...correctByItem.entries()].filter(([itemId, correct]) => correct && !selfChecked.has(itemId)).length;
 		const totalCount = session.items.length - selfChecked.size;
+
+		const { pays, testsOut } = drillReward(session.request.kind, { answeredAll, gradedCount: totalCount, correctCount });
 		const chest = pays ? this.finishDailyOffer("drill", undefined) : undefined;
 
 		if (pays)
@@ -388,7 +390,7 @@ export class FakeQuestFlow
 			if (progress.streak.lastActivityAt?.slice(0, 10) !== new Date().toISOString().slice(0, 10)) progress.streak = { ...progress.streak, count: progress.streak.count + 1, lastActivityAt: new Date().toISOString() };
 		}
 
-		const testedOut = session.request.kind === "test-out" && answeredAll && correctCount === totalCount ? [worldKeyOf(session.request.packId, session.request.worldId)] : [];
+		const testedOut = session.request.kind === "test-out" && testsOut ? [worldKeyOf(session.request.packId, session.request.worldId)] : [];
 		progress.testedOutWorldIds = [...new Set([...progress.testedOutWorldIds, ...testedOut])];
 
 		const nextDueAt = Object.values(progress.schedule).filter((dueAt) => new Date(dueAt).getTime() > Date.now()).sort()[0] ?? null;

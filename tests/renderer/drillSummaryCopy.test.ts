@@ -1,6 +1,7 @@
 // M2.2c: the drill finish card's words, and the fake's Tests-only drill, keep self-checked explain items out of the score and out of "due" (A801, A940).
 import { describe, expect, it } from "vitest";
 
+import { drillReward } from "../../src/renderer/src/data/fake/drillReward";
 import { FakeDojoApi } from "../../src/renderer/src/data/fake/FakeDojoApi";
 import { drillSummaryCopy } from "../../src/renderer/src/screens/quests/drill/drillSummaryCopy";
 
@@ -12,8 +13,8 @@ describe("drillSummaryCopy", () =>
 
 		expect(copy.headline).toEqual({ kind: "score", correct: 5, total: 5 });
 		expect(copy.dueLine).toBeNull();
-		expect(copy.selfCheckedLine).toMatch(/^2 explained in your own words, not graded/);
-		expect(drillSummaryCopy({ correctCount: 5, totalCount: 5, selfCheckedCount: 1 }).selfCheckedLine).toMatch(/Compare it with the model answer; it comes back/);
+		expect(copy.selfCheckedLine).toMatch(/^2 explained in your own words, not graded\. Compare them with the model answers; they stay in your drills until a reviewer can grade them\./);
+		expect(drillSummaryCopy({ correctCount: 5, totalCount: 5, selfCheckedCount: 1 }).selfCheckedLine).toMatch(/Compare it with the model answer; it stays in your drills until a reviewer can grade it\./);
 	});
 
 	it("counts only graded misses as due", () =>
@@ -58,5 +59,24 @@ describe("the fake's Tests-only drill matches the progress service (A801)", () =
 		expect((await fake.getProgress()).schedule[explain.itemId]).toBe(dueBefore);
 		expect(outcome.selfCheckedCount).toBe(1);
 		expect(outcome.totalCount).toBe(session.items.length - 1);
+	});
+});
+
+describe("the fake pays nothing for a drill with no graded answer (A943)", () =>
+{
+	it("gives an all-self-checked drill no XP and an all-self-checked test-out no test-out, like the progress service", () =>
+	{
+		const allSelfChecked = { answeredAll: true, gradedCount: 0, correctCount: 0 };
+
+		expect(drillReward("due", allSelfChecked)).toEqual({ pays: false, testsOut: false });
+		expect(drillReward("test-out", allSelfChecked)).toEqual({ pays: false, testsOut: false });
+	});
+
+	it("still pays and tests out with graded answers, and the Parsons fallback never pays", () =>
+	{
+		expect(drillReward("test-out", { answeredAll: true, gradedCount: 6, correctCount: 6 })).toEqual({ pays: true, testsOut: true });
+		expect(drillReward("test-out", { answeredAll: true, gradedCount: 6, correctCount: 5 })).toEqual({ pays: true, testsOut: false });
+		expect(drillReward("parsons-fallback", { answeredAll: true, gradedCount: 1, correctCount: 1 }).pays).toBe(false);
+		expect(drillReward("due", { answeredAll: false, gradedCount: 3, correctCount: 3 }).pays).toBe(false);
 	});
 });

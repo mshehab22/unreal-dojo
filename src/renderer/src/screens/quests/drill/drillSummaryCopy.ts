@@ -25,6 +25,6 @@ export function drillSummaryCopy(outcome: Pick<DrillOutcome, "correctCount" | "t
 	return {
 		headline: outcome.totalCount > 0 ? { kind: "score", correct: outcome.correctCount, total: outcome.totalCount } : { kind: "explained", count: selfChecked },
 		dueLine: missed === 0 ? null : `${missed === 1 ? "One item is" : `${missed} items are`} due for review and will come back sooner.`,
-		selfCheckedLine: selfChecked === 0 ? null : selfChecked === 1 ? "1 explained in your own words, not graded. Compare it with the model answer; it comes back once a reviewer can grade it." : `${selfChecked} explained in your own words, not graded. Compare them with the model answers; they come back once a reviewer can grade them.`,
+		selfCheckedLine: selfChecked === 0 ? null : selfChecked === 1 ? "1 explained in your own words, not graded. Compare it with the model answer; it stays in your drills until a reviewer can grade it." : `${selfChecked} explained in your own words, not graded. Compare them with the model answers; they stay in your drills until a reviewer can grade them.`,
 	};
 }

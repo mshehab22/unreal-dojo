@@ -1481,6 +1481,12 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 *With Tests only: the explain item is not graded and not scheduled.*
 
 ![[m2-2-drill-summary-self-checked.jpg|800]]
-*The finish card counts only graded items (answered wrong on purpose here) and names the self-checked one on its own line.*
+*The finish card counts only graded items and names the self-checked one on its own line (taken before fix round 1; to be re-shot with every graded item right once e2e can run again, A77).*
 
 - Decisions made: A940 to A942.
+
+### Fix round 1
+- What the reviewer asked for: the finish card said self-checked items "come back once a reviewer can grade them", but they stay in every drill; the sample data paid XP and could test a world out for a drill with nothing graded; and no screen proved the original bug's case, every graded item right with nothing due.
+- What changed: the line now says the item "stays in your drills until a reviewer can grade it". The sample data pays and tests out only when at least one answer was graded, as the real app does. The Tests-only end-to-end flow now answers every graded item right and checks the score reads 6/6, no "due for review" line, and the self-checked line.
+- Proof (rebased on main e931972): `npm run typecheck` passes; `npm test` 76 files, 915 passed, 24 skipped. **e2e pending: hidden test windows (A77).** The new e2e test is written but not run, by the Lead's instruction while test windows still take over the screen; it will run once M0.1b lands, and the summary picture will be re-shot then.
+- Decisions made: A943 and A944.
