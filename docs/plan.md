@@ -146,6 +146,10 @@ Note for M2.1 (from the M1.1 review): `supportsFastLoop` is true for 5.8 on the 
 
 Stages: waiting, building, review, fixes, testing, merged. Only the Lead edits this board (A06).
 
+## Engine missing, 2026-10-26 (A75)
+
+UE 5.8 is not installed on the Mac. Non-engine work continues; code branches whose only engine step is the integration suite can merge after review (suite logged as unverified); content worlds wait as "ready, engine proof pending" until an engine is back.
+
 ## Paused 2026-10-21 about midnight, resumed 2026-10-26
 
 Resumed on 2026-10-26: every task below was re-sent from these notes (M1.3c integration run; Pack 1 World 6 proof then M3.2; World 9 reference-game line then World 10; M3.4, M1.6g and M2.1e fixes from the partial reviews; the World 9 review restarted). Notes from the pause, kept for reference:
