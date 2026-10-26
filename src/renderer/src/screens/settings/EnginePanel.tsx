@@ -6,6 +6,7 @@ import type { Settings } from "@shared/types/settings";
 
 import { AppErrorView } from "@/components/AppErrorView";
 import { BuildProgressView } from "@/components/BuildProgressView";
+import { QuietBuildNotice } from "@/components/QuietBuildNotice";
 import { Panel } from "@/components/Panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ export function EnginePanel({ settings, environment }: EnginePanelProps)
 
 		return picked;
 	}, [QUERY_KEYS.settings, QUERY_KEYS.environment]);
-	const rebuild = useSandboxBuild((client, runId) => client.rebuildSandbox(runId));
+	const rebuild = useSandboxBuild((client, runId) => client.rebuildSandbox(runId), "rebuild");
 
 	return (
 		<Panel title="Engine and sandbox" testId="settings-engine">
@@ -68,7 +69,8 @@ export function EnginePanel({ settings, environment }: EnginePanelProps)
 						</Button>
 					)}
 				</div>
-				{rebuild.status !== "idle" && rebuild.status !== "errored" && <BuildProgressView event={rebuild.progress} outcome={buildOutcome(rebuild.status)} />}
+				{rebuild.status !== "idle" && rebuild.status !== "errored" && <BuildProgressView event={rebuild.progress} outcome={buildOutcome(rebuild.status)} elapsedMs={rebuild.elapsedMs} />}
+				{rebuild.status === "running" && rebuild.isQuiet && <QuietBuildNotice build={rebuild} />}
 				{rebuild.status === "cancelled" && <p className="text-xs text-paper-muted">The rebuild was cancelled. The sandbox keeps its last good build.</p>}
 				{rebuild.status === "succeeded" && rebuild.result && <p className="text-xs text-pass">Rebuilt in {formatElapsed(rebuild.result.durationMs)}.</p>}
 				{rebuild.status === "failed" && rebuild.result && <AppErrorView error={{ code: "sandbox-not-ready", ...explainSandboxFailure(rebuild.result.compilerOutput, "rebuild"), detail: rebuild.result.compilerOutput }} onRetry={rebuild.start} />}

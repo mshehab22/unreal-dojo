@@ -80,7 +80,7 @@ Try it on a real machine: `npx tsx tools/locate-engine.ts [--pick <folder>]` pri
 | `QuestFileWriter.ts`, `SandboxProjectService.ts`, `sandboxErrors.ts` | Above |
 | `Runner.ts` (`IRunner`, `RunnerContext`), `HeadlessRunner.ts`, `RunnerFactory.ts` | The loop; the factory returns `HeadlessRunner` until M1.4 |
 | `ProgressUpdate.ts` | A progress event without `runId` and `elapsedMs`; `src/main/ipc/trackRun.ts` stamps both (A185) |
-| `RunRegistry.ts` | Abort controller per run id, for `cancelRun`; `cancelAll` on `before-quit` stops every build and test (waits up to 5 s) |
+| `RunRegistry.ts` | Abort controller per run id, for `cancelRun`; `cancelAll` on `before-quit` stops every build and test (waits up to 5 s). Also keeps each run's last progress event and event count and the answers of the newest 20 finished runs, for `getRunStatus` (a run ended early by Submit stays running until its answer is recorded), and logs one line per run start and answer (A820, A823) |
 | `SandboxPathStore.ts`, `UnrealSettingsStore.ts`, `SettingsServiceUnrealSettings.ts` | The pipeline's view of the app's settings service: the sandbox and engine folders (A400, A426). The temporary electron-store adapters are deleted |
 | `createUnrealServices.ts` | Builds the real sandbox service and runner factory; the composition root calls it on first use |
 

@@ -1,5 +1,5 @@
 // ui-core M2.1: every core screen against the typed fake DojoApi (A240), at 1100x700 and 1440x900, plus the first-run flow,
-// a failing first build with retry, Codex search, a locked stage's reason, Settings actions, and the real bridge's error view.
+// a failing first build with retry, a first build whose progress and answer go missing (A822), Codex search, a locked stage's reason, Settings actions, and the real bridge's error view.
 // Page scripts are passed as strings because e2e is typechecked without the DOM library.
 // Saves screenshots to test-results/; with SAVE_PROOF=1 a passing test also writes them to docs/iterations/m2-1-*.jpg at one pixel per CSS pixel.
 import type { Page } from "@playwright/test";
@@ -174,8 +174,14 @@ test("a locked stage explains why on hover", async ({ dojo, camera }) =>
 
 	const locked = window.locator('[data-testid="stage-node"][data-status="locked"]').first();
 	await locked.scrollIntoViewIfNeeded();
-	await locked.hover();
-	await expect(window.getByRole("tooltip")).toContainText("first");
+
+	// The tooltip opens after a short delay and a hover can land while the page settles, so the hover is retried until the reason shows.
+	await expect(async () =>
+	{
+		await window.mouse.move(0, 0);
+		await locked.hover();
+		await expect(window.getByRole("tooltip").first()).toContainText("first", { timeout: 1_500 });
+	}).toPass({ timeout: 10_000 });
 	await saveScreenshot(camera, window, "world-map-locked-reason-1440x900");
 });
 
@@ -374,6 +380,38 @@ test("a cancelled first build is calm, and starting again works", async ({ dojo 
 
 	await window.getByRole("button", { name: "Start again" }).click();
 	await expect(window.getByTestId("build-succeeded")).toBeVisible({ timeout: 15_000 });
+});
+
+test("a first build whose progress and answer never arrive still reaches done, through a status check", async ({ dojo, camera }) =>
+{
+	test.setTimeout(120_000);
+
+	const { window } = dojo;
+
+	await useDataSource(window, "fake:first-build-goes-quiet", "#/first-run");
+	await setViewport(window, 1100, 700);
+	await goTo(window, "#/first-run", "screen-firstRun");
+
+	await window.getByRole("button", { name: "Use this engine" }).click();
+	await window.getByRole("button", { name: "Choose a folder" }).click();
+	await window.getByRole("button", { name: "Use this folder" }).click();
+	await window.getByRole("button", { name: "Start the build" }).click();
+
+	// The window's own clock keeps moving after the events stop, so it never sits at 0:00 (A822).
+	await expect(window.getByTestId("build-elapsed")).not.toHaveText("0:00", { timeout: 5_000 });
+
+	// After 15 s with no new output the screen checks with main on its own; main says the build is still running, so the notice stays up
+	// and says so, instead of flashing away (A822).
+	await expect(window.locator('[data-testid="quiet-build"][data-confirmed="true"]')).toBeVisible({ timeout: 25_000 });
+	await expect(window.getByTestId("quiet-build")).toContainText("Still running; no new output");
+	await window.waitForTimeout(3_000);
+	await expect(window.locator('[data-testid="quiet-build"][data-confirmed="true"]')).toBeVisible();
+	await saveScreenshot(camera, window, "first-run-build-quiet-1100x700");
+
+	// The build ends without sending its answer; the next status check finds it finished.
+	await expect(window.getByTestId("build-succeeded")).toBeVisible({ timeout: 40_000 });
+	await expect(window.getByTestId("app-error")).toHaveCount(0);
+	await saveScreenshot(camera, window, "first-run-build-recovered-1100x700");
 });
 
 test("against the real bridge, the title works and the Studio shows real data or the AppError view", async ({ dojo, camera }) =>

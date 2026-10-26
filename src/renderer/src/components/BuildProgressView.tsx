@@ -29,6 +29,9 @@ interface BuildProgressViewProps
 	readonly event: BuildProgressEvent | null;
 	readonly outcome: BuildOutcome;
 	readonly steps?: readonly PhaseStep[];
+
+	/** Elapsed time from the window's own clock, so the timer keeps moving when events are slow. Defaults to the last event's figure. */
+	readonly elapsedMs?: number;
 }
 
 /** The label above the bar: the live phase while running, otherwise how it ended. */
@@ -42,7 +45,7 @@ function statusLabel(event: BuildProgressEvent | null, outcome: BuildOutcome): s
 }
 
 /** The phase list, then the status, elapsed time, bar, and latest log line. A failed bar turns red; a cancelled one goes quiet. */
-export function BuildProgressView({ event, outcome, steps = SANDBOX_PHASES }: BuildProgressViewProps)
+export function BuildProgressView({ event, outcome, steps = SANDBOX_PHASES, elapsedMs }: BuildProgressViewProps)
 {
 	const isFinished = outcome === "succeeded";
 	const currentIndex = isFinished ? steps.length : event ? Math.max(0, steps.findIndex((step) => step.phases.includes(event.phase))) : 0;
@@ -70,7 +73,7 @@ export function BuildProgressView({ event, outcome, steps = SANDBOX_PHASES }: Bu
 				<div className="flex items-baseline justify-between">
 					<span className={cn("font-mono text-2xs tracking-widest uppercase", outcome === "failed" ? "text-fail" : "text-paper-faint")}>{statusLabel(event, outcome)}</span>
 					<span data-testid="build-elapsed" className="font-display text-2xl font-bold tabular-nums">
-						{formatElapsed(event?.elapsedMs ?? 0)}
+						{formatElapsed(elapsedMs ?? event?.elapsedMs ?? 0)}
 					</span>
 				</div>
 				<div role="progressbar" aria-label="Build progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} className="h-2 overflow-hidden rounded-pill bg-raised">

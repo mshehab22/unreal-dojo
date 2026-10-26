@@ -70,7 +70,7 @@ How a call travels (A80):
 3. The handler runs. Whatever it throws (an `AppErrorException`, a plain `Error`, a rejected promise, anything) becomes `{ ok: false, error }`; an unknown throw is code `unexpected` and is logged in main. Main never crashes on a renderer call.
 4. The preload unwraps: `ok` resolves the promise with the value, otherwise the promise rejects with the plain `AppError` object. Renderer code uses `try` and `isAppError(error)` and shows it in the one `AppError` component.
 
-Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) take a `runId` the renderer makes with `crypto.randomUUID()` (A82). Progress arrives as `BuildProgressEvent { runId, phase, elapsedMs, lastLine, percent?, loop?, loopReason? }` on `dojo:event:buildProgress`; `window.dojo.onBuildProgress(listener)` returns the unsubscribe function. `cancelRun(runId)` stops it, and the cancelled call rejects with `run-cancelled`. The final result comes back on the call's own promise.
+Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) take a `runId` the renderer makes with `crypto.randomUUID()` (A82). Progress arrives as `BuildProgressEvent { runId, phase, elapsedMs, lastLine, percent?, loop?, loopReason? }` on `dojo:event:buildProgress`; `window.dojo.onBuildProgress(listener)` returns the unsubscribe function. `cancelRun(runId)` stops it, and the cancelled call rejects with `run-cancelled`. The final result comes back on the call's own promise. `getRunStatus(runId)` answers how a run stands for a window that stopped hearing from it: `running` with its last progress event and event count, `finished` with its answer (kept for the newest 20 runs), or `unknown` (A820). `trackRun` records both in the `RunRegistry`.
 
 | Group | Method | Answer | Built by |
 | --- | --- | --- | --- |
@@ -90,6 +90,7 @@ Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) t
 | Runs | `submitQuest(request)` | `SubmitOutcome` (run, review, loot), streams progress | done (M1.7c, on M1.3b's run path) |
 | Runs | `checkSnippetSyntax(request)` | `SyntaxCheckResult` for the concept scratch buffer | M1.3 |
 | Runs | `cancelRun(runId)` | nothing | M1.3 |
+| Runs | `getRunStatus(runId)` | `RunStatus` | M2.1e |
 | Progress | `getProgress()`, `resetProgress()` | `PlayerProgress` | done (M1.6) |
 | Progress | `getRules()` | `RulesSnapshot` (every rule constant the UI shows) | done (M1.6) |
 | Progress | `getQuestAvailability()` | status and locked reason per quest id | done (M1.6b) |

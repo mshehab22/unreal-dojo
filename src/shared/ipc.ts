@@ -26,7 +26,7 @@ import type {
 	WorldTestOutStatus,
 } from "./types/progress";
 import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "./types/review";
-import type { BuildProgressEvent, RunRequest, RunResult, SandboxSetupRequest, SyntaxCheckRequest, SyntaxCheckResult } from "./types/run";
+import type { BuildProgressEvent, RunRequest, RunResult, RunStatus, SandboxSetupRequest, SyntaxCheckRequest, SyntaxCheckResult } from "./types/run";
 import type { Settings, SettingsPatch } from "./types/settings";
 
 /**
@@ -101,6 +101,9 @@ export interface DojoInvokeApi
 
 	/** Cancels a running build, test, or sandbox setup and kills its process tree. The cancelled call rejects with `run-cancelled`. */
 	cancelRun(runId: string): Promise<void>;
+
+	/** Tells how a run stands (running with its last progress event, finished with its answer, or unknown), for a window that stopped hearing from it (A820). */
+	getRunStatus(runId: string): Promise<RunStatus>;
 
 	// Progress and rules (progress-and-rules)
 
@@ -243,6 +246,7 @@ export const IPC_CHANNELS = {
 	submitQuest: "dojo:submitQuest",
 	checkSnippetSyntax: "dojo:checkSnippetSyntax",
 	cancelRun: "dojo:cancelRun",
+	getRunStatus: "dojo:getRunStatus",
 	getProgress: "dojo:getProgress",
 	getRules: "dojo:getRules",
 	getQuestAvailability: "dojo:getQuestAvailability",
