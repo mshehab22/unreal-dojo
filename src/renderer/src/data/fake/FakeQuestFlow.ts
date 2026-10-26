@@ -34,6 +34,7 @@ import type { Settings } from "@shared/types/settings";
 
 import { levelStanding } from "../../lib/levels";
 
+import { drillReward } from "./drillReward";
 import { judgeBuild } from "./FakeBuildJudge";
 import { FakeDrillSessions } from "./FakeDrillSessions";
 import { gradeDrillItem, gradeQuestion } from "./FakeItemGrader";
@@ -261,13 +262,16 @@ export class FakeQuestFlow
 		const results: DrillItemResult[] = quest.questions.map((question, index) =>
 		{
 			const grade = gradeQuestion(question, submission.answers[index] ?? null);
-			const explainGrade = grade.explainAnswer !== undefined ? gradeSentence(grade.explainAnswer, grade.modelAnswer) : undefined;
+			const explainGrade = grade.explainAnswer !== undefined ? this.gradeExplain(grade.explainAnswer, grade.modelAnswer) : undefined;
 			const correct = explainGrade ? explainGrade.verdict === "correct" : grade.correct;
+			const selfChecked = explainGrade?.provider === "tests-only";
 
-			return { itemId: question.id, correct, quality: correct ? 4 : 2, modelAnswer: grade.modelAnswer, nextDueAt: daysAhead(correct ? 3 : 1), ...(explainGrade ? { explainGrade } : {}) };
+			return { itemId: question.id, correct, quality: correct ? 4 : 2, modelAnswer: grade.modelAnswer, nextDueAt: daysAhead(correct ? 3 : 1), ...(explainGrade ? { explainGrade } : {}), ...(selfChecked ? { selfChecked: true } : {}) };
 		});
 
-		const share = results.filter((result) => result.correct).length / Math.max(1, results.length);
+		// A self-checked explain answer is left out of the pass share, as the progress service does (A315, A801).
+		const counted = results.filter((result) => !result.selfChecked);
+		const share = counted.filter((result) => result.correct).length / Math.max(1, counted.length);
 		const outcome = this.record({ quest, score: Math.round(share * 100), passed: share >= this.host.rules().conceptPassShare, compiled: false, movesSpree: false }, "concept");
 
 		for (const termId of quest.terms) this.host.progress().schedule[termId] = daysAhead(3);
@@ -332,9 +336,18 @@ export class FakeQuestFlow
 		if (!sessionItem) throw fail("invalid-payload", "That drill item is not in this session.", "Start the drill again.");
 
 		const grade = gradeDrillItem(sessionItem.item, answer.response);
-		const explainGrade = grade.explainAnswer !== undefined ? gradeSentence(grade.explainAnswer, grade.modelAnswer) : undefined;
+		const explainGrade = grade.explainAnswer !== undefined ? this.gradeExplain(grade.explainAnswer, grade.modelAnswer) : undefined;
 		const correct = explainGrade ? explainGrade.verdict === "correct" : grade.correct;
 		const progress = this.host.progress();
+
+		// Tests-only cannot judge a sentence: the item is self-checked, neither right nor wrong, and keeps its due time (A801).
+		if (explainGrade?.provider === "tests-only")
+		{
+			this.drills.recordAnswer(answer.sessionId, answer.itemId, false, true);
+
+			return { itemId: answer.itemId, correct: false, selfChecked: true, quality: 0, explainGrade, modelAnswer: grade.modelAnswer, nextDueAt: progress.schedule[answer.itemId] ?? new Date().toISOString() };
+		}
+
 		const memory = progress.memory[answer.itemId];
 		const nextDueAt = daysAhead(correct ? 3 : 1);
 		let masteryChange: DrillItemResult["masteryChange"];
@@ -360,10 +373,14 @@ export class FakeQuestFlow
 
 		const progress = this.host.progress();
 		const rules = this.host.rules();
-		const { session, correctByItem } = finished;
+		const { session, correctByItem, selfChecked } = finished;
 		const answeredAll = correctByItem.size === session.items.length;
-		const pays = answeredAll && session.request.kind !== "parsons-fallback";
-		const correctCount = [...correctByItem.values()].filter(Boolean).length;
+
+		// Self-checked items leave both counts and are reported on their own (A801).
+		const correctCount = [...correctByItem.entries()].filter(([itemId, correct]) => correct && !selfChecked.has(itemId)).length;
+		const totalCount = session.items.length - selfChecked.size;
+
+		const { pays, testsOut } = drillReward(session.request.kind, { answeredAll, gradedCount: totalCount, correctCount });
 		const chest = pays ? this.finishDailyOffer("drill", undefined) : undefined;
 
 		if (pays)
@@ -373,12 +390,12 @@ export class FakeQuestFlow
 			if (progress.streak.lastActivityAt?.slice(0, 10) !== new Date().toISOString().slice(0, 10)) progress.streak = { ...progress.streak, count: progress.streak.count + 1, lastActivityAt: new Date().toISOString() };
 		}
 
-		const testedOut = session.request.kind === "test-out" && answeredAll && correctCount === session.items.length ? [worldKeyOf(session.request.packId, session.request.worldId)] : [];
+		const testedOut = session.request.kind === "test-out" && testsOut ? [worldKeyOf(session.request.packId, session.request.worldId)] : [];
 		progress.testedOutWorldIds = [...new Set([...progress.testedOutWorldIds, ...testedOut])];
 
 		const nextDueAt = Object.values(progress.schedule).filter((dueAt) => new Date(dueAt).getTime() > Date.now()).sort()[0] ?? null;
 
-		return { xpGained: pays ? rules.drillXp : 0, streak: { count: progress.streak.count }, correctCount, totalCount: session.items.length, selfCheckedCount: 0, nextDueAt, testedOutWorldIds: testedOut, ...(chest ? { chest } : {}) };
+		return { xpGained: pays ? rules.drillXp : 0, streak: { count: progress.streak.count }, correctCount, totalCount, selfCheckedCount: selfChecked.size, nextDueAt, testedOutWorldIds: testedOut, ...(chest ? { chest } : {}) };
 	}
 
 	// Review follow-ups
@@ -457,6 +474,14 @@ export class FakeQuestFlow
 	}
 
 	// Helpers
+
+	/** The explain grader as the review service answers it: with Tests only chosen, a self-check against the model answer (the tests-only provider's wording). */
+	private gradeExplain(answer: string, modelAnswer: string): ExplainGrade
+	{
+		if (this.host.settings().reviewProvider === "tests-only") return { score: 70, verdict: "partly", note: `Self-check against the model answer: ${modelAnswer}`, provider: "tests-only" };
+
+		return gradeSentence(answer, modelAnswer);
+	}
 
 	/** A build or refactor quest by id, or the error a screen shows. */
 	private codeQuest(questId: string): Extract<LearnerQuest, { kind: "build" | "refactor" }>

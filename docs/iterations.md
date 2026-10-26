@@ -1474,3 +1474,27 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 - Decisions: A972 (the never-active setting), A973 (the background copy of Electron for test runs).
 - Not done: not tried on Windows; nothing there changed.
 
+
+
+## M2.2c Drill summary copy for self-checked items (ui-quests, builder-ui-quests)
+- What changed: with Tests only as the reviewer, nothing can judge a one-sentence explanation, so it is self-checked. The drill now treats it as neither right nor a miss:
+  - The item says "Not graded: compare your sentence with the model answer" and "Not scheduled: it stays in your drills until a reviewer can grade it", never "due for review".
+  - The finish card's score and its "due for review" line count graded items only, so a drill where every graded item was right says nothing is due. Self-checked items get their own line: "1 explained in your own words, not graded".
+  - A drill where nothing could be graded shows how many were explained (for example "2 explained") instead of "0/0".
+  - Concept quests read the same way: "4 of 4 right, 1 explained in your own words", and the loot list says "explained in your own words, not graded".
+  - The sample data now behaves like the real progress service when Tests only is chosen.
+- Proof (MacBook Air M5, from main 344b758): `npm run typecheck` passes; `npm test` 75 files, 886 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 30 passed and 1 skipped (the real-engine learner flow, which needs an engine), three runs in a row.
+
+![[m2-2-drill-explain-self-checked.jpg|800]]
+*With Tests only: the explain item is not graded and not scheduled.*
+
+![[m2-2-drill-summary-self-checked.jpg|800]]
+*Every graded item right: the finish card reads 6/6, says nothing is due, and names the self-checked item on its own line (the M2.4 case).*
+
+- Decisions made: A940 to A942.
+
+### Fix round 1
+- What the reviewer asked for: the finish card said self-checked items "come back once a reviewer can grade them", but they stay in every drill; the sample data paid XP and could test a world out for a drill with nothing graded; and no screen proved the original bug's case, every graded item right with nothing due.
+- What changed: the line now says the item "stays in your drills until a reviewer can grade it". The sample data pays and tests out only when at least one answer was graded, as the real app does. The Tests-only end-to-end flow now answers every graded item right and checks the score reads 6/6, no "due for review" line, and the self-checked line.
+- Proof (rebased on main e931972): `npm run typecheck` passes; `npm test` 76 files, 915 passed, 24 skipped. After M0.1b (hidden test windows) landed and a rebase onto main 3175628: `npm test` 77 files, 919 passed, 24 skipped; `npm run build` passes; `npm run test:e2e` 30 passed and 1 skipped (the opt-in real-engine learner flow), run once with hidden windows, including the new all-right Tests-only test; the two self-checked pictures were re-shot from it.
+- Decisions made: A943 and A944.

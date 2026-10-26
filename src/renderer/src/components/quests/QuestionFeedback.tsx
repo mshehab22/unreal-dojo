@@ -1,5 +1,5 @@
 // What a graded question taught: right or "due for review", the explanation, the model answer, and the grader's note for explain items.
-import { CheckCircle2Icon, RotateCcwIcon } from "lucide-react";
+import { CheckCircle2Icon, RotateCcwIcon, ScaleIcon } from "lucide-react";
 
 import type { PatternCard, Question } from "@shared/types/content";
 import type { DrillItemResult, ItemResponse } from "@shared/types/progress";
@@ -20,21 +20,24 @@ interface QuestionFeedbackProps
 /** The verdict line for an explain grade, in the grader's three words. */
 const VERDICT_WORDS = { correct: "Correct", partly: "Partly there", incorrect: "Not yet" } as const;
 
-/** The result banner, then explanation, model answer, and notes. A miss reads as due for review, never as a loss. */
+/** The result banner, then explanation, model answer, and notes. A miss reads as due for review, never as a loss; a self-checked sentence reads as not graded. */
 export function QuestionFeedback({ question, result, response, patternCards = [] }: QuestionFeedbackProps)
 {
 	const titles = new Map(patternCards.map((card) => [card.id, card.title]));
+
+	// Tests-only cannot judge a sentence: the item is self-checked, neither right nor a miss (A801).
+	const selfChecked = result.selfChecked === true;
 	const picked = response?.kind === "choice" ? response.choice : null;
 	const distractorNote = question.type === "which-pattern" && picked && picked !== question.answer ? question.distractorNotes.find((note) => note.choice === picked) : undefined;
 
 	return (
-		<div data-testid="question-feedback" data-correct={result.correct} className={cn("flex flex-col gap-3 rounded-md border p-4 text-sm", result.correct ? "border-pass/50 bg-pass/5" : "border-warn/50 bg-warn/5")}>
-			<div className={cn("flex items-center gap-2 font-medium", result.correct ? "text-pass" : "text-warn")}>
-				{result.correct ? <CheckCircle2Icon className="size-4" /> : <RotateCcwIcon className="size-4" />}
-				{result.correct ? "Right" : "Due for review: it comes back in your next drill"}
+		<div data-testid="question-feedback" data-correct={result.correct} data-self-checked={selfChecked} className={cn("flex flex-col gap-3 rounded-md border p-4 text-sm", selfChecked ? "border-line-strong bg-raised" : result.correct ? "border-pass/50 bg-pass/5" : "border-warn/50 bg-warn/5")}>
+			<div className={cn("flex items-center gap-2 font-medium", selfChecked ? "text-paper" : result.correct ? "text-pass" : "text-warn")}>
+				{selfChecked ? <ScaleIcon className="size-4" /> : result.correct ? <CheckCircle2Icon className="size-4" /> : <RotateCcwIcon className="size-4" />}
+				{selfChecked ? "Not graded: compare your sentence with the model answer" : result.correct ? "Right" : "Due for review: it comes back in your next drill"}
 			</div>
 
-			{result.explainGrade && (
+			{result.explainGrade && !selfChecked && (
 				<p className="text-paper-muted">
 					<span className="font-medium text-paper">{VERDICT_WORDS[result.explainGrade.verdict]}.</span> {result.explainGrade.note}{" "}
 					<span className="text-paper-faint">({reviewProviderLabel(result.explainGrade.provider)})</span>

@@ -21,6 +21,24 @@ const WORLD_ONE = JSON.parse(readFakeWorldFixtureJson()) as {
 /** The pattern the drill's which-pattern item (the State card's first scenario) wants. */
 const STATE_SCENARIO_ANSWER = (JSON.parse(readFileSync(resolve("content/patterns.json"), "utf8")) as { id: string; scenarios: { answer?: string }[] }[]).find((card) => card.id === "state")?.scenarios[0]?.answer ?? "state";
 
+/** One authored question with its answer key, as content holds it. */
+interface AnsweredQuestion
+{
+	type: string;
+	prompt: string;
+	choices?: string[];
+	answerIndex?: number;
+	answer?: string;
+	acceptedAnswers?: string[];
+	bugLine?: number;
+}
+
+/** Every question the fake's drills can ask, from World 1's concept quests and the pattern cards, for answering drill items right. */
+const KNOWN_QUESTIONS: AnsweredQuestion[] = [
+	...(JSON.parse(readFakeWorldFixtureJson()) as { world: { quests: { questions?: AnsweredQuestion[]; predict?: AnsweredQuestion }[] } }).world.quests.flatMap((quest) => [...(quest.questions ?? []), ...(quest.predict ? [quest.predict] : [])]),
+	...(JSON.parse(readFileSync(resolve("content/patterns.json"), "utf8")) as { recall: AnsweredQuestion[]; scenarios: AnsweredQuestion[] }[]).flatMap((card) => [...card.recall, ...card.scenarios]),
+];
+
 /** The proof picture size: 1280 wide, as the task asks. */
 const PROOF_SIZE = { width: 1280, height: 800 } as const;
 
@@ -127,6 +145,39 @@ async function addDashPieces(): Promise<void>
 async function boardZoom(testId: string): Promise<number>
 {
 	return window.evaluate<number>(`(() => { const viewport = document.querySelector('[data-testid="${testId}"] .react-flow__viewport'); const match = viewport ? /scale\\(([0-9.]+)\\)/.exec(viewport.style.transform) : null; return match ? Number(match[1]) : 0; })()`);
+}
+
+/** Answers the drill item on screen correctly from the content's answer keys (Parsons in order); an explain item gets a sentence. Returns the item's type. */
+async function answerDrillItemRight(item: Locator): Promise<string>
+{
+	if ((await item.getAttribute("data-source")) === "parsons")
+	{
+		const lineCount = await item.locator('[data-testid="parsons-pool-line"][data-line-id^="line-"]').count();
+
+		for (let line = 0; line < lineCount; line++) await item.locator(`[data-testid="parsons-pool-line"][data-line-id="line-${line}"]`).click();
+
+		return "parsons";
+	}
+
+	const question = item.getByTestId("question");
+	const type = (await question.getAttribute("data-type")) ?? "";
+	const shown = (await question.textContent()) ?? "";
+	const known = KNOWN_QUESTIONS.find((candidate) => candidate.type === type && shown.includes(candidate.prompt.replace(/[`*]/g, "").slice(0, 40)));
+
+	if (type === "explain-in-one-sentence")
+	{
+		await item.getByTestId("explain-input").fill("Blueprint and the console can only call a function by name once reflection knows about it.");
+		return type;
+	}
+
+	if (!known) throw new Error(`No answer key for the ${type} item on screen: ${shown.slice(0, 80)}`);
+
+	if (type === "multiple-choice") await item.locator(`[data-testid="choice"] input[value="${known.answerIndex}"]`).check({ force: true });
+	else if (type === "which-pattern") await item.locator(`[data-testid="choice"] input[value="${known.answer}"]`).check({ force: true });
+	else if (type === "fill-blank") await item.getByTestId("fill-blank-input").fill(known.acceptedAnswers?.[0] ?? "");
+	else if (type === "spot-the-bug") await item.getByTestId("bug-line").nth((known.bugLine ?? 1) - 1).click();
+
+	return type;
 }
 
 /** Inserts text into the focused editor as one input, so auto-closed brackets and the completion list never change it. Monaco indents each new line itself. */
@@ -296,6 +347,51 @@ test("a drill with every item type, Parsons distractors marked, and the finish c
 	await expect(summary).toContainText("streak kept");
 	await saveScreenshot("drill-summary");
 });
+
+test("with Tests only and every graded item right, the drill says nothing is due and names the self-checked item (A801, A940, A944)", async () =>
+{
+	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
+	await openFake("#/settings");
+	await window.getByRole("radiogroup", { name: "Review provider" }).getByRole("radio", { name: "Tests only" }).click();
+	await expect(window.getByRole("radiogroup", { name: "Review provider" }).getByRole("radio", { name: "Tests only" })).toHaveAttribute("aria-checked", "true");
+	await window.evaluate(`location.hash = "#/drill?kind=due"`);
+	await expect(window.getByTestId("drill-position")).toContainText("1 /");
+
+	const total = Number((await window.getByTestId("drill-position").textContent())?.split("/")[1]?.trim() ?? "0");
+
+	for (let index = 0; index < total; index++)
+	{
+		const item = window.getByTestId("drill-item");
+		const type = await answerDrillItemRight(item);
+
+		await window.getByRole("button", { name: "Check" }).click();
+		await expect(item.getByTestId("question-feedback")).toBeVisible();
+
+		if (type === "explain-in-one-sentence")
+		{
+			// Not graded and not scheduled: no "due for review" for a sentence nothing could judge.
+			await expect(item.getByTestId("question-feedback")).toHaveAttribute("data-self-checked", "true");
+			await expect(item.getByTestId("question-feedback")).toContainText("Not graded");
+			await expect(item.getByTestId("question-feedback")).not.toContainText("Due for review");
+			await expect(item.getByTestId("next-due-line")).toContainText("Not scheduled");
+			await saveScreenshot("drill-explain-self-checked");
+		}
+		else
+		{
+			await expect(item.getByTestId("question-feedback")).toHaveAttribute("data-correct", "true");
+		}
+
+		await window.getByRole("button", { name: index === total - 1 ? "Finish the drill" : "Next" }).click();
+	}
+
+	// The M2.4 bug: every graded item right must not say anything is due; the self-checked one is named on its own line.
+	await expect(window.getByTestId("drill-summary")).toBeVisible();
+	await expect(window.getByTestId("drill-score")).toHaveText(`${total - 1}/${total - 1}`);
+	await expect(window.getByTestId("drill-due-line")).toHaveCount(0);
+	await expect(window.getByTestId("drill-self-checked")).toContainText("1 explained in your own words, not graded");
+	await saveScreenshot("drill-summary-self-checked");
+});
+
 
 test("a breakdown: plan on the board, submit, compare with a reference, revise with a note, graded loot", async () =>
 {
