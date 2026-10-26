@@ -215,9 +215,6 @@ bool FDojo_M6_QuestSystem_RangesTiesAndFailure::RunTest(const FString& Parameter
 	const FQuestDay Day = MakeDay(TestWorld, true);
 	if (!TestNotNull(TEXT("Director spawned"), Day.Director) || !TestNotNull(TEXT("Tracker found"), Day.Tracker)) return false;
 
-	Day.Director->RestartRound();
-	TestTrue(TEXT("R does nothing while the day runs"), Day.Director->IsRunning());
-
 	Visit(TestWorld, Day, FVector(600.f, 0.f, 0.f), true);
 	TestEqual(TEXT("E ignores a tool no quest wants yet"), Day.Director->GetItems().Num(), 6);
 
@@ -232,6 +229,14 @@ bool FDojo_M6_QuestSystem_RangesTiesAndFailure::RunTest(const FString& Parameter
 
 	Visit(TestWorld, Day, FVector(0.f, -210.f, 0.f), true);
 	TestEqual(TEXT("Nearer to the item, E collects it"), Day.Tracker->GetProgress(Day.Tools), 1);
+
+	Day.Director->RestartRound();
+	TestEqual(TEXT("R mid-day keeps the quest progress"), Day.Tracker->GetProgress(Day.Tools), 1);
+	TestEqual(TEXT("R mid-day leaves the collected item gone"), Day.Director->GetItems().Num(), 5);
+
+	Visit(TestWorld, Day, GateSpots[0], false);
+	TestEqual(TEXT("A gate before the courier run starts does not count"), Day.Course->GetPassedCount(), 0);
+
 	Visit(TestWorld, Day, FVector(600.f, 0.f, 0.f), true);
 	Visit(TestWorld, Day, FVector(600.f, 300.f, 0.f), true);
 	TestEqual(TEXT("Three tools finish the quest"), Day.Tracker->GetState(Day.Tools), EDojoM6QuestState::EQS_Completed);

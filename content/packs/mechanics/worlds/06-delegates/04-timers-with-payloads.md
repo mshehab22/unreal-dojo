@@ -13,7 +13,7 @@ estimatedMinutes: 7
 concepts:
   - An FTimerDelegate can carry extra arguments that are handed to the function when the timer fires
   - One function and one handle per thing being timed, kept in a map
-  - A finished thing must clear its own timer, or the timer fires anyway
+  - ClearTimer with one handle stops that clock and no other
 ---
 
 # Predict
@@ -46,7 +46,7 @@ GetWorld()->GetTimerManager().SetTimer(Handle, TimeUp, 20.f, false);
 
 `CreateUObject` binds a member function of a UObject and stops firing if that object is destroyed; `CreateLambda` and `CreateUFunction` (by name, for a UFUNCTION) are the other common forms. This kind of delegate is not dynamic, so the function does not need to be a UFUNCTION.
 
-Each running clock still needs its own **handle**, or starting a second one replaces the first. Keep them in a map from the thing being timed to its handle, such as `TMap<TObjectPtr<UDojoQuestData>, FTimerHandle>`. Clear the right handle when the thing ends early: a quest completed in time must clear its clock, or the clock fires later and fails a quest that is already done. When the handler might still run for an old reason, it should also check the state before acting.
+Each running clock still needs its own **handle**, or starting a second one replaces the first. Keep them in a map from the thing being timed to its handle, such as `TMap<TObjectPtr<UDojoQuestData>, FTimerHandle>`. `ClearTimer` with the right handle stops one clock without touching the others.
 
 # Example
 
@@ -92,20 +92,20 @@ void ADojoBombSquad::HandleFuseOut(ADojoBomb* Bomb)
   type: multiple-choice
   prompt: "Does the function bound with FTimerDelegate::CreateUObject need to be a UFUNCTION?"
   choices:
-    - Yes, every delegate needs reflection
     - No, FTimerDelegate is not a dynamic delegate, so it binds by function pointer
+    - Yes, every delegate needs reflection
     - Only when it has a payload
-  answerIndex: 1
+  answerIndex: 0
   explanation: Only dynamic delegates bind by name through reflection; this one stores a plain function pointer.
-- id: early-finish
+- id: payload-copy
   type: multiple-choice
-  prompt: "A timed quest is completed in 12 of its 20 seconds. What must happen so it is not failed at 20?"
+  prompt: "Code sets Quest to the tools quest, builds a timer delegate with Quest as its payload, starts the timer, then sets Quest to the courier quest. Which quest does the handler receive when the timer fires?"
   choices:
-    - Nothing, completed quests cannot fail
-    - Clear that quest's timer when it completes, and have the handler ignore quests that are no longer active
-    - Pause every timer
-  answerIndex: 1
-  explanation: The clock keeps running unless cleared, and a guard in the handler protects against any clock that slips through.
+    - The courier quest, the variable's latest value
+    - Nothing, the payload was cleared
+    - The tools quest, copied into the delegate when it was made
+  answerIndex: 2
+  explanation: A payload is copied into the delegate when the delegate is created; later changes to the variable do not reach it.
 - id: explain-payload
   type: explain-in-one-sentence
   prompt: In one sentence, say what a payload on a timer delegate is for.

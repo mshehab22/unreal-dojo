@@ -1515,9 +1515,7 @@
     "id": "timer-delegate",
     "term": "FTimerDelegate",
     "aliases": [
-      "FTimerDelegate",
       "timer delegate",
-      "CreateUObject",
       "timer payload"
     ],
     "category": "framework",

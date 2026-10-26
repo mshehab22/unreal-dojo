@@ -93,7 +93,7 @@ Acceptance:
     - { id: quest, kind: class, label: UDojoQuestComponent one per quest on a quest board actor with its own state and OnChanged delegate and its own timer handle, covers: [tracker, clocks] }
     - { id: item, kind: class, label: Items with an OnCollected delegate that every collect quest component with a matching tag binds to at the start of the day, covers: [items] }
     - { id: course, kind: class, label: Gates with OnReached and a course actor with OnFinished that the goal quest component binds to, covers: [course] }
-    - { id: chain, kind: step, label: Each quest component binds to the OnChanged of the quest it requires and becomes available when that one completes, covers: [clocks] }
+    - { id: chain, kind: step, label: Each quest component binds to the OnChanged of the quest it requires and becomes available when that one completes, covers: [tracker] }
     - { id: giver, kind: class, label: Givers that bind to one quest component's OnChanged and call its Start, covers: [givers] }
     - { id: board, kind: class, label: The quest board actor binds to every component's OnChanged and rewrites its widget and resets every component for a new day, covers: [board, wiring] }
   edges:

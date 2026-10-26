@@ -31,7 +31,7 @@ This item is the first piece of the Quest System boss.
 
 ## See it in the editor
 
-Place three `DojoM6QuestItem` actors and a `DojoM6Satchel`. In the level Blueprint, on BeginPlay, call Watch on the satchel for each item; on the 1 key, call Collect on the first item with the player pawn. Press Play and press 1: the item disappears. Eject, select the satchel, and run `ke * GetCount Tool` in the console to read the count.
+Place three `DojoM6QuestItem` actors and a `DojoM6Satchel`. In the level Blueprint, on BeginPlay, call Watch on the satchel for each item; on the 1 key, call Collect on the first item with the player pawn. Right after the Collect call, add a Print String of the satchel's Get Count with Tool. Press Play and press 1: the item disappears and 1 prints. Press 1 again: the item is gone, so nothing more is counted.
 
 # Files
 

@@ -1464,6 +1464,31 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
   6. Blank: a quest giver whose label follows its quest by listening to the tracker, binding in BeginPlay and unbinding in EndPlay.
   7. Boss: quest day. Three quests from assets (3 tools; a 20 second courier run through three gates, offered after the tools; a secret pair of gems), two givers, E within 200 (givers win ties, unwanted items skipped), gates within 100 checked every 0.1 seconds while the run is active, a board that hides the secret and calls the finale with the time, and R for a fresh day only after the finale. The pieces need no additions (A872).
 - Originality: checked for 6-word and 5-word overlaps against the GameDev.tv research; one phrase from our own author rules was reworded, and the remaining matches are engine macro names.
-- Proof: the verifier reports no problems for the new pack (three A72 warnings for `data-asset`, A873); typecheck passes; `npm test` 857 passed. Engine proof pending: engine not installed (A75). Still to run under the engine lock: every reference solution and the boss integration, each starter (the item, course, and tracker should build and fail their tests; the giver should not compile), the boss mutations (reach 250, gate reach 150, a 25 second limit, no course reset on start, collecting unwanted items, the secret on the board before it starts, the finale waiting for the secret, gates in any order), and main's --engine run on the mechanics pack.
+- Proof: the verifier reports no problems for the new pack (three A72 warnings for `data-asset`, A873); typecheck passes; `npm test` passes. Engine proof pending: engine not installed on the Mac (A75); engine work moves to the Windows desktop (A76).
+- Engine proof still owed, under the engine lock, on UE 5.8:
+  - References: every m6 reference solution with the boss integration builds, and all ten m6 tests pass (two per build quest, two for the boss).
+  - Starters, each alone with the boss removed: the item, course, and tracker starters build and fail their tests (the tracker on "A quest finished in time stays completed when its time runs out"); the giver starter does not compile.
+  - Main's verifier: `npx tsx tools/verify-content.ts --pack mechanics --engine <engine path>` reports no problems and every starter check conclusive.
+  - Boss mutations, each in `tools/solutions/m6-boss-quest-system/DojoM6QuestDirector.*`, rebuilt alone and restored, each expected to fail the named check:
+    - (a) `InteractRange` 200 to 250: "210 from a giver is out of the 200 reach".
+    - (b) `GateRange` 100 to 150: "110 from a gate is out of the 100 gate reach".
+    - (c) remove `Course->ResetCourse()` from `HandleQuestStateChanged`: "A retry starts the course from the first gate".
+    - (d) remove the `WantsItem` check in `PressInteract`: "E ignores a tool no quest wants yet".
+    - (e) never hide the secret in `LineFor`: "the board hides the secret quest".
+    - (f) count the secret in the finale (drop `!Quest->bSecret`): "Every quest that is not secret is done, so the day ends".
+    - (g) touch gates whatever the courier run's state (drop the Active check in `CheckGates`): "A gate before the courier run starts does not count".
+    - (h) let R restart mid-day (drop `if (bRunning) return;` in `RestartRound`): "R mid-day keeps the quest progress".
+    - (i) let an item win a tie (`GiverSquared <= ItemSquared` to `<`): "A giver wins a tie with a wanted item".
+  - Piece mutations, each in that piece's reference, rebuilt alone and restored:
+    - Item: Destroy before Broadcast in `Collect`: "Every notice arrived while the item still stood". `AddDynamic` instead of `AddUniqueDynamic` in `Watch`: an unexpected ensure, or "Watching the gem twice still counts it once".
+    - Course: `AddDynamic` in `BindCheckpoints`: an unexpected ensure on the second bind. No `RemoveAll` in `EndPlay`: "A destroyed course has stopped listening". No order check in `HandleReached`: "The second gate first does not count". No `OnFinished.Broadcast`: "The finish is announced once the last gate is passed".
+    - Tracker: neither `ClearTimer` in `Complete` nor the Active guard in `HandleTimeUp`: "A quest finished in time stays completed when its time runs out". No timer clearing in `ResetQuests`: "A reset stops every clock". No secret auto-start in `ReportItem`: "The first gem starts and finishes the secret".
+    - Giver: no `RemoveDynamic` in `EndPlay`: "A destroyed giver has stopped listening". No quest filter in the handler: "Another quest's change leaves this label alone".
 - Decisions made: A870 to A873.
 - Still open: Windows. The board is text, not a widget. Key input is not exercised by the headless tests, which call the director's press functions directly. `data-asset` shows A72 warnings until Pack 1 World 6 is on main.
+
+### Fix round 1
+- What the reviewer asked for: the tracker's deliberate failure was told in advance by its brief, the `Complete` comment, and the timer card; only one Parsons block; a boss check for R mid-day that checked nothing; editor steps that showed nothing; no assertion on the course's events; wrong headers in a hint; Pack 3 naming missing from the authoring spec; and smaller text, glossary, and decision fixes.
+- What changed: the brief and the `Complete` comment no longer say a completion stops the clock, and the timer card's warning and early-finish question are gone; the card now asks how a payload is copied, and the tracker's hint explains the running clock, so the learner meets it after failing (A874). New Parsons blocks for the course's `HandleReached` and the tracker's clock start, each with Unreal distractors. The boss test now presses R after the first tool and checks the progress and the items are untouched, and visits a gate before the courier run starts. The editor steps print counts and states. The course test binds a second course's ResetCourse to OnFinished and checks it fires only after the last gate. The hint names `Delegates/Delegate.h` and `UObject/ScriptDelegates.h`. The authoring spec records the Pack 3 naming. A870 to A873 are corrected (the boss's plans, the data-asset gate, why the builds do not follow the 6.6 list).
+- Proof: as above; the engine proof is still owed and listed above.
+- Decisions made: A874.

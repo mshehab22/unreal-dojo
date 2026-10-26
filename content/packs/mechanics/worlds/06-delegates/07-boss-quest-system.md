@@ -38,7 +38,7 @@ Extensions, in order of importance:
 
 1. A third quest kind, survive: stay inside an area for 15 seconds, added as a new kind in the tracker and a new piece that reports it.
 2. A quest chain that offers a reward quest only when both Lost tools and the secret are done.
-3. Lifetime stats on the World 3 score board: quests done, quests failed, best day time.
+3. Lifetime stats on Pack 1 World 3's score board: quests done, quests failed, best day time.
 
 Feel: tune the courier time limit until the run feels like a dash you can make on the second try, not the first.
 

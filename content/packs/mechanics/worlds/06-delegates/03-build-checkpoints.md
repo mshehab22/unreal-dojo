@@ -30,7 +30,7 @@ Dependency direction: the course holds the gates and listens to them; a gate kno
 
 ## See it in the editor
 
-Place three `DojoM6Checkpoint` actors and a `DojoM6Course`, and add the three gates to its Checkpoints list in order. In the level Blueprint, on the 1, 2, and 3 keys, call Touch on each gate with the player pawn. Press Play and press 2, 1, 2, 3: eject, select the course, and watch Passed Count go 0, 1, 2, 3.
+Place three `DojoM6Checkpoint` actors and a `DojoM6Course`, and add the three gates to its Checkpoints list in order. In the level Blueprint, on the 1, 2, and 3 keys, call Touch on each gate with the player pawn. Also on BeginPlay, bind a custom event with a Print String of Passed Count to the course's On Passed, and another printing Finished to On Finished. Press Play and press 2, 1, 2, 3: nothing prints for the first 2, then 1, 2, 3, and Finished.
 
 # Files
 
@@ -262,6 +262,16 @@ bool FDojo_M6_Checkpoints_CountsInOrderOnly::RunTest(const FString& Parameters)
 		TestTrue(TEXT("The course listens to every gate from BeginPlay"), Gate->OnReached.Contains(Course, TEXT("HandleReached")));
 	}
 
+	// A second course on its own gate listens for the first course's finish; finishing resets it, so its count shows when OnFinished fired.
+	ADojoM6Course* Watcher = TestWorld.GetWorld()->SpawnActorDeferred<ADojoM6Course>(ADojoM6Course::StaticClass(), FTransform::Identity);
+	ADojoM6Checkpoint* WatcherGate = TestWorld.SpawnActor<ADojoM6Checkpoint>();
+	Watcher->Checkpoints.Add(WatcherGate);
+	Watcher->Checkpoints.Add(TestWorld.SpawnActor<ADojoM6Checkpoint>());
+	Watcher->FinishSpawning(FTransform::Identity);
+	Course->OnFinished.AddDynamic(Watcher, &ADojoM6Course::ResetCourse);
+	WatcherGate->Touch(Racer);
+	TestEqual(TEXT("The watcher has passed its own first gate"), Watcher->GetPassedCount(), 1);
+
 	Gates[1]->Touch(Racer);
 	TestEqual(TEXT("The second gate first does not count"), Course->GetPassedCount(), 0);
 
@@ -274,8 +284,10 @@ bool FDojo_M6_Checkpoints_CountsInOrderOnly::RunTest(const FString& Parameters)
 	Gates[1]->Touch(Racer);
 	TestEqual(TEXT("Binding again does not make a gate count twice"), Course->GetPassedCount(), 2);
 
+	TestEqual(TEXT("No finish is announced before the last gate"), Watcher->GetPassedCount(), 1);
 	Gates[2]->Touch(Racer);
 	TestEqual(TEXT("The last gate finishes the course"), Course->GetPassedCount(), 3);
+	TestEqual(TEXT("The finish is announced once the last gate is passed"), Watcher->GetPassedCount(), 0);
 	Gates[0]->Touch(Racer);
 	TestEqual(TEXT("A finished course ignores more gates"), Course->GetPassedCount(), 3);
 
@@ -322,7 +334,7 @@ bool FDojo_M6_Checkpoints_LeavesCleanly::RunTest(const FString& Parameters)
 
 - Three small bodies: a loop that binds, a guard then a count in the handler, and a loop that unbinds.
 - The handler receives the gate that fired, so comparing it with the list entry at the current count tells you whether it is next; the unique form of the binding macro ignores a second identical binding, and the multicast delegate can remove every binding of one object at once.
-- `AddUniqueDynamic` and `RemoveAll` are on dynamic multicast delegates (`Delegates/DelegateSignatureImpl.inl`); `TArray::IsValidIndex` guards the lookup.
+- The `AddUniqueDynamic` macro is in `Delegates/Delegate.h`; `RemoveAll` on a dynamic multicast delegate is in `UObject/ScriptDelegates.h` (`TMulticastScriptDelegate`); `TArray::IsValidIndex` guards the lookup.
 
 # Rubric
 
@@ -336,3 +348,23 @@ bool FDojo_M6_Checkpoints_LeavesCleanly::RunTest(const FString& Parameters)
 # Alternative
 
 Each gate could hold an index and a pointer to its course, and call the course itself. That is fewer bindings, but the gate then belongs to one course for ever, and a second course, a timer HUD, or a sound that also wants to hear about the gate has to be added to the gate. With events the order lives only in the course's list, so a designer reorders the course by dragging list entries. AddDynamic would also work for the binding, but calling BindCheckpoints a second time would add the handler again; the engine reports that with an ensure, and the handler would run twice per gate.
+
+# Parsons
+
+```yaml
+- id: course-handle-reached
+  prompt: Put HandleReached in order.
+  lines:
+    - "void ADojoM6Course::HandleReached(ADojoM6Checkpoint* Checkpoint, AActor* Racer)"
+    - "{"
+    - "	if (!Checkpoints.IsValidIndex(PassedCount) || Checkpoints[PassedCount] != Checkpoint) return;"
+    - "	PassedCount++;"
+    - "	OnPassed.Broadcast(PassedCount);"
+    - "	if (PassedCount == Checkpoints.Num()) OnFinished.Broadcast();"
+    - "}"
+  distractors:
+    - line: "	Checkpoint->OnReached.RemoveDynamic(this, &ADojoM6Course::HandleReached);"
+      mistake: Unbinding a passed gate means a reset course can never count it again; the order check already ignores repeat visits.
+    - line: "	OnPassed.Execute(PassedCount);"
+      mistake: A multicast delegate is fired with Broadcast; Execute belongs to single-cast delegates.
+```

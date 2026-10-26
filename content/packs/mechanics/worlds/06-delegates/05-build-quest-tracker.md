@@ -14,7 +14,7 @@ estimatedMinutes: 25
 concepts:
   - One owner of every quest's state, announcing each change so nobody polls
   - Chained quests unlock when the quest they need is completed
-  - Each timed quest has its own clock, which a completion must stop
+  - Each timed quest runs on its own clock
 ---
 
 # Brief
@@ -26,7 +26,7 @@ The quest asset, the states, and the tracker's declarations are given; every bod
 - `AddQuest` adds a quest once: Locked while its Requires quest is not completed, otherwise Available. Every state change, including this first one, is announced on `OnQuestStateChanged`.
 - `StartQuest` starts an Available or Failed quest with no progress and, when it has a time limit, starts that quest's own clock with a timer delegate carrying the quest. Other states are refused.
 - `ReportItem` counts one item for every Active collect quest with that tag, announcing `OnQuestProgress`, and completes it at its Count. A secret quest is never offered: when it is Available and its tag is reported, it starts first and then counts.
-- `CompleteGoal` completes an Active goal quest. Completing any quest stops its clock and makes every Locked quest that requires it Available.
+- `CompleteGoal` completes an Active goal quest. Completing any quest makes every Locked quest that requires it Available.
 - When a clock runs out, its quest fails.
 - `WantsItem`, `GetState` (Locked for an unknown quest), `GetProgress`, and `GetQuests` (in the order added) answer questions; `ResetQuests` puts every quest back to its first state with no progress and no clocks; `Deinitialize` clears every clock.
 
@@ -34,7 +34,7 @@ Write it the obvious way first and run the tests. This one fails on purpose the 
 
 ## See it in the editor
 
-Make two Dojo M6 Quest Data assets: Lost Tools (Collect, Tool, count 3) and Courier Run (Goal, time limit 20, requires Lost Tools). In the level Blueprint, on BeginPlay, get the Dojo M6 Quest Tracker subsystem, call Add Quest for both, and bind a Print String to On Quest State Changed. Press Play: two lines print, Available and Locked. Start Lost Tools and call Report Item with Tool three times from key presses: Completed prints, then Available for the courier run.
+Make two Dojo M6 Quest Data assets: Lost Tools (Collect, Tool, count 3) and Courier Run (Goal, time limit 20, requires Lost Tools). In the level Blueprint, on BeginPlay, get the Dojo M6 Quest Tracker subsystem, bind a custom event with a Print String of the quest's title and the new state to On Quest State Changed, and only then call Add Quest for both. Press Play: two lines print, Available and Locked. Start Lost Tools and call Report Item with Tool three times from key presses: Completed prints, then Available for the courier run.
 
 # Files
 
@@ -177,7 +177,7 @@ private:
 	/** Stores and announces a new state. */
 	void SetState(UDojoM6QuestData* Quest, EDojoM6QuestState NewState);
 
-	/** Completes a quest, stops its clock, and offers every quest that was waiting for it. */
+	/** Completes a quest and offers every quest that was waiting for it. */
 	void Complete(UDojoM6QuestData* Quest);
 
 	/** A time limit ran out; the payload says which quest. */
@@ -406,7 +406,7 @@ bool FDojo_M6_QuestTracker_ClocksPerQuest::RunTest(const FString& Parameters)
 # Hints
 
 - The failing assertion is about a quest completed before its time ran out: follow what is still running after the completion.
-- Completing must clear that quest's handle in the map, and the time-up handler should act only on a quest that is still active; build each clock from `FTimerDelegate::CreateUObject` with the quest as the payload.
+- A clock keeps running until it fires or is cleared, whatever happened to its quest, so a quest finished early still has a clock counting down: completing must clear that quest's handle in the map, and the time-up handler should act only on a quest that is still active, in case a clock slips through. Each clock is an `FTimerDelegate::CreateUObject` with the quest as the payload.
 - `FTimerManager::SetTimer` and `ClearTimer` are in `TimerManager.h`; `TMap::FindOrAdd` gives a handle to fill in place.
 
 # Rubric
@@ -420,4 +420,22 @@ bool FDojo_M6_QuestTracker_ClocksPerQuest::RunTest(const FString& Parameters)
 
 # Alternative
 
-Each quest could be its own actor or object with its own state, clock, and event, and the tracker a list of them. That is the State pattern taken further and suits quests with very different rules, such as escort or defend. With two kinds of quest, one tracker holding states in maps is simpler to test and to reset, and every listener binds to one event instead of one per quest. A Gameplay Message Subsystem or a gameplay tag channel is the other common shape in larger projects: senders post a message and listeners filter by tag, so even the tracker need not be known by name.
+Each quest could be its own actor or object with its own state, clock, and event, and the tracker a list of them. That is the State pattern taken further and suits quests with very different rules, such as escort or defend. With two kinds of quest, one tracker holding states in maps is simpler to test and to reset, and every listener binds to one event instead of one per quest. The Gameplay Message Router plugin from Epic's Lyra sample, a message subsystem keyed by gameplay tags, is the other common shape in larger projects: senders post a message and listeners filter by tag, so even the tracker need not be known by name.
+
+# Parsons
+
+```yaml
+- id: tracker-start-clock
+  prompt: Put the start of a quest's clock in order.
+  lines:
+    - "if (Quest->TimeLimitSeconds > 0.f)"
+    - "{"
+    - "	const FTimerDelegate TimeUp = FTimerDelegate::CreateUObject(this, &UDojoM6QuestTracker::HandleTimeUp, Quest);"
+    - "	GetWorld()->GetTimerManager().SetTimer(TimeLimits.FindOrAdd(Quest), TimeUp, Quest->TimeLimitSeconds, false);"
+    - "}"
+  distractors:
+    - line: "	GetWorld()->GetTimerManager().SetTimer(Clock, this, &UDojoM6QuestTracker::HandleTimeUp, Quest->TimeLimitSeconds, false);"
+      mistake: The plain member-function form passes no quest to the handler, and one shared handle lets each new clock replace the last.
+    - line: "	TimeUp.BindUFunction(this, TEXT(\"HandleTimeUp\"));"
+      mistake: Binding by name needs HandleTimeUp to be a UFUNCTION and carries no quest; CreateUObject with a payload does both jobs.
+```

@@ -69,7 +69,7 @@ private:
 	/** Stores and announces a new state. */
 	void SetState(UDojoM6QuestData* Quest, EDojoM6QuestState NewState);
 
-	/** Completes a quest, stops its clock, and offers every quest that was waiting for it. */
+	/** Completes a quest and offers every quest that was waiting for it. */
 	void Complete(UDojoM6QuestData* Quest);
 
 	/** A time limit ran out; the payload says which quest. */
