@@ -208,6 +208,7 @@ export class ProgressContentService
 		{
 			const item: DrillItemResult = { itemId: result.questionId, correct: result.correct, quality: this.quality.qualityFromAnswer(result.correct), modelAnswer: result.modelAnswer, nextDueAt };
 			if (result.explainGrade) item.explainGrade = result.explainGrade;
+			if (!result.counted) item.selfChecked = true;
 
 			return item;
 		});
@@ -273,9 +274,9 @@ export class ProgressContentService
 	{
 		const variants = await this.composeSession(request);
 		const scheduledDue = new Set(this.progress.getScheduledDueItemIds());
-		const rewarded = request.kind !== "parsons-fallback" && variants.some((variant) => scheduledDue.has(variant.itemId));
+		const dueInSession = request.kind === "parsons-fallback" ? [] : variants.map((variant) => variant.itemId).filter((itemId) => scheduledDue.has(itemId));
 
-		return structuredClone(this.sessions.open(request, variants, rewarded).session);
+		return structuredClone(this.sessions.open(request, variants, dueInSession).session);
 	}
 
 	/** Grades one drill answer and reschedules its item. An explain item self-checked without an AI grader is not scheduled (A318). */
@@ -306,8 +307,9 @@ export class ProgressContentService
 		if (explainGrade.provider === TESTS_ONLY_PROVIDER)
 		{
 			const dueAt = this.progress.getProgress().schedule[variant.itemId] ?? new Date().toISOString();
+			stored.selfChecked.add(answer.itemId);
 
-			return { itemId: variant.itemId, correct, quality: 0, explainGrade, modelAnswer: grade.question.modelAnswer, nextDueAt: dueAt };
+			return { itemId: variant.itemId, correct, selfChecked: true, quality: 0, explainGrade, modelAnswer: grade.question.modelAnswer, nextDueAt: dueAt };
 		}
 
 		const result = await this.progress.reviewItem(variant.itemId, this.quality.qualityFromScore(explainGrade.score, correct), context);
@@ -321,7 +323,13 @@ export class ProgressContentService
 		const stored = this.sessions.get(sessionId);
 		if (!stored) throw new AppErrorException("invalid-payload", "That drill has already ended.", "Start a new drill from the Studio.");
 
-		const totals = { correctCount: [...stored.answers.values()].filter(Boolean).length, totalCount: stored.session.items.length };
+		// Self-checked explain items are neither right nor wrong (A801): they leave both counts and are reported on their own.
+		const graded = [...stored.answers.entries()].filter(([itemId]) => !stored.selfChecked.has(itemId));
+		const totals = {
+			correctCount: graded.filter(([, correct]) => correct).length,
+			totalCount: stored.session.items.length - stored.selfChecked.size,
+			selfCheckedCount: stored.selfChecked.size,
+		};
 		const request = stored.session.request;
 		const complete = stored.answers.size === stored.session.items.length;
 
@@ -329,13 +337,16 @@ export class ProgressContentService
 
 		if (!complete || request.kind === "parsons-fallback") return this.progress.unrewardedDrillOutcome(totals);
 
-		if (request.kind !== "test-out") return this.progress.finishDrill(totals, { rewarded: stored.rewarded });
+		// A self-checked item is not rescheduled and stays due, so it never earns the reward: otherwise every drill holding it would pay again (A801).
+		const rewarded = [...stored.scheduledDueItemIds].some((itemId) => stored.answers.has(itemId) && !stored.selfChecked.has(itemId));
+
+		if (request.kind !== "test-out") return this.progress.finishDrill(totals, { rewarded });
 
 		const { quests } = await this.view();
 
 		const worldKey = worldKeyOf(request.packId, request.worldId);
 
-		return this.progress.finishDrill(totals, { rewarded: stored.rewarded, testOut: { worldKey, termIds: testOutTermsOf(quests, request.packId, request.worldId) } });
+		return this.progress.finishDrill(totals, { rewarded, testOut: { worldKey, termIds: testOutTermsOf(quests, request.packId, request.worldId) } });
 	}
 
 	/** Adds `revealedHints` (texts in reveal order) to a build or refactor quest; other kinds are returned as they are. */
@@ -414,6 +425,12 @@ export class ProgressContentService
 		}
 
 		return [...keys];
+	}
+
+	/** Throws `quest-not-found` for an unknown quest and `quest-locked` (with the map's reason) for a locked one; resolves for an open quest. Run and Submit call it first (A802). */
+	async assertQuestOpen(questId: string): Promise<void>
+	{
+		await this.openQuest(questId);
 	}
 
 	/** The quest's rule facts and authored content, after checking it exists and is not locked. */

@@ -3,7 +3,7 @@ import type { ContentStatus, GlossaryAlias, LearnerQuest, LearnerWorld, PackOutl
 import type { GlossaryEntry, PatternCard } from "@shared/types/content";
 import type { EngineInstall, EnvironmentStatus, SandboxSetupResult, ToolchainCheck } from "@shared/types/engine";
 import type { SubmitOutcome } from "@shared/types/progress";
-import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
+import type { CodeReview, ExplainGrade, FindingExplanationRequest, QuestAlternative, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
 import type { BuildProgressEvent, RunRequest, RunResult, SyntaxCheckResult } from "@shared/types/run";
 import type { Settings, SettingsPatch } from "@shared/types/settings";
 
@@ -32,6 +32,7 @@ import {
 	settingsPatchSchema,
 	syntaxCheckRequestSchema,
 } from "./requestSchemas";
+import { runCancelled } from "../services/unreal/sandboxErrors";
 import { trackRun } from "./trackRun";
 
 /** What the handlers need from the outside world. Grows as services are built; tests pass fakes. */
@@ -100,6 +101,9 @@ export interface ReviewHandlerService
 
 	/** Reviews an earlier Submit's stored files and run again, with no new build, and replaces its stored review (A740, A741). */
 	retryReview(attemptId: string): Promise<CodeReview>;
+
+	/** A passed quest's alternative, or null when its kind has none; alternative-locked before a pass (A850). */
+	getQuestAlternative(questId: string): Promise<QuestAlternative | null>;
 }
 
 /** The part of SettingsService the handlers use, so tests can pass a fake. */
@@ -203,6 +207,14 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 {
 	const { progressService, progressContentService } = dependencies;
 
+	/** Checks the quest is open (A802), then stops with `run-cancelled` if the run was cancelled while it checked. */
+	const openQuestOrCancel = async (questId: string, signal: AbortSignal): Promise<void> =>
+	{
+		await progressContentService.assertQuestOpen(questId);
+
+		if (signal.aborted) throw runCancelled();
+	};
+
 	return {
 		getAppVersion: { argumentSchemas: [], handle: () => dependencies.getAppVersion() },
 
@@ -245,14 +257,26 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 
 		runQuest: {
 			argumentSchemas: [runRequestSchema],
-			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getQuestRunService().runQuest(request.questId, request.files, onProgress, signal)),
+			// The run is registered first, so a cancel during the availability check finds it; a locked or unknown quest is then refused before any build starts (A802, A803).
+			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, async (onProgress, signal) =>
+			{
+				await openQuestOrCancel(request.questId, signal);
+
+				return dependencies.getQuestRunService().runQuest(request.questId, request.files, onProgress, signal);
+			}),
 		},
 		submitQuest: {
 			argumentSchemas: [runRequestSchema],
-			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, (onProgress, signal) => dependencies.getReviewHandlers().submitQuest(request, onProgress, signal, () => dependencies.runRegistry.end(request.runId))),
+			handle: (request) => trackRun(request.runId, dependencies.runRegistry, dependencies.sendProgress, async (onProgress, signal) =>
+			{
+				await openQuestOrCancel(request.questId, signal);
+
+				return dependencies.getReviewHandlers().submitQuest(request, onProgress, signal, () => dependencies.runRegistry.end(request.runId));
+			}),
 		},
 		checkSnippetSyntax: { argumentSchemas: [syntaxCheckRequestSchema], handle: (request) => dependencies.getQuestRunService().checkSnippetSyntax(request.code) },
 		cancelRun: { argumentSchemas: [idSchema], handle: (runId) => dependencies.runRegistry.cancel(runId) },
+		getRunStatus: { argumentSchemas: [idSchema], handle: (runId) => dependencies.runRegistry.status(runId) },
 
 		getProgress: { argumentSchemas: [], handle: () => progressService.getProgress() },
 		getRules: { argumentSchemas: [], handle: () => progressService.getRules() },
@@ -308,5 +332,6 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 		explainFinding: { argumentSchemas: [findingExplanationRequestSchema], handle: (request) => dependencies.getReviewHandlers().explainFinding(request) },
 		answerReflection: { argumentSchemas: [reflectionAnswerRequestSchema], handle: (request) => dependencies.getReviewHandlers().answerReflection(request) },
 		retryReview: { argumentSchemas: [idSchema], handle: (attemptId) => dependencies.getReviewHandlers().retryReview(attemptId) },
+		getQuestAlternative: { argumentSchemas: [idSchema], handle: (questId) => dependencies.getReviewHandlers().getQuestAlternative(questId) },
 	};
 }

@@ -28,14 +28,15 @@ import type {
 	WorldTestOutStatus,
 } from "@shared/types/progress";
 import { worldKeyOf } from "@shared/types/progress";
-import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
-import type { BuildProgressEvent, RunRequest, RunResult, SandboxSetupRequest, SyntaxCheckRequest, SyntaxCheckResult } from "@shared/types/run";
+import type { CodeReview, ExplainGrade, FindingExplanationRequest, QuestAlternative, ReflectionAnswerRequest, ReviewProviderStatus } from "@shared/types/review";
+import type { BuildProgressEvent, RunAnswer, RunRequest, RunResult, RunStatus, SandboxSetupRequest, SyntaxCheckRequest, SyntaxCheckResult } from "@shared/types/run";
 import type { Settings, SettingsPatch } from "@shared/types/settings";
 
 import glossaryJson from "../../../../../content/glossary.json";
 import patternsJson from "../../../../../content/patterns.json";
 import type { FakeScenario } from "../dataSourceChoice";
 import type { DojoClient } from "../DojoClient";
+import { toAppError } from "../toAppError";
 import { daysFromNow } from "./fixtures/fakeClock";
 import { enginesFixture, manualEngineFixture, reviewProvidersFixture, sandboxFolderFixture, sandboxPathIn, toolchainFixture } from "./fixtures/machineFixture";
 import { FakeQuestFlow } from "./FakeQuestFlow";
@@ -51,6 +52,12 @@ const GLOSSARY = glossaryJson as unknown as GlossaryEntry[];
 
 /** The real pattern cards, typed. */
 const PATTERN_CARDS = patternsJson as unknown as PatternCard[];
+
+/** How many events a quiet build sends before it goes silent: the three setup steps, as in the tester's hang. It sends none after, even once it goes on. */
+const QUIET_BUILD_FORWARDED_EVENTS = 3;
+
+/** How long a quiet build stays silent but alive after its setup steps, like UBT waiting for another build's mutex. */
+const QUIET_BUILD_STALL_MS = 32_000;
 
 /** How long every fake answer takes, so loading states are real but short. */
 const LATENCY_MS = 60;
@@ -85,6 +92,9 @@ interface FakeState
 	editorConnected: boolean;
 	failNextBuild: boolean;
 
+	/** True when the next sandbox build should go quiet: progress stops after setup and the call never answers, though the build finishes (A821). */
+	quietNextBuild: boolean;
+
 	/** The packs, worlds, and stages this scenario's map shows. */
 	map: PackFixture[];
 }
@@ -92,7 +102,7 @@ interface FakeState
 /** Builds the starting state for a scenario. */
 function initialState(scenario: FakeScenario): FakeState
 {
-	const isFresh = scenario === "fresh" || scenario === "first-build-fails";
+	const isFresh = scenario === "fresh" || scenario === "first-build-fails" || scenario === "first-build-goes-quiet";
 	const engine = enginesFixture()[0] as EngineInstall;
 
 	return {
@@ -110,6 +120,7 @@ function initialState(scenario: FakeScenario): FakeState
 		progress: isFresh ? freshProgressFixture() : scenario === "quests" ? questFlowProgressFixture() : returningProgressFixture(),
 		editorConnected: false,
 		failNextBuild: scenario === "first-build-fails",
+		quietNextBuild: scenario === "first-build-goes-quiet",
 		map: scenario === "quests" ? questFlowMapFixture() : MAP_FIXTURE,
 	};
 }
@@ -120,6 +131,7 @@ export class FakeDojoApi implements DojoClient
 	private readonly state: FakeState;
 	private readonly listeners = new Set<(event: BuildProgressEvent) => void>();
 	private readonly builds = new Map<string, SandboxBuildSimulator>();
+	private readonly runStatuses = new Map<string, RunStatus>();
 	private readonly quests: FakeQuestFlow;
 
 	/** Starts the fake in one scenario's state; the state lives until the page reloads. */
@@ -231,14 +243,24 @@ export class FakeDojoApi implements DojoClient
 		const engine = [...enginesFixture(), manualEngineFixture()].find((candidate) => candidate.path === request.enginePath);
 		const sandboxPath = sandboxPathIn(request.folder);
 		const shouldFail = this.state.failNextBuild;
+		const goesQuiet = this.state.quietNextBuild;
 
 		this.state.failNextBuild = false;
+		this.state.quietNextBuild = false;
 
-		const end = await this.simulateBuild(request.runId, engine?.version ?? "5.8.3", shouldFail);
+		const result = await this.rememberAnswer(request.runId, async () =>
+		{
+			const end = await this.simulateBuild(request.runId, engine?.version ?? "5.8.3", shouldFail, goesQuiet);
 
-		if (end.ok) this.state.settings = { ...this.state.settings, sandboxPath };
+			if (end.ok) this.state.settings = { ...this.state.settings, sandboxPath };
 
-		return { ok: end.ok, sandboxPath, durationMs: end.durationMs, compilerOutput: end.ok ? "" : FAILED_BUILD_OUTPUT };
+			return { ok: end.ok, sandboxPath, durationMs: end.durationMs, compilerOutput: end.ok ? "" : FAILED_BUILD_OUTPUT };
+		});
+
+		// The hang the tester saw once: the build finished, but its answer never reached the window. Only getRunStatus can tell.
+		if (goesQuiet) return new Promise<SandboxSetupResult>(() => undefined);
+
+		return result;
 	}
 
 	/** Simulates a clean rebuild of the existing sandbox. */
@@ -251,9 +273,12 @@ export class FakeDojoApi implements DojoClient
 			return Promise.reject<SandboxSetupResult>({ code: "sandbox-not-ready", message: "There is no sandbox to rebuild yet.", suggestedAction: "Run first-run setup to create it." } satisfies AppError);
 		}
 
-		const end = await this.simulateBuild(runId, "5.8.3", false);
+		return this.rememberAnswer(runId, async () =>
+		{
+			const end = await this.simulateBuild(runId, "5.8.3", false);
 
-		return { ok: true, sandboxPath, durationMs: end.durationMs, compilerOutput: "" };
+			return { ok: true, sandboxPath, durationMs: end.durationMs, compilerOutput: "" };
+		});
 	}
 
 	/** Pretends the editor opened and its MCP server answers. */
@@ -282,6 +307,14 @@ export class FakeDojoApi implements DojoClient
 	checkSnippetSyntax(request: SyntaxCheckRequest): Promise<SyntaxCheckResult>
 	{
 		return answerFrom(() => this.quests.checkSnippetSyntax(request));
+	}
+
+	/** Where a simulated build stands, as main's run registry would say. Quest runs are not tracked here and read as unknown. */
+	getRunStatus(runId: string): Promise<RunStatus>
+	{
+		const status: RunStatus = this.runStatuses.get(runId) ?? { runId, state: "unknown", lastEvent: null, eventCount: 0, answer: null };
+
+		return answer(status);
 	}
 
 	/** Cancels a simulated sandbox build or quest run. */
@@ -481,6 +514,12 @@ export class FakeDojoApi implements DojoClient
 		return answerFrom(() => this.quests.retryReview(attemptId));
 	}
 
+	/** A passed quest's alternative, locked before a pass. */
+	getQuestAlternative(questId: string): Promise<QuestAlternative | null>
+	{
+		return answerFrom(() => this.quests.getQuestAlternative(questId));
+	}
+
 	// Progress events
 
 	/** Adds a progress listener. */
@@ -648,16 +687,56 @@ export class FakeDojoApi implements DojoClient
 		return result;
 	}
 
-	/** Runs one simulated build, forwarding its events to every listener. */
-	private async simulateBuild(runId: string, engineVersion: string, shouldFail: boolean): Promise<{ ok: boolean; durationMs: number }>
+	/** Runs a build call and remembers how it ended for getRunStatus, as main's trackRun does. */
+	private async rememberAnswer<Value>(runId: string, call: () => Promise<Value>): Promise<Value>
 	{
-		const simulator = new SandboxBuildSimulator(runId, (event) => this.emit(event));
+		try
+		{
+			const value = await call();
+			this.finishRun(runId, { ok: true, value });
+			return value;
+		}
+		catch (thrown)
+		{
+			this.finishRun(runId, { ok: false, error: toAppError(thrown) });
+			throw thrown;
+		}
+	}
+
+	/** Marks a run finished with its answer, keeping its last event. */
+	private finishRun(runId: string, runAnswer: RunAnswer): void
+	{
+		const previous = this.runStatuses.get(runId);
+
+		this.runStatuses.set(runId, { runId, state: "finished", lastEvent: previous?.lastEvent ?? null, eventCount: previous?.eventCount ?? 0, answer: runAnswer });
+	}
+
+	/** Runs one simulated build, forwarding its events to every listener (a quiet build stops forwarding after the setup steps). */
+	private async simulateBuild(runId: string, engineVersion: string, shouldFail: boolean, goesQuiet = false): Promise<{ ok: boolean; durationMs: number }>
+	{
+		let forwarded = 0;
+
+		let eventCount = 0;
+
+		this.runStatuses.set(runId, { runId, state: "running", lastEvent: null, eventCount, answer: null });
+
+		const simulator = new SandboxBuildSimulator(runId, (event) =>
+		{
+			eventCount += 1;
+			this.runStatuses.set(runId, { runId, state: "running", lastEvent: event, eventCount, answer: null });
+
+			// A quiet build still records every event for getRunStatus but stops sending them after the setup steps.
+			if (goesQuiet && forwarded >= QUIET_BUILD_FORWARDED_EVENTS) return;
+
+			forwarded += 1;
+			this.emit(event);
+		});
 
 		this.builds.set(runId, simulator);
 
 		try
 		{
-			return await simulator.run(engineVersion, shouldFail);
+			return await simulator.run(engineVersion, shouldFail, goesQuiet ? { afterSteps: QUIET_BUILD_FORWARDED_EVENTS, milliseconds: QUIET_BUILD_STALL_MS } : null);
 		}
 		finally
 		{

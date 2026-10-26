@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
-import { BUILD_TIMEOUT_MS, UnrealBuilder } from "../../src/main/services/unreal/UnrealBuilder";
+import { BUILD_TIMEOUT_MS, crashedWhileStarting, STARTUP_CRASH_ATTEMPTS, STARTUP_CRASH_GIVE_UP_MESSAGE, STARTUP_CRASH_RETRY_DELAY_MS, UnrealBuilder } from "../../src/main/services/unreal/UnrealBuilder";
 import { WindowsPlatformPaths } from "../../src/main/services/unreal/WindowsPlatformPaths";
 import { FakeProcessLauncher, type ScriptedProcess } from "./FakeProcessLauncher";
 import { FakeTimer } from "./FakeTimer";
@@ -105,5 +105,153 @@ describe("UnrealBuilder", () =>
 		expect(outcome.succeeded).toBe(false);
 		expect(outcome.pipelineError).toBeUndefined();
 		expect(launcher.killCount).toBeGreaterThan(0);
+	});
+});
+
+/** UBT's startup crash when two builds start in the same instant (seen in M1.3c): the shared log backup races, before UBT logs its log file or takes its lock. */
+const STARTUP_CRASH: ScriptedProcess = {
+	exitCode: 134,
+	lines: [
+		"Setting up bundled DotNet SDK",
+		"Running dotnet Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll DojoEditor Mac Development -Project=/S/Dojo.uproject -WaitMutex -Progress",
+		"Unhandled exception. System.IO.FileNotFoundException: Could not find file '/Users/learner/Library/Application Support/Epic/UnrealBuildTool/Trace.uba'.",
+		"   at EpicGames.Core.Log.BackupLogFile(FileReference outputFile)",
+		"Build.sh: line 35:  5007 Abort trap: 6           dotnet Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll \"$@\"",
+	],
+};
+
+/** A FakeTimer that runs the retry pause at once, and keeps every other timer (the 15 minute limit) waiting. */
+class ImmediateRetryTimer extends FakeTimer
+{
+	/** Runs the startup-crash pause at once, moving the clock past it. */
+	override schedule(callback: () => void, delayMs: number): () => void
+	{
+		const cancel = super.schedule(callback, delayMs);
+
+		if (delayMs === STARTUP_CRASH_RETRY_DELAY_MS) this.advance(delayMs);
+
+		return cancel;
+	}
+}
+
+/** Builds with scripted attempts and returns the outcome, the launcher, and the lines seen. */
+async function buildWithAttempts(scripts: ScriptedProcess[], signal = new AbortController().signal)
+{
+	const launcher = new FakeProcessLauncher(scripts);
+	const builder = new UnrealBuilder(new MacPlatformPaths("/Users/learner"), launcher, new ImmediateRetryTimer());
+	const seen: string[] = [];
+
+	const outcome = await builder.build({ engineRoot: "/E", projectFile: "/S/Dojo.uproject", signal, onLine: (line) => seen.push(line) });
+
+	return { outcome, launcher, seen };
+}
+
+describe("UnrealBuilder startup crashes (M1.3c, A890, A891)", () =>
+{
+	it("tries again when UnrealBuildTool crashed while starting, and succeeds", async () =>
+	{
+		const { outcome, launcher, seen } = await buildWithAttempts([STARTUP_CRASH, { exitCode: 0, lines: ["Log file: /Users/learner/Library/Application Support/Epic/UnrealBuildTool/Log.txt", "Result: Succeeded"] }]);
+
+		expect(outcome.succeeded).toBe(true);
+		expect(launcher.specs).toHaveLength(2);
+		expect(seen).toContain("UnrealBuildTool stopped while starting, most likely because another build started at the same moment. Trying again (attempt 2 of 3).");
+	});
+
+	it("gives up after three startup crashes and shows the raw lines that explain it", async () =>
+	{
+		const { outcome, launcher } = await buildWithAttempts([STARTUP_CRASH, STARTUP_CRASH, STARTUP_CRASH, { exitCode: 0 }]);
+
+		expect(outcome.succeeded).toBe(false);
+		expect(launcher.specs).toHaveLength(STARTUP_CRASH_ATTEMPTS);
+		expect(outcome.filteredOutput).toContain("Unhandled exception. System.IO.FileNotFoundException");
+		expect(outcome.filteredOutput).toContain("BackupLogFile");
+		expect(outcome.pipelineError).toBe(STARTUP_CRASH_GIVE_UP_MESSAGE);
+		expect(outcome.pipelineError).toBe("The Unreal build tool stopped while starting, three times in a row. Another Unreal build may be starting at the same moment; wait for it to finish, then try again.");
+	});
+
+	it("stops at once when cancelled during the pause before a retry: one launch, cancelled, no raw lines", async () =>
+	{
+		const controller = new AbortController();
+		const launcher = new FakeProcessLauncher([STARTUP_CRASH, { exitCode: 0 }]);
+		const builder = new UnrealBuilder(new MacPlatformPaths("/Users/learner"), launcher, new FakeTimer());
+
+		const outcome = await builder.build({ engineRoot: "/E", projectFile: "/S/Dojo.uproject", signal: controller.signal, onLine: (line) =>
+		{
+			if (line.startsWith("UnrealBuildTool stopped while starting")) controller.abort();
+		} });
+
+		expect(launcher.specs).toHaveLength(1);
+		expect(outcome).toMatchObject({ succeeded: false, cancelled: true, filteredOutput: "" });
+		expect(outcome.pipelineError).toBeUndefined();
+	});
+
+	it("stops at once when the cancel arrives while the pause is already waiting, through its abort listener", async () =>
+	{
+		const controller = new AbortController();
+		const launcher = new FakeProcessLauncher([STARTUP_CRASH, { exitCode: 0 }]);
+		const timer = new FakeTimer();
+		const builder = new UnrealBuilder(new MacPlatformPaths("/Users/learner"), launcher, timer);
+
+		// The abort lands after the pause started; the fake clock never reaches the one second, so only the listener can end it.
+		const outcome = await builder.build({ engineRoot: "/E", projectFile: "/S/Dojo.uproject", signal: controller.signal, onLine: (line) =>
+		{
+			if (line.startsWith("UnrealBuildTool stopped while starting")) setTimeout(() => controller.abort(), 0);
+		} });
+
+		expect(launcher.specs).toHaveLength(1);
+		expect(outcome).toMatchObject({ succeeded: false, cancelled: true, filteredOutput: "" });
+		expect(timer.now()).toBe(0);
+	});
+
+	it("keeps the raw-lines tail for a timed-out build whose lines all fell through the filter", async () =>
+	{
+		const launcher = new FakeProcessLauncher([{ hangs: true, lines: ["Log file: /x/Log.txt", "Waiting for another build to release the lock"] }]);
+		const timer = new FakeTimer();
+		const builder = new UnrealBuilder(new MacPlatformPaths("/Users/learner"), launcher, timer);
+
+		const pending = builder.build({ engineRoot: "/E", projectFile: "/S/Dojo.uproject", signal: new AbortController().signal, onLine: () => undefined });
+		timer.advance(BUILD_TIMEOUT_MS);
+		const outcome = await pending;
+
+		expect(outcome).toMatchObject({ succeeded: false, timedOut: true, cancelled: false });
+		expect(outcome.pipelineError).toMatch(/15 minutes/);
+		expect(outcome.filteredOutput).toBe("Log file: /x/Log.txt\nWaiting for another build to release the lock");
+	});
+
+	it("measures the whole build, every attempt and pause included", async () =>
+	{
+		const { outcome } = await buildWithAttempts([STARTUP_CRASH, { exitCode: 0, lines: ["Log file: /x/Log.txt"] }]);
+
+		expect(outcome.succeeded).toBe(true);
+		expect(outcome.durationMs).toBe(STARTUP_CRASH_RETRY_DELAY_MS);
+	});
+
+	it("does not retry a real build failure, or a cancelled one", async () =>
+	{
+		const compileError = await buildWithAttempts([{ exitCode: 6, lines: ["Log file: /x/Log.txt", "/S/Source/Dojo/Quests/q/A.cpp:3:1: error: expected ';'"] }, { exitCode: 0 }]);
+		expect(compileError.launcher.specs).toHaveLength(1);
+		expect(compileError.outcome.filteredOutput).toBe("/S/Source/Dojo/Quests/q/A.cpp:3:1: error: expected ';'");
+
+		const controller = new AbortController();
+		controller.abort();
+		const cancelled = await buildWithAttempts([STARTUP_CRASH, { exitCode: 0 }], controller.signal);
+		expect(cancelled.launcher.specs).toHaveLength(0);
+	});
+
+	it("tells a startup crash from other failures", () =>
+	{
+		const base = { started: true, timedOut: false, cancelled: false, durationMs: 80 };
+
+		expect(crashedWhileStarting({ ...base, exitCode: 134, lines: STARTUP_CRASH.lines ?? [] })).toBe(true);
+		expect(crashedWhileStarting({ ...base, exitCode: 134, lines: ["Log file: /x/Log.txt", "Unhandled exception. System.Exception: later"] })).toBe(false);
+		expect(crashedWhileStarting({ ...base, exitCode: 0, lines: STARTUP_CRASH.lines ?? [] })).toBe(false);
+		expect(crashedWhileStarting({ ...base, exitCode: null, cancelled: true, lines: STARTUP_CRASH.lines ?? [] })).toBe(false);
+	});
+
+	it("shows the last raw lines of any failed build whose lines all fell through the filter", async () =>
+	{
+		const { outcome } = await buildWithAttempts([{ exitCode: 5, lines: ["Log file: /x/Log.txt", "Something odd happened", "Result: Failed"] }]);
+
+		expect(outcome.filteredOutput).toBe("Log file: /x/Log.txt\nSomething odd happened\nResult: Failed");
 	});
 });

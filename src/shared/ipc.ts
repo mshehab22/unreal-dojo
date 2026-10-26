@@ -25,8 +25,8 @@ import type {
 	SubmitOutcome,
 	WorldTestOutStatus,
 } from "./types/progress";
-import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest, ReviewProviderStatus } from "./types/review";
-import type { BuildProgressEvent, RunRequest, RunResult, SandboxSetupRequest, SyntaxCheckRequest, SyntaxCheckResult } from "./types/run";
+import type { CodeReview, ExplainGrade, FindingExplanationRequest, QuestAlternative, ReflectionAnswerRequest, ReviewProviderStatus } from "./types/review";
+import type { BuildProgressEvent, RunRequest, RunResult, RunStatus, SandboxSetupRequest, SyntaxCheckRequest, SyntaxCheckResult } from "./types/run";
 import type { Settings, SettingsPatch } from "./types/settings";
 
 /**
@@ -101,6 +101,9 @@ export interface DojoInvokeApi
 
 	/** Cancels a running build, test, or sandbox setup and kills its process tree. The cancelled call rejects with `run-cancelled`. */
 	cancelRun(runId: string): Promise<void>;
+
+	/** Tells how a run stands (running with its last progress event, finished with its answer, or unknown), for a window that stopped hearing from it (A820). */
+	getRunStatus(runId: string): Promise<RunStatus>;
 
 	// Progress and rules (progress-and-rules)
 
@@ -205,6 +208,9 @@ export interface DojoInvokeApi
 
 	/** Reviews an earlier Submit's stored files and test results again, with no new build or test run, and answers the new review. It replaces that attempt's stored review; score, pass, and XP stay (A740, A741). */
 	retryReview(attemptId: string): Promise<CodeReview>;
+
+	/** A passed quest's alternative (the authored idiomatic version with its tradeoff note, plus the AI reviewer's hint), or null when the quest kind has none. Rejects with alternative-locked before a pass. Free; no AI call (A850). */
+	getQuestAlternative(questId: string): Promise<QuestAlternative | null>;
 }
 
 /** Stops a subscription started by `onBuildProgress`. */
@@ -243,6 +249,7 @@ export const IPC_CHANNELS = {
 	submitQuest: "dojo:submitQuest",
 	checkSnippetSyntax: "dojo:checkSnippetSyntax",
 	cancelRun: "dojo:cancelRun",
+	getRunStatus: "dojo:getRunStatus",
 	getProgress: "dojo:getProgress",
 	getRules: "dojo:getRules",
 	getQuestAvailability: "dojo:getQuestAvailability",
@@ -275,6 +282,7 @@ export const IPC_CHANNELS = {
 	explainFinding: "dojo:explainFinding",
 	answerReflection: "dojo:answerReflection",
 	retryReview: "dojo:retryReview",
+	getQuestAlternative: "dojo:getQuestAlternative",
 } as const satisfies { [Method in DojoMethod]: `dojo:${Method}` };
 
 /** Every DojoInvokeApi method name, in declaration order. */

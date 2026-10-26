@@ -1,4 +1,5 @@
 // Types for long operations that stream progress (quest runs, sandbox setup) and for a build quest's verdict. See docs/systems/unreal-pipeline.md.
+import type { AppError } from "./errors";
 
 /** Which loop produced a result: Live Coding plus MCP tests in the open editor, or UnrealBuildTool plus headless tests (D09). */
 export type LoopKind = "fast" | "headless";
@@ -138,4 +139,26 @@ export interface SyntaxCheckResult
 
 	/** Every error and warning, in line order. */
 	diagnostics: SyntaxDiagnostic[];
+}
+
+/** How a finished run ended, as main remembers it for `getRunStatus`: the call's answer, or the AppError it failed with. */
+export type RunAnswer = { ok: true; value: unknown } | { ok: false; error: AppError };
+
+/** Where a run stands, for a renderer that stopped hearing progress or never got the call's answer (A820). */
+export interface RunStatus
+{
+	/** The run asked about. */
+	runId: string;
+
+	/** `running` while the operation goes on; `finished` once it ended (kept for a while after); `unknown` when main never saw the id or forgot it. */
+	state: "running" | "finished" | "unknown";
+
+	/** The latest progress event main sent for the run, or null before the first one. */
+	lastEvent: BuildProgressEvent | null;
+
+	/** How many progress events main has sent for the run. A window compares it with what it has seen to tell new output from none. */
+	eventCount: number;
+
+	/** How it ended, once `finished`. The value has the type of the call that started the run. */
+	answer: RunAnswer | null;
 }

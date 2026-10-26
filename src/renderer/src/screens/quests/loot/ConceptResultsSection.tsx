@@ -1,5 +1,5 @@
 // A concept quest's results on the loot screen: how many were right, and which questions are now due for review.
-import { CheckIcon, RotateCcwIcon } from "lucide-react";
+import { CheckIcon, RotateCcwIcon, ScaleIcon } from "lucide-react";
 
 import type { ConceptQuest } from "@shared/types/content";
 import type { DrillItemResult } from "@shared/types/progress";
@@ -11,7 +11,7 @@ interface ConceptResultsSectionProps
 	readonly results: readonly DrillItemResult[];
 }
 
-/** One line per question, right or due for review. */
+/** One line per question: right, due for review, or self-checked (not graded). */
 export function ConceptResultsSection({ quest, results }: ConceptResultsSectionProps)
 {
 	return (
@@ -19,13 +19,14 @@ export function ConceptResultsSection({ quest, results }: ConceptResultsSectionP
 			{quest.questions.map((question, index) =>
 			{
 				const correct = results[index]?.correct ?? false;
+				const selfChecked = results[index]?.selfChecked === true;
 
 				return (
 					<li key={question.id} className="flex items-start gap-2">
-						{correct ? <CheckIcon className="mt-0.5 size-4 shrink-0 text-pass" strokeWidth={3} /> : <RotateCcwIcon className="mt-0.5 size-4 shrink-0 text-warn" />}
+						{correct ? <CheckIcon className="mt-0.5 size-4 shrink-0 text-pass" strokeWidth={3} /> : selfChecked ? <ScaleIcon className="mt-0.5 size-4 shrink-0 text-paper-faint" /> : <RotateCcwIcon className="mt-0.5 size-4 shrink-0 text-warn" />}
 						<span className={correct ? "text-paper" : "text-paper-muted"}>
 							{question.prompt.length > 110 ? `${question.prompt.slice(0, 107)}...` : question.prompt}
-							{!correct && <span className="text-warn"> Due for review.</span>}
+							{!correct && (selfChecked ? <span className="text-paper-faint"> Explained in your own words, not graded.</span> : <span className="text-warn"> Due for review.</span>)}
 						</span>
 					</li>
 				);

@@ -39,6 +39,9 @@ export interface FolderListing
 /** The file access the reader needs, so the app can pass its own file system and tests a fake. */
 export interface BossFolderReader
 {
+	/** Joins path parts the way this file system spells paths, so the keys the reader looks up match what it lists. */
+	join(...parts: string[]): string;
+
 	/** The folder's files and subfolders, or undefined when the folder does not exist. */
 	listFolder(folder: string): Promise<FolderListing | undefined>;
 
@@ -48,6 +51,7 @@ export interface BossFolderReader
 
 /** Reads the real disk. */
 export const NODE_BOSS_FOLDER_READER: BossFolderReader = {
+	join,
 	listFolder: async (folder) =>
 	{
 		const entries = await readdir(folder, { withFileTypes: true }).catch(() => undefined);
@@ -68,7 +72,7 @@ async function readCodeFolder(reader: BossFolderReader, folder: string, prefix: 
 
 	for (const name of listing.files.filter((fileName) => !fileName.startsWith(".")).sort(byName))
 	{
-		if (name.endsWith(".h") || name.endsWith(".cpp")) files.push({ name, text: await reader.readText(join(folder, name)) });
+		if (name.endsWith(".h") || name.endsWith(".cpp")) files.push({ name, text: await reader.readText(reader.join(folder, name)) });
 		else otherNames.push(`${prefix}${name}`);
 	}
 
@@ -78,7 +82,7 @@ async function readCodeFolder(reader: BossFolderReader, folder: string, prefix: 
 /** Reads every file in `<solutionsFolder>/<bossId>/` and its piece override folders; undefined when there is no such folder. */
 export async function readBossSolution(solutionsFolder: string, bossId: string, reader: BossFolderReader = NODE_BOSS_FOLDER_READER): Promise<BossSolution | undefined>
 {
-	const folder = join(solutionsFolder, bossId);
+	const folder = reader.join(solutionsFolder, bossId);
 
 	if (!(await reader.listFolder(folder))) return undefined;
 
@@ -93,7 +97,7 @@ export async function readBossSolution(solutionsFolder: string, bossId: string, 
 
 	for (const pieceId of top.folders)
 	{
-		const piece = await readCodeFolder(reader, join(folder, pieceId), `${pieceId}/`, solution.otherNames);
+		const piece = await readCodeFolder(reader, reader.join(folder, pieceId), `${pieceId}/`, solution.otherNames);
 
 		for (const nested of piece.folders) solution.otherNames.push(`${pieceId}/${nested}/`);
 

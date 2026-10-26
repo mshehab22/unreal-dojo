@@ -10,6 +10,8 @@ import { Panel } from "@/components/Panel";
 import { Button } from "@/components/ui/button";
 import { formatDue, formatShortDate } from "@/lib/formatting";
 
+import { drillSummaryCopy } from "./drillSummaryCopy";
+
 /** Props for DrillSummaryCard. */
 interface DrillSummaryCardProps
 {
@@ -21,21 +23,29 @@ interface DrillSummaryCardProps
 export function DrillSummaryCard({ outcome, request }: DrillSummaryCardProps)
 {
 	const navigate = useNavigate();
-	const missed = outcome.totalCount - outcome.correctCount;
+	const copy = drillSummaryCopy(outcome);
 
 	return (
 		<Panel title="Drill done" testId="drill-summary" className="max-w-2xl">
 			<div className="flex items-end gap-6">
-				<span className="font-display text-5xl leading-none font-bold tabular-nums">
-					{outcome.correctCount}
-					<span className="text-2xl text-paper-faint">/{outcome.totalCount}</span>
-				</span>
+				{copy.headline.kind === "score" ? (
+					<span data-testid="drill-score" className="font-display text-5xl leading-none font-bold tabular-nums">
+						{copy.headline.correct}
+						<span className="text-2xl text-paper-faint">/{copy.headline.total}</span>
+					</span>
+				) : (
+					<span data-testid="drill-explained" className="flex items-baseline gap-2 font-display text-5xl leading-none font-bold tabular-nums">
+						{copy.headline.count}
+						<span className="text-2xl text-paper-faint">explained</span>
+					</span>
+				)}
 				<div className="flex flex-col gap-1 pb-1 text-sm text-paper-muted">
 					<span>{outcome.xpGained > 0 ? `+${outcome.xpGained} XP` : "Practice only, no XP"}</span>
 					<span>{outcome.streak.count} day streak kept</span>
 				</div>
 			</div>
-			{missed > 0 && <p className="text-sm text-paper-muted">{missed === 1 ? "One item is" : `${missed} items are`} due for review and will come back sooner.</p>}
+			{copy.dueLine && <p data-testid="drill-due-line" className="text-sm text-paper-muted">{copy.dueLine}</p>}
+			{copy.selfCheckedLine && <p data-testid="drill-self-checked" className="text-sm text-paper-muted">{copy.selfCheckedLine}</p>}
 			<p className="flex items-center gap-2 text-sm text-paper-muted">
 				<CalendarClockIcon className="size-4 text-pack" />
 				{outcome.nextDueAt ? `Next item due ${formatDue(outcome.nextDueAt)} (${formatShortDate(outcome.nextDueAt)}).` : "Nothing else is scheduled yet."}

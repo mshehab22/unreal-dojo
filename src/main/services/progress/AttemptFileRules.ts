@@ -67,7 +67,8 @@ export class AttemptFileRules
 			keptForQuest++;
 			if (keptForQuest <= STORED_DETAIL_ATTEMPTS_PER_QUEST) continue;
 
-			const { files: _droppedFiles, review: _droppedReview, run: _droppedRun, ...summary } = attempt;
+			// Explanations go with the review they explain (A851); the learner's reflection answer stays (A852).
+			const { files: _droppedFiles, review: _droppedReview, run: _droppedRun, explanations: _droppedExplanations, ...summary } = attempt;
 			pruned[index] = summary;
 		}
 
