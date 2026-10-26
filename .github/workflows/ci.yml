@@ -2,9 +2,9 @@
 name: ci
 
 on:
-  # Push to main is paused until the Windows unit tests pass (A80); turn it back on by restoring these two lines:
-  # push:
-  #   branches: [main]
+  # Push to main runs again now that the Windows unit tests pass (A1021, closing A80).
+  push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
   # The release workflow calls this one so installers are only built from a commit that passed every check.
