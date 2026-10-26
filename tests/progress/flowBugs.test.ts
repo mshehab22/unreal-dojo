@@ -67,6 +67,7 @@ async function startApp(fileSystem: MemoryFileSystem, runs: string[] = [])
 				return {} as SubmitOutcome;
 			},
 			retryReview: unused,
+			getQuestAlternative: unused,
 		}),
 	};
 	const handlers = createHandlers(dependencies);

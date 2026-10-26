@@ -6,6 +6,7 @@ import type { DrillRequest, DrillSession } from "@shared/types/drill";
 import type { AppError } from "@shared/types/errors";
 import type {
 	AttemptOutcome,
+	AttemptRecord,
 	BreakdownOutcome,
 	BreakdownPlan,
 	BreakdownReferenceChoice,
@@ -27,7 +28,7 @@ import type {
 	SubmitOutcome,
 } from "@shared/types/progress";
 import { worldKeyOf } from "@shared/types/progress";
-import type { CodeReview, ExplainGrade, FindingExplanationRequest, ReflectionAnswerRequest } from "@shared/types/review";
+import type { CodeReview, ExplainGrade, FindingExplanationRequest, QuestAlternative, ReflectionAnswerRequest } from "@shared/types/review";
 import type { BuildProgressEvent, RunRequest, RunResult, SyntaxCheckRequest, SyntaxCheckResult } from "@shared/types/run";
 import type { Settings } from "@shared/types/settings";
 
@@ -64,6 +65,14 @@ export interface FakeQuestHost
 function fail(code: AppError["code"], message: string, suggestedAction: string): AppError
 {
 	return { code, message, suggestedAction };
+}
+
+/** An attempt without its kept finding explanations. */
+function withoutExplanations(attempt: AttemptRecord): AttemptRecord
+{
+	const { explanations: _explanations, ...rest } = attempt;
+
+	return rest;
 }
 
 /** Mastery one level down, for a missed drill item. */
@@ -377,21 +386,57 @@ export class FakeQuestFlow
 	/** Explains one finding of a recorded review in plain English. */
 	explainFinding(request: FindingExplanationRequest): string
 	{
-		const finding = this.host.progress().attempts.find((attempt) => attempt.attemptId === request.attemptId)?.review?.findings[request.findingIndex];
+		const progress = this.host.progress();
+		const attempt = progress.attempts.find((candidate) => candidate.attemptId === request.attemptId);
+		const finding = attempt?.review?.findings[request.findingIndex];
 
-		if (!finding) throw fail("invalid-payload", "That finding is not in the review.", "Open the review again.");
+		if (!attempt || !finding) throw fail("attempt-not-found", "That finding is not in this review.", "Open the review again and pick a finding from the list.");
 
-		return `${finding.title}: ${finding.detail} Reviewers flag this because the next person to read the class, often you in a month, should not have to rebuild the reasoning from the code alone.`;
+		// Kept on the attempt like the real one (A851); the fake keys by index and title, the real one by index and a hash of the finding.
+		const key = `${request.findingIndex}:${finding.title}`;
+		const kept = attempt.explanations?.[key];
+		if (kept !== undefined) return kept;
+
+		const explanation = `${finding.title}: ${finding.detail} Reviewers flag this because the next person to read the class, often you in a month, should not have to rebuild the reasoning from the code alone.`;
+		progress.attempts = progress.attempts.map((candidate) => (candidate.attemptId === attempt.attemptId ? { ...candidate, explanations: { ...candidate.explanations, [key]: explanation } } : candidate));
+
+		return explanation;
 	}
 
-	/** Grades the learner's sentence answering a review's reflection question, against the quest's concepts. */
+	/** Grades the learner's sentence answering a review's reflection question, against the quest's concepts, and keeps it on the attempt; the same sentence again answers the kept grade (A852). */
 	answerReflection(request: ReflectionAnswerRequest): ExplainGrade
 	{
-		const attempt = this.host.progress().attempts.find((candidate) => candidate.attemptId === request.attemptId);
+		const progress = this.host.progress();
+		const attempt = progress.attempts.find((candidate) => candidate.attemptId === request.attemptId);
+		const answer = request.answer.trim();
 
-		if (!attempt) throw fail("invalid-payload", "That attempt is not recorded.", "Open the review again.");
+		if (!attempt?.review) throw fail("attempt-not-found", "That attempt has no code review.", "Only build and refactor submits have a review to ask about.");
+		if (answer.length === 0) throw fail("invalid-payload", "Write one sentence to answer the question.", "Type your answer, then send it.");
+		if (attempt.reflection?.answer === answer && attempt.reflection.grade.provider !== "tests-only") return attempt.reflection.grade;
 
-		return gradeSentence(request.answer, this.quest(attempt.questId).concepts.join(" "));
+		const grade = gradeSentence(answer, this.quest(attempt.questId).concepts.join(" "));
+		const reflection = { answer, grade, at: new Date().toISOString() };
+
+		// Like the real one, only an AI grade is kept, so a self-check never blocks a later real grade (A855).
+		if (grade.provider !== "tests-only") progress.attempts = progress.attempts.map((candidate) => (candidate.attemptId === attempt.attemptId ? { ...candidate, reflection } : candidate));
+
+		return grade;
+	}
+
+	/** A passed quest's alternative and the AI reviewer's hint, like the real one (A850): null for a kind without one, alternative-locked before a pass. */
+	getQuestAlternative(questId: string): QuestAlternative | null
+	{
+		const quest = this.quest(questId);
+		const markdown = quest.kind === "build" || quest.kind === "refactor" ? quest.alternative : quest.kind === "breakdown" ? quest.alternativeNote : null;
+
+		if (!markdown || markdown.trim().length === 0) return null;
+
+		const progress = this.host.progress();
+		if (progress.quests[questId]?.status !== "passed") throw fail("alternative-locked", "The alternative opens after you pass this quest.", "Pass the quest, then look again: it shows an idiomatic version with its tradeoff.");
+
+		const reviewHint = [...progress.attempts].reverse().find((attempt) => attempt.questId === questId && attempt.passed && attempt.review && attempt.review.provider !== "tests-only" && attempt.review.alternativeHint.trim().length > 0)?.review?.alternativeHint.trim();
+
+		return reviewHint ? { questId, markdown, reviewHint } : { questId, markdown };
 	}
 
 	/** Reviews a recorded Submit again from its stored run and replaces the attempt's review; score, pass, and XP stay (A741). */
@@ -404,7 +449,9 @@ export class FakeQuestFlow
 		if (!submitted || !attempt || !submitted.run.compiled) throw fail("attempt-not-found", "This attempt's code is no longer stored, so it cannot be reviewed again.", "Submit the quest again to get a fresh review.");
 
 		const review = this.review(submitted.quest, submitted.run);
-		progress.attempts = progress.attempts.map((candidate) => (candidate.attemptId === attemptId ? { ...candidate, review } : candidate));
+
+		// The kept explanations explained the old findings, so they go with the old review (A851).
+		progress.attempts = progress.attempts.map((candidate) => (candidate.attemptId === attemptId ? { ...withoutExplanations(candidate), review } : candidate));
 
 		return review;
 	}

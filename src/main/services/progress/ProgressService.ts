@@ -17,7 +17,7 @@ import type {
 	QuestProgress,
 	RulesSnapshot,
 } from "@shared/types/progress";
-import type { CodeReview } from "@shared/types/review";
+import type { CodeReview, ReflectionRecord } from "@shared/types/review";
 import type { RunResult } from "@shared/types/run";
 
 import { AppErrorException } from "../../errors/AppErrorException";
@@ -653,10 +653,41 @@ export class ProgressService
 			// A newer Submit may have pruned this attempt to its summary while the reviewer was thinking; a review then stays off it like its files (A604, A745).
 			if (!current.files || !current.run) throw new AppErrorException("attempt-not-found", "This attempt's code is no longer stored, so its review was not kept.", "Submit the quest again to get a fresh review.", attemptId);
 
-			const updated: AttemptRecord = { ...current, review: structuredClone(review) };
+			// The stored explanations explained the old findings, so they go with the old review (A851).
+			const { explanations: _oldExplanations, ...rest } = current;
+			const updated: AttemptRecord = { ...rest, review: structuredClone(review) };
 			await this.commit((progress) => ({ ...progress, attempts: progress.attempts.map((attempt) => (attempt.attemptId === attemptId ? updated : attempt)) }));
 
 			return structuredClone(updated);
+		});
+	}
+
+	/**
+	 * Keeps one "why is this a finding?" answer on its attempt, by `<findingIndex>:<finding hash>` (A851). Free: no XP, no other change.
+	 * Does nothing when the attempt is gone or no longer holds a review (pruned while the explainer was thinking).
+	 */
+	saveFindingExplanation(attemptId: string, findingKey: string, explanation: string): Promise<void>
+	{
+		return this.enqueue(async () =>
+		{
+			const current = this.progress.attempts.find((attempt) => attempt.attemptId === attemptId);
+			if (!current?.review) return;
+
+			const updated: AttemptRecord = { ...current, explanations: { ...current.explanations, [findingKey]: explanation } };
+			await this.commit((progress) => ({ ...progress, attempts: progress.attempts.map((attempt) => (attempt.attemptId === attemptId ? updated : attempt)) }));
+		});
+	}
+
+	/** Keeps the learner's reflection answer and its grade on the attempt, replacing an earlier one (A852). Free: no XP, no other change. Does nothing for an attempt no longer in the save. */
+	saveReflection(attemptId: string, reflection: ReflectionRecord): Promise<void>
+	{
+		return this.enqueue(async () =>
+		{
+			const current = this.progress.attempts.find((attempt) => attempt.attemptId === attemptId);
+			if (!current) return;
+
+			const updated: AttemptRecord = { ...current, reflection: structuredClone(reflection) };
+			await this.commit((progress) => ({ ...progress, attempts: progress.attempts.map((attempt) => (attempt.attemptId === attemptId ? updated : attempt)) }));
 		});
 	}
 

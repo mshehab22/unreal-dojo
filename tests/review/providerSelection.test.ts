@@ -103,7 +103,7 @@ describe("ReviewService", () =>
 		await expect(service.gradeExplain(sampleExplainInput())).resolves.toMatchObject({ provider: "claude-code", verdict: "correct" });
 
 		const finding = { severity: "problem" as const, title: "t", detail: "d" };
-		await expect(service.explainFinding({ cacheKey: "a:0", brief: "b", finding, files: {} })).resolves.toMatch(/Broadcast/);
+		await expect(service.explainFinding({ cacheKey: "a:0", brief: "b", finding, files: {} }, { allowPaidApi: true })).resolves.toEqual({ text: expect.stringMatching(/Broadcast/), provider: "claude-code" });
 
 		expect(claudeCode.requests).toHaveLength(4);
 	});

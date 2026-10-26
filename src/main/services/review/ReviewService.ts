@@ -1,12 +1,13 @@
 // The one entry point for AI review: picks a provider per call and routes each grader to it, or to tests only.
 import type { AppErrorCode } from "@shared/types/errors";
-import type { BreakdownGrade, CodeReview, ExplainGrade, ReviewProviderStatus } from "@shared/types/review";
+import type { BreakdownGrade, CodeReview, ExplainGrade, ReviewProviderId, ReviewProviderStatus } from "@shared/types/review";
 
 import { AppErrorException } from "../../errors/AppErrorException";
 import { BreakdownGrader } from "./graders/BreakdownGrader";
 import { CodeReviewer } from "./graders/CodeReviewer";
 import { ExplainGrader } from "./graders/ExplainGrader";
 import { FindingExplainer } from "./graders/FindingExplainer";
+import { ReflectionGrader } from "./graders/ReflectionGrader";
 import { parseModelOutput } from "./parsing/parseModelOutput";
 import { AnthropicApiProvider } from "./providers/AnthropicApiProvider";
 import { ClaudeCodeLocator } from "./providers/ClaudeCodeLocator";
@@ -15,7 +16,7 @@ import type { IReviewProvider } from "./providers/IReviewProvider";
 import { NodeProcessRunner } from "./providers/NodeProcessRunner";
 import { TestsOnlyProvider, type TestsOnlyFallback } from "./providers/TestsOnlyProvider";
 import { ProviderSelector } from "./ProviderSelector";
-import type { BreakdownGradeInput, CodeReviewInput, ExplainGradeInput, FindingExplanationInput } from "./ReviewInputs";
+import type { BreakdownGradeInput, CodeReviewInput, ExplainGradeInput, FindingExplanationInput, ReflectionGradeInput } from "./ReviewInputs";
 import { connectionCheckOutputSchema, toProviderJsonSchema } from "./ReviewSchemas";
 import type { IReviewSettings } from "./settings/IReviewSettings";
 
@@ -33,7 +34,30 @@ export interface ReviewGraders
 
 	/** "Why is this a finding?" */
 	findingExplainer: FindingExplainer;
+
+	/** Reflection answers. Optional so callers that never grade one need not build it; the service makes one when absent. */
+	reflectionGrader?: ReflectionGrader;
 }
+
+/** A finding explanation and who gave it, inside main only: the IPC answer stays the text (A855). */
+export interface FindingExplanationAnswer
+{
+	/** The explanation. */
+	text: string;
+
+	/** Who answered: an AI provider, or tests-only when none could (a fallback, never kept). */
+	provider: ReviewProviderId;
+}
+
+/** How a free follow-up on a stored review may be answered (A851, A852). */
+export interface FollowUpOptions
+{
+	/** False when the attempt's tests did not all pass: then the paid API key is not asked, as A70 sets for the review itself; Claude Code and tests-only still answer. */
+	allowPaidApi: boolean;
+}
+
+/** Why the API key did not answer a follow-up on an attempt with failing tests (A70, A851, A852). */
+export const API_FOLLOW_UP_REASON = "The API key answers follow-ups only on submits where every test passed, so this one was answered without it. Set up Claude Code to ask about every submit that compiles.";
 
 /** Failures that mean "this provider cannot review right now": it is set aside and the next provider is tried. */
 const PROVIDER_UNAVAILABLE_CODES: ReadonlySet<AppErrorCode> = new Set<AppErrorCode>(["review-unavailable", "secure-storage-unavailable"]);
@@ -54,6 +78,12 @@ interface FailoverOptions
 	fallBackOnBadReply?: boolean;
 }
 
+/** The failover rule of a follow-up: the paid API is skipped with a reason when the attempt's tests did not all pass (A70, A851, A852). */
+function followUpFailover(options: FollowUpOptions): FailoverOptions
+{
+	return { skipReason: (provider) => (provider.id === "anthropic-api" && !options.allowPaidApi ? API_FOLLOW_UP_REASON : null) };
+}
+
 /** The tiny request the Settings "Test" button sends through Claude Code, to prove the login works end to end. */
 const CONNECTION_CHECK_REQUEST = {
 	systemPrompt: "You check that a connection works. Reply with only the JSON object the schema asks for, with ok set to true.",
@@ -67,7 +97,11 @@ export class ReviewService
 	/** Keeps the selector, the Claude Code provider for its connection test, the tests-only fallback, and the graders. */
 	constructor(private readonly selector: ProviderSelector, private readonly claudeCode: IReviewProvider, private readonly testsOnly: TestsOnlyProvider, private readonly graders: ReviewGraders)
 	{
+		this.reflectionGrader = graders.reflectionGrader ?? new ReflectionGrader();
 	}
+
+	/** The reflection grader, from the graders or made here. */
+	private readonly reflectionGrader: ReflectionGrader;
 
 	/** Every provider and whether it is available, for Settings and the Title chip. Uses cached checks; the Settings test button refreshes Claude Code (A154). */
 	getProviderStatuses(): Promise<ReviewProviderStatus[]>
@@ -117,16 +151,31 @@ export class ReviewService
 		return this.withProvider((provider) => this.graders.breakdownGrader.grade(provider, input, signal), (fallback) => this.testsOnly.gradeBreakdown(input, fallback));
 	}
 
-	/** Grades one sentence: an explain item or a reflection answer. Always free for the learner. */
+	/** Grades one sentence of an explain drill item. Always free for the learner. */
 	gradeExplain(input: ExplainGradeInput, signal?: AbortSignal): Promise<ExplainGrade>
 	{
 		return this.withProvider((provider) => this.graders.explainGrader.grade(provider, input, signal), (fallback) => this.testsOnly.gradeExplain(input, fallback));
 	}
 
-	/** Explains a finding in plain English. Free, no XP effect, cached per finding. */
-	explainFinding(input: FindingExplanationInput, signal?: AbortSignal): Promise<string>
+	/** Grades the learner's answer to a review's reflection question, reading their code (A853). Free for the learner; the paid API answers only when `options` allows it (A852). */
+	gradeReflection(input: ReflectionGradeInput, options: FollowUpOptions, signal?: AbortSignal): Promise<ExplainGrade>
 	{
-		return this.withProvider((provider) => this.graders.findingExplainer.explain(provider, input, signal), () => this.testsOnly.explainFinding(input));
+		const selfCheck = { prompt: input.question, answer: input.answer };
+
+		return this.withProvider((provider) => this.reflectionGrader.grade(provider, input, signal), (fallback) => this.testsOnly.gradeExplain(selfCheck, fallback), followUpFailover(options));
+	}
+
+	/**
+	 * Explains a finding in plain English. Free, no XP effect, cached per finding. The paid API answers only when `options` allows it (A851);
+	 * `options` is required so no caller can skip A70 by default (A856). Answers who answered, so the caller keeps only an AI explanation (A855).
+	 */
+	explainFinding(input: FindingExplanationInput, options: FollowUpOptions, signal?: AbortSignal): Promise<FindingExplanationAnswer>
+	{
+		return this.withProvider(
+			async (provider) => ({ text: await this.graders.findingExplainer.explain(provider, input, signal), provider: provider.id }),
+			(fallback) => ({ text: this.testsOnly.explainFinding(input, fallback), provider: this.testsOnly.id }),
+			followUpFailover(options),
+		);
 	}
 
 	/**
