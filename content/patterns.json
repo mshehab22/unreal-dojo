@@ -1129,11 +1129,14 @@
   {
     "id": "type-object",
     "title": "Type Object",
-    "intent": "Turn \"what kind of thing is this\" into an asset: each enemy, weapon, or potion points at a data asset describing its kind, so designers add and tune kinds in the editor without a new C++ class or a recompile.",
-    "problem": "A game with a hundred monster kinds, each a subclass with different health and attacks, needs a programmer and a compile for every new monster, and designers cannot tune kinds on their own.",
-    "unrealForm": "This is mainstream Unreal. A UPrimaryDataAsset subclass like UDojoEnemyKind holds shared data (max health, speed, mesh), and each enemy actor keeps a TObjectPtr to its kind. Data Table rows keyed by FName do the same for tabular data. The Asset Manager loads primary assets. You still write the initialization from the kind, any parent-kind inheritance, and validation that every actor has a kind.",
-    "whenNot": "If kinds mostly differ in behavior rather than numbers, data cannot express it without growing into a scripting system. With three kinds that never change, plain subclasses are simpler.",
-    "useCaseQuestIds": [],
+    "intent": "Turn \"what kind of thing is this\" into data: each weapon, quiver, or lantern points at an asset or a table row describing its kind, so designers add and tune kinds in the editor without a new C++ class or a recompile.",
+    "problem": "An armory with forty weapon classes that differ only in the numbers their constructors set needs a programmer and a compile for every new weapon and every balance tweak, and designers cannot tune the weapons they own.",
+    "unrealForm": "This is mainstream Unreal. A UPrimaryDataAsset subclass like UDojoWeaponKind holds shared data (damage, durability, mesh), and each weapon actor keeps a TObjectPtr<const UDojoWeaponKind> to its kind; the Asset Manager can list and load primary assets by type and id. Data Table rows, structs deriving from FTableRowBase named by an FDataTableRowHandle, do the same for many small flat kinds. A Blueprint that only changes defaults is a kind the engine keeps as its class default object. You still write the object's own state, reading shared numbers through the kind, spawning objects with their kind set before BeginPlay, and what an object with no valid kind does.",
+    "whenNot": "If kinds mostly differ in behavior rather than numbers, data cannot express it without growing into a scripting system. With a few kinds that never change and nobody tunes, plain code is simpler. If every object really needs its own numbers, there is no kind to share.",
+    "useCaseQuestIds": [
+      "p10-weapon-kinds",
+      "p10-quiver-kinds"
+    ],
     "recall": [
       {
         "id": "type-object-recall-1",
@@ -1151,7 +1154,7 @@
       {
         "id": "type-object-recall-2",
         "type": "fill-blank",
-        "prompt": "Each enemy actor stores a pointer to its kind, declared in Unreal as UPROPERTY(EditAnywhere) ___<UDojoEnemyKind> Kind;",
+        "prompt": "Each weapon actor stores a pointer to its kind, declared in Unreal as UPROPERTY(EditAnywhere) ___<const UDojoWeaponKind> Kind;",
         "acceptedAnswers": [
           "TObjectPtr"
         ],
@@ -1168,6 +1171,19 @@
           "Optionally mentions scripting or Bytecode as the escape"
         ],
         "explanation": "When behavior must vary, you pick from predefined behaviors or reach for Bytecode."
+      },
+      {
+        "id": "type-object-recall-4",
+        "type": "multiple-choice",
+        "prompt": "Two quivers name the same data table row, which says a full quiver holds 6 arrows. Where does the number of arrows a quiver has left belong?",
+        "choices": [
+          "On the row, decremented on every draw",
+          "On each quiver, filled from the row's count",
+          "In a global counter for the kind",
+          "Nowhere; recount the row each draw"
+        ],
+        "answerIndex": 1,
+        "explanation": "The row is shared by every quiver of that kind; what changes per quiver, arrows left, lives on the quiver."
       }
     ],
     "scenarios": [
@@ -1201,7 +1217,7 @@
       {
         "id": "type-object-scenario-2",
         "type": "which-pattern",
-        "prompt": "A dungeon shows 5,000 floor tiles, each of which needs its material, walk cost, and footstep sound. Memory is the concern, not authoring. Which pattern describes sharing those fields?",
+        "prompt": "The arena's stands show 6,000 seated spectators, each needing its mesh, its cheer sound, and its cloth material, and only a dozen combinations exist. The worry is memory, since nobody authors new combinations. Which pattern describes sharing those fields?",
         "choices": [
           "data-locality",
           "flyweight",
@@ -1223,7 +1239,34 @@
             "why": "Packing data for cache helps speed, but the main cost here is duplicated fields."
           }
         ],
-        "explanation": "Thousands of tiles pointing at a few shared definitions is Flyweight."
+        "explanation": "Thousands of spectators pointing at a dozen shared definitions is Flyweight."
+      },
+      {
+        "id": "type-object-scenario-3",
+        "type": "which-pattern",
+        "prompt": "Half of the arena's new weapon kinds each need logic of their own (returning to the thrower, tangling legs, splitting in three), all following the same rules for damage and cooldowns. Which pattern fits that logic better than more fields on a kind asset?",
+        "choices": [
+          "subclass-sandbox",
+          "type-object",
+          "prototype",
+          "singleton"
+        ],
+        "answer": "subclass-sandbox",
+        "distractorNotes": [
+          {
+            "choice": "type-object",
+            "why": "Kind assets vary data; new logic per kind needs code, which the kind can at most name."
+          },
+          {
+            "choice": "prototype",
+            "why": "Cloning a configured weapon copies its data, not new behavior."
+          },
+          {
+            "choice": "singleton",
+            "why": "A global weapon manager would end up switching over every kind."
+          }
+        ],
+        "explanation": "Each behavior is a subclass of one base that owns the shared rules, and a kind can name which subclass to use."
       }
     ]
   },

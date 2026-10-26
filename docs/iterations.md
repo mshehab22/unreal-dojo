@@ -1383,3 +1383,19 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 - What changed: the playtest now starts the app on a fresh throwaway data folder with one command, and the restart uses the same command; every stage is named, with how to paste the reference solutions to skip ahead and an honest time. The known-failure choice is A646. The review-dates check now reads the dates line and expects no day twice, whatever the wording. The answer key tells same-prompt Parsons blocks apart by their lines, a missing lock folder is reported instead of thrown, and a failure after the restart photographs the live window.
 - Proof: the playtest command was launched exactly as written on a new folder and opened the real first run (the name box, no sample-data badge, no stored data source). The answer key answered all seven items of a drill (every type, Parsons included) right. Typecheck passes; unit tests 851 passed and 24 skipped; content verifier no problems (13 warnings, all in content); build passes; default end-to-end 27 passed with the learner flow skipped.
 - Not done or left for later: the full real-engine run waits for M1.6g, M2.2b, M2.1e, and M1.3c, as the Lead asked; then the known-failure marks come off.
+
+## M4.P2.10 Pack 2 World 10, Type Object (content-patterns, author-patterns)
+- What changed: a tenth Patterns world, "Kinds as data", with the full mini-arc for Type Object plus a breakdown (seven quests), set in the arena's armory. Each kind is data that many objects point at, and each object keeps only its own state. Three Unreal forms are built: a primary data asset (weapons, lanterns), a data table row named by a row handle (quivers), and the class default object as a fallback kind. The Asset Manager and soft references are planned in the breakdown. Built away from the source chapter's creature kinds, kind inheritance, and kind swapping; the card's monster problem and its Flyweight floor-tile scenario were rewritten (A902, A906).
+- The quests and their observables:
+  - Forty weapons, forty classes, one recompile each (concept): a class per kind that only sets numbers, and the kind as an asset.
+  - One weapon class and a kind asset per weapon (build, worked): the learner writes Swing. A training spear deals 20, 20, then 10 once worn, then nothing, and retuning DA_TrainingSpear reaches every spear.
+  - The kind is data, the object points at it (concept): the card.
+  - Quiver kinds as rows in a data table (build, stub): a Hunting quiver reads "Hunting: 6" and counts down. Two quivers of one row keep their own arrows, and a retuned row reaches both. Its deliberate failure: a quiver handed out with SpawnActor fills itself before it has a kind (A905).
+  - Forty lanterns tuned one at a time (refactor): the tuning moves into a lantern kind asset, and a lantern with no kind uses the kind class's defaults.
+  - Plan the arena armory (breakdown): 60 gear kinds, a shop that lists them all, soft meshes and sounds, and buying that spawns with the kind set. One plan uses primary assets and one uses data tables.
+  - When a kind should be a class (concept): behavior per kind, flags that pick code paths, few fixed kinds, missing kinds, and truly per-object numbers.
+- Proof:
+  - Content verifier: no problems, and no A72 warnings for World 10. `npm run typecheck` passes; `npm test` 857 passed, 24 skipped.
+  - Originality: no 6-word or 5-word run in common with the research's Type Object section, after rewording.
+  - Engine proof: pending: engine not installed (A75). UE 5.8 was removed from the MacBook Air around Oct 24 (`~/Applications/UE_5.8` is gone), so the solution, starter, and deliberate-failure runs could not happen. The sandboxes are ready to run once the engine is back.
+- Not done: the engine proof (pending, A75). No screenshots. Windows unverified. `p10-a-class-per-weapon` requires a World 8 quest until World 9 merges (A908). Decisions A900 to A908.

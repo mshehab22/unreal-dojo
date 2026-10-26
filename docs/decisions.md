@@ -140,6 +140,74 @@ Options: an app flag or environment variable that calls `app.setPath("userData",
 
 (The Lead appends here. Each entry: date, decision, options considered, why, what it would cost to reverse.)
 
+### A908 2026-10-21 World 10 was built in this session's own worktree, on main at 54444c8 (author-patterns, M4.P2.10)
+As in A769, A789, and A839: `m4-p2-world10` is checked out in this session's worktree, started from main at baa852f and rebased onto main at 54444c8, later than the 66f98b6 named in the brief. World 9 is in review and not on main, so `p10-a-class-per-weapon` requires `p8-subclass-sandbox-when-not`. When World 9 merges, the Lead may point it at `p9-component-when-not`. Reverse cost: none.
+
+### A907 2026-10-21 Data terms taught in World 10's concept quests while Pack 1 World 6 is in review (author-patterns, M4.P2.10)
+The brief asked to reuse Pack 1 World 6's data asset and data table terms. World 6 is not on main yet, and on main no concept quest teaches `data-asset`, `primary-data-asset`, `data-table`, or `table-row-base`, so A72 would warn. Options: wait for World 6; add separate concept quests for those terms; list them in World 10's own concept quests, which already explain them where they are used. Chosen: the last. `p10-a-class-per-weapon` lists `data-asset` and `primary-data-asset`, and `p10-type-object-card` lists `data-table` and `table-row-base`. No new glossary entries were added, and no `firstQuestId` was set, so World 6 can claim those terms when it merges and teaches them earlier in course order. The Asset Manager is covered by the existing `primary-data-asset` entry, which has it as an alias. Reverse cost: none.
+
+### A906 2026-10-21 Card changes for Type Object (author-patterns, M4.P2.10)
+The type-object card was audited item by item for the source chapter's examples, and for examples taken from neighboring chapters. Rewritten:
+- `problem`: was a hundred monster kinds, the chapter's own example; now forty weapon classes that only set numbers.
+- `unrealForm`: dropped "parent-kind inheritance", the chapter's enhancement. It now names `TObjectPtr<const>`, row handles, the class default object, and spawning with the kind set before BeginPlay.
+- `intent`: enemies replaced by quivers and lanterns.
+- `whenNot`: adds truly per-object numbers.
+- `type-object-recall-2`: enemy replaced by weapon.
+- `type-object-scenario-2`: was dungeon floor tiles, which is the Flyweight chapter's terrain example; now arena spectators.
+
+Added `type-object-recall-4` (arrows left belong to the quiver, not the row) and `type-object-scenario-3` (behavior per kind points to Subclass Sandbox). Use cases: `p10-weapon-kinds` and `p10-quiver-kinds`. Reverse cost: low.
+
+### A905 2026-10-21 World 10's deliberate failure: a quiver handed out with SpawnActor (author-patterns, M4.P2.10)
+Options:
+- Decrementing the shared row: taught openly by the card's spot-the-bug item.
+- Copying the row at BeginPlay: tested by `OneRowManyQuivers`, but nothing tempts it.
+- `SpawnOfKind` spawning with `SpawnActor` and setting the kind afterwards.
+
+Chosen: the last. SpawnActor runs BeginPlay before it returns, so the given BeginPlay refills from an empty kind and the quiver is handed out empty. `HandedOutQuiversAreFull` fails, and the rest pass. The card says a spawning function gives the object its kind, without saying when. To be checked on 5.8.3 with SpawnActor in place of the deferred spawn once the engine is reinstalled; engine proof pending under A75. Reverse cost: low.
+
+### A904 2026-10-21 The refactor finds the kind by reflection and falls back to the kind class's defaults (author-patterns, M4.P2.10)
+`p10-lantern-refactor` ships `UDojoP10LanternKind` as an empty primary data asset in the starter, so the files match and the tests compile on both versions.
+- `BurnsOutAfterItsFuel` uses only the public functions and default numbers, so it passes before and after.
+- `OneKindTunesEveryLantern` finds a `Kind` object property of the kind class, sets `FuelSeconds` through reflection, and checks that two lanterns go out at 5 seconds. It fails on the starter.
+- `NoTuningOnTheLantern` fails on any editable, non-const float, double, int, or struct property the lantern declares.
+
+A lantern with no kind reads `GetDefault<UDojoP10LanternKind>()`, so lanterns placed before the refactor behave the same. Reverse cost: low.
+
+### A903 2026-10-21 Three Unreal forms: a primary data asset, a data table row, and a defaults-only Blueprint (author-patterns, M4.P2.10)
+- Weapons and lanterns use `UPrimaryDataAsset` kinds, held as `TObjectPtr<const ...>` (a const object property, as Lyra does for its pawn data).
+- Quivers use `FTableRowBase` rows named by `FDataTableRowHandle`, read with `FindRow(..., false)` so a missing row is quiet.
+- The CDO appears as the lantern's fallback and in the card.
+
+Facts confirmed in 5.8:
+- A primary data asset's type is its first native class's name (`DataAsset.h` and `DataAsset.cpp`).
+- `UDataTable::AddRow` and `RowStruct` are public at runtime, so tests build tables in code (`DataTable.h`).
+- The Asset Manager lists types only once they are in its scan list in Project Settings.
+
+Reverse cost: low.
+
+### A902 2026-10-21 Type Object arc, built away from the source's examples (author-patterns, M4.P2.10)
+Not used in briefs, cards, choices, distractors, or the card's items: creature kinds or breeds, attack lines, a kind inheriting from a parent kind (by lookup or by copying down), a creature turning into another kind, or a data file of kinds with parent fields. The arc, all in the arena:
+- `p10-a-class-per-weapon` (concept, no pattern name).
+- `p10-weapon-kinds` (worked: a weapon kind asset and a weapon with its own durability; the learner writes Swing).
+- `p10-type-object-card`.
+- `p10-quiver-kinds` (stub: quiver kinds as data table rows).
+- `p10-lantern-refactor`.
+- `p10-breakdown-armory` (60 gear kinds, a shop, soft references, and a spawn with the kind set; a primary asset plan and a data table plan).
+- `p10-type-object-when-not` (behavior per kind, flags that pick code paths, few fixed kinds, missing kinds, truly per-object numbers).
+
+Reverse cost: low.
+
+### A901 2026-10-21 Pack 2 World 10 ids, and no boss (author-patterns, M4.P2.10)
+- Folder `10-type-object`; world id `type-object`, unique across packs (A73).
+- Quest ids `p10-<slug>`, classes `ADojoP10<Name>` and `UDojoP10<Name>Kind`, struct `FDojoP10QuiverRow`, tests `Dojo.P10.<Quest>.<Case>`.
+- No enums in this world.
+- No boss: the breakdown carries the planning. Any later boss follows A67.
+
+Reverse cost: medium once learners have progress saved.
+
+### A900 2026-10-21 Decision block A900 to A919 from the Lead (author-patterns, M4.P2.10)
+Assigned under A71; this world uses A900 to A907. Reverse cost: none.
+
 ### A789 2026-10-21 World 8 was built in this session's own worktree, from main at a825d04 (author-patterns, M4.P2.8)
 As in A769: the session's file tools write only inside its own worktree, so `m4-p2-world8` is checked out there. It was first cut from main at a825d04, the Lead's World 8 start commit one past the e5ab9e5 named in the brief. After World 7 and Pack 1 World 5 merged, the branch was rebased onto main at f39cb0d and `p8-many-kinds-one-toolbox` now requires World 7's first quest, `p7-flags-to-modes`. Reverse cost: one line.
 
