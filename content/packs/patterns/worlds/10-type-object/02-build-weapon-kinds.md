@@ -40,7 +40,7 @@ In the Content Browser, right-click, choose Miscellaneous, Data Asset, pick Dojo
 #include "Engine/DataAsset.h"
 #include "DojoP10WeaponKind.generated.h"
 
-/** One kind of arena weapon as an asset: the numbers every weapon of this kind shares. Type Object pattern. */
+/** One kind of arena weapon as an asset: the numbers every weapon of this kind shares. */
 UCLASS(BlueprintType)
 class UDojoP10WeaponKind : public UPrimaryDataAsset // @explain: A primary data asset class is a kind: designers make one asset of it per kind in the Content Browser, and the Asset Manager can find and load them by id.
 {
@@ -85,7 +85,7 @@ public:
 class UDojoP10WeaponKind;
 class UTextRenderComponent;
 
-/** One weapon in the arena: its own durability, and everything else read from its kind. Type Object pattern. */
+/** One weapon in the arena: its own durability, and everything else read from its kind. */
 UCLASS()
 class ADojoP10Weapon : public AActor
 {
