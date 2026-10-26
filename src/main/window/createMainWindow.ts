@@ -1,7 +1,9 @@
 // Creates the single app window with the security and size rules from docs/systems/app-shell.md.
 import { join } from "node:path";
 
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, screen, shell } from "electron";
+
+import { isHiddenTestWindow } from "./testWindowMode";
 
 const DEFAULT_WIDTH = 1440;
 const DEFAULT_HEIGHT = 900;
@@ -12,14 +14,16 @@ const BACKGROUND_COLOR = "#0b0d12";
 // Centers the macOS window buttons inside the renderer's 36px drag strip (TitleBarDragRegion).
 const TRAFFIC_LIGHT_POSITION = { x: 14, y: 12 };
 
-/** Opens the main window, loads the renderer, and sends any outside link to the system browser. */
+/** Opens the main window, loads the renderer, and sends any outside link to the system browser. In a hidden e2e run the window is never shown or focused. */
 export function createMainWindow(): BrowserWindow
 {
 	const isMac = process.platform === "darwin";
+	const isHidden = isHiddenTestWindow(process.env, app.isPackaged);
+	const size = initialWindowSize();
 
 	const window = new BrowserWindow({
-		width: DEFAULT_WIDTH,
-		height: DEFAULT_HEIGHT,
+		width: size.width,
+		height: size.height,
 		minWidth: MINIMUM_WIDTH,
 		minHeight: MINIMUM_HEIGHT,
 		show: false,
@@ -28,6 +32,9 @@ export function createMainWindow(): BrowserWindow
 		titleBarStyle: isMac ? "hiddenInset" : "default",
 		...(isMac ? { trafficLightPosition: TRAFFIC_LIGHT_POSITION } : {}),
 		autoHideMenuBar: true,
+		// A hidden test window still paints, so screenshots are real; it can never take keyboard focus from the person at the computer.
+		paintWhenInitiallyHidden: true,
+		focusable: !isHidden,
 		webPreferences: {
 			preload: join(import.meta.dirname, "../preload/index.cjs"),
 			contextIsolation: true,
@@ -35,10 +42,12 @@ export function createMainWindow(): BrowserWindow
 			sandbox: true,
 			// The preload answers window.dojo.isPackaged() from this flag, so dev-only switches stay off in installers (A251).
 			additionalArguments: app.isPackaged ? ["--dojo-packaged"] : [],
+			// Chromium slows timers and animations in hidden windows; a hidden test window must run at full speed.
+			backgroundThrottling: !isHidden,
 		},
 	});
 
-	window.once("ready-to-show", () => window.show());
+	if (!isHidden) window.once("ready-to-show", () => window.show());
 
 	window.webContents.setWindowOpenHandler(({ url }) =>
 	{
@@ -66,6 +75,17 @@ export function createMainWindow(): BrowserWindow
 	}
 
 	return window;
+}
+
+/** 1440x900 shrunk to the primary screen's work area, never below the 1100x700 minimum. macOS did this only for shown windows; doing it here gives hidden test windows and Windows the same size (A971). */
+function initialWindowSize(): { width: number; height: number }
+{
+	const workArea = screen.getPrimaryDisplay().workAreaSize;
+
+	return {
+		width: Math.max(MINIMUM_WIDTH, Math.min(DEFAULT_WIDTH, workArea.width)),
+		height: Math.max(MINIMUM_HEIGHT, Math.min(DEFAULT_HEIGHT, workArea.height)),
+	};
 }
 
 /** Hands a web link to the system browser; anything that is not http or https is ignored. */

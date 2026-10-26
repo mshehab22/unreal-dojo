@@ -1,0 +1,11 @@
+# Every text file is checked out with LF on every platform, so a Windows clone parses content and fixtures the same way as macOS (A1020).
+* text=auto eol=lf
+
+# Binary files are never converted.
+*.jpg binary
+*.png binary
+*.woff2 binary
+*.umap binary
+*.uasset binary
+*.ico binary
+*.icns binary

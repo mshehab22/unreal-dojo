@@ -34,6 +34,7 @@ import type { Settings } from "@shared/types/settings";
 
 import { levelStanding } from "../../lib/levels";
 
+import { drillReward } from "./drillReward";
 import { judgeBuild } from "./FakeBuildJudge";
 import { FakeDrillSessions } from "./FakeDrillSessions";
 import { gradeDrillItem, gradeQuestion } from "./FakeItemGrader";
@@ -60,6 +61,15 @@ export interface FakeQuestHost
 	/** Quest ids open now; the flow compares before and after an attempt to report unlocks. */
 	openQuestIds(): Set<string>;
 }
+
+/** What the fake says when no AI reviewer is set up, in the tests-only provider's words. */
+const NO_REVIEWER_NOTE = "An AI reviewer can check this for you once Claude Code or an API key is set up in Settings.";
+
+/** The tests-only provider's note on a reflection it cannot grade (a self-check with no model answer). */
+const SELF_CHECK_NOTE = "Self-check: reread your sentence against the question and your code.";
+
+/** What a follow-up's timeout says to do, as the review service words it for follow-ups (A954). */
+const FOLLOW_UP_TIMEOUT_ACTION = "Press Ask again to try once more. Your tests still count.";
 
 /** An AppError the fake rejects with. */
 function fail(code: AppError["code"], message: string, suggestedAction: string): AppError
@@ -91,6 +101,7 @@ export class FakeQuestFlow
 	private readonly drills = new FakeDrillSessions();
 	private readonly shownPlans = new Map<string, { plan: BreakdownPlan; referencePlanIndex: number }>();
 	private reviewTimedOut = false;
+	private reflectionTimedOut = false;
 
 	/** The run of each recorded Submit, by attempt id, so Retry review can review it again without a new run (A740). */
 	private readonly submittedRuns = new Map<string, { quest: LearnerQuest; run: RunResult }>();
@@ -261,13 +272,16 @@ export class FakeQuestFlow
 		const results: DrillItemResult[] = quest.questions.map((question, index) =>
 		{
 			const grade = gradeQuestion(question, submission.answers[index] ?? null);
-			const explainGrade = grade.explainAnswer !== undefined ? gradeSentence(grade.explainAnswer, grade.modelAnswer) : undefined;
+			const explainGrade = grade.explainAnswer !== undefined ? this.gradeExplain(grade.explainAnswer, grade.modelAnswer) : undefined;
 			const correct = explainGrade ? explainGrade.verdict === "correct" : grade.correct;
+			const selfChecked = explainGrade?.provider === "tests-only";
 
-			return { itemId: question.id, correct, quality: correct ? 4 : 2, modelAnswer: grade.modelAnswer, nextDueAt: daysAhead(correct ? 3 : 1), ...(explainGrade ? { explainGrade } : {}) };
+			return { itemId: question.id, correct, quality: correct ? 4 : 2, modelAnswer: grade.modelAnswer, nextDueAt: daysAhead(correct ? 3 : 1), ...(explainGrade ? { explainGrade } : {}), ...(selfChecked ? { selfChecked: true } : {}) };
 		});
 
-		const share = results.filter((result) => result.correct).length / Math.max(1, results.length);
+		// A self-checked explain answer is left out of the pass share, as the progress service does (A315, A801).
+		const counted = results.filter((result) => !result.selfChecked);
+		const share = counted.filter((result) => result.correct).length / Math.max(1, counted.length);
 		const outcome = this.record({ quest, score: Math.round(share * 100), passed: share >= this.host.rules().conceptPassShare, compiled: false, movesSpree: false }, "concept");
 
 		for (const termId of quest.terms) this.host.progress().schedule[termId] = daysAhead(3);
@@ -332,9 +346,18 @@ export class FakeQuestFlow
 		if (!sessionItem) throw fail("invalid-payload", "That drill item is not in this session.", "Start the drill again.");
 
 		const grade = gradeDrillItem(sessionItem.item, answer.response);
-		const explainGrade = grade.explainAnswer !== undefined ? gradeSentence(grade.explainAnswer, grade.modelAnswer) : undefined;
+		const explainGrade = grade.explainAnswer !== undefined ? this.gradeExplain(grade.explainAnswer, grade.modelAnswer) : undefined;
 		const correct = explainGrade ? explainGrade.verdict === "correct" : grade.correct;
 		const progress = this.host.progress();
+
+		// Tests-only cannot judge a sentence: the item is self-checked, neither right nor wrong, and keeps its due time (A801).
+		if (explainGrade?.provider === "tests-only")
+		{
+			this.drills.recordAnswer(answer.sessionId, answer.itemId, false, true);
+
+			return { itemId: answer.itemId, correct: false, selfChecked: true, quality: 0, explainGrade, modelAnswer: grade.modelAnswer, nextDueAt: progress.schedule[answer.itemId] ?? new Date().toISOString() };
+		}
+
 		const memory = progress.memory[answer.itemId];
 		const nextDueAt = daysAhead(correct ? 3 : 1);
 		let masteryChange: DrillItemResult["masteryChange"];
@@ -360,10 +383,14 @@ export class FakeQuestFlow
 
 		const progress = this.host.progress();
 		const rules = this.host.rules();
-		const { session, correctByItem } = finished;
+		const { session, correctByItem, selfChecked } = finished;
 		const answeredAll = correctByItem.size === session.items.length;
-		const pays = answeredAll && session.request.kind !== "parsons-fallback";
-		const correctCount = [...correctByItem.values()].filter(Boolean).length;
+
+		// Self-checked items leave both counts and are reported on their own (A801).
+		const correctCount = [...correctByItem.entries()].filter(([itemId, correct]) => correct && !selfChecked.has(itemId)).length;
+		const totalCount = session.items.length - selfChecked.size;
+
+		const { pays, testsOut } = drillReward(session.request.kind, { answeredAll, gradedCount: totalCount, correctCount });
 		const chest = pays ? this.finishDailyOffer("drill", undefined) : undefined;
 
 		if (pays)
@@ -373,12 +400,12 @@ export class FakeQuestFlow
 			if (progress.streak.lastActivityAt?.slice(0, 10) !== new Date().toISOString().slice(0, 10)) progress.streak = { ...progress.streak, count: progress.streak.count + 1, lastActivityAt: new Date().toISOString() };
 		}
 
-		const testedOut = session.request.kind === "test-out" && answeredAll && correctCount === session.items.length ? [worldKeyOf(session.request.packId, session.request.worldId)] : [];
+		const testedOut = session.request.kind === "test-out" && testsOut ? [worldKeyOf(session.request.packId, session.request.worldId)] : [];
 		progress.testedOutWorldIds = [...new Set([...progress.testedOutWorldIds, ...testedOut])];
 
 		const nextDueAt = Object.values(progress.schedule).filter((dueAt) => new Date(dueAt).getTime() > Date.now()).sort()[0] ?? null;
 
-		return { xpGained: pays ? rules.drillXp : 0, streak: { count: progress.streak.count }, correctCount, totalCount: session.items.length, selfCheckedCount: 0, nextDueAt, testedOutWorldIds: testedOut, ...(chest ? { chest } : {}) };
+		return { xpGained: pays ? rules.drillXp : 0, streak: { count: progress.streak.count }, correctCount, totalCount, selfCheckedCount: selfChecked.size, nextDueAt, testedOutWorldIds: testedOut, ...(chest ? { chest } : {}) };
 	}
 
 	// Review follow-ups
@@ -397,6 +424,9 @@ export class FakeQuestFlow
 		const kept = attempt.explanations?.[key];
 		if (kept !== undefined) return kept;
 
+		// With Tests only, no AI can explain: the finding's detail and why, answered but never kept, so a later ask reaches a reviewer (A855).
+		if (this.host.settings().reviewProvider === "tests-only") return `${finding.detail} ${NO_REVIEWER_NOTE}`;
+
 		const explanation = `${finding.title}: ${finding.detail} Reviewers flag this because the next person to read the class, often you in a month, should not have to rebuild the reasoning from the code alone.`;
 		progress.attempts = progress.attempts.map((candidate) => (candidate.attemptId === attempt.attemptId ? { ...candidate, explanations: { ...candidate.explanations, [key]: explanation } } : candidate));
 
@@ -413,6 +443,17 @@ export class FakeQuestFlow
 		if (!attempt?.review) throw fail("attempt-not-found", "That attempt has no code review.", "Only build and refactor submits have a review to ask about.");
 		if (answer.length === 0) throw fail("invalid-payload", "Write one sentence to answer the question.", "Type your answer, then send it.");
 		if (attempt.reflection?.answer === answer && attempt.reflection.grade.provider !== "tests-only") return attempt.reflection.grade;
+
+		// With Tests only, nothing can grade the sentence: a self-check with the reason, never kept (A855).
+		if (this.host.settings().reviewProvider === "tests-only") return { score: 70, verdict: "partly", note: SELF_CHECK_NOTE, provider: "tests-only" };
+
+		// With Claude Code chosen, the first reflection times out like the first review, so the self-check offers Ask again (A300, A954).
+		if (this.host.settings().reviewProvider === "claude-code" && !this.reflectionTimedOut)
+		{
+			this.reflectionTimedOut = true;
+
+			return { score: 70, verdict: "partly", note: SELF_CHECK_NOTE, provider: "tests-only", fallbackReason: `Claude Code did not answer within 3 minutes. ${FOLLOW_UP_TIMEOUT_ACTION}`, retryReviewSuggested: true };
+		}
 
 		const grade = gradeSentence(answer, this.quest(attempt.questId).concepts.join(" "));
 		const reflection = { answer, grade, at: new Date().toISOString() };
@@ -458,6 +499,14 @@ export class FakeQuestFlow
 
 	// Helpers
 
+	/** The explain grader as the review service answers it: with Tests only chosen, a self-check against the model answer (the tests-only provider's wording). */
+	private gradeExplain(answer: string, modelAnswer: string): ExplainGrade
+	{
+		if (this.host.settings().reviewProvider === "tests-only") return { score: 70, verdict: "partly", note: `Self-check against the model answer: ${modelAnswer}`, provider: "tests-only" };
+
+		return gradeSentence(answer, modelAnswer);
+	}
+
 	/** A build or refactor quest by id, or the error a screen shows. */
 	private codeQuest(questId: string): Extract<LearnerQuest, { kind: "build" | "refactor" }>
 	{
@@ -499,6 +548,9 @@ export class FakeQuestFlow
 
 			return { ...reviewCode(quest, run, "tests-only", "Claude Code did not answer within 3 minutes. Press Retry review to ask again."), score: Math.round((run.testsPassed / Math.max(1, run.testsTotal)) * 100) };
 		}
+
+		// With Tests only chosen, the review is graded by the tests alone and says why, as the review service does (no retry suggested: nothing timed out).
+		if (this.host.settings().reviewProvider === "tests-only") return { ...reviewCode(quest, run, "tests-only"), score: Math.round((run.testsPassed / Math.max(1, run.testsTotal)) * 100) };
 
 		return reviewCode(quest, run, "claude-code");
 	}

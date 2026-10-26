@@ -172,14 +172,18 @@ test("a locked stage explains why on hover", async ({ dojo, camera }) =>
 	await setViewport(window, 1440, 900);
 	await goTo(window, "#/world-map", "screen-worldMap", "test-out");
 
-	const locked = window.locator('[data-testid="stage-node"][data-status="locked"]').first();
-	await locked.scrollIntoViewIfNeeded();
+	// Each path regroups its rows once the card is measured, which remounts its stages, so wait for every path to settle first (A980).
+	await expect(window.locator('[data-testid="stage-path"]:not([data-measured="true"])')).toHaveCount(0);
 
-	// The tooltip opens after a short delay and a hover can land while the page settles, so the hover is retried until the reason shows.
+	const locked = window.locator('[data-testid="stage-node"][data-status="locked"]').first();
+
+	// The tooltip opens after a short delay and a hover can land while the page settles, so the scroll and hover are retried together;
+	// the locator finds the node again on each attempt.
 	await expect(async () =>
 	{
 		await window.mouse.move(0, 0);
-		await locked.hover();
+		await locked.scrollIntoViewIfNeeded({ timeout: 1_500 });
+		await locked.hover({ timeout: 1_500 });
 		await expect(window.getByRole("tooltip").first()).toContainText("first", { timeout: 1_500 });
 	}).toPass({ timeout: 10_000 });
 	await saveScreenshot(camera, window, "world-map-locked-reason-1440x900");

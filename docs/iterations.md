@@ -1498,3 +1498,86 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 - What changed: the rubric line now reads that a quest finished in time is never failed by its clock and a late clock changes nothing; the glossary entry ends at keeping one handle per thing timed; the breakdown drops its acceptance line about it, its clocks plan no longer says when the clock is cleared, and its rubric asks the plan to say what happens to a quest's clock when the quest ends; the example's handler is a plain validity check.
 - Proof: verifier no problems; typecheck passes; `npm test` 882 passed. The engine proof listed above is still owed (A75, A76).
 - Decisions made: A874 updated.
+### Follow-up: two test notes from the M1.3c re-review
+- What changed: two unit tests, no product change. One cancels while the pause before a retry is already waiting, so only the pause's abort listener can end it. With that listener removed, this test is the only one that fails. The other checks that a timed-out build whose lines all fell through the filter keeps the raw-lines tail and the 15 minute message.
+- Proof: typecheck passes; `npm test` 909 passed, 24 skipped (the engine tests).
+## M0.1b Hidden test windows (app-shell, builder-shell)
+- Every end-to-end test used to open the app's full-size window in front of everything else and take the keyboard, so the Mac was unusable while any session ran the tests. Now the test harness tells the app to keep its window hidden: it still draws every screen for the screenshots, but nothing appears on screen, nothing takes focus, and no icon shows in the Dock. Anyone who wants to watch a run can turn the window back on with one setting.
+- One thing broke on the way: macOS only shrinks a window to fit a small screen when the window is shown, so a hidden window kept its full height and the size check failed. The app now fits its starting size to the screen itself, which also makes Windows behave the same way (A971).
+- How to see it: run `npm run build` then `npm run test:e2e` and keep working; no window appears. To watch instead, run the tests with `DOJO_TEST_SHOW_WINDOW=1` in front of the command.
+- Proof: typecheck passes. Unit tests 904 passed and 24 skipped, including 4 new ones for when the window hides. End-to-end 29 passed and 1 skipped (the opt-in real-engine flow), including the hover and keyboard tests. During the full run a small program listed the windows on screen every tenth of a second: 1,100 checks, no app window seen, and the app in front stayed the same the whole time. The same program saw the window straight away when the run was told to show it. Screenshots from a hidden run and a shown run of the quest screens and the smoke test came out byte for byte the same, apart from drill answers the app shuffles on purpose.
+
+![Hover card in a hidden window](iterations/m0-1b-hidden-hover-term.jpg)
+*A glossary hover card captured from a hidden window: it renders exactly as in a shown one.*
+
+- Decisions: A970 (the hidden window switch and its opt-out), A971 (the app fits its starting size to the screen).
+- Not done: not tried on Windows. Some proof pictures already in `docs/iterations/` are older than their screens (the breakdown loot screen, for example); they were left as they are.
+
+## M0.1c Test launches never appear as an app (app-shell, builder-shell)
+- After M0.1b no test window appeared, but the Lead's checks still caught the test app listed as a visible app for a moment now and then. A small watcher showed why: each launch spent its first tenth of a second as an ordinary app, before any of the app's own code had run, and the later switch to a background app was only halfway (it still allowed a menu bar).
+- Now the test app tells macOS it may never become active, and the test harness starts it from a copy of Electron that macOS treats as a background app from the very first moment. The copy is made once, in about two seconds, and reused after that. Watching the window with `DOJO_TEST_SHOW_WINDOW=1` still uses the normal Electron.
+- How to see it: run `npm run build` then `npm run test:e2e` while using the Mac; nothing appears, not even in the Dock or the menu bar.
+- Proof: typecheck passes; unit tests pass; end-to-end 29 passed and 1 skipped (the opt-in real-engine flow). During a full run, the visible-app list was polled every second (95 samples) and every 0.3 seconds (209 samples): the test app never appeared, and it was never the front app, while Mohammad was using other apps. The on-screen window check (1,100 samples) saw no app window. A process watcher saw all 39 launches start as a background app and end as one that can never become active; none was ever an ordinary app, active, or the menu bar owner. Before this change the same watcher saw every launch start as an ordinary app. Screenshots still render in full; compared with a run that showed its window, the only differences are drill and question answers the app shuffles on purpose and a few pixels around animated parts. Nothing visible changed in the app, so there is no new picture.
+- Decisions: A972 (the never-active setting), A973 (the background copy of Electron for test runs).
+- Not done: not tried on Windows; nothing there changed.
+
+
+
+## M2.2c Drill summary copy for self-checked items (ui-quests, builder-ui-quests)
+- What changed: with Tests only as the reviewer, nothing can judge a one-sentence explanation, so it is self-checked. The drill now treats it as neither right nor a miss:
+  - The item says "Not graded: compare your sentence with the model answer" and "Not scheduled: it stays in your drills until a reviewer can grade it", never "due for review".
+  - The finish card's score and its "due for review" line count graded items only, so a drill where every graded item was right says nothing is due. Self-checked items get their own line: "1 explained in your own words, not graded".
+  - A drill where nothing could be graded shows how many were explained (for example "2 explained") instead of "0/0".
+  - Concept quests read the same way: "4 of 4 right, 1 explained in your own words", and the loot list says "explained in your own words, not graded".
+  - The sample data now behaves like the real progress service when Tests only is chosen.
+- Proof (MacBook Air M5, from main 344b758): `npm run typecheck` passes; `npm test` 75 files, 886 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 30 passed and 1 skipped (the real-engine learner flow, which needs an engine), three runs in a row.
+
+![[m2-2-drill-explain-self-checked.jpg|800]]
+*With Tests only: the explain item is not graded and not scheduled.*
+
+![[m2-2-drill-summary-self-checked.jpg|800]]
+*Every graded item right: the finish card reads 6/6, says nothing is due, and names the self-checked item on its own line (the M2.4 case).*
+
+- Decisions made: A940 to A942.
+
+### Fix round 1
+- What the reviewer asked for: the finish card said self-checked items "come back once a reviewer can grade them", but they stay in every drill; the sample data paid XP and could test a world out for a drill with nothing graded; and no screen proved the original bug's case, every graded item right with nothing due.
+- What changed: the line now says the item "stays in your drills until a reviewer can grade it". The sample data pays and tests out only when at least one answer was graded, as the real app does. The Tests-only end-to-end flow now answers every graded item right and checks the score reads 6/6, no "due for review" line, and the self-checked line.
+- Proof (rebased on main e931972): `npm run typecheck` passes; `npm test` 76 files, 915 passed, 24 skipped. After M0.1b (hidden test windows) landed and a rebase onto main 3175628: `npm test` 77 files, 919 passed, 24 skipped; `npm run build` passes; `npm run test:e2e` 30 passed and 1 skipped (the opt-in real-engine learner flow), run once with hidden windows, including the new all-right Tests-only test; the two self-checked pictures were re-shot from it.
+- Decisions made: A943 and A944.
+
+
+
+## M3.4b Review extras on the loot screen (ui-quests, builder-ui-quests)
+- What changed: the three review follow-ups that M3.4 added on the main side now show on screen.
+  - The alternative after a pass comes from its own call, so it only exists once the quest is passed. When an AI reviewer wrote a pointer, it shows under the alternative as "Your reviewer suggests: ...". Retrying a review refreshes it.
+  - The reflection answer is kept: open the loot screen again later and your sentence and its grade are still there. Change the sentence and "Send the new answer" grades the new one.
+  - With no AI reviewer set up (Tests only), "Why?" still answers, with the finding's detail and the reason no AI explained it, and the reflection shows as a self-check with the reason, never as a grade. Neither is kept, so once a reviewer is set up the next ask reaches it.
+  - The sample data behaves like the real review service in all of these cases.
+- Proof (MacBook Air M5, from main 3175628, hidden test windows): `npm run typecheck` passes; `npm test` 77 files, 915 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` 30 passed and 1 skipped (the opt-in real-engine learner flow), run once.
+
+![[m2-2-build-loot-alternative.jpg|800]]
+*After a pass with Claude Code: the alternative and the reviewer's pointer; the reflection graded by Claude Code above it.*
+
+![[m2-2-loot-review-extras-tests-only.jpg|800]]
+*With Tests only: "Why?" answers with the reason and can be asked again, the reflection is a self-check in the reviewer's own words, and the alternative has no reviewer pointer.*
+
+- Decisions made: A950 to A952.
+- Left for content-engine: no screen reads `alternative` or `alternativeNote` from the quest any more, so the catalog can stop sending them before a pass (A850).
+
+### Fix round 1
+- What the reviewer and the Lead asked for: the sample data added a "set up a reviewer" reason under Tests only that the real app does not give, and worded the reflection self-check differently; "Why?" could not be asked again after a fallback answer, which is never kept; and the reflection's timeout and "Ask again" were never shown.
+- What changed: the sample data now answers exactly like the real app under Tests only. "Why?" keeps its button as "Ask again (free)" after an answer. When a reviewer times out on "Why?" or the reflection, the reason now says "Press Ask again to try once more" instead of pointing at Retry review, which those two do not have (a one-line change where the review service builds the reason). The sample data's first reflection with Claude Code times out, so the screens show the self-check with Ask again, and asking again gets Claude Code's grade.
+- Proof (rebased on main 8b5a82a): `npm run typecheck` passes; `npm test` 78 files, 922 passed, 24 skipped; `npm run build` passes; `npx tsx tools/verify-content.ts` no problems (13 warnings from content); `npm run test:e2e` with hidden windows: 31 passed and 1 skipped (the opt-in real-engine learner flow).
+
+![[m2-2-loot-reflection-timeout.jpg|800]]
+*The reflection's timeout: a self-check with the reason and Ask again; "Why?" above shows Ask again (free).*
+
+- Decisions made: A953 and A954.
+
+## M2.1f World Map hover test flake (ui-core, builder-ui-core)
+- What was asked: the test that hovers a locked stage still failed now and then on GitHub CI, with the stage it had found disappearing before the scroll.
+- What was going on: each world's path of stages first lays out six per row before it knows how wide its card is, then lays out again once it does. The second layout rebuilds the stages, so a stage the test found during the first one was gone a moment later.
+- What changed: the path now marks itself as settled once it has measured its card. The test waits for every path to be settled, then scrolls to the locked stage and hovers it in one retried step that finds the stage again each time. Nothing changes on screen for the learner.
+- Proof (MacBook Air M5, from main 8097a32, hidden test windows): the hover test run 20 times in a row, 20 passed; the whole ui-core screens spec 12 passed; `npm run typecheck` passes; `npm test` 78 files, 922 passed, 24 skipped; `npm run build` passes. No new screenshots: the existing locked-stage proof is unchanged.
+- Decisions made: A980.
