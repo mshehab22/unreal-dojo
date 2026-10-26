@@ -51,7 +51,7 @@ The Windows desktop is the engine machine from now on.
 - **Shell:** run `tools/lead/merge.sh` and the lock commands in Git Bash. The app itself calls `UnrealBuildTool.exe` directly and anchors test names with `$`; both are handled in code.
 - **Paths:** keep the sandbox path short (the app warns past 100 characters on Windows).
 - **What is waiting there,** in order:
-  0. Make CI green on Windows: `npm test` fails in 6 test files on windows-latest (path separators, CRLF line endings with no `.gitattributes`, the prerequisite filler, save-store renames). Details in problems.md. Reproduce with `npm test` on the Windows machine and split the fixes by owner.
+  0. Make CI green on Windows, then turn the push trigger in `.github/workflows/ci.yml` back on (A80): `npm test` fails in 6 test files on windows-latest (path separators, CRLF line endings with no `.gitattributes`, the prerequisite filler, save-store renames). Details in problems.md. Reproduce with `npm test` on the Windows machine and split the fixes by owner.
   1. The engine proofs for the content branches marked "ready, engine proof pending" on the board (Pack 1 World 6, Pack 2 Worlds 9 to 11, Pack 3 World 6). The exact steps are in problems.md and in each world's iterations entry. A world merges once its proof passes.
   2. The integration suite for the merged code waiting on it (M1.3c, M1.6g, M2.1e, M3.4).
   3. The real-engine learner flow: `DOJO_E2E_ENGINE=1 npx playwright test e2e/learner-flow.spec.ts`.
