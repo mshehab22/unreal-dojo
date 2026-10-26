@@ -58,7 +58,7 @@ The Windows desktop is the engine machine from now on.
 
 ## Pushing to GitHub (A78)
 
-Git on the Mac has no GitHub login, so Mohammad pushes `main` from GitHub Desktop. Branches that another machine needs (the content branches waiting for engine proof) must be published from GitHub Desktop too. If the GitHub CLI is installed and signed in on the Lead's machine, the Lead can push itself; never push without his sign-in, and never make the repository public.
+On the Mac the GitHub CLI is installed at `~/.local/bin/gh` and signed in as mshehab22, and git uses it for github.com, so the Lead pushes `main` after merges and any branch another machine needs (the content branches waiting for engine proof are already there). On a new machine, install the GitHub CLI and have Mohammad run `gh auth login --web --git-protocol https` in a real terminal (it asks a question and shows a code, so it cannot run inside a chat command); until then he pushes with GitHub Desktop. Never push without his sign-in, and never make the repository public.
 
 ## Lessons learned
 
