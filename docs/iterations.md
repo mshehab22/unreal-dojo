@@ -1454,4 +1454,15 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 ### Follow-up: two test notes from the M1.3c re-review
 - What changed: two unit tests, no product change. One cancels while the pause before a retry is already waiting, so only the pause's abort listener can end it. With that listener removed, this test is the only one that fails. The other checks that a timed-out build whose lines all fell through the filter keeps the raw-lines tail and the 15 minute message.
 - Proof: typecheck passes; `npm test` 909 passed, 24 skipped (the engine tests).
+## M0.1b Hidden test windows (app-shell, builder-shell)
+- Every end-to-end test used to open the app's full-size window in front of everything else and take the keyboard, so the Mac was unusable while any session ran the tests. Now the test harness tells the app to keep its window hidden: it still draws every screen for the screenshots, but nothing appears on screen, nothing takes focus, and no icon shows in the Dock. Anyone who wants to watch a run can turn the window back on with one setting.
+- One thing broke on the way: macOS only shrinks a window to fit a small screen when the window is shown, so a hidden window kept its full height and the size check failed. The app now fits its starting size to the screen itself, which also makes Windows behave the same way (A971).
+- How to see it: run `npm run build` then `npm run test:e2e` and keep working; no window appears. To watch instead, run the tests with `DOJO_TEST_SHOW_WINDOW=1` in front of the command.
+- Proof: typecheck passes. Unit tests 904 passed and 24 skipped, including 4 new ones for when the window hides. End-to-end 29 passed and 1 skipped (the opt-in real-engine flow), including the hover and keyboard tests. During the full run a small program listed the windows on screen every tenth of a second: 1,100 checks, no app window seen, and the app in front stayed the same the whole time. The same program saw the window straight away when the run was told to show it. Screenshots from a hidden run and a shown run of the quest screens and the smoke test came out byte for byte the same, apart from drill answers the app shuffles on purpose.
+
+![Hover card in a hidden window](iterations/m0-1b-hidden-hover-term.jpg)
+*A glossary hover card captured from a hidden window: it renders exactly as in a shown one.*
+
+- Decisions: A970 (the hidden window switch and its opt-out), A971 (the app fits its starting size to the screen).
+- Not done: not tried on Windows. Some proof pictures already in `docs/iterations/` are older than their screens (the breakdown loot screen, for example); they were left as they are.
 
