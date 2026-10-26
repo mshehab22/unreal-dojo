@@ -185,6 +185,39 @@ describe("UnrealBuilder startup crashes (M1.3c, A890, A891)", () =>
 		expect(outcome.pipelineError).toBeUndefined();
 	});
 
+	it("stops at once when the cancel arrives while the pause is already waiting, through its abort listener", async () =>
+	{
+		const controller = new AbortController();
+		const launcher = new FakeProcessLauncher([STARTUP_CRASH, { exitCode: 0 }]);
+		const timer = new FakeTimer();
+		const builder = new UnrealBuilder(new MacPlatformPaths("/Users/learner"), launcher, timer);
+
+		// The abort lands after the pause started; the fake clock never reaches the one second, so only the listener can end it.
+		const outcome = await builder.build({ engineRoot: "/E", projectFile: "/S/Dojo.uproject", signal: controller.signal, onLine: (line) =>
+		{
+			if (line.startsWith("UnrealBuildTool stopped while starting")) setTimeout(() => controller.abort(), 0);
+		} });
+
+		expect(launcher.specs).toHaveLength(1);
+		expect(outcome).toMatchObject({ succeeded: false, cancelled: true, filteredOutput: "" });
+		expect(timer.now()).toBe(0);
+	});
+
+	it("keeps the raw-lines tail for a timed-out build whose lines all fell through the filter", async () =>
+	{
+		const launcher = new FakeProcessLauncher([{ hangs: true, lines: ["Log file: /x/Log.txt", "Waiting for another build to release the lock"] }]);
+		const timer = new FakeTimer();
+		const builder = new UnrealBuilder(new MacPlatformPaths("/Users/learner"), launcher, timer);
+
+		const pending = builder.build({ engineRoot: "/E", projectFile: "/S/Dojo.uproject", signal: new AbortController().signal, onLine: () => undefined });
+		timer.advance(BUILD_TIMEOUT_MS);
+		const outcome = await pending;
+
+		expect(outcome).toMatchObject({ succeeded: false, timedOut: true, cancelled: false });
+		expect(outcome.pipelineError).toMatch(/15 minutes/);
+		expect(outcome.filteredOutput).toBe("Log file: /x/Log.txt\nWaiting for another build to release the lock");
+	});
+
 	it("measures the whole build, every attempt and pause included", async () =>
 	{
 		const { outcome } = await buildWithAttempts([STARTUP_CRASH, { exitCode: 0, lines: ["Log file: /x/Log.txt"] }]);
