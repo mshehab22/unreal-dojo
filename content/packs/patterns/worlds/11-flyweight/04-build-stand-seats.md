@@ -14,7 +14,7 @@ estimatedMinutes: 30
 concepts:
   - One instanced static mesh component draws every seat from one shared mesh and a transform per seat
   - The seat's own state, intact or broken, lives in the actor; the component only draws
-  - An instance is a position in the component's list, not a seat, so seat numbers and instance numbers must be kept apart
+  - Breaking a seat hides only that seat
 ---
 
 # Brief
@@ -32,7 +32,7 @@ Write the obvious version first and run the tests. One of them fails on purpose 
 
 ## See it in the editor
 
-Place a `DojoP11Stands` and set Seat Mesh to the engine's Shape_Cube (enable Show Engine Content in the Content Browser settings to find it). Press Play: forty cubes in four rising rows. Select the stands while playing: the Details panel shows one Seats component with 40 instances. Run `ke * BreakSeat 3`, then `ke * BreakSeat 10`, then `ke * BreakSeat 39`, and check that exactly those seats are gone: the fourth of the front row, the first of the second row, and the last of the back row.
+Place a `DojoP11Stands` and set Seat Mesh to the engine's Cube (turn on Show Engine Content in the Content Browser settings, then look in Engine > BasicShapes). So that a missing seat is easy to spot between 100-unit cubes, set Seat Spacing, Row Depth, and Row Rise to about 150, 150, and 100 in Details. Press Play: forty cubes in four rising rows. Select the stands while playing: the Details panel shows one Seats component with 40 instances. Run `ke * BreakSeat 3`, then `ke * BreakSeat 10`, then `ke * BreakSeat 39`, and check that exactly those seats are gone: the fourth of the front row, the first of the second row, and the last of the back row.
 
 # Files
 
@@ -297,8 +297,8 @@ bool FDojo_P11_StandSeats_BadBreaksAreRefused::RunTest(const FString& Parameters
 
 - One instanced static mesh component draws every intact seat, sharing one mesh; there is no component per seat.
 - Building clears the old instances first, so it never doubles the seats.
-- Which seats are intact lives in the actor, by seat number, and is the source of truth for what is drawn.
-- Breaking a seat never removes the wrong instance, however many seats were broken before it.
+- Which seats are intact lives in the actor, by seat number.
+- Breaking any seats, in any order, hides exactly those seats and leaves every other seat drawn where it was.
 - Bad seat numbers and repeat breaks are refused and change nothing.
 
 # Alternative

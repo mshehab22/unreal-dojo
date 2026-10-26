@@ -42,7 +42,7 @@ A full arena is mostly repetition. Three thousand fans in three supporter styles
 
 **Shared means read-only from the copy.** A fan must never change its style; the change would land on every fan who shares it. Anything one fan changes about itself belongs in its own part.
 
-**The same idea for drawing.** Forty torches as forty actors with forty `UStaticMeshComponent`s means forty components to tick, transform, and draw. A `UInstancedStaticMeshComponent` draws one mesh many times: the mesh and material are given once, and each copy is only a transform added with `AddInstance`. The renderer can then draw all of them together.
+**The same idea for drawing.** Forty torches as forty actors with forty `UStaticMeshComponent`s means forty components to register, move, and draw one by one. A `UInstancedStaticMeshComponent` draws one mesh many times: the mesh and material are given once, and each copy is only a transform added with `AddInstance`. The renderer can then draw all of them together.
 
 # Example
 
