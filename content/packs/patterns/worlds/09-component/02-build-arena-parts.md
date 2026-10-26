@@ -45,7 +45,7 @@ class UDojoP9HealthComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDojoP9HealthDepletedSignature, UDojoP9HealthComponent*, Health);
 
-/** A health part any actor can carry: it takes damage and announces, once, when it runs out. Component pattern. */
+/** A health part any actor can carry: it takes damage and announces, once, when it runs out. */
 UCLASS(ClassGroup = "Dojo", meta = (BlueprintSpawnableComponent)) // @explain: BlueprintSpawnableComponent puts the part in every actor's Add Component menu, so a designer can assemble a prop in the editor too.
 class UDojoP9HealthComponent : public UActorComponent
 {
@@ -133,7 +133,7 @@ class UDojoP9HealthComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDojoP9LootDroppedSignature, FName, Item, int32, Count);
 
-/** A loot part any actor can carry: it drops its items once, for example when a health part it listens to runs out. Component pattern. */
+/** A loot part any actor can carry: it drops its items once, for example when a health part it listens to runs out. */
 UCLASS(ClassGroup = "Dojo", meta = (BlueprintSpawnableComponent))
 class UDojoP9LootComponent : public UActorComponent
 {
@@ -242,7 +242,7 @@ void UDojoP9LootComponent::HandleHealthDepleted(UDojoP9HealthComponent* Health)
 
 class UActorComponent;
 
-/** Assembles arena props from parts: a kind of prop is a set of components, not a class. Component pattern. */
+/** Assembles arena props from parts: a kind of prop is a set of components, not a class. */
 UCLASS()
 class UDojoP9PropKit : public UBlueprintFunctionLibrary
 {
