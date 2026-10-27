@@ -9,7 +9,7 @@ import type { AppErrorCode } from "@shared/types/errors";
 
 import { AppErrorException } from "../../src/main/errors/AppErrorException";
 import { BuildFailureExplainer, type EarlierQuestCode, type RunFailureEvidence } from "../../src/main/services/unreal/BuildFailureExplainer";
-import { locatedErrors } from "../../src/main/services/unreal/buildErrorLocations";
+import { locatedErrors, questIdsNamedIn } from "../../src/main/services/unreal/buildErrorLocations";
 import { STARTUP_CRASH_GIVE_UP_MESSAGE } from "../../src/main/services/unreal/UnrealBuilder";
 import { visualStudioWorkloadMissing } from "../../src/main/services/unreal/unrealErrors";
 
@@ -118,6 +118,33 @@ describe("locatedErrors", () =>
 	{
 		expect(locatedErrors("c:\\dojo\\Source\\Dojo\\QUESTS\\F1-Score-Keeper\\A.cpp(1): error C1: x")[0]?.place).toEqual({ kind: "quest", questId: "f1-score-keeper" });
 	});
+
+	it("anchors on the module folder: a sandbox inside a folder called Quests is not misread, relative and Mac paths still work", () =>
+	{
+		const places = locatedErrors([
+			"C:\\Quests\\DojoSandbox\\Source\\Dojo\\Quests\\q1\\A.cpp(1): error C1: x",
+			"C:\\Quests\\DojoSandbox\\Source\\Dojo\\Support\\DojoTestWorld.cpp(1): error C1: x",
+			"C:\\Quests\\DojoSandbox\\Source\\Dojo\\Tests\\q2.Test.cpp(1): error C1: x",
+			"C:\\Quests\\DojoSandbox\\Intermediate\\Build\\Win64\\Gen.cpp(1): error C1: x",
+			"Source\\Dojo\\Quests\\q3\\A.cpp(1): error C1: x",
+			"/Users/learner/Quests/DojoSandbox/Source/Dojo/Quests/q4/A.cpp:1:1: error: x",
+		].join("\n"));
+
+		expect(places.map((error) => error.place)).toEqual([
+			{ kind: "quest", questId: "q1" },
+			{ kind: "support" },
+			{ kind: "quest", questId: "q2" },
+			{ kind: "unknown" },
+			{ kind: "quest", questId: "q3" },
+			{ kind: "quest", questId: "q4" },
+		]);
+	});
+
+	it("names the quests of every part of a line, notes and include chains included", () =>
+	{
+		expect(questIdsNamedIn("In file included from /Users/learner/DojoSandbox/Source/Dojo/Quests/q1/A.cpp:3:")).toEqual(["q1"]);
+		expect(questIdsNamedIn("C:\\Quests\\DojoSandbox\\Intermediate\\x.cpp(1): error C1: x")).toEqual([]);
+	});
 });
 
 describe("BuildFailureExplainer rule 1: known outside failures", () =>
@@ -155,6 +182,14 @@ describe("BuildFailureExplainer rule 1: known outside failures", () =>
 		const failure = await explainer.explainRun(runEvidence(log("msvc-own-quest-error.txt") + log("live-coding-active.txt")));
 
 		expect(failure?.message).toContain("Live Coding");
+	});
+
+	it("does not match a signature phrase on a line that names the learner's quest or test file, because the learner wrote that text (A1199)", async () =>
+	{
+		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+
+		expect(await explainer.explainRun(runEvidence(log("learner-message-looks-like-disk-full.txt")))).toBeUndefined();
+		expect(calls.toolchain).toBe(0);
 	});
 
 	it("also reads the signature out of the pipeline error text", async () =>
@@ -202,13 +237,26 @@ describe("BuildFailureExplainer rule 2: pipeline errors", () =>
 
 	const cases: { name: string; pipelineError: string; messagePart: string; compiled: boolean }[] = [
 		{ name: "a build timeout", pipelineError: "The build took longer than 15 minutes and was stopped.", messagePart: "longer than its time limit", compiled: false },
-		{ name: "a test timeout", pipelineError: "The test run took longer than 10 minutes and was stopped.", messagePart: "longer than its time limit", compiled: true },
 		{ name: "a startup crash", pipelineError: STARTUP_CRASH_GIVE_UP_MESSAGE, messagePart: "stopped while starting", compiled: false },
-		{ name: "no test report", pipelineError: "The engine stopped before writing a test report (exit code 3).", messagePart: "closed before it wrote a result", compiled: true },
-		{ name: "an unreadable test report", pipelineError: "The test report is not valid JSON (Unexpected token).", messagePart: "closed before it wrote a result", compiled: true },
 		{ name: "none of the quest's tests running", pipelineError: "None of this quest's tests ran (Dojo.F1.Score.Works). Check the test names in the quest's test file.", messagePart: "did not run this quest's tests", compiled: true },
-		{ name: "an unexpected stop", pipelineError: "The run stopped unexpectedly: out of memory", messagePart: "stopped before it finished", compiled: false },
 	];
+
+	const staysWithTheQuest: { name: string; pipelineError: string; compiled: boolean }[] = [
+		{ name: "a test timeout after the code compiled (an endless loop)", pipelineError: "The test run took longer than 10 minutes and was stopped.", compiled: true },
+		{ name: "no test report after the code compiled (a crash)", pipelineError: "The engine stopped before writing a test report (exit code 3).", compiled: true },
+		{ name: "an unreadable test report after the code compiled", pipelineError: "The test report is not valid JSON (Unexpected token).", compiled: true },
+		{ name: "a startup crash text after the code compiled", pipelineError: STARTUP_CRASH_GIVE_UP_MESSAGE, compiled: true },
+		{ name: "a pipeline text nobody listed", pipelineError: "The run stopped unexpectedly: out of memory", compiled: false },
+		{ name: "a quest without tests", pipelineError: "This quest's tests declare no automation test, so there is nothing to run.", compiled: false },
+	];
+
+	it.each(staysWithTheQuest)("leaves the blame with the quest for $name (A1199)", async ({ pipelineError, compiled }) =>
+	{
+		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+
+		expect(await explainer.explainRun(runEvidence("", { pipelineError, compiled }))).toBeUndefined();
+		expect(calls.toolchain).toBe(0);
+	});
 
 	it.each(cases)("explains $name as outside the learner's code and keeps the runner's text as detail", async ({ pipelineError, messagePart, compiled }) =>
 	{
@@ -247,6 +295,22 @@ describe("BuildFailureExplainer rule 3: the learner's own code", () =>
 		const { explainer } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
 
 		expect(await explainer.explainRun(runEvidence(log("mixed-own-and-earlier.txt"), { earlierQuests: earlierDummy("saved-code") }))).toBeUndefined();
+	});
+
+	const namedByANote = [
+		"msvc-engine-static-assert-from-learner.txt",
+		"clang-engine-static-assert-from-learner.txt",
+		"msvc-redefinition-in-earlier-header.txt",
+		"clang-redefinition-in-earlier-header.txt",
+		"warnings-only.txt",
+	];
+
+	it.each(namedByANote)("keeps the blame when %s only names the learner's file in a note, an include chain or a warning, even with a broken toolchain and an earlier quest", async (fixture) =>
+	{
+		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+
+		expect(await explainer.explainRun(runEvidence(log(fixture), { earlierQuests: earlierDummy("saved-code") }))).toBeUndefined();
+		expect(calls.toolchain).toBe(0);
 	});
 
 	it("gives nothing for a run that compiled and only failed its tests, or that was cancelled, or that passed", async () =>
@@ -322,37 +386,43 @@ describe("BuildFailureExplainer rule 5: support code, the template, or the engin
 		expect(calls.toolchain).toBe(0);
 	});
 
-	it("does not guess when errors in an earlier quest and in support code are mixed; the toolchain check decides", async () =>
+	it("does not guess when errors in an earlier quest and in support code are mixed, and does not ask the toolchain either", async () =>
 	{
-		const healthy = createExplainer();
-		const broken = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
 		const evidence = runEvidence(log("mixed-earlier-and-support.txt"), { earlierQuests: earlierDummy("saved-code") });
 
-		expect(await healthy.explainer.explainRun(evidence)).toBeUndefined();
-		expect((await broken.explainer.explainRun(evidence))?.code).toBe("toolchain-missing");
+		expect(await explainer.explainRun(evidence)).toBeUndefined();
+		expect(calls.toolchain).toBe(0);
 	});
 });
 
 describe("BuildFailureExplainer rule 6: the toolchain check", () =>
 {
-	const unattributed = ["linker-unresolved.txt", "unattributed-bare-error.txt", "warnings-only.txt"];
-
-	it.each(unattributed)("turns a blocking toolchain problem into the error for %s", async (fixture) =>
+	it("turns a blocking toolchain problem into the error when the output has no compiler or linker error line", async () =>
 	{
 		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
 
-		const failure = await explainer.explainRun(runEvidence(log(fixture)));
+		const failure = await explainer.explainRun(runEvidence(log("unattributed-bare-error.txt")));
 
 		expect(failure).toEqual(BROKEN_TOOLCHAIN.problems[0]?.error);
 		expect(calls.toolchain).toBe(1);
 	});
 
-	it.each(unattributed)("keeps the blame with the quest for %s when the toolchain is healthy (A1199)", async (fixture) =>
+	it("keeps the blame with the quest when the toolchain is healthy (A1199)", async () =>
 	{
 		const { explainer, calls } = createExplainer();
 
-		expect(await explainer.explainRun(runEvidence(log(fixture)))).toBeUndefined();
-		expect(calls.toolchain).toBe(1);
+		expect(await explainer.explainRun(runEvidence(log("unattributed-bare-error.txt")))).toBeUndefined();
+		expect(await explainer.explainRun(runEvidence(""))).toBeUndefined();
+		expect(calls.toolchain).toBe(2);
+	});
+
+	it("never asks when a linker or compiler line proves the toolchain ran, even one that names no known folder", async () =>
+	{
+		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+
+		expect(await explainer.explainRun(runEvidence(log("linker-unresolved.txt")))).toBeUndefined();
+		expect(calls.toolchain).toBe(0);
 	});
 
 	it("ignores a non-blocking problem and a check that throws", async () =>
@@ -374,22 +444,56 @@ describe("BuildFailureExplainer.explainSandbox", () =>
 		expect((await explainer.explainSandbox({ engineRoot: ENGINE_ROOT, compilerOutput: "", pipelineError: "The build took longer than 15 minutes and was stopped." })).message).toContain("longer than its time limit");
 	});
 
-	it("reports a blocking toolchain problem", async () =>
+	it("tells the learner to open or reset a quest whose code already in the sandbox breaks the build, even with a mix of support errors", async () =>
 	{
-		const { explainer } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
 
-		expect(await explainer.explainSandbox({ engineRoot: ENGINE_ROOT, compilerOutput: log("sandbox-first-build-failed.txt") })).toEqual(BROKEN_TOOLCHAIN.problems[0]?.error);
+		const failure = await explainer.explainSandbox({ engineRoot: ENGINE_ROOT, compilerOutput: log("mixed-earlier-and-support.txt") });
+
+		expect(failure.message).toContain("code already in it from f1-training-dummy");
+		expect(failure.suggestedAction).toContain("Open f1-training-dummy");
+		expect(failure.detail).toContain("Quests");
+		expect(calls.toolchain).toBe(0);
 	});
 
-	it("always answers: with a healthy toolchain it says the setup failed and quotes the first error line", async () =>
+	it("blames support code or the template when only those have errors", async () =>
 	{
 		const { explainer } = createExplainer();
 
 		const failure = await explainer.explainSandbox({ engineRoot: ENGINE_ROOT, compilerOutput: log("sandbox-first-build-failed.txt") });
 
+		expect(failure.message).toContain("support code or in the engine");
+		expect(failure.detail).toContain("C1083");
+	});
+
+	it("reports a blocking toolchain problem when no compiler or linker line exists", async () =>
+	{
+		const { explainer } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+
+		expect(await explainer.explainSandbox({ engineRoot: ENGINE_ROOT, compilerOutput: log("unattributed-bare-error.txt") })).toEqual(BROKEN_TOOLCHAIN.problems[0]?.error);
+	});
+
+	it("answers the generic setup message only when no quest lines exist and the toolchain is fine, and quotes the first error line", async () =>
+	{
+		const { explainer } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+
+		const failure = await explainer.explainSandbox({ engineRoot: ENGINE_ROOT, compilerOutput: log("linker-unresolved.txt") });
+
 		expect(failure.code).toBe("build-environment-failed");
 		expect(failure.message).toContain("No quest code is involved");
-		expect(failure.detail).toContain("C1083");
-		expect((await explainer.explainSandbox({ engineRoot: ENGINE_ROOT, compilerOutput: "" })).detail).toContain("printed nothing else");
+		expect(failure.detail).toContain("LNK2019");
+
+		const healthy = createExplainer().explainer;
+
+		expect((await healthy.explainSandbox({ engineRoot: ENGINE_ROOT, compilerOutput: "" })).detail).toContain("printed nothing else");
+	});
+
+	it("explains an unlisted pipeline text for a sandbox build, which has no learner code to blame", async () =>
+	{
+		const { explainer } = createExplainer();
+
+		const failure = await explainer.explainSandbox({ engineRoot: ENGINE_ROOT, compilerOutput: "", pipelineError: "Something odd happened." });
+
+		expect(failure.message).toContain("outside your code");
 	});
 });

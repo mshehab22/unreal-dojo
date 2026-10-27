@@ -208,6 +208,19 @@ describe("SandboxProjectService", () =>
 		expect(passedResult).not.toHaveProperty("failure");
 	});
 
+	it("names a quest left in the sandbox when a rebuild fails in its code, and does not ask the toolchain", async () =>
+	{
+		const explainer = failureExplainer({ ok: false, problems: [{ error: { code: "toolchain-missing", message: "No C++ workload.", suggestedAction: "Install it." }, blocksBuild: true }] });
+		const script = { exitCode: 6, lines: ["/S/Source/Dojo/Quests/x-leftover/Leftover.h:9:3: error: expected ';' at end of declaration list", "Result: Failed"] };
+		const { service } = createService("5.8.3", script, { "/S/Dojo.uproject": "{}" }, undefined, explainer);
+
+		const result = await service.rebuild("/Engines/UE", "/S", () => undefined, new AbortController().signal);
+
+		expect(result.failure?.code).toBe("build-environment-failed");
+		expect(result.failure?.message).toContain("code already in it from x-leftover");
+		expect(result.failure?.suggestedAction).toContain("Open x-leftover");
+	});
+
 	it("explains a build that never started from the engine, and a failed build with a missing Visual Studio workload from the toolchain check", async () =>
 	{
 		const noTool = createService("5.8.3", { failsToStart: true }, { "/S/Dojo.uproject": "{}" }, undefined, failureExplainer({ ok: true, problems: [] }, new AppErrorException("engine-not-found", "Engine moved.", "Pick it again.")));

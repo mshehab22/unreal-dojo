@@ -226,17 +226,6 @@ export function buildToolKeepsCrashing(detail: string): AppError
 	};
 }
 
-/** The headless editor ended without a usable test report. */
-export function testReportMissing(detail: string): AppError
-{
-	return {
-		code: "build-environment-failed",
-		message: "Your code built, but the Unreal editor that runs the tests closed before it wrote a result. This is not a problem in your code.",
-		suggestedAction: "Close any other Unreal editor, then run again. If it keeps happening, use Rebuild sandbox in Settings.",
-		detail,
-	};
-}
-
 /** The editor ran but none of this quest's tests were among the results. */
 export function questTestsDidNotRun(detail: string): AppError
 {
@@ -248,7 +237,20 @@ export function questTestsDidNotRun(detail: string): AppError
 	};
 }
 
-/** Any other pipeline problem the runners report. */
+/** The sandbox build failed in quest code that is already in the sandbox (a rebuild keeps it). */
+export function sandboxHoldsBrokenQuests(questIds: string[], detail: string): AppError
+{
+	const names = questIds.join(", ");
+
+	return {
+		code: "build-environment-failed",
+		message: `The sandbox could not be built because code already in it from ${names} has an error. The setup itself is fine.`,
+		suggestedAction: `Open ${names} and fix the error its build output shows (or reset it), then use Rebuild sandbox in Settings.`,
+		detail,
+	};
+}
+
+/** Any other pipeline problem a sandbox build reports. */
 export function runStoppedOutsideCode(detail: string): AppError
 {
 	return {

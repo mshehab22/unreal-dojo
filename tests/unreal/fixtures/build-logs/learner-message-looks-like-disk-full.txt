@@ -1,0 +1,2 @@
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f1-score-keeper\DojoF1ScoreKeeper.cpp(9): fatal error C1189: #error:  not enough space on the disk for this many seats
+/Users/learner/DojoSandbox/Source/Dojo/Quests/f1-score-keeper/DojoF1ScoreKeeper.cpp:12:3: error: static_assert failed "No space left on device, file name too long, insufficient disk space, LNK1180"

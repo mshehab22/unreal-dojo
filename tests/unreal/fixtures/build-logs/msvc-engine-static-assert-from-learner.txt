@@ -1,0 +1,3 @@
+C:\Program Files\Epic Games\UE_5.8\Engine\Source\Runtime\CoreUObject\Public\Templates\Casts.h(143): error C2338: static_assert failed: 'Cast cannot be used with an incomplete type'
+C:\Program Files\Epic Games\UE_5.8\Engine\Source\Runtime\CoreUObject\Public\Templates\Casts.h(143): note: the template instantiation context (the oldest one first) is
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f1-score-keeper\DojoF1ScoreKeeper.cpp(30): note: see reference to function template instantiation 'ADojoF1Target *Cast<ADojoF1Target,AActor>(AActor *)' being compiled

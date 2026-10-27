@@ -23,13 +23,13 @@ export interface BuildFailureSignature
 	explain: (matchedLine: string) => AppError;
 }
 
-/** Known outside failures, most specific first. The Live Coding, Visual Studio, Windows SDK and Xcode strings were read in the UE 5.8.3 build tool source; the disk and file lock strings are the compilers' and the operating systems' own. */
+/** Known outside failures, most specific first. The explainer never matches them on a line that names a quest or test file, because the learner wrote that line's text (A1199). The Live Coding, Visual Studio, Windows SDK and Xcode strings were read in the UE 5.8.3 build tool source; the disk and file lock strings are the compilers' and the operating systems' own. */
 export const BUILD_FAILURE_SIGNATURES: BuildFailureSignature[] = [
 	// UnrealBuildTool, HotReload.cs: "Unable to build while Live Coding is active. Exit the editor and game, ..."
 	{ name: "live-coding-active", pattern: /Unable to build while Live Coding is active/i, explain: liveCodingBlocksBuild },
 
-	// MSVC LNK1180 and the system messages for a full disk; clang and the Unix tools say "No space left on device".
-	{ name: "disk-full", pattern: /not enough (?:space|room) on the disk|not enough space|No space left on device|ERROR_DISK_FULL|LNK1180|insufficient disk space/i, explain: diskFull },
+	// MSVC LNK1180 and the system messages for a full disk; clang and the Unix tools say "No space left on device". The bare words "not enough space" are not enough: a learner can write them in a message.
+	{ name: "disk-full", pattern: /not enough (?:space|room) on the disk|No space left on device|ERROR_DISK_FULL|LNK1180/i, explain: diskFull },
 
 	// The linker cannot open a module DLL or PDB an open editor holds, or any tool names the lock.
 	{ name: "file-locked", pattern: /LNK1104.*\.(dll|pdb|exp)\b|being used by another process|The process cannot access the file/i, explain: fileInUse },

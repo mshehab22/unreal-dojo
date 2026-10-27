@@ -22,11 +22,11 @@ const CLANG_ERROR_LINE = /^(?<location>.+?):\d+:(?:\d+:)?\s*(?:fatal\s+)?error\b
 /** The linker: `File.cpp.obj : error LNK2019: ...` or `LINK : fatal error LNK1104: ...`. */
 const LINKER_ERROR_LINE = /^(?<location>.+?)\s:\s(?:fatal\s+)?error\b/i;
 
-/** `.../Quests/<quest-id>/<file>` in a forward-slash path. */
-const QUEST_FOLDER_PATH = /\/Quests\/([^/]+)\//i;
+/** `.../Source/Dojo/Quests/<quest-id>/<file>` in a forward-slash path. Anchored on the module folder so a sandbox that sits inside a folder called Quests is not misread. */
+const QUEST_FOLDER_PATH = /\/Source\/Dojo\/Quests\/([^/]+)\//gi;
 
-/** `.../Tests/<quest-id>.Test.cpp` in a forward-slash path. */
-const QUEST_TEST_PATH = /\/Tests\/([^/]+)\.Test\.cpp$/i;
+/** `.../Source/Dojo/Tests/<quest-id>.Test.cpp` in a forward-slash path. */
+const QUEST_TEST_PATH = /\/Source\/Dojo\/Tests\/([^/]+)\.Test\.cpp/gi;
 
 /** The sandbox's support code, a file directly in the module folder (the template's `Dojo.cpp`, `Dojo.Build.cs`), or the engine's own sources. */
 const SUPPORT_OR_ENGINE_PATH = /\/Source\/Dojo\/Support\/|\/Source\/Dojo\/[^/]+$|\/Engine\/(?:Source|Plugins|Build|Shaders)\//i;
@@ -55,18 +55,28 @@ function locationOfErrorLine(line: string): string | null
 	return match?.groups?.location ?? null;
 }
 
-/** Classifies a file location. A leading slash is added so a relative path matches the same patterns. */
+/** Every quest id whose folder or test file any part of the text names, lower case, once each. Works on whole lines too, so a note, an "In file included from" line or a "requested here" line that names a quest counts. */
+export function questIdsNamedIn(text: string): string[]
+{
+	const path = forwardSlashed(text);
+	const matches = [...path.matchAll(QUEST_FOLDER_PATH), ...path.matchAll(QUEST_TEST_PATH)];
+
+	return [...new Set(matches.map((match) => (match[1] ?? "").toLowerCase()))];
+}
+
+/** The text with forward slashes and a leading slash, so a relative path matches the same patterns as an absolute one. */
+function forwardSlashed(text: string): string
+{
+	return `/${text.replace(/\\/g, "/")}`;
+}
+
+/** Classifies a file location. */
 function placeOf(location: string): ErrorPlace
 {
-	const path = `/${location.replace(/\\/g, "/")}`;
+	const [questId] = questIdsNamedIn(location);
+	if (questId) return { kind: "quest", questId };
 
-	const questFolder = QUEST_FOLDER_PATH.exec(path);
-	if (questFolder?.[1]) return { kind: "quest", questId: questFolder[1].toLowerCase() };
-
-	const questTest = QUEST_TEST_PATH.exec(path);
-	if (questTest?.[1]) return { kind: "quest", questId: questTest[1].toLowerCase() };
-
-	if (SUPPORT_OR_ENGINE_PATH.test(path)) return { kind: "support" };
+	if (SUPPORT_OR_ENGINE_PATH.test(forwardSlashed(location))) return { kind: "support" };
 
 	return { kind: "unknown" };
 }
