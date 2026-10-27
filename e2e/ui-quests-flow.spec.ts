@@ -11,6 +11,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { readFakeWorldFixtureJson } from "../tools/fake/readFakeWorldFixture";
 import { expect, test } from "./support/dojoTest";
+import { hoverAtCentre } from "./support/hoverAtCentre";
 import type { ProofCamera } from "./support/ProofCamera";
 
 /** The real World 1 the fake serves, built from content/ the same way the app's build does (A365), read for answers the flow types (Parsons lines, the explain model answer). */
@@ -224,9 +225,8 @@ test("a concept quest: predict, the card with hover terms and the example, quest
 	const term = card.getByTestId("glossary-term").first();
 	await expect(async () =>
 	{
-		await window.mouse.move(5, 5);
-		await term.hover();
-		await expect(window.getByTestId("term-card")).toBeVisible({ timeout: 1_500 });
+		await hoverAtCentre(window, term);
+		await expect(window.getByTestId("term-card")).toBeVisible({ timeout: 3_000 });
 	}).toPass({ timeout: 10_000 });
 	await saveScreenshot("concept-card-hover-term");
 	await window.mouse.move(5, 5);
@@ -747,9 +747,8 @@ test("two failed submits offer the Parsons fallback, which opens a one-item dril
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
 	await expect(async () =>
 	{
-		await window.mouse.move(5, 5);
-		await window.getByTestId("seer-stone-offer").hover();
-		await expect(window.getByRole("tooltip")).toContainText("Seer Stone", { timeout: 1_500 });
+		await hoverAtCentre(window, window.getByTestId("seer-stone-offer"));
+		await expect(window.getByRole("tooltip")).toContainText("Seer Stone", { timeout: 3_000 });
 	}).toPass({ timeout: 10_000 });
 	await saveScreenshot("build-failed-submit-offers");
 
@@ -757,6 +756,46 @@ test("two failed submits offer the Parsons fallback, which opens a one-item dril
 	await expect(window.getByTestId("screen-drill")).toHaveAttribute("data-kind", "parsons-fallback");
 	await expect(window.getByTestId("drill-position")).toContainText("1 / 1");
 	await expect(window.getByTestId("parsons")).toBeVisible();
+});
+
+test("a glossary hover card opens on a real move onto the term, never when content lands under a still pointer (W9)", async () =>
+{
+	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
+	await openFake("#/quest?id=f1-uproperty-specifiers");
+
+	// The pointer stays where "Lock in my guess" was clicked, and the reveal puts a glossary term under it; "Read the card" must stay reachable.
+	const predict = window.getByTestId("predict-step");
+	await predict.getByTestId("choice").first().click();
+	await predict.getByRole("button", { name: "Lock in my guess" }).click();
+	await expect(window.getByTestId("predict-reveal")).toBeVisible();
+	await predict.getByRole("button", { name: "Read the card" }).click({ timeout: 5_000 });
+
+	const card = window.getByTestId("card-step");
+	await waitForEditor(card);
+
+	// Content moving under a still pointer: the pointer rests at one point, then the first term is moved to sit under it. The browser sends the
+	// term a pointer enter, as it does when a reveal lands under a click, but the pointer has not moved. Longer than the open delay, so a card
+	// that was going to open has.
+	const term = card.getByTestId("glossary-term").first();
+
+	await expect(async () =>
+	{
+		await window.mouse.move(60, 60);
+		await term.evaluate((node: { style: Record<string, string> }) => Object.assign(node.style, { position: "fixed", left: "40px", top: "50px" }), undefined, { timeout: 3_000 });
+		expect((await term.boundingBox({ timeout: 3_000 }))?.x).toBe(40);
+	}).toPass({ timeout: 10_000 });
+
+	await window.evaluate("new Promise((resolve) => setTimeout(resolve, 1_500))");
+	await expect(window.getByTestId("term-card")).toHaveCount(0);
+
+	// A real move within the term opens it.
+	await expect(async () =>
+	{
+		await window.mouse.move(5, 5);
+		await window.mouse.move(70, 61);
+		await window.mouse.move(75, 62);
+		await expect(window.getByTestId("term-card")).toBeVisible({ timeout: 2_000 });
+	}).toPass({ timeout: 10_000 });
 });
 
 test("every quest screen fits at 1100x700 and 1440x900 without sideways scroll", async () =>
