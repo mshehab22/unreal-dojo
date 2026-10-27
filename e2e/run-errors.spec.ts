@@ -71,7 +71,10 @@ async function readFirstEditorLine(): Promise<string>
 	return window.evaluate<string>("(() => { const lines = [...document.querySelectorAll('[data-testid=build-quest] .monaco-editor .view-lines .view-line')]; const top = lines.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0]; return top ? top.textContent ?? '' : ''; })()");
 }
 
-/** Puts a line at the very top of the open file as one input, so auto-closed brackets never change it, and checks it landed on the first line. */
+/**
+ * Puts a line at the very top of the open file as one input and checks it landed on the first line. At the file start the next character is `#`,
+ * which stops Monaco auto-closing a typed bracket. Keep the line short: the editor wraps, and a wrapped line would show only its first part.
+ */
 async function insertAtTop(line: string): Promise<void>
 {
 	await window.getByTestId("build-quest").locator(".monaco-editor .view-lines").click();
@@ -81,7 +84,7 @@ async function insertAtTop(line: string): Promise<void>
 	await expect(window.getByTestId("build-quest").locator(".monaco-editor .view-lines")).toContainText(line.slice(0, 12));
 
 	// Monaco shows a non-breaking space for a space, so compare with plain spaces.
-	expect((await readFirstEditorLine()).replace(/ /g, " "), "the line should be the first line of the file").toBe(line);
+	expect((await readFirstEditorLine()).replace(/\u00a0/g, " "), "the line should be the first line of the file").toBe(line);
 }
 
 /** Scrolls the run column so the first error box starts just under the sticky Run and Submit buttons, so a picture shows its headline. */
@@ -176,4 +179,29 @@ test("an ordinary compile failure still says did not compile, with no Not your c
 	await expect(window.getByTestId("build-log")).toContainText("error");
 	await expectNoSidewaysScroll("after a compile failure");
 	await saveScreenshot("compile-failure-1100");
+});
+
+/** The distance of the Run button from the top of the page, rounded to a whole pixel. */
+async function readRunButtonTop(): Promise<number>
+{
+	return window.evaluate<number>("Math.round(document.querySelector('[data-testid=run-button]').getBoundingClientRect().top)");
+}
+
+test("at 1100x700 the Run button does not move when the save status changes, so a click on it is never lost (A1264)", async () =>
+{
+	await setViewport(SIZES[0].width, SIZES[0].height);
+	await openQuest();
+
+	const topWhenSaved = await readRunButtonTop();
+
+	await insertAtTop("// a note");
+
+	// The wider "Unsaved changes" used to wrap the header onto a second line and push the Run button down.
+	await expect(window.getByTestId("autosave")).toHaveAttribute("data-status", "pending");
+	expect(await readRunButtonTop(), "while the changes are unsaved").toBe(topWhenSaved);
+
+	await window.getByTestId("run-button").click();
+	await expect(window.getByTestId("autosave")).toHaveAttribute("data-status", "saved");
+	expect(await readRunButtonTop(), "after the save").toBe(topWhenSaved);
+	await expect(window.getByTestId("run-result")).toBeVisible({ timeout: 20_000 });
 });
