@@ -91,12 +91,14 @@ export function createUnrealServices(inputs: UnrealServiceInputs): UnrealService
 	const { paths, commandRunner } = platform;
 	const fileSystem = new NodeSandboxFileSystem();
 	const launcher = (inputs.decorateProcessLauncher ?? ((real: ProcessLauncher) => real))(new NodeProcessLauncher(platform.processTreeKiller));
-	const builder = new UnrealBuilder(paths, launcher, SYSTEM_TIMER);
+	const editorLauncher = new EditorLauncher({ paths, launcher, timer: SYSTEM_TIMER, portProbe: new NodePortProbe(), createClient: (port) => new McpEditorClient(port) });
+
+	// The app's own sandbox editor is the one editor a build must still respect; any other project's editor must not block it (A1220).
+	const builder = new UnrealBuilder(paths, launcher, SYSTEM_TIMER, () => editorLauncher.current() !== null);
 	const testRunner = new AutomationTestRunner(paths, launcher, SYSTEM_TIMER, fileSystem);
 	const questFileWriter = new QuestFileWriter(paths, fileSystem);
 
 	const buildLedger = new FullBuildLedger();
-	const editorLauncher = new EditorLauncher({ paths, launcher, timer: SYSTEM_TIMER, portProbe: new NodePortProbe(), createClient: (port) => new McpEditorClient(port) });
 
 	// A full build of the sandbox replaces the code an open editor loaded; close one on this sandbox first (UBT cannot rebuild modules it holds, and a rebuild deletes them), then record the build (A531).
 	const buildHooks: SandboxBuildHooks = {
