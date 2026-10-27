@@ -169,7 +169,7 @@ void ADojoM6QuestDirector::RestartRound()
 
 void ADojoM6QuestDirector::HandleQuestStateChanged(UDojoM6QuestData* ChangedQuest, EDojoM6QuestState NewState)
 {
-	if (Quest == CourseQuest && NewState == EDojoM6QuestState::EQS_Active && IsValid(Course)) Course->ResetCourse();
+	if (ChangedQuest == CourseQuest && NewState == EDojoM6QuestState::EQS_Active && IsValid(Course)) Course->ResetCourse();
 
 	RefreshBoard();
 }
