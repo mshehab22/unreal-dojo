@@ -33,7 +33,7 @@ export const test = base.extend<DojoFixtures>({
 		}
 		finally
 		{
-			// Main's console (slow IPC calls, failed handlers, content problems) goes into the report of a failing test, so CI shows what main was doing (W12).
+			// Main's console from when the window opens (slow IPC calls, failed handlers, content problems) goes into the report of a failing test, so CI shows what main was doing (W12).
 			if (testInfo.status !== testInfo.expectedStatus)
 			{
 				await testInfo.attach("main-process.log", { body: session.mainLog.join("\n") || "(main wrote nothing)", contentType: "text/plain" });

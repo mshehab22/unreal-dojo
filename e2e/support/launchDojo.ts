@@ -18,11 +18,17 @@ export interface DojoSession
 	/** The throwaway folder Electron uses as `userData` for this launch. */
 	userDataFolder: string;
 
-	/** Everything main wrote to stdout and stderr since the launch, so a failing test can attach it (W12). */
+	/** Everything main wrote to stdout and stderr from when the window opens, so a failing test can attach it (W12). */
 	mainLog: string[];
 }
 
-/** Collects main's stdout and stderr lines from the launched process, each prefixed with the time it arrived. */
+/** Marks main's IPC lines in the runner's console, so they are easy to find in a CI job log. */
+const MAIN_IPC_LINE_PREFIX = "[dojo main]";
+
+/**
+ * Collects main's stdout and stderr lines from when the window opens, each prefixed with the time it arrived. Every `[ipc]` line (a slow
+ * call, a failed handler) is also printed to the runner's console as it arrives, so it is in the CI job log even when the test passes (A1252).
+ */
 function collectMainLog(electronApp: ElectronApplication): string[]
 {
 	const lines: string[] = [];
@@ -32,7 +38,12 @@ function collectMainLog(electronApp: ElectronApplication): string[]
 	{
 		for (const line of chunk.toString().split(/\r?\n/))
 		{
-			if (line.trim().length > 0) lines.push(`${new Date().toISOString()} ${stream} ${line}`);
+			if (line.trim().length === 0) continue;
+
+			const stampedLine = `${new Date().toISOString()} ${stream} ${line}`;
+			lines.push(stampedLine);
+
+			if (line.includes("[ipc]")) console.log(`${MAIN_IPC_LINE_PREFIX} ${stampedLine}`);
 		}
 	};
 

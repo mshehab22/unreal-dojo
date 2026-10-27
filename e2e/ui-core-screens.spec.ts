@@ -6,6 +6,7 @@ import type { Page } from "@playwright/test";
 
 import { expect, test } from "./support/dojoTest";
 import { scrollIntoViewNow } from "./support/hoverAtCentre";
+import { stubFirstAnswerNeverComes } from "./support/ipcStubs";
 import type { ProofCamera } from "./support/ProofCamera";
 
 /** The two sizes every screen must work at (docs/systems/ui-core.md). */
@@ -445,6 +446,10 @@ test("against the real bridge, the title works and the Studio shows real data or
 	await window.evaluate(`location.hash = "#/studio"`);
 	await expect(window.getByTestId("screen-studio")).toBeVisible();
 	await expect(window.getByTestId("app-error").or(window.getByTestId("studio-lead")).first()).toBeVisible({ timeout: REAL_BRIDGE_STUDIO_TIMEOUT_MS });
+
+	// A read main never answered also ends in the error view now (A1250). That is the CI hang W12 could not explain, so it still fails
+	// here, and the failure attaches main's console, which names the call (A1252, A1253).
+	await expect(window.locator('[data-testid="app-error"][data-error-code="no-answer"]')).toHaveCount(0);
 	await saveScreenshot(camera, window, "studio-bridge-1100x700");
 });
 
@@ -459,24 +464,7 @@ test("a Studio read that main never answers ends in the AppError view, and Try a
 	await expect(window.getByRole("heading", { name: "Unreal Dojo" })).toBeVisible();
 
 	// Main's first answer to getDailyQuest never comes, as on the CI runs that hung (W12); later calls go to the real handler.
-	// `_invokeHandlers` is Electron's own table of ipcMain.handle listeners; the test fails loudly if it ever moves.
-	await electronApp.evaluate(({ ipcMain }) =>
-	{
-		type InvokeHandler = (event: unknown, ...methodArguments: unknown[]) => unknown;
-		const channel = "dojo:getDailyQuest";
-		const original = (ipcMain as unknown as { _invokeHandlers: Map<string, InvokeHandler> })._invokeHandlers.get(channel);
-
-		if (!original) throw new Error(`no handler on ${channel}`);
-
-		let calls = 0;
-		ipcMain.removeHandler(channel);
-		ipcMain.handle(channel, (event, ...methodArguments) =>
-		{
-			calls += 1;
-
-			return calls === 1 ? new Promise(() => undefined) : original(event, ...methodArguments);
-		});
-	});
+	await stubFirstAnswerNeverComes(electronApp, "dojo:getDailyQuest");
 
 	await window.evaluate(`location.hash = "#/studio"`);
 	await expect(window.getByTestId("screen-studio")).toBeVisible();
