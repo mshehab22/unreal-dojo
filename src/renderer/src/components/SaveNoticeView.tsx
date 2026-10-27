@@ -1,11 +1,10 @@
-// A one-time notice about the save file, shown through AppErrorView with a Dismiss button; once dismissed it stays gone for this run of the app.
-import { useState } from "react";
-
+// A notice about the save file, shown through AppErrorView with a Dismiss button; once dismissed it stays hidden on every screen until the window reloads.
 import type { AppError } from "@shared/types/errors";
 
 import { AppErrorView } from "@/components/AppErrorView";
 import { Button } from "@/components/ui/button";
-import { dismissNotice, isNoticeDismissed } from "@/lib/dismissedNotices";
+import { useNoticeDismissed } from "@/hooks/useNoticeDismissed";
+import { dismissNotice } from "@/lib/dismissedNotices";
 
 /** Props for SaveNoticeView. */
 interface SaveNoticeViewProps
@@ -17,21 +16,14 @@ interface SaveNoticeViewProps
 /** Shows the save notice until the learner dismisses it. Renders nothing when there is no notice. */
 export function SaveNoticeView({ notice, compact = false }: SaveNoticeViewProps)
 {
-	const [, setDismissCount] = useState(0);
+	const isDismissed = useNoticeDismissed(notice);
 
-	if (!notice || isNoticeDismissed(notice)) return null;
-
-	/** Hides the notice here and on every other screen that shows it. */
-	const dismiss = (): void =>
-	{
-		dismissNotice(notice);
-		setDismissCount((count) => count + 1);
-	};
+	if (!notice || isDismissed) return null;
 
 	return (
 		<div data-testid="save-notice" className="flex flex-col items-start gap-2">
 			<AppErrorView error={notice} compact={compact} className="w-full" />
-			<Button size="sm" variant="ghost" onClick={dismiss}>
+			<Button size="sm" variant="ghost" aria-label="Dismiss the save notice" onClick={() => dismissNotice(notice)}>
 				Dismiss
 			</Button>
 		</div>

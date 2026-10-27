@@ -154,6 +154,9 @@ export class FakeDojoApi implements DojoClient
 	private readonly runStatuses = new Map<string, RunStatus>();
 	private readonly quests: FakeQuestFlow;
 
+	/** True once checkToolchain ran in the toolchain-recovers scenario; the environment then reports a working toolchain. */
+	private toolchainRechecked = false;
+
 	/** Starts the fake in one scenario's state; the state lives until the page reloads. */
 	constructor(private readonly scenario: FakeScenario)
 	{
@@ -229,9 +232,11 @@ export class FakeDojoApi implements DojoClient
 		return answer(manualEngineFixture());
 	}
 
-	/** A working toolchain, or in the toolchain-missing scenario one whose C++ pieces are missing. */
+	/** A working toolchain; in the toolchain-missing scenario one whose C++ pieces stay missing; in toolchain-recovers the first check finds them fixed, as for a learner who installed them. */
 	checkToolchain(): Promise<ToolchainCheck>
 	{
+		if (this.scenario === "toolchain-recovers") this.toolchainRechecked = true;
+
 		return answer(this.scenario === "toolchain-missing" ? missingToolchainFixture() : toolchainFixture());
 	}
 
@@ -618,7 +623,7 @@ export class FakeDojoApi implements DojoClient
 	/** The real pattern cards from `content/patterns.json`. */
 	getPatternCards(): Promise<PatternCard[]>
 	{
-		// The screen-crash scenario hands the Character screen a broken list, so rendering it throws and the screen error view shows (M5.1i). No other screen reads the cards while rendering.
+		// The screen-crash scenario hands every screen that reads the cards a broken list (Character, Drill, Loot, concept quests), so rendering it throws and the screen error view shows (M5.1i). Title, Studio and Settings do not read the cards.
 		if (this.scenario === "screen-crash") return answer([null] as unknown as PatternCard[]);
 
 		return answer(PATTERN_CARDS);
@@ -672,6 +677,7 @@ export class FakeDojoApi implements DojoClient
 	private environment(): EnvironmentStatus
 	{
 		const isGone = this.isEngineGone();
+		const toolchain = this.reportedToolchain();
 		const engine = isGone ? null : [...enginesFixture(), manualEngineFixture()].find((candidate) => candidate.path === this.state.settings.enginePath) ?? null;
 		const providers = reviewProvidersFixture(this.state.settings.hasApiKey);
 		const reviewProvider = this.state.settings.reviewProvider === "auto"
@@ -685,9 +691,19 @@ export class FakeDojoApi implements DojoClient
 			loopMode: this.state.settings.loopMode,
 			editorConnected: this.state.editorConnected,
 			...(isGone && this.state.settings.enginePath ? { engineProblem: missingEngineFixture(this.state.settings.enginePath) } : {}),
-			...(this.scenario === "toolchain-missing" ? { toolchain: missingToolchainFixture() } : {}),
+			...(toolchain ? { toolchain } : {}),
 			...(this.scenario === "save-notice" ? { saveNotice: saveNoticeFixture() } : {}),
 		};
+	}
+
+	/** The toolchain the environment reports: none in most scenarios, the broken one in toolchain-missing, and in toolchain-recovers the broken one until the first re-check. */
+	private reportedToolchain(): ToolchainCheck | null
+	{
+		if (this.scenario === "toolchain-missing") return missingToolchainFixture();
+
+		if (this.scenario === "toolchain-recovers") return this.toolchainRechecked ? toolchainFixture() : missingToolchainFixture();
+
+		return null;
 	}
 
 	/** True in the engine-missing scenario while settings still point at the install that is gone; picking another engine fixes it. */

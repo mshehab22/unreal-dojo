@@ -235,6 +235,9 @@ test("a screen that throws while rendering shows a friendly card and the rail ke
 		await window.getByRole("button", { name: "Reload" }).click();
 		await expect(window.getByTestId("screen-error")).toBeVisible();
 
+		// Focus lands on the main region, so a keyboard user is not left on a button that no longer exists.
+		await expect(window.locator("main")).toBeFocused();
+
 		// The frame around it still works: the rail reaches another screen, which renders normally.
 		await window.getByRole("link", { name: /Settings/ }).click();
 		await expect(window.getByTestId("screen-settings")).toBeVisible();
@@ -245,6 +248,7 @@ test("a screen that throws while rendering shows a friendly card and the rail ke
 		await window.getByRole("button", { name: "Go to Studio" }).click();
 		await expect(window.getByTestId("screen-studio")).toBeVisible();
 		await expect(window.getByTestId("screen-error")).toHaveCount(0);
+		await expect(window.locator("main")).toBeFocused();
 	}
 });
 
@@ -253,29 +257,74 @@ test("a save notice the main process repeats on every read is dismissed once and
 	const { window } = dojo;
 	const notice = "restored your progress from its backup copy";
 
-	await useDataSource(window, "fake:save-notice");
+	for (const size of SIZES)
+	{
+		// Reloading the window starts each size with the notice not yet dismissed, which is also the "comes back after a reload" check.
+		await useDataSource(window, "fake:save-notice");
+		await setViewport(window, size.width, size.height);
+		const label = `at ${size.width}x${size.height}`;
+
+		await goTo(window, "#/", "screen-title", "environment-chips");
+		await expect(window.getByTestId("save-notice")).toContainText(notice);
+		await expectNoSidewaysScroll(window, `title with a save notice ${label}`);
+
+		await goTo(window, "#/settings", "screen-settings", "review-providers");
+		await expect(window.getByTestId("settings-engine").getByTestId("save-notice")).toContainText(notice);
+		await expectNoSidewaysScroll(window, `settings with a save notice ${label}`);
+		await screenshot(camera, window, "settings-save-notice", size.width);
+
+		await window.getByRole("button", { name: "Dismiss the save notice" }).click();
+		await expect(window.getByTestId("save-notice")).toHaveCount(0);
+
+		// Another screen, then a refocus that reads the environment again: the fake sends the notice every time, and it stays hidden.
+		await goTo(window, "#/", "screen-title", "environment-chips");
+		await expect(window.getByTestId("save-notice")).toHaveCount(0);
+		await expect(window.getByTestId("environment-problems")).toHaveCount(0);
+
+		await window.evaluate("window.dispatchEvent(new Event('focus'))");
+		await expect(window.getByTestId("chip-engine")).toBeVisible();
+		await window.waitForTimeout(500);
+		await expect(window.getByTestId("save-notice")).toHaveCount(0);
+		await expectNoSidewaysScroll(window, `title after dismissing ${label}`);
+
+		await goTo(window, "#/settings", "screen-settings", "review-providers");
+		await expect(window.getByTestId("save-notice")).toHaveCount(0);
+	}
+
+	// A reload of the window forgets the dismissal, so the notice shows again.
+	await window.reload();
+	await window.waitForLoadState("domcontentloaded");
+	await goTo(window, "#/", "screen-title", "environment-chips");
+	await expect(window.getByTestId("save-notice")).toContainText(notice);
+});
+
+test("a returning learner can check the build tools again from Title and Settings, and the problem clears when it is fixed", async ({ dojo, camera }) =>
+{
+	const { window } = dojo;
+
+	await useDataSource(window, "fake:toolchain-recovers");
 	await setViewport(window, 1440, 900);
 
 	await goTo(window, "#/", "screen-title", "environment-chips");
-	await expect(window.getByTestId("save-notice")).toContainText(notice);
+	await expect(window.getByTestId("chip-toolchain")).toContainText("Blocked");
+	await window.getByTestId("environment-problems").getByRole("button", { name: "Check again" }).click();
+	await expect(window.getByTestId("chip-toolchain")).toContainText("OK");
+	await expect(window.getByTestId("chip-toolchain")).toHaveAttribute("data-tone", "pass");
+	await expect(window.getByTestId("environment-problems")).toHaveCount(0);
+	await screenshot(camera, window, "title-toolchain-rechecked", 1440);
 
+	// The same problem on Settings clears through its own button.
+	await useDataSource(window, "fake:toolchain-recovers");
 	await goTo(window, "#/settings", "screen-settings", "review-providers");
-	await expect(window.getByTestId("settings-engine").getByTestId("save-notice")).toContainText(notice);
-	await expectNoSidewaysScroll(window, "settings with a save notice");
-	await screenshot(camera, window, "settings-save-notice", 1440);
+	await expect(window.getByTestId("settings-toolchain")).toContainText("Blocked");
+	await window.getByTestId("settings-toolchain").getByRole("button", { name: "Check again" }).click();
+	await expect(window.getByTestId("settings-toolchain")).toContainText("OK");
+	await expect(window.getByTestId("settings-toolchain").getByTestId("app-error")).toHaveCount(0);
 
-	await window.getByTestId("save-notice").getByRole("button", { name: "Dismiss" }).click();
-	await expect(window.getByTestId("save-notice")).toHaveCount(0);
-
-	// Another screen, then a refocus that reads the environment again: the fake sends the notice every time, and it stays hidden.
+	// A problem that is still there after the check stays, instead of pretending to be fixed.
+	await useDataSource(window, "fake:toolchain-missing");
 	await goTo(window, "#/", "screen-title", "environment-chips");
-	await expect(window.getByTestId("save-notice")).toHaveCount(0);
-
-	await window.evaluate("window.dispatchEvent(new Event('focus'))");
-	await expect(window.getByTestId("chip-engine")).toBeVisible();
-	await window.waitForTimeout(500);
-	await expect(window.getByTestId("save-notice")).toHaveCount(0);
-
-	await goTo(window, "#/settings", "screen-settings", "review-providers");
-	await expect(window.getByTestId("save-notice")).toHaveCount(0);
+	await window.getByTestId("environment-problems").getByRole("button", { name: "Check again" }).click();
+	await expect(window.getByTestId("chip-toolchain")).toContainText("Blocked");
+	await expect(window.getByTestId("environment-problems")).toContainText(TOOLCHAIN_MESSAGE);
 });

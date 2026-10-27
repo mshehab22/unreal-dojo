@@ -12,10 +12,15 @@ export interface ChipState
 	title?: string;
 }
 
-/** The engine chip: the version when usable, Missing when settings point at an engine that is gone or unusable, Not set when none was chosen. */
+/** The engine chip: the version when usable, Too old when the engine is older than the app supports, Missing when it is gone or unusable for another reason, Not set when none was chosen. */
 export function engineChipState(status: Pick<EnvironmentStatus, "engine" | "engineProblem">): ChipState
 {
-	if (status.engineProblem) return { value: "Missing", tone: "fail", title: `${status.engineProblem.message} ${status.engineProblem.suggestedAction}` };
+	if (status.engineProblem)
+	{
+		const value = status.engineProblem.code === "engine-version-unsupported" ? "Too old" : "Missing";
+
+		return { value, tone: "fail", title: `${status.engineProblem.message} ${status.engineProblem.suggestedAction}` };
+	}
 
 	if (status.engine) return { value: `UE ${status.engine.version}`, tone: "pass", title: status.engine.path };
 

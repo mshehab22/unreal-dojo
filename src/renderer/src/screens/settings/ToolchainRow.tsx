@@ -1,7 +1,7 @@
 // Settings: the Visual Studio or Xcode build tools row, with every problem the last check found explained in plain words.
 import type { ToolchainCheck } from "@shared/types/engine";
 
-import { AppErrorView } from "@/components/AppErrorView";
+import { ToolchainProblemList } from "@/components/ToolchainProblemList";
 import { Badge } from "@/components/ui/badge";
 import { toolchainChipState } from "@/lib/environmentChipStates";
 
@@ -25,9 +25,7 @@ export function ToolchainRow({ toolchain }: ToolchainRowProps)
 				<Badge variant={variant}>{state?.value ?? "OK"}</Badge>
 				{toolchain.problems.length === 0 && <span className="min-w-0 text-xs text-paper-muted">{toolchain.message}</span>}
 			</div>
-			{toolchain.problems.map((problem) => (
-				<AppErrorView key={problem.error.message} error={problem.error} compact />
-			))}
+			<ToolchainProblemList problems={toolchain.problems} />
 		</SettingRow>
 	);
 }

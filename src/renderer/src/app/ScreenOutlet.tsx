@@ -45,7 +45,7 @@ export function ScreenOutlet({ routeId }: ScreenOutletProps)
 	const navigate = useNavigate();
 
 	return (
-		<ScreenErrorBoundary key={routeId} onGoToStudio={() => navigate("studio")}>
+		<ScreenErrorBoundary key={routeId} onGoToStudio={() => navigate("studio")} isStudioScreen={routeId === "studio"}>
 			<Screen />
 		</ScreenErrorBoundary>
 	);

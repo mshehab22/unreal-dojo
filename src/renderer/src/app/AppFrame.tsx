@@ -33,7 +33,7 @@ export function AppFrame()
 				<NavigationRail activeRouteId={route.id} />
 				<div className="relative flex min-w-0 flex-1 flex-col viewport-grid">
 					<div className="h-titlebar shrink-0" />
-					<main ref={stageReference} data-route={route.id} className="min-h-0 flex-1 overflow-y-auto px-gutter pb-gutter">
+					<main ref={stageReference} data-route={route.id} tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto px-gutter pb-gutter outline-none">
 						<ScreenOutlet routeId={route.id} />
 					</main>
 				</div>

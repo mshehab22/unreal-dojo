@@ -1,8 +1,9 @@
 // A React error boundary around one screen: when the screen throws while rendering, a friendly card replaces it and the app frame keeps working.
 import { ChevronDownIcon, RotateCwIcon, TriangleAlertIcon } from "lucide-react";
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component, createRef, type ErrorInfo, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { queryCache } from "@/data/QueryCache";
 import { cn } from "@/lib/utils";
 
 /** Props for ScreenErrorBoundary. */
@@ -10,8 +11,11 @@ interface ScreenErrorBoundaryProps
 {
 	readonly children: ReactNode;
 
-	/** Moves the app to the Studio screen. The boundary also clears its own error, so this works when the Studio itself is the screen that broke. */
+	/** Moves the app to the Studio screen. */
 	readonly onGoToStudio: () => void;
+
+	/** True when the screen inside is the Studio, so moving to the Studio changes nothing and the boundary has to clear its own error. */
+	readonly isStudioScreen: boolean;
 }
 
 /** What the boundary remembers: the error it caught, and whether the learner opened the details. */
@@ -26,6 +30,9 @@ export class ScreenErrorBoundary extends Component<ScreenErrorBoundaryProps, Scr
 {
 	override state: ScreenErrorBoundaryState = { error: null, showDetails: false };
 
+	/** The card, so the boundary can find the main region around it and give it keyboard focus. */
+	private readonly cardReference = createRef<HTMLElement>();
+
 	/** Turns a thrown render error into the state that shows the card. */
 	static getDerivedStateFromError(error: unknown): ScreenErrorBoundaryState
 	{
@@ -38,17 +45,38 @@ export class ScreenErrorBoundary extends Component<ScreenErrorBoundaryProps, Scr
 		console.error("A screen threw while rendering.", error, info.componentStack);
 	}
 
-	/** Clears the error so the screen renders again from scratch. */
+	/** The main region around the card, which holds keyboard focus once the card is gone. */
+	private findMainRegion(): HTMLElement | null
+	{
+		return this.cardReference.current?.closest("main") ?? null;
+	}
+
+	/** Forgets cached answers no screen is reading (bad data may be what broke the screen), clears the error so the screen renders again from scratch, and moves focus to the main region. */
 	private readonly reload = (): void =>
 	{
-		this.setState({ error: null, showDetails: false });
+		const region = this.findMainRegion();
+
+		queryCache.forgetUnobserved();
+		void queryCache.refetchObserved();
+		this.setState({ error: null, showDetails: false }, () => region?.focus({ preventScroll: true }));
 	};
 
-	/** Leaves for the Studio, and clears the error in case the Studio is where the app already was. */
+	/**
+	 * Leaves for the Studio. A new route remounts this boundary through its key, so the crashed screen is not drawn a second time;
+	 * only when the Studio itself broke does the boundary clear its own error.
+	 */
 	private readonly goToStudio = (): void =>
 	{
+		if (this.props.isStudioScreen)
+		{
+			this.reload();
+			return;
+		}
+
+		const region = this.findMainRegion();
+
 		this.props.onGoToStudio();
-		this.reload();
+		region?.focus({ preventScroll: true });
 	};
 
 	/** Opens or closes the error message. */
@@ -65,7 +93,7 @@ export class ScreenErrorBoundary extends Component<ScreenErrorBoundaryProps, Scr
 		if (!error) return this.props.children;
 
 		return (
-			<section data-testid="screen-error" role="alert" className="mx-auto flex min-h-full w-full max-w-xl flex-col justify-center py-6">
+			<section ref={this.cardReference} data-testid="screen-error" role="alert" className="mx-auto flex min-h-full w-full max-w-xl flex-col justify-center py-6">
 				<div className="flex flex-col gap-4 rounded-xl border border-fail/30 bg-fail/[0.06] p-6">
 					<div className="flex items-center gap-3">
 						<TriangleAlertIcon className="size-5 shrink-0 text-fail" strokeWidth={2} />

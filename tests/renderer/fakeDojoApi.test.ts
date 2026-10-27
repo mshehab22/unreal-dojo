@@ -103,6 +103,20 @@ describe("FakeDojoApi", () =>
 		expect((await fine.getEnvironmentStatus()).engineProblem).toBeUndefined();
 	});
 
+	it("keeps reporting the toolchain problem after a re-check in toolchain-missing, and clears it after the first re-check in toolchain-recovers", async () =>
+	{
+		const stuck = new FakeDojoApi("toolchain-missing");
+
+		await stuck.checkToolchain();
+		expect((await stuck.getEnvironmentStatus()).toolchain?.ok).toBe(false);
+
+		const recovering = new FakeDojoApi("toolchain-recovers");
+
+		expect((await recovering.getEnvironmentStatus()).toolchain?.ok).toBe(false);
+		expect((await recovering.checkToolchain()).ok).toBe(true);
+		expect((await recovering.getEnvironmentStatus()).toolchain).toMatchObject({ ok: true, problems: [] });
+	});
+
 	it("fails the first sandbox setup with the main process's explanation in the sandbox-setup-fails scenario, then passes", async () =>
 	{
 		const fake = new FakeDojoApi("sandbox-setup-fails");

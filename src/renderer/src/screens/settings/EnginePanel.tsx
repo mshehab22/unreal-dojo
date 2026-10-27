@@ -1,8 +1,7 @@
 // Settings: the engine path, the build tools, and the sandbox, with the environment problems explained and a clean rebuild that shows its progress.
 import { FolderOpenIcon, HammerIcon, SquareIcon } from "lucide-react";
 
-import type { EnvironmentStatus, SandboxSetupResult } from "@shared/types/engine";
-import type { AppError } from "@shared/types/errors";
+import type { EnvironmentStatus } from "@shared/types/engine";
 import type { Settings } from "@shared/types/settings";
 
 import { AppErrorView } from "@/components/AppErrorView";
@@ -17,7 +16,7 @@ import { useDojoAction } from "@/data/useDojoAction";
 import { useSandboxBuild } from "@/data/useSandboxBuild";
 import { buildOutcome } from "@/lib/buildOutcome";
 import { formatElapsed } from "@/lib/formatting";
-import { describeSandboxFailure } from "@/lib/sandboxFailure";
+import { describeRebuildFailure } from "@/lib/sandboxFailure";
 
 import { SettingRow } from "./SettingRow";
 import { ToolchainRow } from "./ToolchainRow";
@@ -27,14 +26,6 @@ interface EnginePanelProps
 {
 	readonly settings: Settings;
 	readonly environment: EnvironmentStatus | undefined;
-}
-
-/** The error a failed rebuild shows: the main process's explanation when it sent one, else the guess from the compiler output, with that output as the detail. */
-function rebuildFailure(result: SandboxSetupResult): AppError
-{
-	const error = describeSandboxFailure(result, "rebuild");
-
-	return { ...error, detail: error.detail ?? (result.compilerOutput || undefined) };
 }
 
 /** Engine, build tools, and sandbox rows. */
@@ -87,7 +78,7 @@ export function EnginePanel({ settings, environment }: EnginePanelProps)
 				{rebuild.status === "running" && rebuild.isQuiet && <QuietBuildNotice build={rebuild} />}
 				{rebuild.status === "cancelled" && <p className="text-xs text-paper-muted">The rebuild was cancelled. The sandbox keeps its last good build.</p>}
 				{rebuild.status === "succeeded" && rebuild.result && <p className="text-xs text-pass">Rebuilt in {formatElapsed(rebuild.result.durationMs)}.</p>}
-				{rebuild.status === "failed" && rebuild.result && <AppErrorView error={rebuildFailure(rebuild.result)} onRetry={rebuild.start} />}
+				{rebuild.status === "failed" && rebuild.result && <AppErrorView error={describeRebuildFailure(rebuild.result)} onRetry={rebuild.start} />}
 				{rebuild.status === "errored" && rebuild.error && <AppErrorView error={rebuild.error} onRetry={rebuild.start} />}
 			</SettingRow>
 		</Panel>

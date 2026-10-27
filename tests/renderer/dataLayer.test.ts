@@ -64,6 +64,20 @@ describe("QueryCache", () =>
 		expect(calls).toEqual({ rules: 2, glossary: 1 });
 	});
 
+	it("forgets what no mounted screen reads, so a screen that mounts again starts from scratch", async () =>
+	{
+		const cache = new QueryCache();
+		const stopReadingPatternCards = cache.observe("pattern-cards", () => Promise.resolve("bad data"));
+
+		cache.observe("rules", () => Promise.resolve("rules"));
+		await cache.invalidate(["pattern-cards", "rules"]);
+		stopReadingPatternCards();
+		cache.forgetUnobserved();
+
+		expect(cache.read<string>("pattern-cards")).toMatchObject({ data: undefined, isLoading: true });
+		expect(cache.read<string>("rules").data).toBe("rules");
+	});
+
 	it("turns a rejection into an AppError and keeps the last good answer", async () =>
 	{
 		const cache = new QueryCache();

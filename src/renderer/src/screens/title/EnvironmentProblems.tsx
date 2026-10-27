@@ -3,6 +3,8 @@ import type { EnvironmentStatus } from "@shared/types/engine";
 
 import { AppErrorView } from "@/components/AppErrorView";
 import { SaveNoticeView } from "@/components/SaveNoticeView";
+import { ToolchainProblemList } from "@/components/ToolchainProblemList";
+import { useNoticeDismissed } from "@/hooks/useNoticeDismissed";
 
 /** Props for EnvironmentProblems. */
 interface EnvironmentProblemsProps
@@ -10,19 +12,18 @@ interface EnvironmentProblemsProps
 	readonly status: EnvironmentStatus;
 }
 
-/** Lists each environment problem with its message and suggested action. Renders nothing when everything is fine. */
+/** Lists each environment problem with its message and suggested action. Renders nothing when everything is fine or the only notice was dismissed. */
 export function EnvironmentProblems({ status }: EnvironmentProblemsProps)
 {
 	const toolchainProblems = status.toolchain?.problems ?? [];
+	const isSaveNoticeHidden = useNoticeDismissed(status.saveNotice);
 
-	if (!status.engineProblem && toolchainProblems.length === 0 && !status.saveNotice) return null;
+	if (!status.engineProblem && toolchainProblems.length === 0 && isSaveNoticeHidden) return null;
 
 	return (
 		<div data-testid="environment-problems" className="flex max-w-2xl flex-col gap-2">
 			{status.engineProblem && <AppErrorView error={status.engineProblem} compact />}
-			{toolchainProblems.map((problem) => (
-				<AppErrorView key={problem.error.message} error={problem.error} compact />
-			))}
+			<ToolchainProblemList problems={toolchainProblems} />
 			<SaveNoticeView notice={status.saveNotice} compact />
 		</div>
 	);

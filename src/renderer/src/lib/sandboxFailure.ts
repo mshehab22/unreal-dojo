@@ -47,3 +47,13 @@ export function describeSandboxFailure(result: Pick<SandboxSetupResult, "compile
 
 	return { code: "sandbox-not-ready", ...explainSandboxFailure(result.compilerOutput, context) };
 }
+
+/** The error a failed Settings rebuild shows: the explanation of describeSandboxFailure, with the main process's detail and the compiler output both behind the details toggle. */
+export function describeRebuildFailure(result: Pick<SandboxSetupResult, "compilerOutput" | "failure">): AppError
+{
+	const error = describeSandboxFailure(result, "rebuild");
+	const detailParts = [error.detail, result.compilerOutput].filter((part): part is string => Boolean(part));
+	const uniqueParts = detailParts.filter((part, index) => detailParts.indexOf(part) === index);
+
+	return uniqueParts.length > 0 ? { ...error, detail: uniqueParts.join("\n\n") } : error;
+}

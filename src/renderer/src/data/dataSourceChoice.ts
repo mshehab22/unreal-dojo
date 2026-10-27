@@ -12,6 +12,7 @@ export const FAKE_SCENARIOS = [
 	"quests",
 	"engine-missing",
 	"toolchain-missing",
+	"toolchain-recovers",
 	"sandbox-setup-fails",
 	"folder-blocked",
 	"screen-crash",
@@ -21,7 +22,7 @@ export const FAKE_SCENARIOS = [
 /**
  * One fake starting state: a learner part way in, a learner who never ran setup, a setup whose first build fails once, a setup whose first build goes quiet
  * (its progress and answer never arrive, A821), or the returning learner with the real Pack 1 World 1 open on the map (the quest screens' flow).
- * Environment scenarios (M5.1i): the engine in settings is gone (`engine-missing`), the build tools are missing (`toolchain-missing`),
+ * Environment scenarios (M5.1i): the engine in settings is gone (`engine-missing`), the build tools are missing (`toolchain-missing`, which a re-check does not fix, or `toolchain-recovers`, which the first re-check does),
  * the first sandbox setup fails and says why (`sandbox-setup-fails`), the first folder pick cannot be used (`folder-blocked`),
  * the Character screen throws while rendering so the screen error view can be seen (`screen-crash`),
  * and the save was restored from its backup, a notice the fake repeats on every read as the main process does (`save-notice`). They exist only in the fake, which a packaged build never loads (A251).

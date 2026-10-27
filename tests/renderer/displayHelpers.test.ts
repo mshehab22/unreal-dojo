@@ -12,7 +12,7 @@ import type { AppError } from "@shared/types/errors";
 
 import { dismissNotice, isNoticeDismissed } from "../../src/renderer/src/lib/dismissedNotices";
 import { engineChipState, toolchainChipState } from "../../src/renderer/src/lib/environmentChipStates";
-import { describeSandboxFailure, explainSandboxFailure } from "../../src/renderer/src/lib/sandboxFailure";
+import { describeRebuildFailure, describeSandboxFailure, explainSandboxFailure } from "../../src/renderer/src/lib/sandboxFailure";
 import { groupSkills, skillPrefix } from "../../src/renderer/src/lib/skillGroups";
 import { skillGroupName, skillLabel } from "../../src/renderer/src/lib/skillNames";
 import { searchGlossary } from "../../src/renderer/src/lib/searchGlossary";
@@ -212,9 +212,26 @@ describe("describeSandboxFailure", () =>
 	});
 });
 
+describe("describeRebuildFailure", () =>
+{
+	const explained: AppError = { code: "build-environment-failed", message: "The build tools could not run.", suggestedAction: "Build again.", detail: "UBT exited with code 6." };
+
+	it("keeps both the main process detail and the compiler output reachable", () =>
+	{
+		expect(describeRebuildFailure({ compilerOutput: "link error LNK1104", failure: explained }).detail).toBe("UBT exited with code 6.\n\nlink error LNK1104");
+	});
+
+	it("shows a detail that equals the compiler output once, and the output alone when main sent no detail", () =>
+	{
+		expect(describeRebuildFailure({ compilerOutput: "UBT exited with code 6.", failure: explained }).detail).toBe("UBT exited with code 6.");
+		expect(describeRebuildFailure({ compilerOutput: "link error LNK1104", failure: { ...explained, detail: undefined } }).detail).toBe("link error LNK1104");
+		expect(describeRebuildFailure({ compilerOutput: "" }).detail).toBeUndefined();
+	});
+});
+
 describe("engineChipState", () =>
 {
-	const engine = { path: "C:\UE_5.8", version: "5.8.3", source: "launcher" as const, supportsFastLoop: true };
+	const engine = { path: "C:\\UE_5.8", version: "5.8.3", source: "launcher" as const, supportsFastLoop: true };
 	const problem: AppError = { code: "engine-not-found", message: "The engine folder is gone.", suggestedAction: "Pick it again in Settings." };
 
 	it("says Missing, with the message and action in the tooltip, when the engine in settings has a problem", () =>
@@ -225,10 +242,17 @@ describe("engineChipState", () =>
 		expect(state.title).toBe("The engine folder is gone. Pick it again in Settings.");
 	});
 
+	it("says Too old, not Missing, when the engine is there but older than the app supports", () =>
+	{
+		const tooOld: AppError = { code: "engine-version-unsupported", message: "UE 5.2 is older than the oldest supported version.", suggestedAction: "Pick UE 5.4 or later." };
+
+		expect(engineChipState({ engine: null, engineProblem: tooOld })).toMatchObject({ value: "Too old", tone: "fail" });
+	});
+
 	it("says Not set only when no engine was ever chosen, and shows the version when the engine works", () =>
 	{
 		expect(engineChipState({ engine: null })).toMatchObject({ value: "Not set", tone: "fail" });
-		expect(engineChipState({ engine, engineProblem: null })).toMatchObject({ value: "UE 5.8.3", tone: "pass", title: "C:\UE_5.8" });
+		expect(engineChipState({ engine, engineProblem: null })).toMatchObject({ value: "UE 5.8.3", tone: "pass", title: "C:\\UE_5.8" });
 	});
 });
 
