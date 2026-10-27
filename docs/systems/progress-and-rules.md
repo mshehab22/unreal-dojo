@@ -53,13 +53,13 @@ Rematch: a due pattern or term surfaces as a quest from a different world than t
 
 ## Architecture (keep current)
 
-Last updated by M1.6b (content-backed progress and drill methods).
+Last updated by M5.1b (atomic backup via .bak.tmp, getLoadRecovery, whenIdle, kill test), after M1.6b (content-backed progress and drill methods).
 
 ### Layers
 - Pure rule classes (no I/O, time and randomness passed in): `PassRules`, `XpRules`, `HintSpellRules`, `LevelRules`, `PatternCardRules`, `SkillRules`, `MasteryRules`, `SpreeRules`, `StreakRules`, `SeerStoneRules`, `ChestRules`, `TestOutRules`, `RematchSelector`, `UnlockGraph`, `DrillScheduler`, `DailyQuestService`, and the scheduler `Sm2Scheduler` behind the `ReviewScheduler` interface (FSRS replaces it by implementing the same interface; the review log already holds every review).
 - Every constant lives in `rules.ts` with a comment; `createRulesSnapshot()` is what `getRules` answers.
 - `ProgressService` is the only stateful piece: it holds the loaded save, applies the rules to attempts, reviews, drills, hints, solution views, and the daily quest, and saves after every change (memory never runs ahead of the disk). Every public method that changes the save runs as one queued step (read, compute, commit) after the previous one finishes, so overlapping IPC calls never lose an update; a failed step does not block the queue. A save that cannot be opened gives a refused service (`openOrRefuse`) whose every progress call answers the `save-failed` error and which never writes. It takes a `Clock` and a `RandomSource` (`SystemClock` and `MathRandomSource` in the app; fixed ones in tests).
-- `ProgressStore` loads and saves `<userData>/progress.json` through `AtomicJsonFile` on a `FileSystem` (`NodeFileSystem` in the app, `tests/support/MemoryFileSystem.ts` in tests, which can crash mid-write or before the rename).
+- `ProgressStore` loads and saves `<userData>/progress.json` through `AtomicJsonFile` on a `FileSystem` (`NodeFileSystem` in the app, `tests/support/MemoryFileSystem.ts` in tests, which can crash mid temp write, mid backup copy, before the rename, or right after it).
 
 ### Files (`src/main/services/progress/`)
 - `rules.ts`: constants and the rules snapshot.
@@ -69,7 +69,9 @@ Last updated by M1.6b (content-backed progress and drill methods).
 - One file per rule class listed above, plus `ProgressService.ts`, `ProgressStore.ts`, `AtomicJsonFile.ts`, `FileSystem.ts`, `NodeFileSystem.ts`, `progressSchema.ts` (zod), `createNewProgress.ts`.
 
 ### Save file
-- Write: the JSON goes to `progress.json.tmp` and is flushed (fsync), the current `progress.json` is copied to `progress.json.bak`, then the temp file is renamed over `progress.json`. A crash at any step leaves the old or the new file whole. Writes are serialized.
+- Write: the JSON goes to `progress.json.tmp` and is flushed (fsync), the current `progress.json` is copied to `progress.json.bak.tmp` and that is renamed over `progress.json.bak` (so a kill mid-copy never leaves a torn backup, A1193), then the temp file is renamed over `progress.json`. A process kill at any step leaves the old or the new file whole. A power cut is out of scope: the backup copy is not fsynced, so a power cut could still leave an empty `.bak` (the main file is fsynced before the rename). Writes are serialized.
+- Leftovers: a `.tmp` or `.bak.tmp` left by a killed process is never read on load, even when it is complete (the call that wrote it never answered, so the old file is the consistent one). The next save overwrites both.
+- Load recovery: `ProgressService.open` keeps what the load found. `getLoadRecovery()` answers `{ kind: "none" | "backup" | "fresh", quarantinedPath? }` (a service built without a load, and a refused one, answer `none`). `whenIdle(timeoutMs)` resolves true when every queued change has been saved and false when the time runs out; it never rejects (A1195).
 - Migrations: `migrateSave.ts` upgrades a parsed save step by step to `SAVE_VERSION` before the schema check (version 1 to 2 adds `revealedHints`).
 - Load: missing file gives a fresh save (or the backup if only the backup exists). A file that is not JSON or fails the zod schema is moved to `progress.json.corrupt-<time>` and the backup is used; if the backup is bad too, a fresh save starts. A save whose `version` is newer than the app, and a file the disk will not read (locked, no permission), are refused with `save-failed`, never quarantined or overwritten; the app still opens (A133).
 - Disk: on Windows, reads, renames, and copies retry EPERM, EACCES, and EBUSY with backoff of about 1.5 seconds (`retryWhileLocked.ts`); on macOS and Linux the folder is flushed after the rename. Fields added after version 1 default to empty.
@@ -102,4 +104,4 @@ Last updated by M1.6b (content-backed progress and drill methods).
 M1.6: `getProgress`, `getRules`, `setPlayerName`, `saveQuestDraft`, `resetQuest`, `recordTermHover`, `queueDrillItem`, `chooseDailyOffer`, `resetProgress`, `getDrillSummary`. M1.6b: the ten content-backed methods above. Every progress and drill method is now wired. `src/main/index.ts` opens the progress service, then builds `ProgressContentService` on the content catalog.
 
 ### Tests
-`tests/progress/*.test.ts`, one file per rule area, plus `progressStore.test.ts` (round trip, two simulated crashes, corrupt recovery, real disk) and `progressService.test.ts` (end to end on an in-memory disk). Shared builders in `tests/support/`.
+`tests/progress/*.test.ts`, one file per rule area, plus `progressStore.test.ts` (round trip, four simulated crash points, corrupt recovery, real disk), `progressService.test.ts` (end to end on an in-memory disk, `getLoadRecovery`, `whenIdle`), and `saveKillSafety.test.ts` (M5.1b: the child `tests/progress/support/killedSaveWriter.ts` writes saves of 2 to 5 MB with an increasing number through the real `AtomicJsonFile` and `NodeFileSystem`, run with `node --import tsx` and killed with SIGKILL at 20 seeded random moments; afterwards the main file and the backup parse and pass the schema, the load is never `fresh`, and the loaded number is the last acknowledged one or the next; the seed is logged and `DOJO_KILL_SEED` replays it, A1194). Shared builders in `tests/support/`; the real-disk time budget is `tests/support/realDiskBudget.ts`.
