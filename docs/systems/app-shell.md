@@ -44,7 +44,7 @@ content/, resources/, research/, docs/
 
 ## Architecture (keep current)
 
-Last updated by M0.2c (settings service).
+Last updated by M5.1c (content load log line and budget), after M0.2c (settings service).
 
 ### Processes and files
 - `src/main/index.ts`: composition root. Waits for `app.whenReady()`, opens the `ProgressService` on `<userData>/progress.json` (M1.6), calls `registerHandlers()`, opens the window, reopens it from the macOS dock, quits when all windows close on Windows.

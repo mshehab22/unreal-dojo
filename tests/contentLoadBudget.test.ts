@@ -1,4 +1,6 @@
 // Checks the content load budget: 300 quests cloned from the real content, on real disk, through the app's own catalog path, with a median under 300 ms.
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -9,7 +11,7 @@ import { ContentCatalog } from "../src/main/content/ContentCatalog";
 import { createContentCatalog } from "../src/main/content/createContentCatalog";
 import { ProgressContentService } from "../src/main/services/progress/ProgressContentService";
 import { fakeGraders } from "./support/contentFixture";
-import { createLargeContentFixture, LARGE_QUEST_COUNT, type LargeContentFixture } from "./support/largeContentFixture";
+import { createLargeContentFixture, LARGE_QUEST_COUNT, LARGE_QUESTS_PER_WORLD, type LargeContentFixture } from "./support/largeContentFixture";
 import { createTestProgressService } from "./support/progressFixtures";
 import { SequenceRandom } from "./support/SequenceRandom";
 
@@ -66,7 +68,7 @@ async function measureLoad(root: string): Promise<LoadMeasurement>
 
 describe("content load budget", () =>
 {
-	let fixture: LargeContentFixture;
+	let fixture!: LargeContentFixture;
 
 	beforeAll(async () =>
 	{
@@ -75,24 +77,30 @@ describe("content load budget", () =>
 
 	afterAll(async () =>
 	{
-		await fixture.remove();
+		await fixture?.remove();
 	});
 
 	it("loads 300 cloned real quests with a median under the budget", async () =>
 	{
 		const logSpy = vi.spyOn(console, "info");
 		const measurements: LoadMeasurement[] = [];
+		let loadLines: string[];
 
-		for (let run = 0; run < RUN_COUNT; run++) measurements.push(await measureLoad(fixture.root));
+		try
+		{
+			for (let run = 0; run < RUN_COUNT; run++) measurements.push(await measureLoad(fixture.root));
+
+			loadLines = logSpy.mock.calls.map((call) => String(call[0])).filter((line) => LOAD_LOG_PATTERN.test(line));
+		}
+		finally
+		{
+			logSpy.mockRestore();
+		}
 
 		const times = measurements.map((measurement) => measurement.milliseconds);
 		const middle = median(times);
 
 		console.info(`[content load budget] ${LARGE_QUEST_COUNT} quests over ${fixture.worldCount} worlds: first (cold) ${times[0]?.toFixed(1)} ms, all ${times.map((time) => time.toFixed(1)).join(", ")} ms, median ${middle.toFixed(1)} ms, budget ${LOAD_BUDGET_MILLISECONDS} ms`);
-
-		const loadLines = logSpy.mock.calls.map((call) => String(call[0])).filter((line) => LOAD_LOG_PATTERN.test(line));
-
-		logSpy.mockRestore();
 
 		for (const measurement of measurements)
 		{
@@ -110,7 +118,20 @@ describe("content load budget", () =>
 	it("writes the large fixture with the quest and world counts it promises", () =>
 	{
 		expect(fixture.questCount).toBe(LARGE_QUEST_COUNT);
-		expect(fixture.worldCount).toBe(12);
+		expect(fixture.worldCount).toBe(Math.ceil(LARGE_QUEST_COUNT / LARGE_QUESTS_PER_WORLD));
+	});
+
+	it("gives a cloned boss the same id prefix on its pieces as on its own id", async () =>
+	{
+		const files = await readdir(fixture.root, { recursive: true });
+		const bossFile = files.find((file) => file.endsWith("boss-training-yard.md"));
+
+		expect(bossFile).toBeDefined();
+
+		const text = await readFile(join(fixture.root, bossFile ?? ""), "utf8");
+
+		expect(text).toMatch(/^id: load\d-f1-/m);
+		expect(text).toMatch(/^\s*- load\d-f1-training-dummy\s*$/m);
 	});
 });
 
@@ -123,10 +144,15 @@ describe("content load log line", () =>
 		const logSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
 		const catalog = new ContentCatalog({ root: "/fixture", folderExists: async () => true, loadContent: async () => loaded, now: () => readings.shift() ?? 0 });
 
-		await catalog.getStatus();
+		try
+		{
+			await catalog.getStatus();
 
-		expect(logSpy).toHaveBeenCalledWith("[content] loaded 0 quests in 42 ms");
-
-		logSpy.mockRestore();
+			expect(logSpy).toHaveBeenCalledWith("[content] loaded 0 quests in 42 ms");
+		}
+		finally
+		{
+			logSpy.mockRestore();
+		}
 	});
 });

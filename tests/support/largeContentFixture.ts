@@ -6,12 +6,22 @@ import { dirname, join, resolve } from "node:path";
 /** The number of quests the load budget is stated for. */
 export const LARGE_QUEST_COUNT = 300;
 
-/** A real quest file: its text, its id, its prerequisites, and the file name without its number. */
+/** How many quests share a world in the large fixture. */
+export const LARGE_QUESTS_PER_WORLD = 25;
+
+/** Matches the front matter block (the two `---` lines and everything between them) at the top of a quest file. */
+const FRONT_MATTER_PATTERN = /^---\r?\n[\s\S]*?\r?\n---/;
+
+/** Matches a top-level `pieces:` list of quest ids in a boss's front matter, including its list lines. */
+const PIECES_PATTERN = /^pieces:\r?\n(?:[ \t]*- .+\r?\n)+/m;
+
+/** A real quest file: its text, its id, the quest ids it points at, and the file name without its number. */
 interface RealQuestFile
 {
 	text: string;
 	id: string;
 	prerequisites: string[];
+	pieces: string[];
 	slug: string;
 }
 
@@ -39,15 +49,24 @@ async function listFolders(folder: string): Promise<string[]>
 	return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
 }
 
-/** Reads one real quest file and picks out its id, prerequisites, and slug. */
+/** Returns the front matter block of a quest file, or an empty string when it has none. */
+function frontMatterOf(text: string): string
+{
+	return FRONT_MATTER_PATTERN.exec(text)?.[0] ?? "";
+}
+
+/** Reads one real quest file and picks out its id, the quest ids it points at, and its slug. */
 async function readRealQuestFile(path: string, fileName: string): Promise<RealQuestFile>
 {
 	const text = await readFile(path, "utf8");
-	const id = /^id: (.+?)\r?$/m.exec(text)?.[1] ?? "";
-	const prerequisiteList = /^prerequisites: \[(.*)\]\r?$/m.exec(text)?.[1] ?? "";
+	const frontMatter = frontMatterOf(text);
+	const id = /^id: (.+?)\r?$/m.exec(frontMatter)?.[1] ?? "";
+	const prerequisiteList = /^prerequisites: \[(.*)\]\r?$/m.exec(frontMatter)?.[1] ?? "";
 	const prerequisites = prerequisiteList.split(",").map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+	const piecesBlock = PIECES_PATTERN.exec(frontMatter)?.[0] ?? "";
+	const pieces = [...piecesBlock.matchAll(/^[ \t]*- (.+?)\r?$/gm)].map((match) => match[1] ?? "");
 
-	return { text, id, prerequisites, slug: fileName.replace(/^\d+-/, "").replace(/\.md$/, "") };
+	return { text, id, prerequisites, pieces, slug: fileName.replace(/^\d+-/, "").replace(/\.md$/, "") };
 }
 
 /** Reads every real quest file under `content/packs`, in pack order, then world order, then quest order. */
@@ -81,15 +100,32 @@ async function readRealQuestFiles(): Promise<RealQuestFile[]>
 	return quests;
 }
 
-/** Gives a real quest a new id, order, and prerequisite ids, keeping everything else byte for byte. */
+/** Gives a real quest a new id and order and the same prefix on every quest id it points at (prerequisites, boss pieces), keeping the rest byte for byte. */
 function retagRealQuest(quest: RealQuestFile, idPrefix: string, order: number): string
 {
+	const frontMatter = frontMatterOf(quest.text);
 	const prerequisites = quest.prerequisites.map((prerequisite) => `${idPrefix}${prerequisite}`).join(", ");
 
-	return quest.text
+	const retaggedFrontMatter = frontMatter
 		.replace(/^id: .+?(\r?)$/m, `id: ${idPrefix}${quest.id}$1`)
 		.replace(/^order: .+?(\r?)$/m, `order: ${order}$1`)
-		.replace(/^prerequisites: \[.*\](\r?)$/m, `prerequisites: [${prerequisites}]$1`);
+		.replace(/^prerequisites: \[.*\](\r?)$/m, `prerequisites: [${prerequisites}]$1`)
+		.replace(PIECES_PATTERN, (block) => block.replace(/^([ \t]*- )(.+?)(\r?)$/gm, `$1${idPrefix}$2$3`));
+
+	return retaggedFrontMatter + quest.text.slice(frontMatter.length);
+}
+
+/** Copies the real glossary with each `firstQuestId` pointing at the first clone of that quest, so no entry points at a missing quest. */
+function retagGlossary(text: string, idPrefix: string): string
+{
+	const entries = JSON.parse(text) as { firstQuestId?: string }[];
+
+	for (const entry of entries)
+	{
+		if (entry.firstQuestId !== undefined) entry.firstQuestId = `${idPrefix}${entry.firstQuestId}`;
+	}
+
+	return JSON.stringify(entries);
 }
 
 /** Writes one file under the root, creating its folder. */
@@ -103,53 +139,85 @@ async function writeFileUnder(root: string, path: string, text: string): Promise
 
 /**
  * Creates a content folder holding the real glossary and patterns plus `questCount` quests cloned from the real packs.
- * Each pass over the real quests becomes one pack of worlds of `questsPerWorld`; ids are prefixed per pass, so ids stay
- * unique, orders restart in each world, and prerequisites point at the clone of the same pass. Works on real disk.
+ * Clones run through the real quests in order, again and again; the nth clone of a pass gets that pass's id prefix, so ids
+ * stay unique. Worlds are numbered across all clones (`ceil(questCount / questsPerWorld)` of them), each in the pack its first
+ * quest came from. Prerequisites and boss pieces point at the clone of the same pass; the build throws if any would dangle.
+ * Works on real disk, and removes the folder again when the build fails.
  */
-export async function createLargeContentFixture(questCount: number = LARGE_QUEST_COUNT, questsPerWorld: number = 25): Promise<LargeContentFixture>
+export async function createLargeContentFixture(questCount: number = LARGE_QUEST_COUNT, questsPerWorld: number = LARGE_QUESTS_PER_WORLD): Promise<LargeContentFixture>
 {
 	const root = await mkdtemp(join(tmpdir(), "dojo-large-content-"));
-	const realQuests = await readRealQuestFiles();
-	const writes: Promise<void>[] = [];
-	let worldCount = 0;
 
-	for (const name of ["glossary.json", "patterns.json"]) writes.push(writeFileUnder(root, name, await readFile(resolve("content", name), "utf8")));
-
-	for (let passStart = 0, pass = 1; passStart < questCount; passStart += realQuests.length, pass++)
+	try
 	{
-		const packId = `load-pack-${pass}`;
-		const questsInPass = Math.min(realQuests.length, questCount - passStart);
-
-		writes.push(writeFileUnder(root, `packs/${packId}/pack.json`, JSON.stringify({ id: packId, title: `Load pack ${pass}`, summary: "A cloned pack for the load budget.", order: pass })));
-
-		for (let index = 0; index < questsInPass; index++)
-		{
-			const quest = realQuests[index];
-			if (!quest) continue;
-
-			const worldNumber = Math.floor(index / questsPerWorld) + 1;
-			const worldId = `load-${pass}-world-${String(worldNumber).padStart(2, "0")}`;
-			const worldFolder = `packs/${packId}/worlds/${String(worldNumber).padStart(2, "0")}-${worldId}`;
-			const order = (index % questsPerWorld) + 1;
-
-			if (order === 1)
-			{
-				worldCount++;
-				writes.push(writeFileUnder(root, `${worldFolder}/world.json`, JSON.stringify({ id: worldId, title: `Load world ${worldId}`, summary: "A cloned world for the load budget." })));
-			}
-
-			const fileName = `${String(order).padStart(2, "0")}-${quest.slug}.md`;
-
-			writes.push(writeFileUnder(root, `${worldFolder}/${fileName}`, retagRealQuest(quest, `load${pass}-`, order)));
-		}
+		return await writeLargeContent(root, questCount, questsPerWorld);
 	}
+	catch (thrown)
+	{
+		await rm(root, { recursive: true, force: true });
+
+		throw thrown;
+	}
+}
+
+/** Writes the large content into an existing empty folder and returns the fixture that owns it. */
+async function writeLargeContent(root: string, questCount: number, questsPerWorld: number): Promise<LargeContentFixture>
+{
+	const realQuests = await readRealQuestFiles();
+
+	if (realQuests.length === 0) throw new Error("The large content fixture found no real quests under content/packs to clone.");
+
+	const writes: Promise<void>[] = [];
+	const writtenIds = new Set<string>();
+	const pointers: { from: string; to: string }[] = [];
+	const worldFolders = new Set<string>();
+	const packNumbers = new Set<number>();
+
+	writes.push(writeFileUnder(root, "glossary.json", retagGlossary(await readFile(resolve("content", "glossary.json"), "utf8"), "load1-")));
+	writes.push(writeFileUnder(root, "patterns.json", await readFile(resolve("content", "patterns.json"), "utf8")));
+
+	for (let position = 0; position < questCount; position++)
+	{
+		const quest = realQuests[position % realQuests.length];
+		if (!quest) continue;
+
+		const pass = Math.floor(position / realQuests.length) + 1;
+		const idPrefix = `load${pass}-`;
+		const worldNumber = Math.floor(position / questsPerWorld) + 1;
+		const worldId = `load-world-${String(worldNumber).padStart(2, "0")}`;
+		const packNumber = Math.floor(((worldNumber - 1) * questsPerWorld) / realQuests.length) + 1;
+		const worldFolder = `packs/load-pack-${packNumber}/worlds/${String(worldNumber).padStart(2, "0")}-${worldId}`;
+		const order = (position % questsPerWorld) + 1;
+
+		if (!packNumbers.has(packNumber))
+		{
+			packNumbers.add(packNumber);
+			writes.push(writeFileUnder(root, `packs/load-pack-${packNumber}/pack.json`, JSON.stringify({ id: `load-pack-${packNumber}`, title: `Load pack ${packNumber}`, summary: "A cloned pack for the load budget.", order: packNumber })));
+		}
+
+		if (!worldFolders.has(worldFolder))
+		{
+			worldFolders.add(worldFolder);
+			writes.push(writeFileUnder(root, `${worldFolder}/world.json`, JSON.stringify({ id: worldId, title: `Load world ${worldNumber}`, summary: "A cloned world for the load budget." })));
+		}
+
+		writtenIds.add(`${idPrefix}${quest.id}`);
+
+		for (const pointed of [...quest.prerequisites, ...quest.pieces]) pointers.push({ from: `${idPrefix}${quest.id}`, to: `${idPrefix}${pointed}` });
+
+		writes.push(writeFileUnder(root, `${worldFolder}/${String(order).padStart(2, "0")}-${quest.slug}.md`, retagRealQuest(quest, idPrefix, order)));
+	}
+
+	const dangling = pointers.filter((pointer) => !writtenIds.has(pointer.to));
+
+	if (dangling.length > 0) throw new Error(`The large content fixture would leave ${dangling.length} dangling quest ids, for example ${dangling[0]?.from} -> ${dangling[0]?.to}.`);
 
 	await Promise.all(writes);
 
 	return {
 		root,
 		questCount,
-		worldCount,
+		worldCount: worldFolders.size,
 		async remove()
 		{
 			await rm(root, { recursive: true, force: true });

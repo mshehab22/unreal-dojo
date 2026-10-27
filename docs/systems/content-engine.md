@@ -134,7 +134,7 @@ Windows desktop, 2026-10-27 (M5.1c), other builders using the machine:
 
 | Run | Time | Notes |
 | --- | --- | --- |
-| App content load (`tests/contentLoadBudget.test.ts`): fresh `ContentCatalog` on real disk, 300 real quests cloned over 12 worlds with the real glossary and patterns, until `listPacks`, `getGlossaryAliases`, and `getQuestAvailability` have answered | median of three: 122 ms quietest, 130 to 190 ms typical; first (cold) run: 186 ms quietest, 200 to 235 ms typical, 337 ms worst seen; the budget gates the median at 300 ms | 11 runs; the budget held without any loader change, so no follow-up was needed (A1196 to A1198) |
+| App content load (`tests/contentLoadBudget.test.ts`): fresh `ContentCatalog` on real disk, 300 real quests cloned over 25-quest worlds with the real glossary and patterns, until `listPacks`, `getGlossaryAliases`, and `getQuestAvailability` have answered | median of three: 122 ms quietest, 130 to 190 ms typical; first (cold) run: 186 ms quietest, 200 to 235 ms typical, 337 ms worst seen; the budget gates the median at 300 ms | 11 runs; the budget held without any loader change, so no follow-up was needed (A1196 to A1198) |
 
 Starter checks dominate. For a full pack, M2 or later can cut this with one batched starter build, falling back to one quest at a time only when that build fails (see A208).
 
