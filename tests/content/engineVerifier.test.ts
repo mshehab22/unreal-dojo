@@ -284,6 +284,22 @@ describe("EngineVerifier", () =>
 		expect(sandbox.written.has("b")).toBe(true);
 	});
 
+	it("fails a run that judges nothing, naming the scope and the solutions folder (V1)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ b: "SOLUTION" });
+		const scoped = await verifyWith(sandbox, [quest("a"), quest("b")], solutions, new Set(["a"]));
+		const unscoped = await verifyWith(sandbox, [quest("a")], join(scratch, "no-such-folder"));
+
+		expect(scoped.questsChecked).toBe(0);
+		expect(scoped.problems).toHaveLength(1);
+		expect(scoped.problems[0]).toMatchObject({ file: "(engine)" });
+		expect(scoped.problems[0]?.message).toContain("judged no quests");
+		expect(scoped.problems[0]?.message).toContain(" for a in ");
+		expect(unscoped.problems.map((problem) => problem.message).join("\n")).toContain("judged no quests");
+		expect(sandbox.operations).toEqual([]);
+	});
+
 	it("treats a starter build failure in another quest's files as inconclusive, and one in its own files as fine", async () =>
 	{
 		const sandbox = new FakeSandbox();

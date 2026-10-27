@@ -7,8 +7,6 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 ## Open
 
 - 2026-10-26, unreal-pipeline (Windows): the first Windows integration suite run had 8 failures of 24. Five are the tests' `pgrep` process check, one is the known A402 snippet checker gap, and two are a product bug: the windowless editor answers "Live Coding is not enabled for this session", which the runner reads as a compile failure instead of falling back to headless. The wiring test also likely opened a windowed editor, against A643. Owner: builder-unreal, W8 in progress.
-- 2026-10-26, content authors and unreal-pipeline: MSVC treats C4458 (a local or parameter that hides a class member, such as `Instigator` or `bHidden` on an actor) as an error, and clang on the Mac does not warn, so Mac-written solutions can break the Windows build. Two were found and fixed (A1050, A1060). Until a Mac-side check exists (for example a clang shadow warning in the sandbox, or a verifier lint for known AActor member names), every world's engine proof on Windows catches it. Owner: unreal-pipeline, to decide.
-- 2026-10-26, content-engine: `verify-content --quest <id> --solutions <folder>` reports "0 quests, 0 problems" and exits 0 when the scoped quest has no folder in `<folder>` (seen when a shell ate a backslash). A scoped run that judges nothing should fail. Owner: content-engine.
 - 2026-10-26, ui-quests: a glossary hover card that opens under a resting pointer covers the concept quest's "Read the card" button. W9 in progress.
 
 
@@ -42,6 +40,10 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 - 2026-10-21, unreal-pipeline: M1.2a sandbox template, headless build and test, and the MCP calls passed on the Mac (UE 5.8.3), and on Windows UE 5.8.3 on 2026-10-26 (MCP up in 7 s in the windowless editor). Still unverified on UE 5.4 to 5.7: that `L_Sandbox.umap`, saved by 5.8, opens there, and that the C++ APIs used by `FDojoTestWorld` (`UWorld::SetBegunPlay`, `UWorld::CreateWorld` with its 5.8 signature, `FWorldContext::SetCurrentWorld`) exist with the same signatures.
 
 ## Solved
+
+- 2026-10-26, content authors and unreal-pipeline: MSVC treats C4458 (a local or parameter that hides a class member, such as `Instigator` or `bHidden`) as an error and clang on the Mac does not warn. Solved by V1 (2026-10-27): the content verifier lints every solution and starter for it, with no engine (A1170, A1171, A1174); the sandbox template keeps its flags (A1173).
+
+- 2026-10-26, content-engine: `verify-content --quest <id> --solutions <folder>` reported "0 quests, 0 problems" and exited 0 when the folder had nothing for that quest. Solved by V1 (2026-10-27): a scoped run that judges nothing, a missing `--solutions` folder, and an engine run with nothing to build now fail (A1172).
 
 - 2026-10-21, ui-core: Cmd/Ctrl+K palette highlighted rows under a resting pointer. Fixed in M2.1d (highlight on real pointer movement, with a resting-pointer e2e test).
 
