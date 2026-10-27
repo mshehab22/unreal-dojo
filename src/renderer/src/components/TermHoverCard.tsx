@@ -55,7 +55,7 @@ export function TermHoverCard({ entry, children }: TermHoverCardProps)
 				</span>
 			</HoverCardPrimitive.Trigger>
 			<HoverCardPrimitive.Portal>
-				<HoverCardPrimitive.Content data-testid="term-card" sideOffset={6} className="z-50 flex w-80 animate-fade-in flex-col gap-2 rounded-md border border-line-strong bg-overlay p-4 text-sm shadow-overlay">
+				<HoverCardPrimitive.Content data-testid="term-card" sideOffset={6} className="z-50 flex w-80 data-[state=open]:animate-fade-in flex-col gap-2 rounded-md border border-line-strong bg-overlay p-4 text-sm shadow-overlay">
 					<div className="flex items-baseline justify-between gap-3">
 						<span className="font-mono text-sm font-semibold text-pack">{entry.term}</span>
 						<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">{entry.category}</span>

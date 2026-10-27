@@ -1813,3 +1813,10 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Commit: 92b1815 for the first round, 7cf2def for fix round 1, and fix round 2 follows on branch `w8-windows-integration`. Fix round 2: a failed or cancelled Live Coding compile now counts as a compile failure only when the answer holds a real compiler error line; the usual real answer has only the Live Coding log, and that goes to the full build so the learner sees the real errors.
 - Nothing visible to learners changed.
 - Decisions made: A1070 to A1076.
+
+## W9b macOS CI: the Escape step of the hover card test (ui-quests, builder-ui)
+- What was asked: after W9 merged, its new test failed on macOS CI (run 40452256211) at the step after Escape, which expected the hover card to be gone and still found it.
+- What was going on: two CI runs on a branch with logging showed Escape does reach the page and does close the card on macOS (the card's state was "closed" and the card's close handler had run). The closed card was still in the page, because the card waits for its fade animation before it is removed, and a hidden macOS window does not finish animations. So it was the test, not the product, that asked for the card to be gone.
+- What changed: the test now checks the card's own state (`data-state="open"`) after Escape, after the small moves, and when re-entering, so the Escape check stays. The card's fade-in now applies only while it is open, as the dialog's does, so a closed card has no animation to wait for and is removed at once. The first version of this round (ignoring the card's own open requests unless focused) was dropped, since the logs showed no stale open.
+- Proof (Windows 11, from main 26bdf38, hidden windows): `npm run typecheck` passes; the W9 test with `--repeat-each=10`, 10 passed; macOS not run locally. Two macOS CI runs on the branch (40453724540, 40454888342) were the diagnostic runs and failed on the old assertion; a combined run on the fix is for the Lead to start.
+- Decisions made: none.
