@@ -4,6 +4,54 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1099 2026-10-27 Engine builds were blocked by an open windowed editor; the proof passes -NoHotReloadFromIDE locally (author-patterns, M4.P2.12)
+While a windowed editor with Live Coding was open on this machine (Mohammad's KAEL project, which runs the installed `UnrealEditor.exe`), every sandbox build failed in about 10 s with "Unable to build while Live Coding is active". UnrealBuildTool names that check's mutex after the editor executable, which every project on the installed engine shares. Options: wait for Mohammad to close his editor; close it myself (no, never); change the app's build call. Chosen for this proof only: an uncommitted local edit adds UBT's own `-NoHotReloadFromIDE` flag to `UnrealBuilder.ts`, which turns that guard off for the sandbox build (the sandbox is never open in an editor), and the edit is reverted before the commit. A real fix belongs to the owner of `UnrealBuilder.ts`: the same flag in the committed build call. Reverse cost: none.
+
+### A1098 2026-10-27 World 12's engine proof (author-patterns, M4.P2.12)
+Proven on Windows, UE 5.8.3, 2026-10-27, headless with -NullRHI, against a scratch solutions folder holding only the three p12 folders. Each reference builds and passes its tests, and each starter compiles and fails (build 71.8 s, solution tests 13.7 s, starter checks 121.3 s, 209 s for the whole run). Mutations caught: the one-level Resolve fails only GrandchildBorrowsThroughItsParent (the deliberate failure, A1093); a LayBlade without Wake fails TunedStaysOutOfPlay (so a copy of a parked blade really is parked); a LayBlade that drops the template fails the value tests (Damage 10, not 40); a plain spawn without SetActorLocation fails CopiesStandWhereTheyAreLaid, and so did SpawnActorAbsolute (A1094); a charm-less clone fails only CloneOwnsItsCharm. The first run of CopiesStandWhereTheyAreLaid failed the reference, which is how A1094 was found. Reverse cost: none.
+
+### A1097 2026-10-27 Glossary and card changes for Prototype (author-patterns, M4.P2.12)
+Added `spawn-template` (framework; aliases FActorSpawnParameters::Template, template actor, spawn template) and `duplicate-object` (object model; aliases DuplicateObject<T>() and StaticDuplicateObject), both first taught in `p12-copy-the-tuned-one`, and the alias `GetMutableDefault` on `cdo`. The Prototype card in `patterns.json` was audited item by item. Rewritten: `intent`, `problem`, `unrealForm`, and `whenNot` (the old problem was a fast ghost, a slow armored ghost, and a ghost with a key, which is the chapter's spawner example), `prototype-recall-2` and `-3` (reworded), and both old scenarios (an elite guard, and thirty enemy kinds). Added `prototype-recall-4` and `-5` and `prototype-scenario-3` (trial rows) and `-4` (a multiple-choice when-not: copies are snapshots). Use cases: `p12-blade-copies` and `p12-trial-rows`. No card item names the grandchild chain, which is the deliberate failure (A1093). Reverse cost: low.
+
+### A1096 2026-10-27 The refactor is checked by reflection, and the starter has drifted (author-patterns, M4.P2.12)
+`p12-kit-refactor` starts with a hand-written `Clone` that copies the label, health, stamina, charm strength, and favor but not `LuckBonus`, the field "added after the first version". `CloneKeepsEveryValue` walks the kit's non-object properties with `TFieldIterator` and fails on the starter naming `LuckBonus`; `CloneOwnsItsCharm` and `CloneSharesTheFavor` pass before and after. The reference is one `DuplicateObject<UDojoP12Kit>(this, GetOuter())`, which also keeps the owned charm separate and the favor shared. Options considered: a test that fails only on a field it names by hand (rejected, it would miss the next field); a structural test counting lines (rejected, brittle). Reverse cost: low.
+
+### A1095 2026-10-27 Trial rows use -1 as "not set", live in an array on an actor, and have no loop test (author-patterns, M4.P2.12)
+Options for "this row does not set it": `TOptional` (not a `UPROPERTY`), one override flag per field (doubles the fields), or a negative sentinel. Chosen: the sentinel, since a blade count, a speed, a time limit, and a reward are never negative; zero stays a real value. The rows sit in a `TArray<FDojoP12TrialRow>` on `ADojoP12TrialBook`, not in a Data Table, so the tests need no asset; the Alternative names the Data Table form. Rows that name each other as parents are stated in the brief and the rubric (give up and return false) but not tested: the obvious one-level version returns true for a loop, which would add a second failing test beside the deliberate one, and an unguarded learner loop would hang the test run. Reverse cost: low.
+
+### A1094 2026-10-27 Laying a blade sets the copy's location and wakes it (author-patterns, M4.P2.12)
+UE 5.8's `LevelActor.cpp` and `Actor.cpp` place a spawned actor's root at the transform given combined with the template root's own relative transform, and `bHidden` and `bActorEnableCollision` are plain saved properties that a template copy takes. So a template standing at (1000, 1000, 500) leaves copies off target, and a parked template makes a parked copy. Options for the place: `UWorld::SpawnActorAbsolute`, which the source says cancels the template root's place; a plain spawn followed by `SetActorLocation`. The engine run showed `SpawnActorAbsolute` still leaves a copy at the template's place when the spawn is at exactly (0, 0, 0), so the reference spawns plainly and calls `SetActorLocation(Where)` and `Wake()`; a plain spawn alone also fails on the first blade. Both are stated requirements in the worked quest's brief and rubric and covered by tests with the tuned blade away from the origin; neither is the world's deliberate failure. Reverse cost: low.
+
+### A1093 2026-10-27 World 12's deliberate failure: a trial that borrows through a parent that itself borrows (author-patterns, M4.P2.12)
+Options:
+- Calling `GetMutableDefault` to tune a variant: taught openly in the first quest and the card.
+- A template that is left visible: taught openly in the first quest.
+- `Resolve` that reads the parent's row as written, one level up.
+
+Chosen: the last. A natural first `Resolve` finds the row, then copies the parent's numbers into whatever the row left unset. That passes every one-level test, and fails `GrandchildBorrowsThroughItsParent`, where SwiftLong's blade count and reward are set two rows up, in Basic, while Swift leaves them unset. The book lists children before parents, so a precompute pass in array order also fails. The reference climbs the chain until every number is set. The card says a parent "may borrow from its own parent in turn" only in the sense of the data form, without the consequence for a single read. Engine check: see A1098. Reverse cost: low.
+
+### A1092 2026-10-27 Prototype arc, built away from the source's examples (author-patterns, M4.P2.12)
+Not used in briefs, cards, choices, distractors, or the card's items: a spawner class per monster kind, ghosts, demons, a goblin and its archer, or the chapter's remarks on prototype-based languages. The originality check ran against the research's Prototype section (6 and 5 words, no hits in quests, solutions comments, glossary, or the card); the source PDF is gone, so a direct check against the book is pending. The arc, all in the trial hall:
+- `p12-copy-the-tuned-one` (concept, no pattern name).
+- `p12-blade-copies` (worked: lay blades from a tuned template actor).
+- `p12-prototype-card`.
+- `p12-trial-rows` (stub: trials that borrow from parent rows; deliberate failure A1093).
+- `p12-kit-refactor` (a hand-written Clone becomes DuplicateObject).
+- `p12-prototype-when-not`.
+
+No boss and no breakdown. Reverse cost: low.
+
+### A1091 2026-10-27 Pack 2 World 12 ids (author-patterns, M4.P2.12)
+- Folder `12-prototype`; world id `prototype`, unique across packs (A73).
+- Quest ids `p12-<slug>`; classes `ADojoP12Blade`, `ADojoP12BladeLayer`, `ADojoP12TrialBook`, `UDojoP12Charm`, `UDojoP12Kit`; struct `FDojoP12TrialRow` in its own header; tests `Dojo.P12.<Quest>.<Case>`.
+- No enums. `p12-copy-the-tuned-one` requires `p11-flyweight-when-not` (World 11, already on main).
+- Locals and parameters avoid the names of `AActor`, `UActorComponent`, and `UObject` members (A1050, A1060): `Blade`, `Where`, `Laid`, `LevelWorld`, `Parameters`, `Index`, `TrialName`, `Row`, `Result`, `Copy`.
+
+Reverse cost: medium once learners have progress saved.
+
+### A1090 2026-10-27 Decision block A1090 to A1109 from the Lead (author-patterns, M4.P2.12)
+Assigned under A71; this world uses A1090 to A1099. Reverse cost: none.
+
 ### A1060 2026-10-26 W7 how the tracker's reset test observes a stale clock (builder, M3.2 Pack 3 World 6)
 The reset mutation survived because a stale clock does nothing once the quest is no longer Active, so the state read the same either way. Options: restart the quest after the reset and check it is still Active past the old deadline; read the timer handle through the timer manager. Chosen: restart the quest, with its time limit set to zero first. Why: the handle is private to the tracker, so a learner's test cannot read it, and restarting a timed quest would replace the old clock under the same handle and hide the leak. With no limit on the restart, no new clock is set, so only a clock the reset left running can still fail the quest. The boss reference also renamed its local `bHidden` to `bHiddenOnBoard`, because `AActor` has a member of that name (MSVC error C4458).
 

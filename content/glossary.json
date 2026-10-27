@@ -1044,7 +1044,8 @@
       "CDO",
       "GetDefault",
       "class defaults",
-      "archetype"
+      "archetype",
+      "GetMutableDefault"
     ],
     "category": "object model",
     "short": "A hidden template instance of each class, built by running its constructor once, that new instances copy their defaults from.",
@@ -4098,5 +4099,46 @@
       "profiling"
     ],
     "firstQuestId": "p11-thousands-of-the-same"
+  },
+  {
+    "id": "spawn-template",
+    "term": "Spawn Template",
+    "aliases": [
+      "FActorSpawnParameters::Template",
+      "template actor",
+      "spawn template"
+    ],
+    "category": "framework",
+    "short": "A spawn parameter that starts a new actor from an existing actor's property values instead of from the class defaults.",
+    "long": "FActorSpawnParameters has a Template field. Set it to an existing actor of exactly the same class and the world builds the new actor from that actor's property values, so a tuned instance becomes the starting point for any number of copies. The template is still a real actor in the world and plays like one unless you hide it and turn its collision off, and a copy takes those values too. The root component's own place is one of the values a copy takes, so a copy may not land where you asked until you set its location. A template of a different class makes the spawn fail.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/FActorSpawnParameters?application_version=5.8",
+    "related": [
+      "spawnactor",
+      "cdo",
+      "blueprint-class",
+      "actor",
+      "world"
+    ],
+    "firstQuestId": "p12-copy-the-tuned-one"
+  },
+  {
+    "id": "duplicate-object",
+    "term": "DuplicateObject",
+    "aliases": [
+      "DuplicateObject<T>()",
+      "StaticDuplicateObject"
+    ],
+    "category": "object model",
+    "short": "The function that makes a separate copy of a UObject, including the objects it owns.",
+    "long": "DuplicateObject takes a source object and an outer and returns a new object of the same class with the same property values. Subobjects the source owns, such as components or helper objects created inside it, are duplicated too, so the copy does not share them. Objects the source only points at stay shared between the two. It is the engine's own deep copy for objects that are not actors; actors are copied by spawning with a template. Prefer it to a hand-written Clone function that lists every field, which falls behind as soon as someone adds a field.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/DuplicateObject?application_version=5.8",
+    "related": [
+      "newobject",
+      "uobject",
+      "cdo",
+      "garbage-collection",
+      "spawn-template"
+    ],
+    "firstQuestId": "p12-copy-the-tuned-one"
   }
 ]

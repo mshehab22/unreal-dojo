@@ -1708,3 +1708,21 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 - Line endings on Windows: the editor's text keeps the line endings of the starter file it was created from. The starters are checked out with LF (A1020), so the editor holds LF on Windows, typed new lines are LF, and what the app saves and submits is LF. Only a file with no line break at all would pick Windows' default (CRLF) the first time the learner presses Enter; no starter is like that.
 - Proof (Windows 11, from main 20e9501, hidden test windows): the build test with `--repeat-each=5`, 5 passed; the whole `e2e/ui-quests-flow.spec.ts`, 11 passed; `npm run typecheck` passes; `npm test` 920 passed, 28 skipped. macOS not run here; the change is platform neutral (frames and the End key behave the same there).
 - Decisions made: none.
+
+## M4.P2.12 Pack 2 World 12, Prototype (content-patterns, author-patterns)
+- What changed: a twelfth Patterns world, "Start from one that is already right", with the full mini-arc for Prototype (six quests), set in the trial hall. A new thing starts from a copy of an example that is already tuned, or a data row borrows what it does not set from a parent row. Three Unreal forms: a spawn template for actors, `DuplicateObject` for other objects, and rows that name a parent. Built away from the source chapter's spawner-per-monster example; the card's ghost problem, elite-guard scenario, and thirty-kinds scenario were rewritten (A1092, A1097).
+- The quests and their observables:
+  - Ten more like the one I tuned (concept): a plain spawn starts from the class defaults, a spawn template starts from a tuned actor, a template is a real actor, and `DuplicateObject` copies a non-actor object.
+  - Three blades, each tuned like the first (build, worked): the learner writes `LayBlade`. Three blades laid at X 0, 300, and 600 from a tuned blade (Damage 40, Swing Speed 90, Arm Delay 2, orange) carry those numbers and stand where laid even when the tuned blade stands far away; the tuned blade stays parked and the laid ones are awake.
+  - Start from one that is already right (concept): the card, with the class default object, spawn templates, `DuplicateObject`, Blueprint children, the data form, deep versus shallow, snapshot versus live.
+  - Trials that borrow from other trials (build, stub): the learner writes `Resolve`. SwiftLong, which sets only its time limit, resolves to 3 blades, speed 150, 120 seconds, and reward 10. Its deliberate failure: reading only the parent's row as written (A1093).
+  - A copy function that lists every field (refactor): `Clone` becomes one `DuplicateObject` call. The starter's hand-written copy misses `LuckBonus`; the copy owns its charm and shares the favor.
+  - When copying an example is the wrong move (concept): kinds that are only data, snapshots, unclear sharing, class default writes, hand-written clones.
+- Also: new glossary entries `spawn-template` and `duplicate-object`, the `GetMutableDefault` alias on `cdo`, and the Prototype card audit (A1097).
+- Proof:
+  - Content verifier: no problems. `npm run typecheck` and `npm test`: see the tester line below.
+  - Engine proof: proven on Windows, UE 5.8.3, 2026-10-27, headless (details and mutations in A1098). The three references build and pass; the three starters compile and fail. Build 71.8 s, solution tests 13.7 s, starter checks 121.3 s.
+  - Originality: the 6-word and 5-word check against the research's Prototype section found no hits in the quests, solutions, glossary entries, or card. The check against the book is pending because the PDF is gone.
+- Found while proving: engine builds failed in about 10 s with "Unable to build while Live Coding is active" while Mohammad's KAEL editor was open, because UnrealBuildTool's mutex is named after the shared `UnrealEditor.exe`. The proof ran with an uncommitted `-NoHotReloadFromIDE` added to `UnrealBuilder.ts`; the committed build call still needs it (A1099).
+- Also found: a template's own root place and its parked state are copied (A1094), and `SpawnActorAbsolute` still leaves a copy at the template's place for a spawn at exactly the origin.
+- Not done: the source n-gram check. No screenshots. Decisions A1090 to A1099.

@@ -1,0 +1,5 @@
+{
+	"id": "prototype",
+	"title": "Start from one that is already right",
+	"summary": "The trial hall needs dozens of blades, trials, and challenger kits that are almost like one you already tuned. Learn to copy a tuned actor or object and to let one record borrow what it does not set from another, using the class default object, spawn templates, and DuplicateObject, so a new variant is a small change instead of a new class."
+}
