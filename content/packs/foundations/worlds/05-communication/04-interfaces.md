@@ -46,13 +46,13 @@ class IDojoF5Interactable
 	GENERATED_BODY()
 public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interact")
-	bool Interact(AActor* Instigator);
+	bool Interact(AActor* Interactor);
 };
 ```
 
 `UDojoF5Interactable` is the reflected half: an empty class that lets the engine and Blueprint know the interface exists. `IDojoF5Interactable` holds the functions. A class keeps the promise by listing the I half as a second parent, `class ADojoF5Crate : public AActor, public IDojoF5Interactable`, and implementing `Interact_Implementation`.
 
-To call it, first ask: `Target->Implements<UDojoF5Interactable>()`. Then call through the generated static helper `IDojoF5Interactable::Execute_Interact(Target, Instigator)`. Execute_ works whether the class implemented the function in C++ or in Blueprint. The two shortcuts both fail: calling `Interact` directly on the I class stops the program on a failed check for every implementer, because the generated body of an interface event only tells you to call Execute_ instead; and a Cast to the I class returns nullptr for a Blueprint implementer, which has no C++ I part. So always call BlueprintNativeEvent and BlueprintImplementableEvent functions through Execute_.
+To call it, first ask: `Target->Implements<UDojoF5Interactable>()`. Then call through the generated static helper `IDojoF5Interactable::Execute_Interact(Target, Interactor)`. Execute_ works whether the class implemented the function in C++ or in Blueprint. The two shortcuts both fail: calling `Interact` directly on the I class stops the program on a failed check for every implementer, because the generated body of an interface event only tells you to call Execute_ instead; and a Cast to the I class returns nullptr for a Blueprint implementer, which has no C++ I part. So always call BlueprintNativeEvent and BlueprintImplementableEvent functions through Execute_.
 
 # Example
 
@@ -80,7 +80,7 @@ bool ADojoF5Keeper::InteractWith(AActor* Target)
   explanation: One interface call replaces the cast chain, and a thirteenth pickup needs no change to the player.
 - id: fill-execute
   type: fill-blank
-  prompt: "To call Interact on an actor whose implementation may be in Blueprint, use IDojoF5Interactable::___Interact(Target, Instigator)."
+  prompt: "To call Interact on an actor whose implementation may be in Blueprint, use IDojoF5Interactable::___Interact(Target, Interactor)."
   acceptedAnswers: [Execute_]
   explanation: The Execute_ helper reaches C++ and Blueprint implementations alike.
 - id: spot-implements-class
