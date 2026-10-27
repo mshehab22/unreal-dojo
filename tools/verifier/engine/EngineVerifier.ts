@@ -265,6 +265,15 @@ async function install(sandbox: VerifierSandbox, desired: ReadonlyMap<string, In
 	}
 }
 
+/** The error for an engine run that built and tested no quest, so a mistyped path or id never looks like a pass. */
+function nothingJudgedMessage(scope: ReadonlySet<string> | undefined, solutionsFolder: string): string
+{
+	const ids = scope === undefined ? [] : [...scope];
+	const scoped = ids.length === 0 ? "" : ` for ${ids.slice(0, 5).join(", ")}${ids.length > 5 ? ", and more" : ""}`;
+
+	return `the engine stage judged no quests: no reference solution was found${scoped} in ${solutionsFolder}; check the --solutions path, the --quest or --pack id, and that each quest has a folder there`;
+}
+
 /** Runs the engine stage for the given quests. Never throws for content problems; engine failures become problems too. */
 export class EngineVerifier
 {
@@ -291,7 +300,8 @@ export class EngineVerifier
 
 		const judged = quests.filter((entry) => scope === undefined || scope.has(entry.quest.id));
 
-		if (judged.length === 0) return { problems, questsChecked: 0, timings };
+		// Judging nothing is a failure of its own, unless a quest was already reported as unusable (that report fails the run).
+		if (judged.length === 0) return { problems: problems.length > 0 ? problems : [errorAt("(engine)", nothingJudgedMessage(scope, this.options.solutionsFolder))], questsChecked: 0, timings };
 
 		const signal = this.options.signal ?? new AbortController().signal;
 		const createSandbox = this.options.createSandbox ?? ((templateFolder, target, abortSignal) => EngineSandbox.create(templateFolder, target, abortSignal));

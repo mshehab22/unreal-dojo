@@ -13,6 +13,7 @@ import { questionCheck } from "./checks/questionCheck";
 import { questShapeCheck } from "./checks/questShapeCheck";
 import { referenceCheck } from "./checks/referenceCheck";
 import { repetitionCheck } from "./checks/repetitionCheck";
+import { shadowedMemberCheck } from "./checks/shadowedMemberCheck";
 import { solutionCheck } from "./checks/solutionCheck";
 import { termOrderCheck } from "./checks/termOrderCheck";
 import { unlockGraphCheck } from "./checks/unlockGraphCheck";
@@ -64,6 +65,7 @@ export const CONTENT_CHECKS: readonly ContentCheck[] = [
 	glossaryCheck,
 	coverageCheck,
 	solutionCheck,
+	shadowedMemberCheck,
 	dependencyCheck,
 	packGateCheck,
 	termOrderCheck,
@@ -130,6 +132,15 @@ function filterToPack(reports: readonly FileReport[], packId: string): FileRepor
 	return [{ file: "packs", problems: [{ file: "packs", message: `no pack folder named "${packId}"` }] }];
 }
 
+/** How many quests a `--pack` or `--quest` run judges (every quest when neither is given). */
+function scopedQuestCount(options: VerifierOptions, quests: readonly QuestRecord[]): number
+{
+	if (options.questId !== undefined) return quests.filter((record) => record.quest.id === options.questId).length;
+	if (options.packId !== undefined) return quests.filter((record) => record.packId === options.packId).length;
+
+	return quests.length;
+}
+
 /** Counts a report list's errors and warnings. */
 function countProblems(reports: readonly FileReport[]): { errors: number; warnings: number }
 {
@@ -160,6 +171,14 @@ export async function runVerifier(options: VerifierOptions, checks: readonly Con
 
 	if (options.packId !== undefined) reports = filterToPack(reports, options.packId);
 	if (options.questId !== undefined) reports = filterToQuest(reports, options.questId, content.questSources[options.questId] ?? examples.questSources[options.questId]);
+
+	// A scoped run that judges no quest and found no problem would pass by doing nothing, so it fails instead.
+	if ((options.packId !== undefined || options.questId !== undefined) && scopedQuestCount(options, input.quests) === 0 && countProblems(reports).errors === 0)
+	{
+		const scope = options.questId === undefined ? `--pack "${options.packId}"` : `--quest "${options.questId}"`;
+
+		reports = [...reports, { file: "(scope)", problems: [{ file: "(scope)", message: `${scope} judged no quests; check the id` }] }];
+	}
 
 	const { errors, warnings } = countProblems(reports);
 	const counts: VerifierCounts = {

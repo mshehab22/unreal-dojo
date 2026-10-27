@@ -13,6 +13,7 @@ import type { ElectronApplication, Locator, Page, TestInfo } from "@playwright/t
 import { answerParsons, answerQuestion, readAnswerKey, type AnswerKey } from "./support/answerKey";
 import { stubOpenDialog } from "./support/dialogStubs";
 import { expect, test } from "./support/dojoTest";
+import { hoverAtCentre } from "./support/hoverAtCentre";
 import { closeDojoKeepingData, launchDojo } from "./support/launchDojo";
 import type { ProofCamera } from "./support/ProofCamera";
 
@@ -221,9 +222,8 @@ async function hoverTerm(scope: Locator): Promise<void>
 
 	await expect(async () =>
 	{
-		await window.mouse.move(5, 5);
-		await term.hover();
-		await expect(window.getByTestId("term-card")).toBeVisible({ timeout: 1_500 });
+		await hoverAtCentre(window, term);
+		await expect(window.getByTestId("term-card")).toBeVisible({ timeout: 3_000 });
 	}).toPass({ timeout: 15_000 });
 }
 

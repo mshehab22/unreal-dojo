@@ -1,6 +1,7 @@
 // Content verifier entry point: parses and checks every content file, optionally builds and tests reference solutions, and reports per file.
 import { resolve } from "node:path";
 
+import { solutionsFolderProblem } from "./verifier/checkSolutionsFolder";
 import { formatReport } from "./verifier/formatReport";
 import { parseVerifierArguments, USAGE } from "./verifier/parseVerifierArguments";
 import { runEngineStage } from "./verifier/engine/runEngineStage";
@@ -30,6 +31,15 @@ async function main(): Promise<void>
 	if (parsed.options.help)
 	{
 		console.log(USAGE);
+		return;
+	}
+
+	const unusableSolutions = await solutionsFolderProblem(parsed.options.solutionsFolder);
+
+	if (unusableSolutions !== undefined)
+	{
+		console.error(`verify-content: ${unusableSolutions}`);
+		process.exitCode = EXIT_USAGE;
 		return;
 	}
 

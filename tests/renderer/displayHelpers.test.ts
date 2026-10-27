@@ -148,6 +148,19 @@ describe("explainSandboxFailure", () =>
 		expect(explainSandboxFailure(output, "first-run").message).toContain("not in anything you wrote");
 	});
 
+	it("names another open editor with Live Coding as the cause, on both a first build and a rebuild", () =>
+	{
+		const pipelineMessage = "Unreal refused to build because an Unreal editor with Live Coding is open. Close the other Unreal editor, then run again. Your code was not compiled.";
+		const rawLine = "Unable to build while Live Coding is active. Exit the editor and game, or press Ctrl+Alt+F11 if iterating on code in the editor or game";
+
+		for (const context of ["first-run", "rebuild"] as const)
+		{
+			expect(explainSandboxFailure(`${pipelineMessage}
+${rawLine}`, context).message).toContain("another Unreal editor with Live Coding is open");
+			expect(explainSandboxFailure(rawLine, context).suggestedAction).toContain("Close the other Unreal editor");
+		}
+	});
+
 	it("never mentions setup steps on a rebuild", () =>
 	{
 		const explanation = explainSandboxFailure(output, "rebuild");
