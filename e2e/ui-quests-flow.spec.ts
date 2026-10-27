@@ -763,11 +763,15 @@ test("a glossary hover card opens on a real move onto the term, never when conte
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
 	await openFake("#/quest?id=f1-uproperty-specifiers");
 
-	// The pointer stays where "Lock in my guess" was clicked, and the reveal puts a glossary term under it; "Read the card" must stay reachable.
+	// The pointer stays where "Lock in my guess" was clicked and nothing moves it before "Read the card" is clicked. In the fake's layout this click
+	// also passes on the old component, so it only proves the button is reachable here; the steps below are what pin the behavior.
 	const predict = window.getByTestId("predict-step");
 	await predict.getByTestId("choice").first().click();
 	await predict.getByRole("button", { name: "Lock in my guess" }).click();
 	await expect(window.getByTestId("predict-reveal")).toBeVisible();
+	await window.evaluate("new Promise((resolve) => setTimeout(resolve, 1_000))");
+	await expect(window.getByTestId("term-card")).toHaveCount(0);
+	await saveScreenshot("w9-read-the-card-clear");
 	await predict.getByRole("button", { name: "Read the card" }).click({ timeout: 5_000 });
 
 	const card = window.getByTestId("card-step");
@@ -789,6 +793,23 @@ test("a glossary hover card opens on a real move onto the term, never when conte
 	await expect(window.getByTestId("term-card")).toHaveCount(0);
 
 	// A real move within the term opens it.
+	await expect(async () =>
+	{
+		await window.mouse.move(5, 5);
+		await window.mouse.move(70, 61);
+		await window.mouse.move(75, 62);
+		await expect(window.getByTestId("term-card")).toBeVisible({ timeout: 2_000 });
+	}).toPass({ timeout: 10_000 });
+
+	// Escape closes it and keeps it closed: a small move inside the term does not reopen it (one open per entry), so the hover is not counted again.
+	await window.keyboard.press("Escape");
+	await expect(window.getByTestId("term-card")).toHaveCount(0);
+	await window.mouse.move(78, 63);
+	await window.mouse.move(80, 63);
+	await window.evaluate("new Promise((resolve) => setTimeout(resolve, 1_000))");
+	await expect(window.getByTestId("term-card")).toHaveCount(0);
+
+	// Leaving and coming back is a new entry and opens it again.
 	await expect(async () =>
 	{
 		await window.mouse.move(5, 5);

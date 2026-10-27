@@ -1,4 +1,4 @@
-// Opens a hover card only after the pointer really moves onto its trigger, so content that appears under a still pointer never pops a card open.
+// Opens a hover card only after the pointer really moves onto its trigger, once per entry, so content that appears under a still pointer never pops a card open and Escape keeps it closed.
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 
 import { PointerTrail } from "@/lib/pointerMovement";
@@ -29,6 +29,9 @@ export function useIntentionalHover(openDelayMilliseconds: number): IntentionalH
 	const [open, setOpenState] = useState(false);
 	const timer = useRef<number | undefined>(undefined);
 
+	// True from a pointer enter until the card opens, closes, or the pointer leaves: one pointer open per entry.
+	const armed = useRef(false);
+
 	/** Cancels a pending pointer open. */
 	const cancelPending = useCallback((): void =>
 	{
@@ -41,22 +44,30 @@ export function useIntentionalHover(openDelayMilliseconds: number): IntentionalH
 	/** Applies an open or close from the card itself. */
 	const setOpen = useCallback((next: boolean): void =>
 	{
-		if (!next) cancelPending();
+		if (!next)
+		{
+			cancelPending();
+			armed.current = false;
+		}
 
 		setOpenState(next);
 	}, [cancelPending]);
 
-	/** Takes over the card's own pointer-enter open, which cannot tell a real move from a layout change. */
+	/** Arms one pointer open and takes over the card's own pointer-enter open, which cannot tell a real move from a layout change. */
 	const onPointerEnter = useCallback((event: PointerEvent): void =>
 	{
-		event.preventDefault();
-	}, []);
+		armed.current = true;
+
+		// An open card keeps the card's own handling, which cancels its pending close when the pointer comes back.
+		if (!open) event.preventDefault();
+	}, [open]);
 
 	/** Starts the open delay on the first real movement over the trigger. */
 	const onPointerMove = useCallback((event: PointerEvent): void =>
 	{
-		if (event.pointerType === "touch" || timer.current !== undefined || !windowTrail.lastEventMoved()) return;
+		if (event.pointerType === "touch" || !armed.current || timer.current !== undefined || !windowTrail.lastEventMoved()) return;
 
+		armed.current = false;
 		timer.current = window.setTimeout(() =>
 		{
 			timer.current = undefined;
@@ -64,5 +75,12 @@ export function useIntentionalHover(openDelayMilliseconds: number): IntentionalH
 		}, openDelayMilliseconds);
 	}, [openDelayMilliseconds]);
 
-	return { open, setOpen, onPointerEnter, onPointerMove, onPointerLeave: cancelPending };
+	/** Cancels a pending open and disarms until the pointer enters again. */
+	const onPointerLeave = useCallback((): void =>
+	{
+		armed.current = false;
+		cancelPending();
+	}, [cancelPending]);
+
+	return { open, setOpen, onPointerEnter, onPointerMove, onPointerLeave };
 }
