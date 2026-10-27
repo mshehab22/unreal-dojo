@@ -14,7 +14,7 @@ void ADojoM6Satchel::Watch(ADojoM6QuestItem* Item)
 	Item->OnCollected.AddUniqueDynamic(this, &ADojoM6Satchel::HandleCollected);
 }
 
-void ADojoM6Satchel::HandleCollected(ADojoM6QuestItem* Item, AActor* Collector)
+void ADojoM6Satchel::HandleCollected(ADojoM6QuestItem* Item, AActor* Taker)
 {
 	if (!Item || Item->IsActorBeingDestroyed()) LateNotices++;
 	if (!Item) return;

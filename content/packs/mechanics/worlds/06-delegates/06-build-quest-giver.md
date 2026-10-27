@@ -167,7 +167,7 @@ bool FDojo_M6_QuestGiver_StopsListeningOnEndPlay::RunTest(const FString& Paramet
 # Hints
 
 - Three moments matter: BeginPlay (find, listen, show the current state), the handler (check it is your quest, then show), and EndPlay (stop listening). Interact only asks the tracker.
-- The world hands out its subsystems by type; the handler's parameters must match the tracker's event exactly and the function must be a UFUNCTION; a state the tracker has never heard of reads as Locked, which is why a giver placed before its quest is added shows LOCKED.
+- The world hands out its subsystems by type; the handler's parameters must match the tracker's event in type and order and the function must be a UFUNCTION, but give each parameter a name different from the giver's own members, because a parameter named like a member hides it and the Windows compiler (MSVC) refuses that; a state the tracker has never heard of reads as Locked, which is why a giver placed before its quest is added shows LOCKED.
 - `UWorld::GetSubsystem` is in `Engine/World.h`; `UTextRenderComponent::SetText` is in `Components/TextRenderComponent.h`.
 
 # Rubric

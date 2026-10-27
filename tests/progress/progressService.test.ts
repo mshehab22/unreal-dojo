@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import { AppErrorException } from "../../src/main/errors/AppErrorException";
+import { createNewProgress } from "../../src/main/services/progress/createNewProgress";
 import { ProgressService } from "../../src/main/services/progress/ProgressService";
 import { ProgressStore } from "../../src/main/services/progress/ProgressStore";
 
@@ -406,6 +407,115 @@ describe("ProgressService refused save", () =>
 
 		expect(service.getRefusal()?.detail).toMatch(/EBUSY/);
 		expect([...fileSystem.files.keys()]).toEqual([MEMORY_SAVE_PATH]);
+	});
+});
+
+describe("ProgressService load recovery and whenIdle", () =>
+{
+	/** Holds every file write until the returned function is called, so a test can keep a save in flight. */
+	function holdWrites(fileSystem: MemoryFileSystem): () => void
+	{
+		let release: () => void = () => undefined;
+		const gate = new Promise<void>((resolve) =>
+		{
+			release = resolve;
+		});
+		const write = fileSystem.writeTextDurably.bind(fileSystem);
+
+		fileSystem.writeTextDurably = async (path, text) =>
+		{
+			await gate;
+			await write(path, text);
+		};
+
+		return release;
+	}
+
+	it("reports a clean load as none", async () =>
+	{
+		const { service } = createTestProgressService();
+
+		expect(service.getLoadRecovery()).toEqual({ kind: "none" });
+	});
+
+	it("reports the backup and the quarantined path when the main file was bad", async () =>
+	{
+		const fileSystem = new MemoryFileSystem();
+		const store = new ProgressStore(fileSystem, MEMORY_USER_DATA_FOLDER);
+		const clock = new FixedClock(localMoment(2026, 10, 21));
+		await store.save({ ...createNewProgress(clock.now()), playerName: "Older" });
+		await store.save({ ...createNewProgress(clock.now()), playerName: "Newer" });
+		fileSystem.files.set(MEMORY_SAVE_PATH, "{ not json");
+
+		const service = await ProgressService.open(store, clock, new SequenceRandom());
+		const recovery = service.getLoadRecovery();
+
+		expect(service.getProgress().playerName).toBe("Older");
+		expect(recovery.kind).toBe("backup");
+		expect(recovery.quarantinedPath).toMatch(/progress\.json\.corrupt-/);
+		expect(fileSystem.files.get(recovery.quarantinedPath ?? "")).toBe("{ not json");
+	});
+
+	it("reports fresh when both the main file and the backup were bad", async () =>
+	{
+		const fileSystem = new MemoryFileSystem();
+		fileSystem.files.set(MEMORY_SAVE_PATH, "garbage");
+		fileSystem.files.set(`${MEMORY_SAVE_PATH}.bak`, "also garbage");
+
+		const service = await ProgressService.open(new ProgressStore(fileSystem, MEMORY_USER_DATA_FOLDER), new FixedClock(localMoment(2026, 10, 21)), new SequenceRandom());
+
+		expect(service.getLoadRecovery().kind).toBe("fresh");
+	});
+
+	it("whenIdle resolves true right away when nothing is queued", async () =>
+	{
+		const { service } = createTestProgressService();
+
+		await expect(service.whenIdle(1000)).resolves.toBe(true);
+	});
+
+	it("whenIdle resolves true after every queued commit has been saved", async () =>
+	{
+		const { service, fileSystem } = createTestProgressService();
+		const release = holdWrites(fileSystem);
+
+		void service.setPlayerName("First");
+		void service.setPlayerName("Second");
+		void service.recordTermHover("term.uobject");
+		const idle = service.whenIdle(5000);
+		release();
+
+		await expect(idle).resolves.toBe(true);
+		const saved = JSON.parse(fileSystem.files.get(MEMORY_SAVE_PATH) ?? "{}");
+		expect(saved.playerName).toBe("Second");
+		expect(saved.hoverCounts).toEqual({ "term.uobject": 1 });
+	});
+
+	it("whenIdle resolves false when the time runs out, and true once the save finishes", async () =>
+	{
+		const { service, fileSystem } = createTestProgressService();
+		const release = holdWrites(fileSystem);
+
+		void service.setPlayerName("Slow");
+
+		await expect(service.whenIdle(20)).resolves.toBe(false);
+
+		release();
+
+		await expect(service.whenIdle(5000)).resolves.toBe(true);
+		expect(JSON.parse(fileSystem.files.get(MEMORY_SAVE_PATH) ?? "{}").playerName).toBe("Slow");
+	});
+
+	it("whenIdle never rejects, even when a queued save fails", async () =>
+	{
+		const { service, fileSystem } = createTestProgressService();
+		fileSystem.crashAt = "mid-temp-write";
+
+		const failing = service.setPlayerName("Lost");
+		const failure = expect(failing).rejects.toMatchObject({ appError: { code: "save-failed" } });
+
+		await expect(service.whenIdle(5000)).resolves.toBe(true);
+		await failure;
 	});
 });
 

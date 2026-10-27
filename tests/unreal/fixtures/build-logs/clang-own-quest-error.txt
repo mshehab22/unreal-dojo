@@ -1,0 +1,3 @@
+/Users/learner/DojoSandbox/Source/Dojo/Quests/f1-score-keeper/DojoF1ScoreKeeper.cpp:14:9: error: use of undeclared identifier 'Points'
+/Users/learner/DojoSandbox/Source/Dojo/Tests/f1-score-keeper.Test.cpp:22:30: error: no member named 'AddPoints' in 'UDojoF1ScoreKeeper'
+1 error generated.

@@ -1,0 +1,2 @@
+/Users/Shared/Epic Games/UE_5.8/Engine/Source/Runtime/Engine/Classes/Kismet/GameplayStatics.h:20:1: error: expected ';' after class
+/Users/Shared/Epic Games/UE_5.8/Engine/Source/Runtime/Engine/Classes/Kismet/GameplayStatics.h:34:12: error: unknown type name 'FHitResultThing'

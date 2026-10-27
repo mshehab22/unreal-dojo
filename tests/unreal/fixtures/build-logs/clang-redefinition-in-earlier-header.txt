@@ -1,0 +1,2 @@
+/Users/learner/DojoSandbox/Source/Dojo/Quests/f1-training-dummy/DojoF1TrainingDummy.h:7:7: error: redefinition of 'UDojoF1Thing'
+/Users/learner/DojoSandbox/Source/Dojo/Quests/f1-score-keeper/DojoF1ScoreKeeper.h:4:7: note: previous definition is here

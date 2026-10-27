@@ -11,6 +11,9 @@ import { cn } from "@/lib/utils";
 interface AppErrorViewProps
 {
 	readonly error: AppError;
+
+	/** A short bold line above the message that names the kind of problem, for example "Not your code". */
+	readonly headline?: string;
 	readonly onRetry?: () => void;
 	readonly retryLabel?: string;
 	readonly compact?: boolean;
@@ -18,7 +21,7 @@ interface AppErrorViewProps
 }
 
 /** Shows an AppError in plain English. Detail stays hidden until asked for. */
-export function AppErrorView({ error, onRetry, retryLabel = "Try again", compact = false, className }: AppErrorViewProps)
+export function AppErrorView({ error, headline, onRetry, retryLabel = "Try again", compact = false, className }: AppErrorViewProps)
 {
 	const [showDetail, setShowDetail] = useState(false);
 
@@ -26,6 +29,11 @@ export function AppErrorView({ error, onRetry, retryLabel = "Try again", compact
 		<div role="alert" data-testid="app-error" data-error-code={error.code} className={cn("flex gap-3 rounded-lg border border-fail/30 bg-fail/[0.06]", compact ? "p-3" : "p-4", className)}>
 			<TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-fail" strokeWidth={2} />
 			<div className="flex min-w-0 flex-1 flex-col gap-1.5">
+				{headline && (
+					<p data-testid="app-error-headline" className="text-sm font-semibold text-fail">
+						{headline}
+					</p>
+				)}
 				<p className="text-sm font-medium text-paper">{error.message}</p>
 				<p className="text-sm text-paper-muted">{error.suggestedAction}</p>
 				{(onRetry || error.detail) && (

@@ -1,5 +1,11 @@
 // Checks the verifier: arguments, per-file reports, the --quest filter, the extension point, and the 300-quest time budget.
+import { execFile } from "node:child_process";
+import { resolve } from "node:path";
+import { promisify } from "node:util";
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import { solutionsFolderProblem } from "../../tools/verifier/checkSolutionsFolder";
 
 import { formatReport } from "../../tools/verifier/formatReport";
 import { parseVerifierArguments, type VerifierOptions } from "../../tools/verifier/parseVerifierArguments";
@@ -139,4 +145,115 @@ describe("runVerifier", () =>
 		expect(result.counts.quests).toBe(300);
 		expect(result.elapsedMilliseconds).toBeLessThan(3000);
 	});
+});
+
+describe("a scoped run that judges nothing (V1)", () =>
+{
+	it("fails when --pack names a pack folder that holds no quests", async () =>
+	{
+		await writePack(fixture, "empty");
+		await writeWorld(fixture, "empty", "01-first");
+
+		const result = await runVerifier({ ...defaultOptions(), packId: "empty" });
+
+		expect(result.problemCount).toBe(1);
+		expect(formatReport(result).join("\n")).toContain('--pack "empty" judged no quests');
+	});
+
+	it("fails when --pack names no pack, and when --quest names no quest", async () =>
+	{
+		const concept = (await readExamples()).get("01-concept-uproperty.md") ?? "";
+
+		await writePack(fixture, "p1");
+		await writeWorld(fixture, "p1", "01-first");
+		await fixture.write("packs/p1/worlds/01-first/01-a.md", retagQuest(concept, "a", 1));
+
+		expect((await runVerifier({ ...defaultOptions(), packId: "nope" })).problemCount).toBeGreaterThan(0);
+		expect((await runVerifier({ ...defaultOptions(), questId: "nope" })).problemCount).toBeGreaterThan(0);
+	});
+
+	it("still passes a scope that judges a clean quest", async () =>
+	{
+		const concept = (await readExamples()).get("01-concept-uproperty.md") ?? "";
+
+		await writeRepoGlossary(fixture);
+		await writePack(fixture, "p1");
+		await writeWorld(fixture, "p1", "01-first");
+		await fixture.write("packs/p1/worlds/01-first/01-a.md", retagQuest(concept, "a", 1));
+
+		expect((await runVerifier({ ...defaultOptions(), questId: "a" })).problemCount).toBe(0);
+		expect((await runVerifier({ ...defaultOptions(), packId: "p1" })).problemCount).toBe(0);
+	});
+});
+
+describe("solutionsFolderProblem", () =>
+{
+	it("accepts a folder that exists", async () =>
+	{
+		expect(await solutionsFolderProblem(fixture.root)).toBeUndefined();
+	});
+
+	it("rejects a folder that does not exist, naming the likely cause", async () =>
+	{
+		const problem = await solutionsFolderProblem(`${fixture.root}/missing`);
+
+		expect(problem).toContain("does not exist");
+		expect(problem).toContain("backslash");
+	});
+
+	it("rejects a file", async () =>
+	{
+		await fixture.write("a-file.txt", "x");
+
+		expect(await solutionsFolderProblem(`${fixture.root}/a-file.txt`)).toContain("is not a folder");
+	});
+});
+
+describe("verify-content command line (V1)", () =>
+{
+	const run = promisify(execFile);
+	const script = resolve("tools/verify-content.ts");
+
+	/** Runs the CLI under tsx and returns its exit code and output. */
+	async function commandLine(args: string[]): Promise<{ code: number; text: string }>
+	{
+		try
+		{
+			const { stdout, stderr } = await run(process.execPath, ["--import", "tsx", script, ...args], { cwd: resolve("."), timeout: 60000 });
+
+			return { code: 0, text: stdout + stderr };
+		}
+		catch (error)
+		{
+			const failure = error as { code?: number; stdout?: string; stderr?: string };
+
+			return { code: failure.code ?? -1, text: (failure.stdout ?? "") + (failure.stderr ?? "") };
+		}
+	}
+
+	it("exits non-zero when --solutions points at a folder that does not exist", async () =>
+	{
+		const result = await commandLine(["--quest", "f5-interact", "--solutions", `${fixture.root}/no-such-folder`]);
+
+		expect(result.code).toBe(2);
+		expect(result.text).toContain("does not exist");
+	}, 60000);
+
+	it("exits non-zero when --quest names no quest", async () =>
+	{
+		const result = await commandLine(["--quest", "no-such-quest-anywhere"]);
+
+		expect(result.code).toBe(1);
+		expect(result.text).toContain("no quest with id");
+	}, 60000);
+
+	it("exits non-zero when a scoped quest has no folder in --solutions, and zero for a known-good quest", async () =>
+	{
+		const missing = await commandLine(["--quest", "f5-interact", "--solutions", fixture.root]);
+		const good = await commandLine(["--quest", "f5-interact"]);
+
+		expect(missing.code).toBe(1);
+		expect(missing.text).toContain("no reference solution");
+		expect(good.code).toBe(0);
+	}, 120000);
 });

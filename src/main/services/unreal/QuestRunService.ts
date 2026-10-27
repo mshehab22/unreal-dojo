@@ -5,11 +5,13 @@ import type { SandboxSetupResult } from "@shared/types/engine";
 import type { RunResult, SyntaxCheckResult } from "@shared/types/run";
 
 import { AppErrorException } from "../../errors/AppErrorException";
+import type { BuildFailureExplainer, EarlierQuestCode } from "./BuildFailureExplainer";
 import type { FullBuildLedger } from "./FullBuildLedger";
 import type { FilledPrerequisite, PrerequisiteFiller } from "./PrerequisiteFiller";
 import type { ProgressListener } from "./ProgressUpdate";
 import { prerequisiteQuestIds } from "./QuestDependencies";
 import type { QuestFileWriter } from "./QuestFileWriter";
+import type { RunPreflight } from "./RunPreflight";
 import type { RunnerFactory } from "./RunnerFactory";
 import type { RunnerContext } from "./Runner";
 import type { SandboxProjectService } from "./SandboxProjectService";
@@ -56,6 +58,12 @@ export interface QuestRunDependencies
 
 	/** The fast loop's build record, told when a reset removes files (A481). */
 	buildLedger: FullBuildLedger;
+
+	/** Explains a failed run that is not the learner's code (M5.1d). Without it a run never carries `unrelatedFailure`. */
+	failureExplainer?: BuildFailureExplainer;
+
+	/** Confirms before every run that the engine and sandbox in settings are still there (M5.1e). */
+	preflight: RunPreflight;
 }
 
 /** `runQuest`, `checkSnippetSyntax`, and `rebuildSandbox` behind one object for the IPC handlers. */
@@ -69,20 +77,21 @@ export class QuestRunService
 		this.dependencies = dependencies;
 	}
 
-	/** Builds and tests the learner's files for a build or refactor quest. Throws an AppError exception when the quest or sandbox is missing; build and test failures resolve in the RunResult. */
+	/** Builds and tests the learner's files for a build or refactor quest. Rejects with an AppError exception when the quest, engine, or sandbox is missing (never a RunResult, M5.1e); build and test failures resolve in the RunResult. */
 	async runQuest(questId: string, files: Record<string, string>, onProgress: ProgressListener, signal: AbortSignal): Promise<RunResult>
 	{
-		const context = this.requireContext();
+		const context = await this.dependencies.preflight.check();
 		const quest = await this.requireCodeQuest(questId);
 
 		const { prerequisites, bossIds } = await this.allPrerequisites(quest);
+		let filled: FilledPrerequisite[] = [];
 
 		if (prerequisites.length > 0)
 		{
 			onProgress({ phase: "preparing", lastLine: `Checking earlier quests this one compiles against: ${prerequisites.join(", ")}` });
 
 			const learner = this.dependencies.learner;
-			const filled = await this.dependencies.prerequisiteFiller.fill(context.sandboxFolder, prerequisites, {
+			filled = await this.dependencies.prerequisiteFiller.fill(context.sandboxFolder, prerequisites, {
 				isPassed: (questId) => learner.isPassed(questId),
 				savedFiles: (questId) => learner.savedFiles(questId),
 				isBoss: (questId) => bossIds.has(questId),
@@ -91,7 +100,9 @@ export class QuestRunService
 			for (const prerequisite of filled) onProgress({ phase: "writing", lastLine: describeFill(prerequisite) });
 		}
 
-		return this.dependencies.runnerFactory.forContext(context).run(quest, files, onProgress, signal);
+		const result = await this.dependencies.runnerFactory.forContext(context).run(quest, files, onProgress, signal);
+
+		return this.withFailureExplanation(result, context, quest.id, earlierQuestCode(prerequisites, filled));
 	}
 
 	/** Removes a reset quest's files and test from the sandbox in settings and records the change, so the fast loop does not trust the editor's copy (A481). Does nothing before setup. */
@@ -110,17 +121,35 @@ export class QuestRunService
 		const checker = this.dependencies.snippetChecker;
 		if (!checker) throw new AppErrorException("not-implemented", "The syntax check is not available on this computer yet.", "Use Run on a build quest to compile your code for now.", "No snippet checker for this platform (A402)");
 
-		const context = this.requireContext();
+		const context = await this.dependencies.preflight.check();
 
 		return checker.check(context.engineRoot, context.sandboxFolder, code);
 	}
 
-	/** Runs a clean full build of the sandbox in settings. */
-	rebuildSandbox(onProgress: ProgressListener, signal: AbortSignal): Promise<SandboxSetupResult>
+	/** Runs a clean full build of the sandbox in settings. Rejects with the same preflight errors as a run. */
+	async rebuildSandbox(onProgress: ProgressListener, signal: AbortSignal): Promise<SandboxSetupResult>
 	{
-		const context = this.requireContext();
+		const context = await this.dependencies.preflight.check();
 
 		return this.dependencies.sandboxService.rebuild(context.engineRoot, context.sandboxFolder, onProgress, signal);
+	}
+
+	/** The result with `unrelatedFailure` set when the explainer finds the run failed outside the learner's code. A passing run, a cancel, and a failed explainer leave it untouched. */
+	private async withFailureExplanation(result: RunResult, context: RunnerContext, questId: string, earlierQuests: EarlierQuestCode[]): Promise<RunResult>
+	{
+		const explainer = this.dependencies.failureExplainer;
+		if (!explainer || result.ok) return result;
+
+		try
+		{
+			const unrelatedFailure = await explainer.explainRun({ engineRoot: context.engineRoot, questId, compiled: result.compiled, compilerOutput: result.compilerOutput, ...(result.error === undefined ? {} : { pipelineError: result.error }), earlierQuests });
+
+			return unrelatedFailure ? { ...result, unrelatedFailure } : result;
+		}
+		catch
+		{
+			return result;
+		}
 	}
 
 	/** The quest's prerequisites and theirs, transitively (a boss's spec names its own, A413), each once and never the quest itself, with the bosses among them. */
@@ -154,17 +183,6 @@ export class QuestRunService
 		return packs.flatMap((pack) => pack.worlds.flatMap((world) => world.quests.map((outline) => outline.id)));
 	}
 
-	/** The engine and sandbox from settings. Throws `sandbox-not-ready` before setup. */
-	private requireContext(): RunnerContext
-	{
-		const engineRoot = this.dependencies.settings.getEnginePath();
-		const sandboxFolder = this.dependencies.settings.getSandboxPath();
-
-		if (engineRoot === null || sandboxFolder === null) throw new AppErrorException("sandbox-not-ready", "The sandbox project has not been set up yet.", "Finish first-run setup (pick the engine and create the sandbox), then run again.");
-
-		return { engineRoot, sandboxFolder };
-	}
-
 	/** The build or refactor quest with this id. Throws `quest-not-found` for an unknown id or a quest without code. */
 	private async requireCodeQuest(questId: string): Promise<Extract<AuthoredQuest, { kind: "build" | "refactor" }>>
 	{
@@ -182,6 +200,18 @@ export function describeFill(prerequisite: FilledPrerequisite): string
 	const files = prerequisite.files.map((file) => `${file.name} from ${file.source}`).join(", ");
 
 	return `Filled ${prerequisite.questId} because ${prerequisite.reason}: ${files}.`;
+}
+
+/** Where each prerequisite's files in the sandbox came from: the reference solution when every file the filler wrote there did, else the learner's code (their own files, or filled from their saved code). */
+export function earlierQuestCode(prerequisites: string[], filled: FilledPrerequisite[]): EarlierQuestCode[]
+{
+	return prerequisites.map((questId) =>
+	{
+		const written = filled.find((prerequisite) => prerequisite.questId === questId)?.files ?? [];
+		const allFromReference = written.length > 0 && written.every((file) => file.source !== "your saved code");
+
+		return { questId, origin: allFromReference ? "reference-solution" : "saved-code" };
+	});
 }
 
 /** The prose that carries a quest's "Compiles against earlier quests:" line: a code quest's brief, a boss's spec. */

@@ -1,0 +1,2 @@
+/Users/learner/DojoSandbox/Source/Dojo/Tests/f2-target-rack.Test.cpp:22:30: error: no member named 'Hit' in 'UDojoF1TrainingDummy'
+1 error generated.

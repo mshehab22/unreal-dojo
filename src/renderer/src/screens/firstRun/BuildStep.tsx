@@ -1,4 +1,4 @@
-// Setup step 3: copy the template and run the first full build, with phase, elapsed time, cancel, plain-English failures, and retry.
+// Setup step 3: copy the template and run the first full build, with phase, elapsed time, cancel, plain-English failures (the main process's own explanation first), and retry.
 import { CircleCheckIcon, PlayIcon, SquareIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useSandboxBuild } from "@/data/useSandboxBuild";
 import { buildOutcome } from "@/lib/buildOutcome";
 import { formatElapsed } from "@/lib/formatting";
-import { explainSandboxFailure } from "@/lib/sandboxFailure";
+import { describeSandboxFailure } from "@/lib/sandboxFailure";
 
 import { StepFrame } from "./StepFrame";
 
@@ -76,14 +76,12 @@ export function BuildStep({ engine, folder, onBack, onNext }: BuildStepProps)
 			)}
 			{build.status === "failed" && build.result && (
 				<div data-testid="build-failed" className="flex flex-col gap-2">
-					<AppErrorView
-						error={{ code: "sandbox-not-ready", ...explainSandboxFailure(build.result.compilerOutput, "first-run") }}
-						onRetry={build.start}
-						retryLabel="Build again"
-					/>
-					<button type="button" onClick={() => setShowOutput(!showOutput)} className="self-start text-xs text-paper-faint hover:text-paper-muted">
-						{showOutput ? "Hide the compiler output" : "Show the compiler output"}
-					</button>
+					<AppErrorView error={describeSandboxFailure(build.result, "first-run")} onRetry={build.start} retryLabel="Build again" />
+					{build.result.compilerOutput && (
+						<button type="button" onClick={() => setShowOutput(!showOutput)} className="self-start text-xs text-paper-faint hover:text-paper-muted">
+							{showOutput ? "Hide the compiler output" : "Show the compiler output"}
+						</button>
+					)}
 					{showOutput && <pre className="max-h-40 overflow-auto rounded-md bg-ink p-3 font-mono text-2xs whitespace-pre-wrap text-paper-muted select-text">{build.result.compilerOutput}</pre>}
 				</div>
 			)}

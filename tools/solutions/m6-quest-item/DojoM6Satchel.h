@@ -31,7 +31,7 @@ public:
 private:
 	/** Counts one item of the collected item's tag. */
 	UFUNCTION()
-	void HandleCollected(ADojoM6QuestItem* Item, AActor* Collector);
+	void HandleCollected(ADojoM6QuestItem* Item, AActor* Taker);
 
 	TMap<FName, int32> Counts;
 

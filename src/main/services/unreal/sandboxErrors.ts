@@ -16,7 +16,19 @@ export function sandboxCopyFailed(folder: string, detail: string): AppErrorExcep
 /** The folder has no `Dojo.uproject`, so there is nothing to rebuild. */
 export function sandboxNotReady(folder: string): AppErrorException
 {
-	return new AppErrorException("sandbox-not-ready", "There is no sandbox project in that folder.", "Create the sandbox again from Settings.", folder);
+	return new AppErrorException("sandbox-not-ready", "There is no sandbox project in that folder.", "Put the sandbox folder back where it was, then try again.", folder);
+}
+
+/** The picked folder cannot hold a sandbox at all; `reason` is the rule's plain-English sentence. */
+export function sandboxPathUnsupported(folder: string, reason: string): AppErrorException
+{
+	return new AppErrorException("sandbox-path-unsupported", reason, "Pick a different folder, one that is outside the Unreal Engine folder.", folder);
+}
+
+/** `Dojo.uproject` could not be read in the sandbox folder in Settings. The reader answers the same for a moved folder, a deleted one, a locked one, and a drive that is not connected, so the wording covers them all. */
+export function sandboxMovedOrDeleted(folder: string): AppErrorException
+{
+	return new AppErrorException("sandbox-not-ready", `The sandbox project could not be found at ${folder}. The folder may have been moved, renamed or deleted, or its drive is not connected.`, "Put the folder back where it was (or reconnect its drive), then run again.", folder);
 }
 
 /** The learner cancelled. */

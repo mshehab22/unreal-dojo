@@ -62,6 +62,21 @@ describe("EditorLauncher", () =>
 		expect(launcher.commandArguments({ projectFile: MAC_PROJECT, port: 8000, startMcpServer: false, windowless: true })).toEqual([MAC_PROJECT, "-NullRHI", "-Unattended", "-NoSplash", "-NoSound", "-stdout", "-FullStdOutLogOutput"]);
 	});
 
+	it("starts Live Coding hidden, attended, and only in a windowless editor that asks for it (A1072)", () =>
+	{
+		const { launcher } = createLauncher();
+		const request = { projectFile: MAC_PROJECT, port: 8000, startMcpServer: true };
+
+		const liveCodingArguments = launcher.commandArguments({ ...request, windowless: true, startLiveCoding: true });
+
+		expect(liveCodingArguments).toContain("-ini:EditorPerProjectUserSettings:[/Script/LiveCoding.LiveCodingSettings]:bEnabled=True,[/Script/LiveCoding.LiveCodingSettings]:Startup=AutomaticButHidden");
+		expect(liveCodingArguments).not.toContain("-Unattended");
+		expect(liveCodingArguments).not.toContain("-LiveCoding");
+		expect(launcher.commandArguments({ ...request, windowless: true })).toContain("-Unattended");
+		expect(launcher.commandArguments({ ...request, windowless: true }).join(" ")).not.toContain("LiveCodingSettings");
+		expect(launcher.commandArguments({ ...request, windowless: false, startLiveCoding: true }).join(" ")).not.toContain("LiveCodingSettings");
+	});
+
 	it("quotes the Windows arguments and starts UnrealEditor.exe", async () =>
 	{
 		const { launcher, processes } = createLauncher(new WindowsPlatformPaths({}));
@@ -118,6 +133,57 @@ describe("EditorLauncher", () =>
 
 		expect(reopened?.port).toBe(8001);
 		expect(processes.specs).toHaveLength(3);
+	});
+
+	it("runs two launches at once one after the other, so the first editor is closed and not left running (A1075)", async () =>
+	{
+		const { launcher, processes } = createLauncher();
+		const request = { engineRoot: MAC_ENGINE, projectFile: MAC_PROJECT, port: 8000, startMcpServer: true, windowless: true };
+
+		const [first, second] = await Promise.all([launcher.launch(request), launcher.launch({ ...request, port: 8001 })]);
+
+		expect(processes.specs).toHaveLength(2);
+		expect(processes.exitRequestCount).toBe(1);
+		expect(first.isRunning()).toBe(false);
+		expect(second.isRunning()).toBe(true);
+		expect(launcher.current()).toBe(second);
+	});
+
+	it("waits for the Live Coding ready line after the server answers, up to a minute, only when the launch asked for it (A1072)", async () =>
+	{
+		const processes = new FakeProcessLauncher([{ hangs: true }, { hangs: true, lines: ["LogLiveCodingServer: Display: Live coding ready - Save changes and press Ctrl+Alt+F11 to re-compile code"] }, { hangs: true }]);
+		const timer = new FakeTimer();
+		const launcher = new EditorLauncher({ paths: new WindowsPlatformPaths({}), launcher: processes, timer, portProbe: { isInUse: async () => false }, createClient: () => new FakeEditorToolClient() });
+		const request = { engineRoot: "C:\\Epic\\UE_5.8", projectFile: "C:\\Dojo\\DojoSandbox\\Dojo.uproject", port: 8000, startMcpServer: true, windowless: true };
+
+		// Asked for Live Coding, never says ready: waits the full minute, then still reports the editor as answering.
+		const silent = await launcher.launch({ ...request, startLiveCoding: true });
+		let silentAnswer: boolean | null = null;
+		void launcher.waitUntilAnswering(silent, 180_000).then((value) => (silentAnswer = value));
+		await settle();
+
+		expect(silentAnswer).toBeNull();
+
+		for (let second = 0; second < 61; second++)
+		{
+			timer.advance(1_000);
+			await settle();
+		}
+
+		expect(silentAnswer).toBe(true);
+		expect(silent.isLiveCodingReady()).toBe(false);
+
+		// Asked for Live Coding and says ready: no wait.
+		const ready = await launcher.launch({ ...request, startLiveCoding: true });
+
+		expect(ready.isLiveCodingReady()).toBe(true);
+		expect(await launcher.waitUntilAnswering(ready, 180_000)).toBe(true);
+
+		// Did not ask: no wait, and never ready.
+		const plain = await launcher.launch(request);
+
+		expect(plain.startsLiveCoding).toBe(false);
+		expect(await launcher.waitUntilAnswering(plain, 180_000)).toBe(true);
 	});
 
 	it("waits until the server answers, polling once a second", async () =>

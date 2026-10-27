@@ -369,6 +369,9 @@ describe("EnvironmentStatusReader", () =>
 			pathExists: async (path) => existing.has(path),
 			reviewStatuses: async () => STATUSES,
 			editorConnected: async () => false,
+			checkToolchain: async () => ({ ok: true, tool: "vswhere", message: "Visual Studio is ready.", problems: [] }),
+			saveRefusal: () => null,
+			saveLoadRecovery: () => ({ kind: "none" }),
 			...overrides,
 		};
 	}
@@ -383,6 +386,9 @@ describe("EnvironmentStatusReader", () =>
 			reviewProvider: STATUSES[1],
 			loopMode: "headless",
 			editorConnected: false,
+			engineProblem: null,
+			toolchain: { ok: true, tool: "vswhere", message: "Visual Studio is ready.", problems: [] },
+			saveNotice: null,
 		});
 	});
 
@@ -395,7 +401,16 @@ describe("EnvironmentStatusReader", () =>
 			editorConnected: async () => { throw new Error("no MCP"); },
 		})).read();
 
-		expect(status).toEqual({ engine: null, sandbox: { path: "/Sandboxes/DojoSandbox", ready: false }, reviewProvider: null, loopMode: "headless", editorConnected: false });
+		expect(status).toEqual({
+			engine: null,
+			sandbox: { path: "/Sandboxes/DojoSandbox", ready: false },
+			reviewProvider: null,
+			loopMode: "headless",
+			editorConnected: false,
+			engineProblem: expect.objectContaining({ code: "engine-not-found" }),
+			toolchain: { ok: true, tool: "vswhere", message: "Visual Studio is ready.", problems: [] },
+			saveNotice: null,
+		});
 	});
 
 	it("reports nothing set on a fresh install", async () =>

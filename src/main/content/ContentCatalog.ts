@@ -17,6 +17,9 @@ export interface ContentCatalogDependencies
 
 	/** Reads and parses the whole content folder. */
 	loadContent: () => Promise<LoadedContent>;
+
+	/** Returns the current time in milliseconds for the load timing line. Defaults to `performance.now`; tests pass a fake clock. */
+	now?: () => number;
 }
 
 /** The loaded content with its lookups and derived views, built once per load. */
@@ -147,10 +150,12 @@ export class ContentCatalog
 		return this.loading;
 	}
 
-	/** Reads the content folder and builds the lookups. Throws an AppErrorException when nothing could be read. */
+	/** Reads the content folder, builds the lookups, and logs how long that took. Throws an AppErrorException when nothing could be read. */
 	private async loadAndIndex(): Promise<IndexedContent>
 	{
 		const root = this.dependencies.root;
+		const now = this.dependencies.now ?? (() => performance.now());
+		const startedAt = now();
 
 		if (!(await this.dependencies.folderExists(root))) throw contentFolderMissing(root);
 
@@ -170,7 +175,7 @@ export class ContentCatalog
 
 		if (content.problems.length > 0) console.warn(`[content] loaded with ${content.problems.length} problems`, content.problems);
 
-		return {
+		const indexed: IndexedContent = {
 			content,
 			packOutlines: toPackOutlines(content.packs),
 			worldsById: new Map(worlds.map((world) => [world.id, world])),
@@ -178,5 +183,9 @@ export class ContentCatalog
 			glossaryAliases: buildGlossaryAliases(content.glossary),
 			questCount: quests.length,
 		};
+
+		console.info(`[content] loaded ${quests.length} quests in ${Math.round(now() - startedAt)} ms`);
+
+		return indexed;
 	}
 }
