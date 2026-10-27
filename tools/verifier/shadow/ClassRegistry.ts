@@ -21,12 +21,12 @@ export class ClassRegistry
 		this.byUnit.set(unit, classes);
 	}
 
-	/** True when `className` declares a function called `functionName` and every declaration of that name is static. */
-	isStaticFunction(unit: string, className: string, functionName: string): boolean
+	/** True when `className` declares a static function called `functionName`. An overload set that mixes static and non-static is exempt too, because a definition cannot be told apart by name alone. */
+	declaresStaticFunction(unit: string, className: string, functionName: string): boolean
 	{
 		const declarations = this.find(unit, className) ?? [];
 
-		return declarations.some((declaration) => declaration.staticFunctions.includes(functionName)) && !declarations.some((declaration) => declaration.instanceFunctions.includes(functionName));
+		return declarations.some((declaration) => declaration.staticFunctions.includes(functionName));
 	}
 
 	/**

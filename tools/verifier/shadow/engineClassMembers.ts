@@ -5,7 +5,7 @@
 //   Engine\Classes\Components\ActorComponent.h (UActorComponent), SceneComponent.h (USceneComponent),
 //   CoreUObject\Public\UObject\UObjectBase.h (the data members UObject inherits from UObjectBase).
 // Only data members are listed (any access, private ones too, statics too, editor-only ones too). MSVC checked on
-// 2026-10-26 (cl /W4): C4458 fires for a parameter or local that hides a data member of the class or of any base,
+// 2026-10-27 (cl /W4): C4458 fires for a parameter or local that hides a data member of the class or of any base,
 // even a private base member; it does not fire for a name that matches a member function, nor for a lambda parameter.
 // Names the UE headers do not declare as members are left out on purpose: `World` (AActor has GetWorld(), not a field)
 // and `bActive` (UActorComponent has `bIsActive`).

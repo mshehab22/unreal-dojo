@@ -215,7 +215,7 @@ describe("verify-content command line (V1)", () =>
 	const script = resolve("tools/verify-content.ts");
 
 	/** Runs the CLI under tsx and returns its exit code and output. */
-	async function cli(args: string[]): Promise<{ code: number; text: string }>
+	async function commandLine(args: string[]): Promise<{ code: number; text: string }>
 	{
 		try
 		{
@@ -233,7 +233,7 @@ describe("verify-content command line (V1)", () =>
 
 	it("exits non-zero when --solutions points at a folder that does not exist", async () =>
 	{
-		const result = await cli(["--quest", "f5-interact", "--solutions", `${fixture.root}/no-such-folder`]);
+		const result = await commandLine(["--quest", "f5-interact", "--solutions", `${fixture.root}/no-such-folder`]);
 
 		expect(result.code).toBe(2);
 		expect(result.text).toContain("does not exist");
@@ -241,7 +241,7 @@ describe("verify-content command line (V1)", () =>
 
 	it("exits non-zero when --quest names no quest", async () =>
 	{
-		const result = await cli(["--quest", "no-such-quest-anywhere"]);
+		const result = await commandLine(["--quest", "no-such-quest-anywhere"]);
 
 		expect(result.code).toBe(1);
 		expect(result.text).toContain("no quest with id");
@@ -249,8 +249,8 @@ describe("verify-content command line (V1)", () =>
 
 	it("exits non-zero when a scoped quest has no folder in --solutions, and zero for a known-good quest", async () =>
 	{
-		const missing = await cli(["--quest", "f5-interact", "--solutions", fixture.root]);
-		const good = await cli(["--quest", "f5-interact"]);
+		const missing = await commandLine(["--quest", "f5-interact", "--solutions", fixture.root]);
+		const good = await commandLine(["--quest", "f5-interact"]);
 
 		expect(missing.code).toBe(1);
 		expect(missing.text).toContain("no reference solution");

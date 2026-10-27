@@ -46,7 +46,7 @@ export function findShadowedMembers(files: readonly SourceFile[]): ShadowFinding
 	{
 		for (const definition of findFunctions(cleaned, classes))
 		{
-			if (definition.className === undefined || registry.isStaticFunction(file.unit, definition.className, definition.functionName)) continue;
+			if (definition.className === undefined || registry.declaresStaticFunction(file.unit, definition.className, definition.functionName)) continue;
 
 			const members = registry.membersOf(file.unit, definition.className);
 

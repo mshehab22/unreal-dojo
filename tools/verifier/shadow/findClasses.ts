@@ -12,9 +12,8 @@ export interface ClassDeclaration
 	/** Data members the class declares itself (functions, types, and nested bodies are not members). */
 	members: string[];
 
-	/** Names of the member functions declared `static` and of those that are not; MSVC does not report C4458 inside a static function. */
+	/** Names of the member functions declared `static`; MSVC does not report C4458 inside a static function. */
 	staticFunctions: string[];
-	instanceFunctions: string[];
 
 	/** Index of the opening brace and of the closing brace in the cleaned text. */
 	bodyStart: number;
@@ -109,11 +108,10 @@ function memberNamesOf(statement: string): string[]
 
 	if (text === "" || NON_MEMBER_STARTS.test(text)) return [];
 
-	const declaration = text.split("=")[0] ?? "";
+	if ((text.split("=")[0] ?? "").includes("(")) return [];
 
-	if (declaration.includes("(")) return [];
-
-	const parts = splitTopLevel(declaration.replace(/:\s*\d+\s*$/, ""));
+	// Each declarator loses its own initializer and bit field width: `int32 A = 0, B : 3 = 1;` declares A and B.
+	const parts = splitTopLevel(text).map((part) => (part.split("=")[0] ?? "").replace(/:\s*\d+\s*$/, ""));
 	const first = parts[0]?.trim().split(/[\s*&]+/).filter((word) => word !== "") ?? [];
 	const minimumWords = DECLARATION_KEYWORDS.has(first[0] ?? "") ? 3 : 2;
 
@@ -134,7 +132,7 @@ function memberNamesOf(statement: string): string[]
 /** The member function a statement declares or defines, with whether it is static; undefined when the statement is not a function. */
 function functionOf(statement: string): { name: string; isStatic: boolean } | undefined
 {
-	const text = statement.replace(/\{\}/g, " ").trim();
+	const text = statement.replace(/\{\}/g, " ").trim().replace(/^template\b\s*/, "");
 
 	if (text === "" || NON_MEMBER_STARTS.test(text)) return undefined;
 
@@ -171,7 +169,7 @@ export function findClasses(cleaned: string): ClassDeclaration[]
 		const members = statements.flatMap(memberNamesOf);
 		const functions = statements.map(functionOf).filter((found) => found !== undefined);
 
-		classes.push({ name: match[2] ?? "", bases: baseNamesOf(match[3] ?? ""), members, staticFunctions: functions.filter((found) => found.isStatic).map((found) => found.name), instanceFunctions: functions.filter((found) => !found.isStatic).map((found) => found.name), bodyStart, bodyEnd: bodyEnd < 0 ? cleaned.length : bodyEnd });
+		classes.push({ name: match[2] ?? "", bases: baseNamesOf(match[3] ?? ""), members, staticFunctions: functions.filter((found) => found.isStatic).map((found) => found.name), bodyStart, bodyEnd: bodyEnd < 0 ? cleaned.length : bodyEnd });
 	}
 
 	return classes;

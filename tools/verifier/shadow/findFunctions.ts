@@ -26,7 +26,7 @@ const CONTROL_WORDS = new Set(["if", "for", "while", "switch", "catch", "return"
 const TYPE_WORDS = new Set(["int", "float", "double", "bool", "char", "long", "short", "unsigned", "signed", "void", "auto", "const"]);
 
 /** The end of a function head: `)`, qualifiers, an optional constructor initializer list, then the body's `{`. */
-const FUNCTION_HEAD = /\)\s*(?:\b(?:const|noexcept|override|final|volatile)\b\s*)*(?::(?!:)[^;{}]*?)?\{/g;
+const FUNCTION_HEAD = /\)\s*(?:\b(?:const|noexcept|override|final|volatile)\b\s*)*(?:->[^;{}:]*?)?(?::(?!:)[^;{}]*?)?\{/g;
 
 /** A local declaration at the start of a statement: optional qualifiers, a type, pointer or reference marks, then the name. */
 const LOCAL_DECLARATION = /^\s*(?:(?:const|constexpr|static|volatile|mutable|thread_local|register|struct|class|enum|typename)\s+)*(?!(?:return|delete|new|throw|case|goto|using|typedef|co_return|co_yield|namespace|sizeof|else|do|default|public|private|protected)\b)[A-Za-z_]\w*(?:\s*::\s*\w+)*(?:\s*[*&]+\s*|\s+)(?:(?:const|volatile|__restrict)\s+)*([A-Za-z_]\w*)\s*(?=[=[({:,)]|$)/d;
@@ -79,6 +79,16 @@ function parameterNames(text: string, listStart: number, listEnd: number): Decla
 	return names;
 }
 
+/** True when a `[` that follows `before` indexes a value (`Items[0]`, `Grid[1][2]`) instead of opening a lambda capture; `return [this]() {}` is a lambda. */
+function isSubscript(before: string): boolean
+{
+	const previous = /(\S)\s*$/.exec(before)?.[1] ?? "";
+
+	if (previous === ")" || previous === "]") return true;
+
+	return /\w/.test(previous) && !/\b(?:return|co_return|co_yield|throw)\s*$/.test(before);
+}
+
 /** Blanks lambda parameter lists and bodies: MSVC reports no C4458 for names a lambda declares (checked with cl /W4). */
 function blankLambdas(body: string): string
 {
@@ -86,7 +96,7 @@ function blankLambdas(body: string): string
 
 	for (let index = 0; index < body.length; index++)
 	{
-		if (body[index] !== "[" || /[\w)\]]/.test(/(\S)\s*$/.exec(body.slice(0, index))?.[1] ?? "")) continue;
+		if (body[index] !== "[" || isSubscript(body.slice(0, index))) continue;
 
 		const closeCapture = findClosing(body, index);
 
@@ -119,10 +129,27 @@ function blankLambdas(body: string): string
 	return characters.join("");
 }
 
+/** Blanks types declared inside a function body (`struct FLocal { int32 Owner; };`): their fields are not locals. */
+function blankLocalTypes(body: string): string
+{
+	const characters = [...body];
+
+	for (const match of body.matchAll(/\b(?:struct|class|union)\s+[A-Za-z_]\w*\s*(?::(?!:)[^{;]*)?\{/g))
+	{
+		const open = match.index + match[0].length - 1;
+		const close = findClosing(body, open);
+		const end = close < 0 ? body.length : close + 1;
+
+		for (let blank = match.index; blank < end; blank++) if (characters[blank] !== "\n") characters[blank] = " ";
+	}
+
+	return characters.join("");
+}
+
 /** The local variable names a body declares: statement by statement, plus the declarations in `for`, `if`, and `catch` headers. */
 function localNames(text: string, bodyStart: number, bodyEnd: number): DeclaredName[]
 {
-	const body = blankLambdas(text.slice(bodyStart, bodyEnd)).replace(/\b(?:for|if|while|switch|catch)\s*\(|\b(?:else|do)\b/g, (word) => ";".padEnd(word.length, " "));
+	const body = blankLocalTypes(blankLambdas(text.slice(bodyStart, bodyEnd))).replace(/\b(?:for|if|while|switch|catch)\s*\(|\b(?:else|do)\b/g, (word) => ";".padEnd(word.length, " "));
 	const names: DeclaredName[] = [];
 	let from = 0;
 

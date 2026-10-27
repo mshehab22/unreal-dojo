@@ -66,6 +66,7 @@ describe("findShadowedMembers, engine members", () =>
 
 	it("reads members through APawn, ACharacter, UActorComponent, USceneComponent, and UObject", () =>
 	{
+		// Scans a class that derives as `declaration` says, with one local named `local` in its Run function.
 		const findingsFor = (declaration: string, local: string): string[] =>
 		{
 			const className = declaration.split(" ")[0] ?? "";
@@ -154,6 +155,14 @@ describe("findShadowedMembers, the class's own members", () =>
 		expect(findShadowedMembers(files).map(describeFinding)).toEqual(["parameter Charges in ADojoSecond::Use (ADojoFirst)"]);
 	});
 
+	it("flags the second member of a declaration where both have initializers, and a trailing return type", () =>
+	{
+		const header = "class ADojoPair : public AActor { int32 Count = 0, Total = 0; auto Run(int32 Total) -> int32; };";
+		const source = "auto ADojoPair::Run(int32 Total) -> int32\n{\n	return Total;\n}\n";
+
+		expect(scan(header, source)).toEqual(["parameter Total in ADojoPair::Run (ADojoPair)"]);
+	});
+
 	it("flags the second name in a multiple declaration and the constructor-style local", () =>
 	{
 		const header = "class ADojoPair : public AActor { int32 Left = 0; int32 Right = 0; void Run(); };";
@@ -173,12 +182,28 @@ describe("findShadowedMembers, what MSVC lets through", () =>
 		expect(scan(header, source)).toEqual([]);
 	});
 
-	it("still flags the non-static overload when a static one shares the name", () =>
+	it("exempts an overload set that mixes static and non-static, because the name alone cannot tell them apart", () =>
 	{
 		const header = "class ADojoQuiver : public AActor { FName Kind; static void Make(FName Kind); void Make(int32 Kind); };";
-		const source = "void ADojoQuiver::Make(int32 Kind) {}\n";
+		const source = "void ADojoQuiver::Make(int32 Kind) {}\nvoid ADojoQuiver::Make(FName Kind) {}\n";
 
-		expect(scan(header, source)).toEqual(["parameter Kind in ADojoQuiver::Make (ADojoQuiver)"]);
+		expect(scan(header, source)).toEqual([]);
+	});
+
+	it("ignores a static member template and a lambda returned from a function", () =>
+	{
+		const header = "class ADojoThing : public AActor { int32 Count = 0; template <typename T> static T* Make(T* Owner) { return Owner; } TFunction<int32()> Counter(); };";
+		const source = "TFunction<int32()> ADojoThing::Counter()\n{\n	return [this]()\n	{\n		const int32 Count = 1;\n		return Count;\n	};\n}\n";
+
+		expect(scan(header, source)).toEqual([]);
+	});
+
+	it("ignores the fields of a struct declared inside a function", () =>
+	{
+		const header = "class ADojoThing : public AActor { int32 Owner = 0; void Run(); };";
+		const source = "void ADojoThing::Run()\n{\n	struct FLocal { int32 Owner = 0; };\n	FLocal Local;\n}\n";
+
+		expect(scan(header, source)).toEqual([]);
 	});
 
 	it("ignores lambda parameters and locals inside lambda bodies", () =>
