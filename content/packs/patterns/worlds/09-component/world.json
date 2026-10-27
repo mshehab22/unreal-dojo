@@ -1,0 +1,5 @@
+{
+	"id": "component",
+	"title": "Actors built from parts",
+	"summary": "The arena's props, gladiators, and champions keep needing the same abilities in new mixes: health here, loot there, stamina and a sprint on anything that runs. Learn to build each ability once as a component and assemble actors from them, in the constructor or at runtime, and to choose how the parts talk to each other."
+}

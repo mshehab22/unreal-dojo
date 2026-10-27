@@ -1028,10 +1028,13 @@
     "id": "component",
     "title": "Component",
     "intent": "Assemble an actor from small, self-contained parts such as health, inventory, and interaction, so each capability lives in one reusable class and a crate and a boss can share the same health code without sharing a parent class.",
-    "problem": "A player class that handles input, physics, animation, health, inventory, and sound grows to thousands of lines, and reusing its health logic on a destructible barrel means copying code or inheriting from the player.",
-    "unrealForm": "Unreal is built on this. AActor is the container; UActorComponent holds logic and USceneComponent adds a transform. Engine components include UCharacterMovementComponent, UStaticMeshComponent, and UAbilitySystemComponent. You write UDojoHealthComponent or UDojoInventoryComponent with UCLASS(meta=(BlueprintSpawnableComponent)), find them with FindComponentByClass, and let them talk through delegates or the owner.",
-    "whenNot": "A tiny actor with one job does not need three components and wiring between them. If components constantly reach into each other, the split is in the wrong place.",
-    "useCaseQuestIds": [],
+    "problem": "An arena prop class that keeps health, loot, and opening behind a row of flags grows with every new kind, and a crate that must both break and drop loot cannot inherit both abilities from two parent classes, so code is copied or pushed into a base that statues and chests then carry for nothing.",
+    "unrealForm": "Unreal is built on this. AActor is the container; UActorComponent holds logic and data, and USceneComponent adds a transform and attachment. Engine parts include UCharacterMovementComponent, UStaticMeshComponent, and UAbilitySystemComponent. You write parts such as UDojoHealthComponent with UCLASS(meta=(BlueprintSpawnableComponent)), make them in the constructor with CreateDefaultSubobject or at runtime with NewObject and RegisterComponent, find them with FindComponentByClass, and let them talk through the owner, delegates, interfaces, or a direct reference. On startup every part gets OnRegister, then InitializeComponent if it sets bWantsInitializeComponent, then BeginPlay.",
+    "whenNot": "A small actor with one job does not need its job split into parts. If parts constantly reach into each other, the split is in the wrong place. Something that must outlive its owner or has its own place and lifetime in the level, such as a dropped pouch or a turret that can be knocked off a wall, is an actor, not a component.",
+    "useCaseQuestIds": [
+      "p9-arena-parts",
+      "p9-sprint-parts"
+    ],
     "recall": [
       {
         "id": "component-recall-1",
@@ -1067,6 +1070,19 @@
           "Mentions adding or removing the capability"
         ],
         "explanation": "Composition lets a barrel and a boss share health without sharing ancestry."
+      },
+      {
+        "id": "component-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A stamina part fills itself to full at startup, and other parts may spend stamina in their BeginPlay. Where should it fill itself?",
+        "choices": [
+          "In its constructor, from the default value only",
+          "In InitializeComponent, with bWantsInitializeComponent set",
+          "In BeginPlay",
+          "In TickComponent on the first frame"
+        ],
+        "answerIndex": 1,
+        "explanation": "For an actor starting play, every InitializeComponent runs before any BeginPlay, so the bar is full whichever part's BeginPlay runs first; the constructor runs before a designer's values for that instance are applied."
       }
     ],
     "scenarios": [
@@ -1100,7 +1116,7 @@
       {
         "id": "component-scenario-2",
         "type": "which-pattern",
-        "prompt": "Your AShooterCharacter is 4,000 lines and touches input, weapons, health, and interaction. A teammate wants weapon logic on a turret too. Which pattern guides the refactor?",
+        "prompt": "Your arena champion class runs its weapons, health, and interaction in one file that everyone edits, and a teammate now wants the same weapon logic on a wall turret. Which pattern guides the refactor?",
         "choices": [
           "component",
           "facade",
@@ -1122,7 +1138,34 @@
             "why": "States would not split domains apart."
           }
         ],
-        "explanation": "Pull weapons into UDojoWeaponComponent and attach it to both the character and the turret."
+        "explanation": "Pull the weapon logic into UDojoWeaponComponent and give one to both the champion and the turret."
+      },
+      {
+        "id": "component-scenario-3",
+        "type": "which-pattern",
+        "prompt": "Gladiators, mounts, and supply carts all need the same stamina bar, only some also need a sprint or health, and the cart already derives from a vehicle class. Which pattern lets them all share one stamina implementation?",
+        "choices": [
+          "component",
+          "subclass-sandbox",
+          "singleton",
+          "type-object"
+        ],
+        "answer": "component",
+        "distractorNotes": [
+          {
+            "choice": "subclass-sandbox",
+            "why": "A shared base class cannot slide under the cart, which already has a parent, and would force sprint and health on everything below it."
+          },
+          {
+            "choice": "singleton",
+            "why": "One global stamina object cannot hold a separate bar for every runner."
+          },
+          {
+            "choice": "type-object",
+            "why": "Data per kind tunes numbers, but it does not give a cart an ability its class lacks."
+          }
+        ],
+        "explanation": "A stamina part, and separate sprint and health parts, can be added to any of them in whatever mix each needs."
       }
     ]
   },
