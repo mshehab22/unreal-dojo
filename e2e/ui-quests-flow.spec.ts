@@ -180,10 +180,17 @@ async function answerDrillItemRight(item: Locator): Promise<string>
 	return type;
 }
 
-/** Inserts text into the focused editor as one input, so auto-closed brackets and the completion list never change it. Monaco indents each new line itself. */
+/**
+ * Inserts text into the focused editor as one input, so auto-closed brackets and the completion list never change it. Monaco indents each new line itself.
+ * The window is hidden (A970), so Chromium paints it in slow frames; on Windows the browser's own "show the caret after an edit" scroll then lands on a frame
+ * after the edit and can fling the view to the end of the file. Waiting two frames lets that scroll finish, and End keeps the caret line on screen, so the
+ * lines just typed are the ones in view when the caller reads them.
+ */
 async function typeInEditor(text: string): Promise<void>
 {
 	await window.keyboard.insertText(text);
+	await window.evaluate("new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+	await window.keyboard.press("End");
 }
 
 // Every test drives its own freshly launched app; reduced motion zeroes every duration token, so screenshots never catch a transition.

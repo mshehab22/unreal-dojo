@@ -17,7 +17,7 @@ bool ADojoF5Crate::IsOpen() const
 	return bOpen;
 }
 
-bool ADojoF5Crate::Interact_Implementation(AActor* Instigator)
+bool ADojoF5Crate::Interact_Implementation(AActor* Interactor)
 {
 	if (bOpen) return false;
 

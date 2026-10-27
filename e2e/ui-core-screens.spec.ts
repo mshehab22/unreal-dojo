@@ -178,13 +178,20 @@ test("a locked stage explains why on hover", async ({ dojo, camera }) =>
 	const locked = window.locator('[data-testid="stage-node"][data-status="locked"]').first();
 
 	// The tooltip opens after a short delay and a hover can land while the page settles, so the scroll and hover are retried together;
-	// the locator finds the node again on each attempt.
+	// the locator finds the node again on each attempt. The window is hidden (A77), so its animation frames arrive about a second apart and
+	// later still when the machine is busy; Playwright's own scroll and hover wait for the node to hold still across two frames, which is
+	// what ran out of time under load. So this scrolls the node into view itself and moves the pointer to its measured centre, with no frame wait.
 	await expect(async () =>
 	{
 		await window.mouse.move(0, 0);
-		await locked.scrollIntoViewIfNeeded({ timeout: 1_500 });
-		await locked.hover({ timeout: 1_500 });
-		await expect(window.getByRole("tooltip").first()).toContainText("first", { timeout: 1_500 });
+		await locked.evaluate("(node) => node.scrollIntoView({ block: 'center', inline: 'center' })", undefined, { timeout: 3_000 });
+
+		const box = await locked.boundingBox({ timeout: 3_000 });
+
+		if (!box) throw new Error("The locked stage has no box yet.");
+
+		await window.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+		await expect(window.getByRole("tooltip").first()).toContainText("first", { timeout: 3_000 });
 	}).toPass({ timeout: 10_000 });
 	await saveScreenshot(camera, window, "world-map-locked-reason-1440x900");
 });

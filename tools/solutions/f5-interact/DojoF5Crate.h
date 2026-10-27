@@ -26,7 +26,7 @@ public:
 	bool IsOpen() const;
 
 	/** Opens the crate and returns true; returns false once it is already open. */
-	virtual bool Interact_Implementation(AActor* Instigator) override;
+	virtual bool Interact_Implementation(AActor* Interactor) override;
 
 private:
 	bool bOpen = false;
