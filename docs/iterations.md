@@ -1977,6 +1977,6 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
   - `insertAtTop` presses Cmd+Up on a Mac and Ctrl+Home elsewhere, and checks the rendered first line of the editor is the inserted line, so a wrong position fails on the spot.
   - `QuestTitleRow` no longer wraps; the title truncates instead, so the header keeps its height whatever the save status says.
   - New test: at 1100x700 the Run button stays at the same height while the status goes Saved, Unsaved changes, Saved. It fails on the old header (131 against 159) and passes on the new one.
-- Proof: not yet complete. Windows 11, hidden windows: the four run-errors tests pass with both fixes, and the new test fails on the old header (131 against 159). The full typecheck, unit and e2e runs on the final code were paused before they finished.
+- Proof (Windows 11, from main 9bbcdf3, hidden windows): `npm run typecheck` passes; `npm test` 94 files, 1209 passed, 29 skipped; `npm run build` passes; the full e2e run had 43 passed, 1 skipped (the real-engine learner flow) and 1 failed, the build quest flow in `ui-quests-flow.spec.ts` at its 60 s limit. That test takes 51 to 52 s on this busy desktop with or without the header change (checked against the old header), passes alone three times, and is outside this change; it ran in 12.5 s on CI. The four run-errors tests pass, and the new one fails on the old header (131 against 159).
 - Not done: running it on a Mac. Logged in problems.md as unverified on macOS.
 - Decisions made: A1263, A1264.
