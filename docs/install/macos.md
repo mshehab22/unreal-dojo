@@ -48,19 +48,20 @@ The app is not signed or notarized, because an Apple Developer ID costs money. m
 
 1. Open the `.dmg` and drag **Unreal Dojo** onto **Applications**.
 2. Eject the disk image.
-3. Open **Applications**, **right-click** (or Control-click) **Unreal Dojo**, and choose **Open**. In the dialog, press **Open** again. macOS remembers your choice, so later launches work with a normal double-click.
+3. Remove the quarantine mark that downloads carry, by running this in Terminal:
 
-On macOS 15 (Sequoia) and later, the right-click Open route often shows a dialog with no Open button. Use this instead:
+   ```bash
+   xattr -dr com.apple.quarantine "/Applications/Unreal Dojo.app"
+   ```
 
-1. Double-click **Unreal Dojo** once and press **Done** on the warning.
-2. Open **System Settings**, then **Privacy & Security**, and scroll to the **Security** section.
-3. Next to "Unreal Dojo was blocked", press **Open Anyway** and confirm with your password or Touch ID.
+4. Open **Unreal Dojo** from **Applications**.
 
-If you prefer Terminal, remove the quarantine mark that downloads carry. This is the quickest route and also fixes a "damaged and can't be opened" message, which an unsigned app can trigger:
+Start with the Terminal command on a Mac with Apple silicon. An unsigned app there often shows "Unreal Dojo is damaged and can't be opened", and for that message neither route below offers a way through. The command fixes it. macOS remembers the app afterwards, so later launches work with a normal double-click.
 
-```bash
-xattr -dr com.apple.quarantine "/Applications/Unreal Dojo.app"
-```
+If you would rather not use Terminal, or you are on an Intel Mac and the app only shows an "unidentified developer" warning, use one of these:
+
+- **Right-click Open:** in **Applications**, right-click (or Control-click) **Unreal Dojo**, choose **Open**, and press **Open** again.
+- **Open Anyway** (macOS 15 Sequoia and later, where right-click Open often has no Open button): double-click **Unreal Dojo** once and press **Done** on the warning. Open **System Settings**, then **Privacy & Security**, scroll to **Security**, and next to "Unreal Dojo was blocked" press **Open Anyway**. Confirm with your password or Touch ID.
 
 The app has no custom icon yet, so the Dock shows the default Electron icon.
 
@@ -68,7 +69,7 @@ To remove the app, drag it from **Applications** to the Trash. Your progress sta
 
 ## First run
 
-The app opens on a title screen and asks what your studio should be called. Then:
+The app opens on a title screen that asks for your name (what your studio should call you). Type it and press **Set up your studio**. Then:
 
 1. **Pick the engine.** The app lists the Unreal installs it finds (`/Users/Shared/Epic Games` and `~/Applications` are searched). Choose one and press **Use this engine**. If a toolchain problem is shown (Xcode missing or not selected, license not accepted, no Metal toolchain), fix it, then check again.
 2. **Choose a folder for the sandbox project.** Pick or create an empty folder, for example `~/DojoSandbox`.
@@ -91,6 +92,6 @@ Open **Settings**, then the **Code review** panel. Use **Claude Code** (install 
 
 ## If something goes wrong
 
-- **"Unreal Dojo is damaged and can't be opened."** The app is fine; this is the quarantine mark. Run the `xattr` command above.
+- **"Unreal Dojo is damaged and can't be opened."** This is the quarantine mark on an unsigned app. Run the `xattr` command above.
 - **The first build fails.** The message names the cause. The common ones are Xcode not selected (`xcode-select` points at the Command Line Tools), a license that has not been accepted, and an engine that is not a supported version.
 - **Settings shows Claude Code as not signed in.** Run `claude` in Terminal once and sign in, then press **Test Claude Code** again.

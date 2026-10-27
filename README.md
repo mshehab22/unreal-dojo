@@ -9,7 +9,7 @@ Unreal Dojo is a desktop app for Windows and macOS that teaches Unreal Engine C+
 - **Refactor quests and bosses** make you fix and combine what you learned.
 - **A game layer** (your studio, XP, roles, pattern cards, a spree, a streak, loot) gives you a reason to come back tomorrow.
 
-Everything runs on your machine. The sandbox project, the compiler, and your saves are all local. The only thing that can leave your computer is the code you send for AI review, and only if you turn that on.
+Everything runs on your machine. The sandbox project, the compiler, and your saves are all local. What can leave your computer is what you send for AI review (your code, breakdown plans, and one-sentence explanations), and only when a reviewer is available: Claude Code on your computer, or an API key you saved. Choose **Tests only** in Settings to keep everything local.
 
 ## Get the app
 
@@ -74,7 +74,7 @@ AI review is optional. Without it, the app still builds and tests your code and 
 - **API key**: uses your own Anthropic API key.
   1. Paste the key into **Anthropic API key** and press **Save**.
   2. The key is encrypted with your operating system's secure storage (Electron `safeStorage`: the Windows data protection API, or the macOS Keychain). The app never shows it again, never writes it to a log, and never keeps it in plain text. Press **Remove** to forget it.
-  3. A key costs you money per review, so the app only uses it on a Submit where every test passed. A Submit with failing tests goes to Claude Code if you have it, and otherwise gets the tests-only result with a note saying why.
+  3. A key costs you money per review, so the app only uses it on a Submit where every test passed. With **Auto**, a Submit with failing tests goes to Claude Code if it is set up, and otherwise gets the tests-only result with a note saying why. If you pick **API key** yourself, a Submit with failing tests gets the tests-only result.
 - **Tests only**: no AI at all. You get the test results and a checklist to review yourself.
 
 Leave **Review provider** on **Auto** and the app picks the first one that works, in this order: Claude Code, then your API key, then tests only. If the provider you chose is not available, the app falls back to tests only and tells you the reason.

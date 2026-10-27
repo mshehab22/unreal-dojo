@@ -38,11 +38,12 @@ You can check that the file is the one CI built by comparing its size with the r
 
 ## The install steps
 
-The installer is not one-click. It installs for your user only, so it does not ask for administrator rights.
+The installer is not one-click, so it walks you through a few pages.
 
-1. Choose the install folder, or keep the default (`%LOCALAPPDATA%\Programs\Unreal Dojo`).
-2. Press **Install**, then **Finish**.
-3. Start **Unreal Dojo** from the Start menu or the desktop shortcut.
+1. On the first page, keep **Only for me** selected and press **Next**. That installs for your own user and needs no administrator rights. **Anyone who uses this computer** would ask for them.
+2. Choose the install folder, or keep the default (`%LOCALAPPDATA%\Programs\Unreal Dojo`).
+3. Press **Install**, then **Finish**.
+4. Start **Unreal Dojo** from the Start menu or the desktop shortcut.
 
 The app has no custom icon yet, so Windows shows the default Electron icon.
 
@@ -50,7 +51,7 @@ To remove it, open **Settings**, **Apps**, **Installed apps**, find **Unreal Doj
 
 ## First run
 
-The app opens on a title screen and asks what your studio should be called. Then:
+The app opens on a title screen that asks for your name (what your studio should call you). Type it and press **Set up your studio**. Then:
 
 1. **Pick the engine.** The app lists the Unreal installs it finds, usually `C:\Program Files\Epic Games\UE_5.8`. Choose one and press **Use this engine**. If a toolchain problem is shown (no Visual Studio, a missing workload, a version older than 17.14), fix it, then check again.
 2. **Choose a folder for the sandbox project.** Pick or create an empty folder with a short path, for example `C:\DojoSandbox`. Long paths break Unreal builds, and the app warns you past 100 characters.

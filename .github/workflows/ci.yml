@@ -122,8 +122,9 @@ jobs:
     env:
       # Unsigned until Mohammad buys certificates (docs/systems/packaging.md, "Later").
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
-      # electron-builder keeps its downloads here (the Electron builds it packages, the nsis tools), so the cache step below can restore them.
+      # electron-builder keeps its tool downloads (the nsis tools) in the first folder, and the Electron builds it packages in the second, so the cache step below can restore both.
       ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+      electron_config_cache: ${{ github.workspace }}/.cache/electron
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -139,7 +140,9 @@ jobs:
       - name: Cache the electron-builder downloads
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: .cache/electron-builder
+          path: |
+            .cache/electron-builder
+            .cache/electron
           key: electron-builder-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
