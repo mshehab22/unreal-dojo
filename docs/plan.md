@@ -244,6 +244,14 @@ Look for: does it feel like a game studio you want to come back to, is anything 
 
 (The Lead writes a handoff here before its context fills: what is in flight, what each builder was told, what is next.)
 
+### Handoff, Windows Lead, 2026-10-26 night
+- Machine: the Windows desktop (A76), Node 24.22.1 (A1022), UE 5.8.3 at `C:\Program Files\Epic Games\UE_5.8`. Worktrees link `node_modules` to the Lead worktree's install by junction; remove the junction (`cmd //c rmdir node_modules`) before any `git worktree remove` (handbook, Lessons learned).
+- Done: CI green on Windows and push back on (A1021); Pack 1 World 6, Pack 2 Worlds 9 to 11, Pack 3 World 6 proven and merged; W6 and W7 (MSVC C4458 fixes); the integration suite and real-engine learner flow run; the nsis installer builds. main pushed at 80713d9, CI run 40442224295 green; the commits after it are local until the next push.
+- In flight: W8 (builder-unreal agent, worktree `w8-windows-integration`): a process check without pgrep, the A402 skip on Windows, Live Coding "not enabled" falls back to headless, integration tests force a windowless editor; it reruns the full suite under the lock. W9 (ui agent, worktree `w9-learner-flow-hover`): the hover card must not cover "Read the card", plus robust hovers in e2e. Both are normal size: a fresh `reviewer` before merge.
+- After W8 and W9 merge: rerun the real-engine learner flow on main under the lock (`DOJO_E2E_ENGINE=1`, `DOJO_E2E_ENGINE_PATH=<engine root>`, `DOJO_E2E_ENGINE_LOCK=<lock path>`, `npx playwright test e2e/learner-flow.spec.ts`), then push main.
+- Still unverified on Windows: the UBT crash markers (A890; no crash happened in any run), the leftover-process check (until W8), Live Coding in a windowless editor (W8), installing and launching the installer.
+- Owed: the D13 n-gram checks for Pack 2 Worlds 10 and 11 (the book PDF is missing). Open findings for their owners are in problems.md (a scoped verifier run that judges nothing still passes; a Mac-side C4458 check).
+
 ### Handoff, 2026-10-21 evening (replaces the afternoon note)
 - On main: M0 complete; M1.1, M1.2, M1.3, M1.3b, M1.6 to M1.6d, M1.7, M1.7b, M1.8 to M1.8c; M2.1 to M2.1d, M2.2, M2.3 and M2.3b; Pack 1 Worlds 1 and 2 (with A67 boss integrations); Pack 2 Worlds 1 to 3; QA harness. Main is green: typecheck, about 706 unit tests, 27 e2e, verifier (2 packs, 5 worlds, 43 quests).
 - In flight (see the board rows for branch and commit): M1.4 fast loop (re-review), M1.7c submitQuest (finishing its engine proof), Pack 1 World 3 (fix round 1), Pack 2 World 4 (review).
