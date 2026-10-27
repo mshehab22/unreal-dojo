@@ -25,17 +25,24 @@ const RESULT_NAMES: Record<string, LiveCodingStatus> = {
 /** Wording that means Live Coding cannot run in this editor at all, so the headless loop must be used: a Mac build, a module that is not loaded, a session without Live Coding (A1071). It is checked before the generic error match, because these answers also begin with "Error:". */
 const UNAVAILABLE_WORDING = /not available|not enabled|not loaded|not started|cannot be enabled|unable to start/;
 
-/** An answer that is only a `Result:` line, with nothing after it. */
-const BARE_RESULT_LINE = /^\s*Result:\s*\S+\s*$/i;
+/** A real compiler or linker error line, such as `Health.cpp(3): error C2065` or `LINK : fatal error LNK1104`. */
+const COMPILER_DIAGNOSTIC = /\): (fatal )?error |\berror C\d{4}\b|\berror LNK\d+\b/i;
 
-/** Reads the answer: a known result name in a JSON field or a `Result:` line first, then the text. Anything not recognised counts as needing a full build, the safe choice. */
+/** Reads the answer: a known result name in a JSON field or a `Result:` line first, then the text. Anything not recognised counts as needing a full build, the safe choice. A failure is `failed` only when the text holds a real compiler error line: the toolset's `Compile Output:` carries only the Live Coding log ("Live coding failed, please see Live console", "Live coding canceled"), and `Compiler Diagnostics:` appears only when the build tool's log is in the engine folder, which a Launcher install lacks. Every other failure or cancel is `needs-full-build`, and the headless loop shows the real errors. */
 export function readLiveCodingAnswer(text: string): LiveCodingAnswer
+{
+	const answer = classifyAnswer(text);
+
+	if (answer.status === "failed" && !COMPILER_DIAGNOSTIC.test(text)) return { status: "needs-full-build", output: answer.output };
+
+	return answer;
+}
+
+/** The first reading of the answer, before the failed-without-errors rule. */
+function classifyAnswer(text: string): LiveCodingAnswer
 {
 	const structured = structuredStatus(text);
 	const output = outputOf(text);
-
-	// A bare `Result: Failure` has no `Compile Output:` or `Compiler Diagnostics:` after it (the toolset adds them only when they have text), so there is nothing to show; the headless loop will show the real compiler output.
-	if (structured === "failed" && BARE_RESULT_LINE.test(text)) return { status: "needs-full-build", output };
 
 	if (structured) return { status: structured, output };
 

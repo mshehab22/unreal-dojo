@@ -1692,6 +1692,6 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
   - The Windows scratch buffer checker (A402) is still not built.
   - The opt-in Live Coding path passed before its last small refactor and was not run again.
   - During two opt-in runs the Live Coding console window appeared on Mohammad's screen. It is an engine behaviour: any Live Coding compile shows it. That is why the opt-in is off by default.
-- Commit: 92b1815 for the first round; the fix round 1 commit follows it on branch `w8-windows-integration`.
+- Commit: 92b1815 for the first round, 7cf2def for fix round 1, and fix round 2 follows on branch `w8-windows-integration`. Fix round 2: a failed or cancelled Live Coding compile now counts as a compile failure only when the answer holds a real compiler error line; the usual real answer has only the Live Coding log, and that goes to the full build so the learner sees the real errors.
 - Nothing visible to learners changed.
 - Decisions made: A1070 to A1076.

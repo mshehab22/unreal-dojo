@@ -176,12 +176,23 @@ describe("readLiveCodingAnswer", () =>
 		expect(readLiveCodingAnswer("Result: CompileStillActive").status).toBe("busy");
 	});
 
-	it("sends a bare failed Result line, with no compiler output after it, to the full build so the real errors show (W8 fix round 1)", () =>
+	it("sends a failure or cancel with no compiler error line to the full build so the real errors show (W8 fix rounds 1 and 2)", () =>
 	{
+		// Bare results.
 		expect(readLiveCodingAnswer("Result: Failure").status).toBe("needs-full-build");
 		expect(readLiveCodingAnswer("Result: Failure\n").status).toBe("needs-full-build");
 		expect(readLiveCodingAnswer("Result: Cancelled").status).toBe("needs-full-build");
-		expect(readLiveCodingAnswer("Result: Failure\n\nCompiler Diagnostics:\nHealth.cpp(3): error C2065").status).toBe("failed");
+
+		// What a Launcher install really answers: only the Live Coding log in Compile Output, never Compiler Diagnostics.
+		expect(readLiveCodingAnswer("Result: Failure\n\nCompile Output:\nLogLiveCoding: Error: Live coding failed, please see Live console for more information").status).toBe("needs-full-build");
+		expect(readLiveCodingAnswer("Result: Cancelled\n\nCompile Output:\nLogLiveCoding: Live coding canceled").status).toBe("needs-full-build");
+	});
+
+	it("keeps a failure as failed when the text holds a real compiler or linker error line", () =>
+	{
+		expect(readLiveCodingAnswer("Result: Failure\n\nCompiler Diagnostics:\nHealth.cpp(3): error C2065: 'Helth': undeclared identifier").status).toBe("failed");
+		expect(readLiveCodingAnswer("Result: Failure\n\nCompile Output:\nLogLiveCoding: Live coding failed\n\nCompiler Diagnostics:\nHealth.cpp(9): fatal error C1083: cannot open include file").status).toBe("failed");
+		expect(readLiveCodingAnswer("Result: Failure\n\nCompile Output:\nLINK : fatal error LNK1104: cannot open file 'UnrealEditor-Dojo.dll'").status).toBe("failed");
 	});
 
 	it("reads plain text answers", () =>
