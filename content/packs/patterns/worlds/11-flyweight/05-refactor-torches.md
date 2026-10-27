@@ -32,7 +32,7 @@ Refactor the line onto one `UInstancedStaticMeshComponent`:
 
 ## See it in the editor
 
-Before the refactor, place a `DojoP11TorchLine`, set Torch Mesh to Shape_Cylinder from Engine Content, and press Play: select the line while playing and its component list shows twelve static mesh components. After it, the same line shows one Torches component with twelve instances, and looks the same.
+Before the refactor, place a `DojoP11TorchLine`, set Torch Mesh to the engine's Cylinder (turn on Show Engine Content in the Content Browser settings, then look in Engine > BasicShapes), and press Play: select the line while playing and its component list shows twelve static mesh components. After it, the same line shows one Torches component with twelve instances, and looks the same.
 
 # Files
 
