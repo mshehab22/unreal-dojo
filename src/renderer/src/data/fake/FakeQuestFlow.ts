@@ -160,6 +160,10 @@ export class FakeQuestFlow
 	{
 		const quest = this.codeQuest(request.questId);
 		const run = await this.simulateRun(request, true);
+
+		// A failure outside the learner's code rejects with its error and records nothing, as the real submit does (A1208).
+		if (run.unrelatedFailure) throw run.unrelatedFailure;
+
 		const rules = this.host.rules();
 		const review = run.compiled ? this.review(quest, run) : undefined;
 		const testShare = run.testsTotal === 0 ? 0 : run.testsPassed / run.testsTotal;
@@ -531,7 +535,7 @@ export class FakeQuestFlow
 			const durationMs = await simulator.run(quest.id, includesReview, verdict.compiled);
 			const testsPassed = verdict.tests.filter((test) => test.passed).length;
 
-			return { ok: verdict.compiled && testsPassed === verdict.tests.length && verdict.tests.length > 0, compiled: verdict.compiled, compilerOutput: verdict.compilerOutput, tests: verdict.tests, testsPassed, testsTotal: verdict.tests.length, durationMs, loop: "headless" };
+			return { ok: verdict.compiled && testsPassed === verdict.tests.length && verdict.tests.length > 0, compiled: verdict.compiled, compilerOutput: verdict.compilerOutput, tests: verdict.tests, testsPassed, testsTotal: verdict.tests.length, durationMs, loop: "headless", ...(verdict.unrelatedFailure ? { unrelatedFailure: verdict.unrelatedFailure } : {}) };
 		}
 		finally
 		{

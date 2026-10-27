@@ -1709,6 +1709,25 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 - Proof (Windows 11, from main 20e9501, hidden test windows): the build test with `--repeat-each=5`, 5 passed; the whole `e2e/ui-quests-flow.spec.ts`, 11 passed; `npm run typecheck` passes; `npm test` 920 passed, 28 skipped. macOS not run here; the change is platform neutral (frames and the End key behave the same there).
 - Decisions made: none.
 
+## M5.1h The Build screen explains outside failures (ui-quests, m5-1 builder)
+- What changed: when a Run or Submit fails for a reason that is not the learner's code (for example Live Coding is active in the open editor, so Unreal cannot build), the Build screen now says so. The result label reads "could not build (not your code)" instead of "did not compile", and a red box headed "Not your code" gives the plain message, what to do next, a Run again or Submit again button, and a "Show details" toggle with the technical lines. A Submit that fails this way shows the same box in the run column and nothing else: no loot screen, no last-submit card, no XP, no spree change, and no failed attempt on record. Ordinary compile failures and failing tests look exactly as before. For trying it without a real engine, putting the line `// dojo:fake-outside-failure` anywhere in a file makes the fake engine fail this way.
+- How to see it: run the app on the fake data source `quests`, open "A score keeper that tells dummies from targets", type `// dojo:fake-outside-failure` at the top of the file, then press Run and Submit. Or run `npx playwright test e2e/run-errors.spec.ts`.
+- Proof (Windows 11): the new spec passes (3 tests: the outside failure at 1100x700 and at 1440x900, each with Run, then Submit, then a check that the Character screen's spree and XP are unchanged; and an ordinary compile failure still saying "did not compile"). No sideways scroll at either size. New unit tests for the marker in `tests/renderer/fakeQuestFlow.test.ts` (Run answers with the failure, Submit rejects and records nothing, ordinary failures are unchanged). `npm run typecheck`, `npm test` (967 passed, 28 skipped), `npx tsx tools/verify-content.ts` and `npm run build` pass.
+- Screenshots: `docs/iterations/m5-1h-outside-run-1100.jpg`, `docs/iterations/m5-1h-outside-run-1440.jpg`, `docs/iterations/m5-1h-outside-submit-1100.jpg`, `docs/iterations/m5-1h-outside-submit-1440.jpg`, `docs/iterations/m5-1h-compile-failure-1100.jpg`.
+
+![[m5-1h-outside-run-1440.jpg|800]]
+*After Run at 1440x900: the "Not your code" box with its message and action, and the label under it saying the run could not build.*
+
+![[m5-1h-outside-submit-1100.jpg|800]]
+*After a rejected Submit at 1100x700: the same box with Submit again and its details open; there is no loot screen.*
+
+![[m5-1h-compile-failure-1100.jpg|800]]
+*An ordinary compile failure for comparison: still "did not compile", with the build log open.*
+
+- What went wrong and how it was solved: a rejected Submit left its message on screen even after a later Run passed, so starting a Run or Submit now clears the other one's error. When a Run result and a rejected Submit carried the same failure the screen showed two identical boxes, so only the Submit's box shows then.
+- Decisions made: A1213 to A1214 in `docs/decisions.md`.
+- Not done or left for later: the real pipeline filling `unrelatedFailure` is M5.1d and M5.1f; a real engine run of this screen is M5.1j. The small `headline` prop was added to the shared `AppErrorView`; `docs/systems/ui-core.md` was not edited to avoid a clash with M5.1i, so its component list should mention `headline` when the Lead merges.
+
 ## M5.1c Content load under 300 ms for 300 quests (app-shell, m5-1 builder)
 - What changed: the app now writes one line to its log when the lessons finish loading, saying how many quests loaded and how long it took. A new test builds a throwaway lessons folder on disk with 300 quests (copies of the real ones, renamed so nothing clashes, plus the real glossary and pattern cards), loads it the way the app does, and fails if loading takes too long. No loading code had to change; it was already fast enough.
 - How to see it: run `npx vitest run tests/contentLoadBudget.test.ts --reporter=verbose` and read the line that starts with `[content load budget]`. In the app, the log line is `[content] loaded N quests in X ms`.
