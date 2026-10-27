@@ -1,0 +1,5 @@
+{
+	"id": "type-object",
+	"title": "Kinds as data",
+	"summary": "The arena's armory keeps growing: new spears, new quivers, new lanterns, each differing only in its numbers. Learn to make each kind an asset or a table row that many objects point at, so designers add and tune kinds in the editor, while each object keeps only what is truly its own."
+}
