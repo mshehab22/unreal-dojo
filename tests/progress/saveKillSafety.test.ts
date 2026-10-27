@@ -26,8 +26,17 @@ const KILL_COUNT = 20;
  */
 const EARLY_KILL_EVERY = 10;
 
-/** The longest wait after the first acknowledged save before the kill, in milliseconds. Short enough to keep the disk traffic small, long enough to land inside several writes. */
+/** The usual longest wait after the first acknowledged save before the kill, in milliseconds. Short enough to keep the disk traffic small, long enough to land inside several writes. */
 const LONGEST_WAIT_AFTER_FIRST_SAVE_MS = 600;
+
+/** On a slow machine the longest wait grows to this many times the measured first save, so a second save is always reachable. */
+const WAIT_IN_FIRST_SAVES = 3;
+
+/** The longest wait after the first acknowledged save, however slow the machine is, so the run stays inside the 30 s test budget. */
+const MAXIMUM_WAIT_AFTER_FIRST_SAVE_MS = 6000;
+
+/** A first save slower than this, from "ready" to its acknowledgement, marks the machine as too slow to expect a second save; the 2-or-more check is then skipped with a logged note. */
+const SLOW_FIRST_SAVE_MS = 4000;
 
 /** The longest wait after "ready" for an early kill, in milliseconds. */
 const LONGEST_EARLY_WAIT_MS = 100;
@@ -35,15 +44,14 @@ const LONGEST_EARLY_WAIT_MS = 100;
 /** How long the child gets from its start to reach the point the kill waits for ("ready" for an early kill, else the first acknowledged save), before the run is failed with a clear message, in milliseconds. Well under the 30 s test budget. */
 const CHILD_DEADLINE_MS = 15_000;
 
-
 /** The repository root, where `tsx` is installed. */
 const REPOSITORY_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
 /** The child script, run with the same node that runs the tests. */
 const CHILD_SCRIPT = fileURLToPath(new URL("./support/killedSaveWriter.ts", import.meta.url));
 
-/** When the kill happens. */
-type KillMoment = { kind: "after-ready"; delayMs: number } | { kind: "after-first-save"; delayMs: number };
+/** When the kill happens: a fixed wait after "ready", or a seeded fraction of a wait measured from the first acknowledged save (see `waitAfterFirstSave`). */
+type KillMoment = { kind: "after-ready"; delayMs: number } | { kind: "after-first-save"; fraction: number };
 
 /** What the parent learned from one killed child. */
 interface KilledRun
@@ -53,6 +61,12 @@ interface KilledRun
 
 	/** Whatever the child wrote to stderr. */
 	errorText: string;
+
+	/** Milliseconds from "ready" to the first acknowledged save, or undefined when none was acknowledged. */
+	firstSaveMs: number | undefined;
+
+	/** The wait, in milliseconds, between the point the kill was timed from and the kill. */
+	killDelayMs: number;
 }
 
 /** What one run showed, gathered to check that the 20 runs together really tested a kill mid-write. */
@@ -60,6 +74,9 @@ interface RunSummary
 {
 	/** How many saves the child acknowledged before it was killed. */
 	acknowledgedCount: number;
+
+	/** True when the first save took longer than `SLOW_FIRST_SAVE_MS`. */
+	firstSaveWasSlow: boolean;
 
 	/** True when the folder held a `.tmp` or `.bak.tmp` right after the kill, which only a kill during a write leaves behind. */
 	foundLeftoverTemporaryFile: boolean;
@@ -81,6 +98,14 @@ function seededRandom(seed: number): () => number
 
 		return ((mixed ^ (mixed >>> 14)) >>> 0) / 4_294_967_296;
 	};
+}
+
+/** The wait after the first acknowledged save: a fraction of the usual window, stretched to a few first saves on a slow machine (so a second save is reachable) but never past the cap. */
+function waitAfterFirstSave(fraction: number, firstSaveMs: number): number
+{
+	const longestWait = Math.min(MAXIMUM_WAIT_AFTER_FIRST_SAVE_MS, Math.max(LONGEST_WAIT_AFTER_FIRST_SAVE_MS, WAIT_IN_FIRST_SAVES * firstSaveMs));
+
+	return Math.floor(fraction * longestWait);
 }
 
 /** The template save the child pads and numbers: a new save with one quest whose saved file the child fills. */
@@ -125,6 +150,9 @@ function runUntilKilled(folder: string, templatePath: string, moment: KillMoment
 		let killed = false;
 		let failure: Error | undefined;
 		let killTimer: ReturnType<typeof setTimeout> | undefined;
+		let readyAt = 0;
+		let firstSaveMs: number | undefined;
+		let killDelayMs = 0;
 
 		/** Kills the child now. */
 		const killNow = (): void =>
@@ -147,6 +175,7 @@ function runUntilKilled(folder: string, templatePath: string, moment: KillMoment
 		const scheduleKill = (delayMs: number): void =>
 		{
 			clearTimeout(deadlineTimer);
+			killDelayMs = delayMs;
 			killTimer = setTimeout(killNow, delayMs);
 		};
 
@@ -162,12 +191,18 @@ function runUntilKilled(folder: string, templatePath: string, moment: KillMoment
 			{
 				if (line === "ready")
 				{
+					readyAt = Date.now();
 					if (moment.kind === "after-ready") scheduleKill(moment.delayMs);
 				}
 				else
 				{
 					acknowledged.push(Number(line));
-					if (acknowledged.length === 1 && moment.kind === "after-first-save") scheduleKill(moment.delayMs);
+
+					if (acknowledged.length === 1)
+					{
+						firstSaveMs = Date.now() - readyAt;
+						if (moment.kind === "after-first-save") scheduleKill(waitAfterFirstSave(moment.fraction, firstSaveMs));
+					}
 				}
 			}
 		});
@@ -186,7 +221,7 @@ function runUntilKilled(folder: string, templatePath: string, moment: KillMoment
 			clearTimeout(killTimer);
 
 			if (failure) rejectPromise(failure);
-			else if (killed) resolvePromise({ acknowledged, errorText });
+			else if (killed) resolvePromise({ acknowledged, errorText, firstSaveMs, killDelayMs });
 			else rejectPromise(new Error(`the child ended before it was killed: ${errorText}`));
 		});
 	});
@@ -242,12 +277,15 @@ describe("the save survives a kill mid-write", { timeout: REAL_DISK_TIMEOUT_MS }
 	{
 		if (summaries.length < KILL_COUNT) return;
 
-		const runsWithABackupToMake = summaries.filter((summary) => summary.acknowledgedCount >= 2).length;
+		const runsWithASecondSave = summaries.filter((summary) => summary.acknowledgedCount >= 2).length;
 		const runsWithLeftovers = summaries.filter((summary) => summary.foundLeftoverTemporaryFile).length;
-		console.info(`saveKillSafety: seed ${baseSeed}: ${runsWithABackupToMake} of ${KILL_COUNT} runs acknowledged 2 or more saves, ${runsWithLeftovers} left a temp file, acknowledged per run: ${summaries.map((summary) => summary.acknowledgedCount).join(" ")}`);
+		const machineIsSlow = summaries.some((summary) => summary.firstSaveWasSlow);
+		console.info(`saveKillSafety: seed ${baseSeed}: ${runsWithASecondSave} of ${KILL_COUNT} runs acknowledged 2 or more saves, ${runsWithLeftovers} left a temp file, acknowledged per run: ${summaries.map((summary) => summary.acknowledgedCount).join(" ")}`);
 
-		// Two or more acknowledged saves means the child wrote a save over an earlier one, so the kill window held real backup copies and renames, not only first writes.
-		expect(runsWithABackupToMake, `seed ${baseSeed}: no run got past one save, so no kill could land while a backup was being made`).toBeGreaterThanOrEqual(1);
+		// The kill window covered at least one whole save cycle after the first save. With one acknowledged save the main file already exists, so the write that was killed
+		// is already making a backup of it; with two or more a whole cycle finished first. The wait grows with the measured first save, so only a very slow machine skips this.
+		if (machineIsSlow) console.info(`saveKillSafety: the first save took over ${SLOW_FIRST_SAVE_MS} ms on this machine, so the check for a second save is skipped`);
+		else expect(runsWithASecondSave, `seed ${baseSeed}: no run got past one save, so no kill window covered a whole save cycle after the first`).toBeGreaterThanOrEqual(1);
 
 		// A .tmp or .bak.tmp can only be left by a kill that landed during a write, so this proves a kill really landed mid-write.
 		expect(runsWithLeftovers, `seed ${baseSeed}: no kill left a temp file, so none landed mid-write`).toBeGreaterThanOrEqual(1);
@@ -263,9 +301,9 @@ describe("the save survives a kill mid-write", { timeout: REAL_DISK_TIMEOUT_MS }
 			const early = index % EARLY_KILL_EVERY === 0;
 			const moment: KillMoment = early
 				? { kind: "after-ready", delayMs: Math.floor(random() * LONGEST_EARLY_WAIT_MS) }
-				: { kind: "after-first-save", delayMs: Math.floor(random() * LONGEST_WAIT_AFTER_FIRST_SAVE_MS) };
+				: { kind: "after-first-save", fraction: random() };
 			const seededSaves = index % 3;
-			const label = `seed ${baseSeed}, kill ${index + 1}, killed ${moment.delayMs} ms ${moment.kind === "after-ready" ? "after ready" : "after the first save"}, ${seededSaves} saves before the child`;
+			const baseLabel = `seed ${baseSeed}, kill ${index + 1}, ${moment.kind === "after-ready" ? "timed from ready" : "timed from the first save"}, ${seededSaves} saves before the child`;
 
 			root = await mkdtemp(join(tmpdir(), "dojo-kill-"));
 			const folder = join(root, "save");
@@ -281,6 +319,7 @@ describe("the save survives a kill mid-write", { timeout: REAL_DISK_TIMEOUT_MS }
 			{
 				runningChild = child;
 			});
+			const label = `${baseLabel}, first save ${run.firstSaveMs ?? "never"} ms, killed ${run.killDelayMs} ms later`;
 			expect(run.errorText, label).toBe("");
 
 			const lastAcknowledged = run.acknowledged.at(-1) ?? 0;
@@ -288,7 +327,7 @@ describe("the save survives a kill mid-write", { timeout: REAL_DISK_TIMEOUT_MS }
 			expect(run.acknowledged, label).toEqual(Array.from({ length: lastAcknowledged }, (_unused, position) => position + 1));
 
 			const leftovers = (await readdir(folder)).filter((name) => name.endsWith(".tmp"));
-			summaries.push({ acknowledgedCount: lastAcknowledged, foundLeftoverTemporaryFile: leftovers.length > 0 });
+			summaries.push({ acknowledgedCount: lastAcknowledged, firstSaveWasSlow: (run.firstSaveMs ?? 0) > SLOW_FIRST_SAVE_MS, foundLeftoverTemporaryFile: leftovers.length > 0 });
 
 			// The main file is whole: it parses and passes the schema (it is absent only if the very first save never landed).
 			const mainText = await readIfPresent(join(folder, SAVE_FILE_NAME));

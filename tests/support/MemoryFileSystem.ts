@@ -11,7 +11,7 @@ export const MEMORY_SAVE_PATH = join(MEMORY_USER_DATA_FOLDER, "progress.json");
 /** The write steps a test can make fail. */
 export type CrashPoint = "none" | "mid-temp-write" | "mid-backup-copy" | "before-rename" | "after-rename";
 
-/** Keeps files in a map. `crashAt` makes the next write fail at that step, like a power cut. */
+/** Keeps files in a map. `crashAt` makes the next write fail at that step, like a killed process. */
 export class MemoryFileSystem implements FileSystem
 {
 	/** File contents by path. */
