@@ -158,6 +158,24 @@ describe("readLiveCodingAnswer", () =>
 		expect(readLiveCodingAnswer("Error: Live Coding is not available in this build configuration.").status).toBe("unavailable");
 	});
 
+	it("reads every answer that says Live Coding cannot run here as unavailable, ahead of the error match (A1071)", () =>
+	{
+		const notEnabled = "Error: Live Coding is not enabled for this session. Enable it in Editor Preferences.";
+
+		expect(readLiveCodingAnswer(notEnabled)).toEqual({ status: "unavailable", output: notEnabled });
+		expect(readLiveCodingAnswer("Error: Live Coding module is not loaded. Ensure Live Coding is enabled in Editor Preferences.").status).toBe("unavailable");
+		expect(readLiveCodingAnswer("Result: CompileNotStarted").status).toBe("unavailable");
+		expect(readLiveCodingAnswer("Live Coding cannot be enabled while hot-reloaded modules are active.").status).toBe("unavailable");
+	});
+
+	it("reads the engine toolset's Result line before any wording in the compile output (A1071)", () =>
+	{
+		expect(readLiveCodingAnswer("Result: Success\n\nCompile Output:\nno error reported, nothing to restart").status).toBe("succeeded");
+		expect(readLiveCodingAnswer("Result: NoChanges").status).toBe("no-changes");
+		expect(readLiveCodingAnswer("Result: Failure\n\nCompile Output:\nHealth.cpp(3): error C2065").status).toBe("failed");
+		expect(readLiveCodingAnswer("Result: CompileStillActive").status).toBe("busy");
+	});
+
 	it("reads plain text answers", () =>
 	{
 		expect(readLiveCodingAnswer("Live coding succeeded").status).toBe("succeeded");

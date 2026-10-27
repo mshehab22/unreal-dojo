@@ -7,6 +7,8 @@ import { EditorLauncher } from "../../src/main/services/unreal/EditorLauncher";
 import { EDITOR_READY_TIMEOUT_MS, EditorService } from "../../src/main/services/unreal/EditorService";
 import { FullBuildLedger } from "../../src/main/services/unreal/FullBuildLedger";
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
+import type { PlatformPaths } from "../../src/main/services/unreal/PlatformPaths";
+import { WindowsPlatformPaths } from "../../src/main/services/unreal/WindowsPlatformPaths";
 import { FakeEditorToolClient } from "./FakeEditorToolClient";
 import { FakeProcessLauncher } from "./FakeProcessLauncher";
 import { FakeTimer } from "./FakeTimer";
@@ -18,11 +20,13 @@ const HEALTHY: ToolchainCheck = { ok: true, tool: "xcode-select", message: "Xcod
 const METAL_MISSING: ToolchainCheck = { ...HEALTHY, problems: [{ blocksBuild: false, error: { code: "toolchain-missing", message: "The Metal toolchain is not installed.", suggestedAction: "xcodebuild -downloadComponent MetalToolchain" } }] };
 
 /** The service over fakes; `version` picks 5.8 (fast loop) or 5.6. */
-function createRig(options: { version?: "5.8.3" | "5.6.1"; toolchain?: ToolchainCheck; enginePath?: string | null; answering?: boolean } = {})
+function createRig(options: { version?: "5.8.3" | "5.6.1"; toolchain?: ToolchainCheck; enginePath?: string | null; answering?: boolean; alwaysWindowless?: boolean; startLiveCodingWhenWindowless?: boolean; paths?: PlatformPaths } = {})
 {
-	const paths = new MacPlatformPaths("/Users/learner");
+	const paths = options.paths ?? new MacPlatformPaths("/Users/learner");
 	const timer = new FakeTimer();
-	const processes = new FakeProcessLauncher([{ hangs: true }, { hangs: true }, { hangs: true }]);
+	// The ready line only counts when the launch asked for Live Coding (A1072).
+	const readyEditor = { hangs: true, lines: ["LogLiveCodingServer: Display: Live coding ready - Save changes and press Ctrl+Alt+F11 to re-compile code"] };
+	const processes = new FakeProcessLauncher([readyEditor, readyEditor, readyEditor]);
 	const clients: FakeEditorToolClient[] = [];
 	const editorLauncher = new EditorLauncher({ paths, launcher: processes, timer, portProbe: { isInUse: async () => false }, createClient: () =>
 	{
@@ -37,7 +41,7 @@ function createRig(options: { version?: "5.8.3" | "5.6.1"; toolchain?: Toolchain
 	const ledger = new FullBuildLedger();
 	const version = options.version ?? "5.8.3";
 	const engine: EngineInstall = { path: ENGINE, version, source: "launcher", supportsFastLoop: version === "5.8.3" };
-	const service = new EditorService({ settings, engineInspector: { inspectFolder: async () => engine }, editorLauncher, ledger, paths, checkToolchain: async () => options.toolchain ?? HEALTHY });
+	const service = new EditorService({ settings, engineInspector: { inspectFolder: async () => engine }, editorLauncher, ledger, paths, checkToolchain: async () => options.toolchain ?? HEALTHY, alwaysWindowless: options.alwaysWindowless, startLiveCodingWhenWindowless: options.startLiveCodingWhenWindowless });
 
 	return { service, processes, clients, ledger, timer, editorLauncher, settings };
 }
@@ -61,6 +65,44 @@ describe("EditorService", () =>
 		await service.openEditor();
 
 		expect(processes.specs[0]?.commandArguments).toContain("-NullRHI");
+	});
+
+	it("always opens a windowless editor when tests ask for it, even with a healthy toolchain and an older engine (A643, A1074)", async () =>
+	{
+		const fast = createRig({ alwaysWindowless: true });
+		await fast.service.openEditor();
+
+		expect(fast.processes.specs[0]?.commandArguments).toContain("-NullRHI");
+
+		const older = createRig({ alwaysWindowless: true, version: "5.6.1" });
+		await older.service.openEditor();
+
+		expect(older.processes.specs[0]?.commandArguments).toEqual([`${SANDBOX}/Dojo.uproject`, "-NullRHI", "-Unattended", "-NoSplash", "-NoSound", "-stdout", "-FullStdOutLogOutput"]);
+	});
+
+	it("starts Live Coding in a windowless Windows editor only when asked, and never on the Mac or in a windowed editor (A1072)", async () =>
+	{
+		const windows = new WindowsPlatformPaths({});
+		const unasked = createRig({ alwaysWindowless: true, paths: windows });
+		await unasked.service.openEditor();
+
+		expect(unasked.processes.specs[0]?.commandArguments).toContain("-Unattended");
+		expect(unasked.processes.specs[0]?.commandArguments.join(" ")).not.toContain("LiveCodingSettings");
+
+		const windowlessOnWindows = createRig({ alwaysWindowless: true, startLiveCodingWhenWindowless: true, paths: windows });
+		await windowlessOnWindows.service.openEditor();
+
+		expect(windowlessOnWindows.processes.specs[0]?.commandArguments.join(" ")).toContain("LiveCodingSettings]:Startup=AutomaticButHidden");
+
+		const windowedOnWindows = createRig({ startLiveCodingWhenWindowless: true, paths: windows });
+		await windowedOnWindows.service.openEditor();
+
+		expect(windowedOnWindows.processes.specs[0]?.commandArguments.join(" ")).not.toContain("LiveCodingSettings");
+
+		const windowlessOnMac = createRig({ alwaysWindowless: true, startLiveCodingWhenWindowless: true });
+		await windowlessOnMac.service.openEditor();
+
+		expect(windowlessOnMac.processes.specs[0]?.commandArguments.join(" ")).not.toContain("LiveCodingSettings");
 	});
 
 	it("opens an engine older than 5.8 without the MCP server and does not wait", async () =>

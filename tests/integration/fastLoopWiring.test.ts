@@ -1,13 +1,12 @@
 // Real engine check of M1.4b: the app's own wiring. Opens the editor through the openEditor handler, runs a World 1 quest through runQuest twice (headless, then fast), and quits through the app's quit sequence with no editor left.
 // Opt in with DOJO_ENGINE_ROOT=<engine root>; skipped otherwise, or when that folder has no engine (A187). Run under the shared engine lock.
-import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { createServer, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { IPC_CHANNELS, type IpcResponse } from "@shared/ipc";
 import type { BuildProgressEvent, RunResult } from "@shared/types/run";
@@ -16,9 +15,13 @@ import { createContentCatalog } from "../../src/main/content/createContentCatalo
 import { createHandlers } from "../../src/main/ipc/createHandlers";
 import { registerHandlers, type WrappedHandler } from "../../src/main/ipc/registerHandlers";
 import { createEngineLocator } from "../../src/main/services/unreal/createEngineLocator";
-import { createUnrealServices, type UnrealServices } from "../../src/main/services/unreal/createUnrealServices";
+import type { UnrealServices } from "../../src/main/services/unreal/createUnrealServices";
 import { RunRegistry } from "../../src/main/services/unreal/RunRegistry";
 import { stopEngineWorkBeforeQuit } from "../../src/main/services/unreal/stopEngineWorkBeforeQuit";
+import { assertNoForeignLiveCodingSession } from "../support/liveCodingSessions";
+import { createIntegrationServices, LIVE_CODING_REQUESTED } from "../support/createIntegrationServices";
+import type { GuardedProcessLauncher } from "../support/GuardedProcessLauncher";
+import { processesMentioning } from "../support/processesMentioning";
 import { MemoryUnrealSettings } from "../unreal/MemoryUnrealSettings";
 
 /** The engine to test against, from the environment. */
@@ -36,6 +39,12 @@ const STEP_TIMEOUT_MS = 10 * 60 * 1000;
 /** A World 1 quest with no earlier quests to fill. */
 const QUEST_ID = "f1-training-dummy";
 
+/** True on Windows without real Live Coding (the default, A1072): the windowless editor answers "not enabled" and the fast loop hands the run to the headless loop (A1071). */
+const WINDOWS_FALLBACK = process.platform === "win32" && !LIVE_CODING_REQUESTED;
+
+/** How long the editor the app reopens after a full build gets to answer again. */
+const EDITOR_REOPEN_TIMEOUT_MS = 3 * 60 * 1000;
+
 /** Measured times, printed at the end for the docs. */
 const timings: Record<string, number> = {};
 
@@ -48,12 +57,6 @@ async function freePort(): Promise<number>
 	await new Promise<void>((resolve) => server.close(() => resolve()));
 
 	return port;
-}
-
-/** True when any process still mentions the folder on its command line. */
-function processesMentioning(folder: string): string
-{
-	return spawnSync("pgrep", ["-fl", folder], { encoding: "utf8" }).stdout.trim();
 }
 
 /** The quest's reference solution as a learner's file map. */
@@ -69,8 +72,12 @@ async function solutionFiles(questId: string): Promise<Record<string, string>>
 
 describe.skipIf(!HAS_ENGINE)(`fast loop wiring against ${ENGINE_ROOT || "no engine"}`, () =>
 {
+	// Stops at once, with the reason, when another editor's Live Coding would make every build fail (A1076).
+	beforeAll(() => assertNoForeignLiveCodingSession());
+
 	let pickedFolder = "";
 	let services: UnrealServices | null = null;
+	let guard: GuardedProcessLauncher | null = null;
 	const events: BuildProgressEvent[] = [];
 	const settings = new MemoryUnrealSettings();
 	const runRegistry = new RunRegistry();
@@ -85,8 +92,8 @@ describe.skipIf(!HAS_ENGINE)(`fast loop wiring against ${ENGINE_ROOT || "no engi
 	/** Calls one IPC channel like the preload does. */
 	const invoke = <Value>(channel: string, ...methodArguments: unknown[]): Promise<IpcResponse<Value>> => handlersByChannel.get(channel)!({} as Parameters<WrappedHandler>[0], ...methodArguments) as Promise<IpcResponse<Value>>;
 
-	/** Runs the quest's reference solution through runQuest and returns the result and its loop reason. */
-	async function runQuest(runId: string, timingName: string): Promise<{ result: RunResult; reason: string }>
+	/** Runs the quest's reference solution through runQuest and returns the result, its first loop reason, and every loop reason in order. */
+	async function runQuest(runId: string, timingName: string): Promise<{ result: RunResult; reason: string; reasons: string[] }>
 	{
 		events.length = 0;
 		const startedAt = Date.now();
@@ -95,16 +102,18 @@ describe.skipIf(!HAS_ENGINE)(`fast loop wiring against ${ENGINE_ROOT || "no engi
 
 		if (!response.ok) throw new Error(`runQuest failed: ${JSON.stringify(response.error)}`);
 
-		const reason = events.find((event) => event.loopReason !== undefined)?.loopReason ?? "";
+		const reasons = events.flatMap((event) => (event.loopReason === undefined ? [] : [event.loopReason]));
+		const reason = reasons[0] ?? "";
 		console.log(`${timingName}: loop=${response.value.loop} ok=${response.value.ok} ${response.value.testsPassed}/${response.value.testsTotal} in ${timings[timingName]} ms; ${reason}`);
 
-		return { result: response.value, reason };
+		return { result: response.value, reason, reasons };
 	}
 
 	afterAll(async () =>
 	{
 		await services?.editorLauncher.dispose();
 		console.log(`Timings (ms): ${JSON.stringify(timings)}`);
+		console.log(`Editor launches: ${JSON.stringify(guard?.editorLaunchLines() ?? [])}`);
 
 		if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true });
 	}, STEP_TIMEOUT_MS);
@@ -113,7 +122,9 @@ describe.skipIf(!HAS_ENGINE)(`fast loop wiring against ${ENGINE_ROOT || "no engi
 	{
 		settings.mcpPort = await freePort();
 		const catalog = createContentCatalog(join(REPOSITORY, "content"));
-		const built = createUnrealServices({ templateFolder: join(REPOSITORY, "resources", "sandbox-template"), solutionsFolder: join(REPOSITORY, "tools", "solutions"), engineInspector: createEngineLocator(), settings, quests: catalog, learner: { isPassed: () => false, savedFiles: () => ({}) } });
+		const integration = createIntegrationServices({ templateFolder: join(REPOSITORY, "resources", "sandbox-template"), solutionsFolder: join(REPOSITORY, "tools", "solutions"), engineInspector: createEngineLocator(), settings, quests: catalog, learner: { isPassed: () => false, savedFiles: () => ({}) } });
+		const built = integration.services;
+		guard = integration.guard;
 		services = built;
 
 		registerHandlers(
@@ -169,19 +180,40 @@ describe.skipIf(!HAS_ENGINE)(`fast loop wiring against ${ENGINE_ROOT || "no engi
 		expect(services!.editorLauncher.current()?.launchedAt).toBeDefined();
 	}, STEP_TIMEOUT_MS);
 
-	it("runs the same quest again through runQuest in the fast loop", async () =>
+	it("runs the same quest again through runQuest in the fast loop, or falls back to a full build where the editor has no Live Coding", async () =>
 	{
-		const { result, reason } = await runQuest("run-2", "secondRunFast");
+		const { result, reason, reasons } = await runQuest("run-2", "secondRunFast");
 
-		expect(result).toMatchObject({ ok: true, compiled: true, loop: "fast" });
 		expect(result.testsTotal).toBeGreaterThan(0);
 		expect(reason).toMatch(/^Fast loop/);
+
+		if (!WINDOWS_FALLBACK)
+		{
+			expect(result).toMatchObject({ ok: true, compiled: true, loop: "fast" });
+
+			return;
+		}
+
+		// The compile answered "not enabled" (A1071), so the run built headless; that closed the editor and the app reopens it afterwards.
+		expect(result).toMatchObject({ ok: true, compiled: true, loop: "headless" });
+		expect(reasons[1]).toBe('Full build: Live Coding answered "unavailable".');
+
+		const startedAt = Date.now();
+
+		while (!(await services!.editorService.isConnected()) && Date.now() - startedAt < EDITOR_REOPEN_TIMEOUT_MS) await new Promise<void>((resolve) => setTimeout(resolve, 500));
+
+		timings.editorReopenAfterFallback = Date.now() - startedAt;
+
+		expect(await services!.editorService.isConnected()).toBe(true);
 	}, STEP_TIMEOUT_MS);
 
 	it("quits through the app's quit sequence: the quit is held, the editor closes, and nothing is left on the sandbox", async () =>
 	{
 		const sandboxFolder = settings.getSandboxPath()!;
 		let held = false;
+
+		// With no editor and no run the quit hook lets the app quit by itself and `quitted` would never resolve, so fail now instead of at the timeout.
+		expect(services!.editorLauncher.current()).not.toBeNull();
 		const startedAt = Date.now();
 
 		beforeQuit({ preventDefault: () => (held = true) });
@@ -192,5 +224,7 @@ describe.skipIf(!HAS_ENGINE)(`fast loop wiring against ${ENGINE_ROOT || "no engi
 		expect(services!.editorLauncher.current()).toBeNull();
 		expect(await services!.editorLauncher.reopen()).toBeNull();
 		expect(processesMentioning(sandboxFolder)).toBe("");
+		expect(guard!.editorLaunchLines().length).toBeGreaterThan(0);
+		expect(guard!.editorLaunchLines().every((line) => line.includes("-NullRHI"))).toBe(true);
 	}, STEP_TIMEOUT_MS);
 });
