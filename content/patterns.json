@@ -1271,7 +1271,7 @@
         "distractorNotes": [
           {
             "choice": "type-object",
-            "why": "Same shape, different reason: Type Object is about defining kinds, Flyweight is about memory."
+            "why": "The two look alike, but they solve different problems: one lets data define the kinds, the other shares data to save memory."
           },
           {
             "choice": "object-pool",

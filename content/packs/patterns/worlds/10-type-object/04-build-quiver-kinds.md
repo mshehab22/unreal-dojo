@@ -383,21 +383,18 @@ Each quiver could copy its row into a member when it begins play and read the co
 # Parsons
 
 ```yaml
-- id: spawn-of-kind
-  prompt: Put SpawnOfKind in order.
+- id: draw-arrow
+  prompt: "Put Draw in order: find the kind, give up if there is nothing to draw, spend one arrow, refresh the label, then return the damage."
   lines:
-    - "ADojoP10Quiver* ADojoP10Quiver::SpawnOfKind(UWorld* World, const FDataTableRowHandle& Kind, const FTransform& Transform)"
+    - "float ADojoP10Quiver::Draw()"
     - "{"
-    - "	if (!World) return nullptr;"
-    - "	const FDojoP10QuiverRow* Row = Kind.DataTable ? Kind.DataTable->FindRow<FDojoP10QuiverRow>(Kind.RowName, TEXT(\"SpawnOfKind\"), false) : nullptr;"
-    - "	UClass* QuiverClass = Row && Row->QuiverClass ? Row->QuiverClass.Get() : ADojoP10Quiver::StaticClass();"
-    - "	ADojoP10Quiver* Quiver = World->SpawnActorDeferred<ADojoP10Quiver>(QuiverClass, Transform);"
-    - "	if (!Quiver) return nullptr;"
-    - "	Quiver->Kind = Kind;"
-    - "	Quiver->FinishSpawning(Transform);"
-    - "	return Quiver;"
+    - "	const FDojoP10QuiverRow* Row = FindKind();"
+    - "	if (!Row || ArrowsLeft <= 0) return 0.f;"
+    - "	ArrowsLeft--;"
+    - "	RefreshLabel();"
+    - "	return Row->ArrowDamage;"
     - "}"
   distractors:
-    - line: "	ADojoP10Quiver* Quiver = World->SpawnActor<ADojoP10Quiver>(QuiverClass, Transform);"
-      mistake: SpawnActor runs BeginPlay before it returns, so the quiver fills itself while its Kind is still empty and is handed out with no arrows.
+    - line: "	Row->ArrowCount--;"
+      mistake: The row is shared by every quiver of that kind and is read-only; the arrows spent belong to this quiver's own count.
 ```

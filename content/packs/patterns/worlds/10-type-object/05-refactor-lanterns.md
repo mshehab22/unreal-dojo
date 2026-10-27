@@ -204,6 +204,7 @@ void ADojoP10Lantern::RefreshLabel()
 #include "Quests/p10-lantern-refactor/DojoP10LanternKind.h"
 #include "Support/DojoTestWorld.h"
 #include "UObject/UnrealType.h"
+#include "UObject/TextProperty.h"
 
 namespace DojoP10LanternTest
 {
