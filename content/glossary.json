@@ -1720,7 +1720,7 @@
     ],
     "category": "object model",
     "short": "The C++ half of an Unreal interface, the I-prefixed class that declares the functions implementers must provide.",
-    "long": "A class opts into an interface by inheriting from the I class alongside its normal parent, as in class ADojoChest : public AActor, public IInteractable. Functions marked BlueprintNativeEvent or BlueprintImplementableEvent in the interface must be called through the generated static helper, IInteractable::Execute_Interact(Target, Instigator), so that Blueprint implementations work too. Plain C++ interface functions can be called through a cast pointer as usual.",
+    "long": "A class opts into an interface by inheriting from the I class alongside its normal parent, as in class ADojoChest : public AActor, public IInteractable. Functions marked BlueprintNativeEvent or BlueprintImplementableEvent in the interface must be called through the generated static helper, IInteractable::Execute_Interact(Target, Interactor), so that Blueprint implementations work too. Plain C++ interface functions can be called through a cast pointer as usual.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/interfaces-in-unreal-engine?application_version=5.8",
     "related": [
       "uinterface",

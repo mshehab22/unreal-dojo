@@ -37,7 +37,7 @@ public:
 	bool IsOn() const;
 
 	/** Boss addition: lights the lever if it is off and its own cooldown, if it has one, is ready; returns true when it lit. */
-	virtual bool Interact_Implementation(AActor* Instigator) override;
+	virtual bool Interact_Implementation(AActor* Interactor) override;
 
 protected:
 	/** Shows the starting position. */

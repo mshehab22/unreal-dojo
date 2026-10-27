@@ -57,9 +57,9 @@ class IDojoF5Interactable
 	GENERATED_BODY()
 
 public:
-	/** Reacts to Instigator interacting; returns true when something happened. */
+	/** Reacts to Interactor interacting; returns true when something happened. */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interact") // @explain: A native event, so C++ classes implement Interact_Implementation and Blueprints override Interact.
-	bool Interact(AActor* Instigator);
+	bool Interact(AActor* Interactor);
 };
 ```
 
@@ -94,7 +94,7 @@ public:
 	bool IsOpen() const;
 
 	/** Opens the crate and returns true; returns false once it is already open. */
-	virtual bool Interact_Implementation(AActor* Instigator) override;
+	virtual bool Interact_Implementation(AActor* Interactor) override;
 
 private:
 	bool bOpen = false;
@@ -123,7 +123,7 @@ bool ADojoF5Crate::IsOpen() const
 	return bOpen;
 }
 
-bool ADojoF5Crate::Interact_Implementation(AActor* Instigator)
+bool ADojoF5Crate::Interact_Implementation(AActor* Interactor)
 {
 	// Your code: refuse when already open.
 	// Your code: open, show OPEN on the label, and report that something happened.
@@ -255,8 +255,8 @@ bool FDojo_F5_Interact_InterfaceIsBlueprintReady::RunTest(const FString& Paramet
 
 # Hints
 
-- The prodder must never mention the crate's class; everything it needs is on the actor and the interface.
-- Actors can be asked whether they implement an interface by its reflected U class; the interface's generated static helper takes the target and the instigator.
+- The prodder must never mention the crate's class; everything it needs is on the actor and the interface. Keep the parameter name `Interactor` in the crate: `Instigator` is already a member of `AActor`, and MSVC rejects a parameter that shadows it.
+- Actors can be asked whether they implement an interface by its reflected U class; the interface's generated static helper takes the target and the interactor.
 - `UObject::Implements<T>` is in `UObject/Object.h`; the `Execute_Interact` helper is generated into `DojoF5Interactable.generated.h`.
 
 # Rubric

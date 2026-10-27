@@ -32,7 +32,7 @@ bool ADojoF5Lever::IsOn() const
 	return bIsOn;
 }
 
-bool ADojoF5Lever::Interact_Implementation(AActor* Instigator)
+bool ADojoF5Lever::Interact_Implementation(AActor* Interactor)
 {
 	if (bIsOn) return false;
 

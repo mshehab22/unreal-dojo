@@ -17,7 +17,7 @@ class IDojoF5Interactable
 	GENERATED_BODY()
 
 public:
-	/** Reacts to Instigator interacting; returns true when something happened. */
+	/** Reacts to Interactor interacting; returns true when something happened. */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interact")
-	bool Interact(AActor* Instigator);
+	bool Interact(AActor* Interactor);
 };
