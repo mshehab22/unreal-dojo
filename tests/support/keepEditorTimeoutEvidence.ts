@@ -8,7 +8,7 @@ import { processesMentioning } from "./processesMentioning";
 /** What the caller knows about the editor session when the wait ended: running, not running, or no session at all. */
 export type EditorSessionState = "running" | "not running" | "no session";
 
-/** What to keep and where. `keepRoot` and `now` are only for tests; the suites use the defaults. */
+/** What to keep and where. `keepRoot`, `now`, and `findProcesses` are only for tests; the suites use the defaults. */
 export interface KeepEditorTimeoutEvidenceRequest
 {
 	readonly sandboxFolder: string;
@@ -16,6 +16,7 @@ export interface KeepEditorTimeoutEvidenceRequest
 	readonly sessionState: EditorSessionState;
 	readonly keepRoot?: string;
 	readonly now?: () => Date;
+	readonly findProcesses?: (folder: string) => string;
 }
 
 /** The label with every character a folder name cannot hold replaced by a dash. */
@@ -25,11 +26,11 @@ function safeLabel(label: string): string
 }
 
 /** The processes still mentioning the sandbox, as one line of text, or the reason the query failed. Never throws. */
-function liveProcesses(sandboxFolder: string): string
+function liveProcesses(sandboxFolder: string, findProcesses: (folder: string) => string): string
 {
 	try
 	{
-		const found = processesMentioning(sandboxFolder);
+		const found = findProcesses(sandboxFolder);
 
 		return found === "" ? "no process mentions the sandbox" : `processes mentioning the sandbox: ${found.split(/\r?\n/).join(" || ")}`;
 	}
@@ -44,7 +45,7 @@ export async function keepEditorTimeoutEvidence(request: KeepEditorTimeoutEviden
 {
 	const stamp = (request.now?.() ?? new Date()).toISOString().replace(/[:.]/g, "-");
 	const keptFolder = join(request.keepRoot ?? tmpdir(), `dojo-reopen-timeout-${safeLabel(request.label)}-${stamp}`);
-	const alive = `Editor session: ${request.sessionState}; ${liveProcesses(request.sandboxFolder)}.`;
+	const alive = `Editor session: ${request.sessionState}; ${liveProcesses(request.sandboxFolder, request.findProcesses ?? processesMentioning)}.`;
 
 	try
 	{
