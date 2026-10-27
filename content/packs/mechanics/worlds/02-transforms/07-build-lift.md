@@ -30,7 +30,7 @@ Dependency direction: the lift knows nothing about who calls it; any actor, widg
 
 ## See it in the editor
 
-Place a `DojoM2Lift` at the origin and leave Floor Heights at 0, 400, and 800. In the level Blueprint, on the 1, 2, and 3 keys, call Call To with 0, 1, and 2. Press Play and press 3: the label reads GOING TO 2 and the lift rises fast and settles at 800. Press 1 while it is rising: nothing changes. After it lands, press 1: it descends. Type `stat game` in the console and see the lift's tick cost disappear while it is at rest.
+Place a `DojoM2Lift` at the origin and leave Floor Heights at 0, 400, and 800. In the level Blueprint, on the 1, 2, and 3 keys, call Call To with 0, 1, and 2. Press Play and press 3: the label reads GOING TO 2 and the lift rises fast and settles at 800. Press 1 while it is rising: nothing changes. After it lands, press 1: it descends. Type `dumpticks` in the console and find DojoM2Lift in the Output Log: its tick shows as enabled only while it is moving.
 
 # Files
 

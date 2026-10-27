@@ -35,7 +35,7 @@ explanation: Each frame closes a share of the remaining gap, and the gap shrinks
 A thing that has to get from where it is to where it should be, over several frames, uses an **interpolation** helper from `FMath`. They all take the current value, the target, the frame's `DeltaTime`, and a speed, and return the value for this frame. Two families:
 
 - **Ease out:** `FInterpTo` for a float, `VInterpTo` for a vector, `RInterpTo` for a rotator. Each frame closes a share of the remaining gap, `DeltaTime * InterpSpeed` of it, never more than all of it. It starts fast and slows as it nears, like a door settling shut. The speed is a rate, not units per second: a speed of 5 closes most of a gap in about a second. Because `DeltaTime` is in the share, a 30 frames per second game and a 120 frames per second game end up in nearly the same place after the same time.
-- **Constant:** `FInterpConstantTo`, `VInterpConstantTo`, `RInterpConstantTo`. Each frame moves a fixed amount, `Speed * DeltaTime`, and never overshoots: it lands exactly on the target. For the vector version the speed is units per second; for the rotator version it is degrees per second, so it is the natural tool for a speed limit or a turn-rate limit.
+- **Constant:** `FInterpConstantTo`, `VInterpConstantTo`, `RInterpConstantTo`. Each frame moves a fixed amount, `Speed * DeltaTime`, and never overshoots: it lands exactly on the target. For the vector version the speed is units per second; for the rotator version it is degrees per second, limited on each axis separately, so it is the natural tool for a speed limit or a turn-rate limit. A speed of 0 or less means no limit at all: the helper jumps straight to the target.
 
 Easing is not the same as `FMath::Lerp(A, B, Alpha)`. A lerp blends by an alpha you choose and has no idea of time. Calling `Lerp(Current, Target, 0.1f)` every frame looks like an ease-out, but the share is per frame, not per second, so it closes far more of the gap each second at 120 frames per second than at 60.
 
@@ -50,6 +50,10 @@ Choose by feel: ease out for things that should settle (lifts, doors, cameras), 
 ```cpp
 void ADojoHoverCamera::Tick(float DeltaSeconds)
 {
+	Super::Tick(DeltaSeconds);
+
+	if (!IsValid(Subject)) return;
+
 	const FVector Wanted = Subject->GetActorLocation() + FVector(-300.f, 0.f, 200.f);
 	SetActorLocation(FMath::VInterpTo(GetActorLocation(), Wanted, DeltaSeconds, 4.f));
 

@@ -13,7 +13,7 @@ xp: 70
 estimatedMinutes: 18
 concepts:
   - A mover that turns round has to keep track of where it is on its path
-  - The block must be on its path at the end of every frame, however long the frame was
+  - The distance along the path is the one fact the patrol keeps, and its position follows from it
 ---
 
 # Brief
@@ -178,13 +178,13 @@ bool FDojo_M2_Patrol_SwingsAlongItsOwnForward::RunTest(const FString& Parameters
 	TestTrue(TEXT("After 1 second it is halfway out along its own forward"), Patrol->GetActorLocation().Equals(FVector(100.0, 300.0, 0.0), 1.0));
 	TestEqual(TEXT("Its distance along the path is 250"), Patrol->GetOffsetAlongPath(), 250.f, 1.f);
 
-	TestWorld.Tick(61);
+	TestWorld.Tick(65);
 	TestEqual(TEXT("A little over 2 seconds in, it has reached the far end once"), Patrol->GetEndsReached(), 1);
-	TestTrue(TEXT("and is on its way back"), Patrol->GetOffsetAlongPath() < 500.f && Patrol->GetOffsetAlongPath() > 480.f);
+	TestTrue(TEXT("and is on its way back"), Patrol->GetOffsetAlongPath() < 500.f && Patrol->GetOffsetAlongPath() > 470.f);
 
-	TestWorld.Tick(120);
+	TestWorld.Tick(125);
 	TestEqual(TEXT("A little over 4 seconds in, it has reached the start again"), Patrol->GetEndsReached(), 2);
-	TestTrue(TEXT("and is just setting out again"), Patrol->GetOffsetAlongPath() >= 0.f && Patrol->GetOffsetAlongPath() < 20.f);
+	TestTrue(TEXT("and is just setting out again"), Patrol->GetOffsetAlongPath() >= 0.f && Patrol->GetOffsetAlongPath() < 60.f);
 	TestTrue(TEXT("It never left the line of its forward"), FMath::IsNearlyEqual(Patrol->GetActorLocation().X, 100.0, 0.01));
 
 	return true;
@@ -192,7 +192,7 @@ bool FDojo_M2_Patrol_SwingsAlongItsOwnForward::RunTest(const FString& Parameters
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M2_Patrol_SlowFramesStayOnThePath, "Dojo.M2.Patrol.SlowFramesStayOnThePath", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Swings a fast patrol through long frames and checks that at the end of every frame it stands between its two ends. */
+/** Swings a fast patrol through frames of 0.4 seconds, the longest the engine allows, and checks that at the end of every frame it stands between its two ends. */
 bool FDojo_M2_Patrol_SlowFramesStayOnThePath::RunTest(const FString& Parameters)
 {
 	using namespace DojoM2PatrolTest;
@@ -205,14 +205,14 @@ bool FDojo_M2_Patrol_SlowFramesStayOnThePath::RunTest(const FString& Parameters)
 	bool bStayedOnThePath = true;
 	for (int32 Frame = 0; Frame < 20; ++Frame)
 	{
-		TestWorld.Tick(1, 0.45f);
+		TestWorld.Tick(1, 0.4f);
 
 		const double Along = Patrol->GetActorLocation().Y;
 		if (Along < -0.01 || Along > 500.01 || Patrol->GetOffsetAlongPath() < -0.01f || Patrol->GetOffsetAlongPath() > 500.01f) bStayedOnThePath = false;
 	}
 
 	TestTrue(TEXT("Even with slow frames, the patrol stays between its two ends"), bStayedOnThePath);
-	TestTrue(TEXT("It kept swinging, turning round several times in 9 seconds"), Patrol->GetEndsReached() >= 5 && Patrol->GetEndsReached() <= 8);
+	TestTrue(TEXT("It kept swinging, turning round several times in 8 seconds"), Patrol->GetEndsReached() >= 5 && Patrol->GetEndsReached() <= 8);
 	TestTrue(TEXT("It never left the line of its forward"), FMath::IsNearlyEqual(Patrol->GetActorLocation().X, 0.0, 0.01));
 
 	return true;

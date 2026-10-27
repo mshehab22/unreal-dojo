@@ -25,7 +25,7 @@ Write `ADojoM2Dart` from nothing. It has a scene root, ticks every frame, and ho
 The tests use this public interface, so keep these names:
 
 - `UPROPERTY(EditAnywhere, BlueprintReadWrite) float Speed = 600.f;` units per second, 0 or more.
-- `UPROPERTY(EditAnywhere, BlueprintReadWrite) float TurnRate = 90.f;` degrees per second, 0 or more.
+- `UPROPERTY(EditAnywhere, BlueprintReadWrite) float TurnRate = 90.f;` degrees per second, 0 or more; 0 means the nose never turns.
 - `UFUNCTION(BlueprintCallable) void Launch(AActor* NewTarget);` starts chasing; nullptr means fly straight.
 - `UFUNCTION(BlueprintPure) AActor* GetTarget() const;` the chased actor, or nullptr once it is gone.
 - `virtual void Tick(float DeltaSeconds) override;`
@@ -178,6 +178,29 @@ bool FDojo_M2_Dart_ADodgeTakesTimeToAnswer::RunTest(const FString& Parameters)
 
 	TestWorld.Tick(90);
 	TestTrue(TEXT("Two seconds after the dodge it faces the new spot"), FMath::Abs(Dart->GetActorRotation().Yaw) < 3.0);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M2_Dart_ZeroTurnRateNeverTurns, "Dojo.M2.Dart.ZeroTurnRateNeverTurns", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Gives a dart a turn rate of zero and checks it keeps its nose while it chases. */
+bool FDojo_M2_Dart_ZeroTurnRateNeverTurns::RunTest(const FString& Parameters)
+{
+	using namespace DojoM2DartTest;
+
+	FDojoTestWorld TestWorld;
+
+	ADojoM2Dart* Dart = SpawnDart(TestWorld, 0.0);
+	ADojoTestActor* Target = SpawnFarTarget(TestWorld, FVector(0.0, 1.0, 0.0));
+	if (!TestNotNull(TEXT("Dart spawned"), Dart) || !TestNotNull(TEXT("Target spawned"), Target)) return false;
+
+	Dart->TurnRate = 0.f;
+	Dart->Launch(Target);
+	TestWorld.Tick(60);
+
+	TestTrue(TEXT("A turn rate of 0 never turns the nose"), FMath::Abs(Dart->GetActorRotation().Yaw) < 0.01);
+	TestTrue(TEXT("and it still flies straight ahead"), Dart->GetActorLocation().Equals(FVector(600.0, 0.0, 0.0), 0.5));
 
 	return true;
 }

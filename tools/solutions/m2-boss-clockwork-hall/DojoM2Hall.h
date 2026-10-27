@@ -29,6 +29,26 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hall")
 	TObjectPtr<AActor> Hero;
 
+	/** The hero finishes the round by reaching this far along the hall. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hall")
+	float ExitX = 2000.f;
+
+	/** A hazard this close to the hero is a hit, in units. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hall", meta = (ClampMin = "1"))
+	float HitRadius = 100.f;
+
+	/** Seconds between hit checks. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hall", meta = (ClampMin = "0.02"))
+	float CheckSeconds = 0.1f;
+
+	/** Seconds between boulders. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hall", meta = (ClampMin = "0.1"))
+	float BoulderSeconds = 4.f;
+
+	/** Seconds between darts. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hall", meta = (ClampMin = "0.1"))
+	float DartSeconds = 3.f;
+
 	/** The R key: starts a fresh round, only once the last one is finished; false while a round is running. */
 	UFUNCTION(BlueprintCallable, Category = "Hall")
 	bool PressRestart();

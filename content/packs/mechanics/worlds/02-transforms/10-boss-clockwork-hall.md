@@ -127,4 +127,4 @@ Feel: tune the boulder and dart intervals until the hall feels like a rhythm you
 - The exit at X 2000 ends the round once: the time freezes, the timers stop, and no further hits count.
 - R does nothing while a round runs; a new round clears and rebuilds every hazard and wall, and resets the hits, the time, and the hero.
 - The board changes only when the hits or the round change, with the real time and hits at the finish.
-- Every timer is cleared in EndPlay or at the end of the round, and the submission gives the tuned boulder and dart intervals with one sentence on why.
+- The exit, the hit radius, and the three intervals are properties a designer can tune; every timer is cleared in EndPlay or at the end of the round; the submission gives the tuned boulder and dart intervals with one sentence on why.

@@ -28,7 +28,8 @@ void ADojoM2Dart::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (const AActor* Goal = Target.Get())
+	// A turn rate of 0 means the nose never turns; the constant helper would read it as no limit at all.
+	if (const AActor* Goal = Target.Get(); Goal && TurnRate > 0.f)
 	{
 		const FRotator Wanted = (Goal->GetActorLocation() - GetActorLocation()).Rotation();
 		SetActorRotation(FMath::RInterpConstantTo(GetActorRotation(), Wanted, DeltaSeconds, TurnRate));

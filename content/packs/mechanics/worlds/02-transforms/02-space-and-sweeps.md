@@ -58,6 +58,8 @@ A sweep covers the whole move, so a fast mover cannot skip through a thin wall i
 ```cpp
 void ADojoPusher::Tick(float DeltaSeconds)
 {
+	Super::Tick(DeltaSeconds);
+
 	const FVector Change = FVector::ForwardVector * 300.f * DeltaSeconds;
 
 	FHitResult Hit;

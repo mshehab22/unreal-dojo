@@ -3,9 +3,12 @@
 #if WITH_AUTOMATION_TESTS
 
 #include "Components/TextRenderComponent.h"
+#include "EngineUtils.h"
 #include "Quests/m2-boss-clockwork-hall/DojoM2Hall.h"
 #include "Quests/m2-bumper/DojoM2Bumper.h"
+#include "Quests/m2-bumper/DojoM2Wall.h"
 #include "Quests/m2-dart/DojoM2Dart.h"
+#include "Quests/m2-patrol/DojoM2Patrol.h"
 #include "Quests/m2-sled/DojoM2Sled.h"
 #include "Support/DojoTestActor.h"
 #include "Support/DojoTestWorld.h"
@@ -42,6 +45,15 @@ namespace DojoM2HallTest
 		return Actor && FVector::Dist(Actor->GetActorLocation(), Expected) <= Tolerance;
 	}
 
+	/** How many live actors of a class the world holds. */
+	template<typename TActor>
+	int32 CountActors(FDojoTestWorld& TestWorld)
+	{
+		int32 Count = 0;
+		for (TActorIterator<TActor> It(TestWorld.GetWorld()); It; ++It) ++Count;
+		return Count;
+	}
+
 	/** Plays one round from its first moment to its finish and returns the finish time, or -1 if the round broke. */
 	float PlayRound(FAutomationTestBase& Test, FDojoTestWorld& TestWorld, const FHallScene& Scene, const FString& Round)
 	{
@@ -55,6 +67,11 @@ namespace DojoM2HallTest
 		Test.TestTrue(Prefix + TEXT("the boulder waits at its start"), IsNear(Scene.Hall->GetBoulder(), FVector(1000.f, -700.f, 0.f), 0.1));
 		Test.TestTrue(Prefix + TEXT("the bouncer waits in the middle of its channel"), IsNear(Scene.Hall->GetBouncer(), FVector(1400.f, 0.f, 0.f), 0.1));
 		Test.TestNull(Prefix + TEXT("no dart yet"), Scene.Hall->GetDart());
+		Test.TestEqual(Prefix + TEXT("one crusher stands in the hall"), CountActors<ADojoM2Patrol>(TestWorld), 1);
+		Test.TestEqual(Prefix + TEXT("one boulder rolls in the hall"), CountActors<ADojoM2Sled>(TestWorld), 1);
+		Test.TestEqual(Prefix + TEXT("one bouncer rolls in the hall"), CountActors<ADojoM2Bumper>(TestWorld), 1);
+		Test.TestEqual(Prefix + TEXT("two walls stand in the hall"), CountActors<ADojoM2Wall>(TestWorld), 2);
+		Test.TestEqual(Prefix + TEXT("no dart actor exists yet"), CountActors<ADojoM2Dart>(TestWorld), 0);
 		if (!Scene.Hall->GetCrusher()) return -1.f;
 
 		Scene.Hero->SetActorLocation(Scene.Hall->GetCrusher()->GetActorLocation() + FVector(130.f, 0.f, 0.f));
@@ -112,7 +129,7 @@ bool FDojo_M2_ClockworkHall_TwoRoundsPlayAlike::RunTest(const FString& Parameter
 	const float Second = PlayRound(*this, TestWorld, Scene, TEXT("Round 2"));
 	if (Second < 0.f) return false;
 
-	TestTrue(TEXT("The second round took as long as the first, give or take a frame or two"), FMath::IsNearlyEqual(First, Second, 0.05f));
+	TestTrue(TEXT("The second round took as long as the first, give or take one hit check"), FMath::IsNearlyEqual(First, Second, 0.12f));
 
 	return true;
 }

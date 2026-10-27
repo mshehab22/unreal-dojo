@@ -254,7 +254,7 @@ bool FDojo_M2_Bumper_BounceMirrorsTheHeading::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M2_Bumper_TwoWallsKeepItInside, "Dojo.M2.Bumper.TwoWallsKeepItInside", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Rolls a ball between two walls, including through very long frames, and checks it never gets out. */
+/** Rolls a ball between two walls, including through the longest frames the engine allows, and checks it never gets out. */
 bool FDojo_M2_Bumper_TwoWallsKeepItInside::RunTest(const FString& Parameters)
 {
 	using namespace DojoM2BumperTest;
@@ -278,11 +278,11 @@ bool FDojo_M2_Bumper_TwoWallsKeepItInside::RunTest(const FString& Parameters)
 
 	for (int32 Frame = 0; Frame < 20; ++Frame)
 	{
-		TestWorld.Tick(1, 0.5f);
+		TestWorld.Tick(1, 0.4f);
 		if (FMath::Abs(Bumper->GetActorLocation().Y) > 241.0) bStayedInside = false;
 	}
 
-	TestTrue(TEXT("Even with half-second frames the ball cannot skip through a wall"), bStayedInside);
+	TestTrue(TEXT("Even with 0.4 second frames the ball cannot skip through a wall"), bStayedInside);
 
 	return true;
 }
@@ -294,16 +294,16 @@ bool FDojo_M2_Bumper_TwoWallsKeepItInside::RunTest(const FString& Parameters)
 
 - One call moves the actor and also tells you whether something stopped it. Keep what it fills in, and ask it whether the stop was a real block.
 - The offset functions take a sweep flag and a place for the hit result. A hit result knows which way the surface it struck faces, and a ball leaves a surface the way light leaves a mirror.
-- `FHitResult::IsValidBlockingHit` and `ImpactNormal` are in `Engine/EngineTypes.h`; `FVector::MirrorByVector` is in `Math/Vector.h`.
+- `FHitResult::IsValidBlockingHit` and `ImpactNormal` are in `Engine/HitResult.h`; `FVector::MirrorByVector` is in `Math/Vector.h`.
 
 # Rubric
 
 - The move is swept (the flag is on) and the hit result is read after it.
-- Only a valid blocking hit bounces; free flight leaves the heading alone.
-- A bounce mirrors the heading about the surface's normal, so a glancing hit keeps its sideways motion.
-- Each bounce is counted once.
-- The step is scaled by `DeltaSeconds`, and the heading stays a direction of length one.
-- The ball has a collision shape as its root, so the sweep has something to push against the walls.
+- Only a valid blocking hit bounces, and free flight leaves the heading alone.
+- A bounce mirrors the heading about the surface's normal, so a glancing hit keeps its sideways motion, and each bounce is counted once.
+- The step is scaled by `DeltaSeconds`, and the ball has a collision shape as its root, so the sweep has something to stop against.
+- The bumper reacts only to its own sweep and holds no pointer to the walls; the walls know nothing about the bumper.
+- While testing in the editor the collision is made visible, with `show Collision` or a debug line along the heading.
 
 # Alternative
 

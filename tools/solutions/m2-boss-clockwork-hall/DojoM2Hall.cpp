@@ -12,21 +12,6 @@ namespace
 	/** Where the hero starts and where a hit sends it back to. */
 	const FVector StartGate(0.f, 0.f, 0.f);
 
-	/** The hero finishes by reaching this far along the hall. */
-	constexpr float ExitX = 2000.f;
-
-	/** A hazard this close to the hero is a hit. */
-	constexpr float HitRadius = 100.f;
-
-	/** Seconds between hit checks. */
-	constexpr float CheckSeconds = 0.1f;
-
-	/** Seconds between boulders. */
-	constexpr float BoulderSeconds = 4.f;
-
-	/** Seconds between darts. */
-	constexpr float DartSeconds = 3.f;
-
 	/** Spawns a hazard with its settings applied before BeginPlay runs. */
 	template<typename TActor>
 	TActor* SpawnHazard(UWorld* World, const FVector& Location, const FRotator& Rotation, TFunctionRef<void(TActor&)> Configure)
