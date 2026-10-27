@@ -15,6 +15,12 @@ export function explainSandboxFailure(compilerOutput: string, context: SandboxBu
 {
 	const output = compilerOutput.toLowerCase();
 
+	// Another Unreal editor with Live Coding open made Unreal refuse the build (W10, A1223); name that instead of a vague failure.
+	if (output.includes("live coding is active") || output.includes("editor with live coding is open"))
+	{
+		return { message: "Unreal refused to build because another Unreal editor with Live Coding is open.", suggestedAction: "Close the other Unreal editor, then try again. Your code was not compiled." };
+	}
+
 	if (output.includes("disk") || output.includes("no space"))
 	{
 		return { message: "The build ran out of disk space.", suggestedAction: "Free up at least 10 GB on the sandbox drive, then try again." };

@@ -26,7 +26,7 @@ export const NO_HOT_RELOAD_FROM_IDE_ARGUMENT = "-NoHotReloadFromIDE";
 const LIVE_CODING_GUARD_LINE = /Unable to build while Live Coding is active/;
 
 /** The pipeline error when UBT's Live Coding guard stopped the build; it names the cause, which is not the learner's code (W10, A1223). */
-export const LIVE_CODING_GUARD_MESSAGE = "Unreal refused to build because an Unreal editor with Live Coding is open. Close the other Unreal editor (or press Ctrl+Alt+F11 in it to turn Live Coding off), then run again. Your code was not compiled.";
+export const LIVE_CODING_GUARD_MESSAGE = "Unreal refused to build because an Unreal editor with Live Coding is open. Close the other Unreal editor, then run again. Your code was not compiled.";
 
 /** The editor target every sandbox has. */
 export const EDITOR_TARGET = "DojoEditor";
