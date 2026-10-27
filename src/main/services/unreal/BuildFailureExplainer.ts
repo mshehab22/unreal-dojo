@@ -104,7 +104,7 @@ export class BuildFailureExplainer
 		if (evidence.compiled && evidence.pipelineError === undefined) return undefined;
 
 		const namesTheQuest = questIdsNamedIn(evidence.compilerOutput).includes(evidence.questId.toLowerCase());
-		const knownFailure = this.knownOutsideFailure(evidence.compilerOutput, evidence.pipelineError, namesTheQuest);
+		const knownFailure = this.knownOutsideFailure(evidence.compilerOutput, evidence.pipelineError, namesTheQuest, evidence.compiled);
 		if (knownFailure) return knownFailure;
 
 		// A pipeline error not on the outside list (a crash or endless loop in a test, an unknown text) stays with the quest; RunResult.error still shows it.
@@ -126,18 +126,19 @@ export class BuildFailureExplainer
 	/** The reason a sandbox build failed. No quest code is being run, so it always answers: a known cause, a pipeline problem, quest code left in the sandbox, support code, a blocking toolchain problem, or the generic setup message. Never throws. */
 	async explainSandbox(evidence: SandboxFailureEvidence): Promise<AppError>
 	{
-		const knownFailure = this.knownOutsideFailure(evidence.compilerOutput, evidence.pipelineError, false);
+		const knownFailure = this.knownOutsideFailure(evidence.compilerOutput, evidence.pipelineError, false, false);
 		if (knownFailure) return knownFailure;
 
 		if (evidence.pipelineError !== undefined) return (await this.outsidePipelineFailure(evidence.pipelineError, evidence.engineRoot, false)) ?? runStoppedOutsideCode(evidence.pipelineError);
 
-		const errors = locatedErrors(evidence.compilerOutput);
-		const questErrors = errors.filter((error) => error.place.kind === "quest");
-		const supportErrors = errors.filter((error) => error.place.kind === "support" || error.place.kind === "engine");
+		// A rebuild keeps the quests already in the sandbox, so any line naming one (an error, a note, an include chain) means its code may be the cause.
+		const namedQuestIds = questIdsNamedIn(evidence.compilerOutput);
+		if (namedQuestIds.length > 0) return sandboxHoldsBrokenQuests(namedQuestIds, clipped(firstLineNamingAQuest(evidence.compilerOutput)));
 
-		// A rebuild keeps the quests already in the sandbox, so their code can break it.
-		if (questErrors.length > 0) return sandboxHoldsBrokenQuests(brokenQuestIds(questErrors), clipped(questErrors[0]?.line ?? ""));
-		if (supportErrors.length > 0) return supportOrEngineCodeBroken(clipped(supportErrors[0]?.line ?? ""));
+		const errors = locatedErrors(evidence.compilerOutput);
+		const outsideErrors = errors.filter(isOutsideError);
+
+		if (outsideErrors.length > 0 && !errors.some(blocksOutsideRules)) return supportOrEngineCodeBroken(clipped(outsideErrors[0]?.line ?? ""));
 
 		if (errors.length === 0)
 		{
@@ -149,9 +150,10 @@ export class BuildFailureExplainer
 	}
 
 	/** Rule 1: the first known signature that a line of the output or the pipeline error matches. A line that names a quest folder or test file, and a clang code excerpt line, is the learner's text and never counts. A signature for a failure that stops the build before compiling is ignored when the output names the quest, since that proves the compiler ran. */
-	private knownOutsideFailure(compilerOutput: string, pipelineError: string | undefined, outputNamesTheQuest: boolean): AppError | undefined
+	private knownOutsideFailure(compilerOutput: string, pipelineError: string | undefined, outputNamesTheQuest: boolean, compiled: boolean): AppError | undefined
 	{
-		const outputLines = compilerOutput.split(/\r?\n/).filter((line) => questIdsNamedIn(line).length === 0 && !CODE_EXCERPT_LINE.test(line));
+		// Once the code compiled, the output holds only kept warnings: a coincident warning must not refund a test-time crash or loop, so only the pipeline error is read.
+		const outputLines = compiled ? [] : compilerOutput.split(/\r?\n/).filter((line) => questIdsNamedIn(line).length === 0 && !CODE_EXCERPT_LINE.test(line));
 		const lines = [...outputLines, ...(pipelineError === undefined ? [] : pipelineError.split(/\r?\n/))];
 
 		for (const signature of BUILD_FAILURE_SIGNATURES)
@@ -202,10 +204,10 @@ export class BuildFailureExplainer
 	private explainByPlace(errors: LocatedError[], earlierQuests: EarlierQuestCode[]): AppError | undefined
 	{
 		const questErrors = errors.filter((error) => error.place.kind === "quest");
-		const engineErrors = errors.filter((error) => error.place.kind === "engine");
-		const outsideErrors = errors.filter((error) => error.place.kind === "support" || (error.place.kind === "engine" && isMissingFileError(error.line)));
+		const outsideErrors = errors.filter(isOutsideError);
 
-		if (engineErrors.some((error) => !isMissingFileError(error.line))) return undefined;
+		// "Only" means only: an error line with an unknown location, or an engine error that is not a missing file, blocks both rules.
+		if (errors.some(blocksOutsideRules)) return undefined;
 
 		if (questErrors.length > 0 && outsideErrors.length === 0) return this.explainEarlierQuests(questErrors, earlierQuests);
 
@@ -218,10 +220,13 @@ export class BuildFailureExplainer
 	private explainEarlierQuests(questErrors: LocatedError[], earlierQuests: EarlierQuestCode[]): AppError | undefined
 	{
 		const brokenIds = brokenQuestIds(questErrors);
+
+		// True when the quest is one this run compiles against.
 		const isEarlier = (questId: string): boolean => earlierQuests.some((earlier) => earlier.questId.toLowerCase() === questId);
 
 		if (!brokenIds.every(isEarlier)) return undefined;
 
+		// True when the quest's files in the sandbox came from a reference solution, not from the learner.
 		const fromReference = (questId: string): boolean => earlierQuests.some((earlier) => earlier.questId.toLowerCase() === questId && earlier.origin === "reference-solution");
 		const learnerIds = brokenIds.filter((questId) => !fromReference(questId));
 
@@ -244,6 +249,24 @@ export class BuildFailureExplainer
 			return undefined;
 		}
 	}
+}
+
+/** True for an error that is certainly not the learner's: in a support source file or the template, or an engine error that says a file is missing. */
+function isOutsideError(error: LocatedError): boolean
+{
+	return error.place.kind === "support" || (error.place.kind === "engine" && isMissingFileError(error.line));
+}
+
+/** True for an error that stops the "only in earlier quests" and "only in support or the engine" rules: an unknown location, or an engine error that is not a missing file (MSVC prints no include chain, so the learner's header may have caused it). */
+function blocksOutsideRules(error: LocatedError): boolean
+{
+	return error.place.kind === "unknown" || (error.place.kind === "engine" && !isMissingFileError(error.line));
+}
+
+/** The first line of the output that names a quest folder or test file, or an empty string. */
+function firstLineNamingAQuest(output: string): string
+{
+	return output.split(/\r?\n/).find((line) => questIdsNamedIn(line).length > 0) ?? "";
 }
 
 /** The quest ids the error lines point into, once each. */

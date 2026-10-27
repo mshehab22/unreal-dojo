@@ -212,6 +212,25 @@ describe("BuildFailureExplainer rule 1: known outside failures", () =>
 		expect(await explainer.explainRun(runEvidence(own + log("xcode-commandlinetools.txt")))).toBeUndefined();
 	});
 
+	it("reads only the pipeline error once the code compiled: a coincident kept warning must not refund a test-time crash or loop", async () =>
+	{
+		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+		const warnings = [
+			"C:\\Program Files\\Epic Games\\UE_5.8\\Engine\\Source\\Runtime\\Core\\Private\\Foo.cpp(4): warning C4996: the file is being used by another process",
+			"warning : Visual Studio 2019 x64 toolchain was not found",
+		].join("\n");
+		const timeout = "The test run took longer than 10 minutes and was stopped.";
+		const noReport = "The engine stopped before writing a test report (exit code 3).";
+
+		expect(await explainer.explainRun(runEvidence(warnings, { compiled: true, pipelineError: timeout }))).toBeUndefined();
+		expect(await explainer.explainRun(runEvidence(warnings, { compiled: true, pipelineError: noReport }))).toBeUndefined();
+		expect(await explainer.explainRun(runEvidence("warning: Visual Studio 2019 x64 toolchain was not found", { compiled: true, pipelineError: timeout }))).toBeUndefined();
+		expect(calls.toolchain).toBe(0);
+
+		// The same lines before the code compiled still count.
+		expect(await explainer.explainRun(runEvidence("LINK : fatal error LNK1104: cannot open file 'a.dll' being used by another process"))).toMatchObject({ code: "build-environment-failed" });
+	});
+
 	it("does not match the learner's message echoed in a clang code excerpt line", async () =>
 	{
 		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
@@ -447,6 +466,16 @@ describe("BuildFailureExplainer rule 5: support code, the template, or the engin
 		expect(calls.toolchain).toBe(0);
 	});
 
+	it("keeps the blame for an error in a support header, which can be hit through the learner's header like an engine header, and for any unknown-located error beside it", async () =>
+	{
+		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+
+		expect(await explainer.explainRun(runEvidence(log("msvc-support-header-and-generated-header.txt")))).toBeUndefined();
+		expect(await explainer.explainRun(runEvidence("C:\\Dojo\\DojoSandbox\\Source\\Dojo\\Support\\DojoTestWorld.h(12): error C2143: x"))).toBeUndefined();
+		expect(await explainer.explainRun(runEvidence(`${log("msvc-support-error.txt")}${log("linker-unresolved.txt")}`))).toBeUndefined();
+		expect(calls.toolchain).toBe(0);
+	});
+
 	it("does not guess when errors in an earlier quest and in support code are mixed, and does not ask the toolchain either", async () =>
 	{
 		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
@@ -514,6 +543,27 @@ describe("BuildFailureExplainer.explainSandbox", () =>
 		expect(failure.message).toContain("code already in it from f1-training-dummy");
 		expect(failure.suggestedAction).toContain("Open f1-training-dummy");
 		expect(failure.detail).toContain("Quests");
+		expect(calls.toolchain).toBe(0);
+	});
+
+	it("names the quest when ANY line names one, even an engine static_assert with a 'requested here' note", async () =>
+	{
+		const { explainer } = createExplainer();
+
+		const failure = await explainer.explainSandbox({ engineRoot: ENGINE_ROOT, compilerOutput: log("clang-engine-static-assert-from-learner.txt") });
+
+		expect(failure.message).toContain("code already in it from f1-score-keeper");
+		expect(failure.detail).toContain("Quests");
+	});
+
+	it("sends an engine error that is not a missing file to the generic message, not to the rebuild advice, and does not ask the toolchain", async () =>
+	{
+		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+
+		const failure = await explainer.explainSandbox({ engineRoot: ENGINE_ROOT, compilerOutput: log("msvc-engine-header-after-learner-header.txt") });
+
+		expect(failure.message).toContain("No quest code is involved");
+		expect(failure.detail).toContain("C2236");
 		expect(calls.toolchain).toBe(0);
 	});
 

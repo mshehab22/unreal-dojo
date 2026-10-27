@@ -31,8 +31,8 @@ const QUEST_FOLDER_PATH = /\/Source\/Dojo\/Quests\/([^/]+)\//gi;
 /** `.../Source/Dojo/Tests/<quest-id>.Test.cpp` in a forward-slash path. */
 const QUEST_TEST_PATH = /\/Source\/Dojo\/Tests\/([^/]+)\.Test\.cpp/gi;
 
-/** The sandbox's support code, or a file directly in the module folder (the template's `Dojo.cpp`, `Dojo.Build.cs`). */
-const SUPPORT_PATH = /\/Source\/Dojo\/Support\/|\/Source\/Dojo\/[^/]+$/i;
+/** A support source file (`Support/*.cpp`), or a file directly in the module folder (the template's `Dojo.cpp`, `Dojo.Build.cs`). A support HEADER is not listed: like an engine header, it can be included by the learner's header, and MSVC prints no include chain, so it stays `unknown`. */
+const SUPPORT_PATH = /\/Source\/Dojo\/Support\/[^/]+\.cpp$|\/Source\/Dojo\/[^/]+$/i;
 
 /** The engine's own sources. */
 const ENGINE_PATH = /\/Engine\/(?:Source|Plugins|Build|Shaders)\//i;
