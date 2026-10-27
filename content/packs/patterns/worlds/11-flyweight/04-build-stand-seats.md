@@ -309,7 +309,7 @@ A broken seat could stay as an instance with its transform scaled to zero throug
 
 ```yaml
 - id: build-seats
-  prompt: Put BuildSeats in order.
+  prompt: "Put BuildSeats in order: set the mesh, mark every seat intact, then clear and draw the seats fresh."
   lines:
     - "void ADojoP11Stands::BuildSeats()"
     - "{"

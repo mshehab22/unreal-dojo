@@ -4091,7 +4091,7 @@
     ],
     "category": "components",
     "short": "A component that draws one mesh many times, storing only a transform and a few optional floats per copy.",
-    "long": "Instead of one static mesh component per rock, seat, or torch, one instanced component holds the shared mesh and material and a list of instances, each added with AddInstance as a transform. The renderer can draw them together, which saves the per-component upkeep and the memory of many separate components. Each instance can carry a few custom data floats that the material reads. The hierarchical version clusters instances so large sets cull and change detail in groups, which is what foliage uses. Instances have no tick, events, or logic of their own.",
+    "long": "Instead of one static mesh component per rock, seat, or torch, one instanced component holds the shared mesh and material and a list of instances, each added with AddInstance as a transform. One component then stands for every copy, which saves the per-component upkeep (registration, render data, visibility checks, updates) and the memory of many separate components. Each instance can carry a few custom data floats that the material reads. The hierarchical version clusters instances so large sets cull and change detail in groups, which is what foliage uses. Instances have no tick, events, or logic of their own.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UInstancedStaticMeshComponent?application_version=5.8",
     "related": [
       "static-mesh-component",
