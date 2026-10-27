@@ -141,7 +141,7 @@ export interface PackGateWorld
 /** A gate: the pack in position `packOrder` opens only once the boss of every listed world is passed. A listed world that does not exist yet keeps the pack closed. */
 export interface PackGate
 {
-	/** The gated pack's position (1 to 4; Pack 4, Systems Lab, has no folder or id yet). */
+	/** The gated pack's position (1 to 4; Pack 4 is the Systems Lab, pack id `systems`). */
 	packOrder: number;
 
 	/** The worlds whose bosses must be passed. */
