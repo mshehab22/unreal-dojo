@@ -158,7 +158,6 @@ Parsed 8 files (0 packs, 0 worlds, 0 quests, 8 examples, 0 glossary entries, 0 p
 - What the reviewer and the Lead asked for: rebase onto main; make the sample quest look like real quest code (no module export macro, forward declarations, a comment on the delegate); a test-world teardown that does not rely on a 5.8-only engine call; a Mac runner rule that accounts for the editor keeping old code; the verified headless command and exit codes in the spec; tidier problems; and the map renamed to `L_Sandbox`.
 - What changed: all of the above. The teardown now ends play on each actor by hand, so 5.8 runs the same path older engines will. The map was regenerated with the same Python script under its new name. Decisions A43 and A45 are updated and A46 records the naming call.
 - Proof (fresh copy of the template, UE 5.8.3, stdin from `/dev/null`): full editor build `Result: Succeeded` in 19 s; headless test with the per-quest filter `Dojo.Sample.Health` found 1 test, `Result={Success}`, `TEST COMPLETE. EXIT CODE: 0`, 18 s for the whole run, the editor loaded `L_Sandbox`; report: 1 succeeded, 0 warnings, 0 failed.
-- Fix round 2 (second review, fresh agent, FIXES NEEDED on seven points): the boss director now enables input and binds its keys the way the Pack 3 director does (it had none); an Equip that checks for room before taking the new item out is now caught by two added swap cases in the equipment test (a swap that lands exactly on the weight limit and one that needs the freed slot); the equipment hint says the room question depends on when it is asked; engine proof after the round on UE 5.8.3: all 5 references pass, all 4 starters fail as designed (first build 145 s, solution tests 29 s, starter checks 153 s), and an Equip that checks room before removing the new item fails TightBags; the breakdown's after-pass note no longer points at the order of the swap; the editor steps use the level Blueprint, which receives keys, and the bag view steps call Use Bag and add the sword first; RestartRound and PressDrop guard missing components; the bag view hint warns about the member name; the boss spec names the three patterns with their Pack 2 worlds.
 - Still open: Windows, and the C++ APIs and map on UE 5.4 to 5.7 (logged in `docs/problems.md`).
 
 ## M1.1 Engine locator and platform paths (unreal-pipeline, builder-unreal)
@@ -605,7 +604,6 @@ total                                       39.2  PASSED
 - What changed: the boss spec now says a refused hit is a miss: the target's label reads MISS, the score drops by 5 and never below 0. The fixed numbers, the "additions" piece and both reference plans, the integration rubric, and the feel criterion all carry it. The miss count and the penalty are listed as boss additions next to Lower and ResetHits, so the World 1 build quests stay one idea each (A331). The door example in the State card now uses EDS_Closed and friends (A332).
 - Proof: the verifier on the foundations pack reports no problems. Under the shared engine lock on the Mac (UE 5.8.3), the four World 1 reference solutions, which the boss uses as its pieces, rebuilt (`Result: Succeeded`) and passed 8 of 8 headless tests; the pieces' code did not change in this task. Nothing visible in the app changed, so no screenshots; the build log and report were in this session's scratch folder and are not kept.
 - Decisions made: A330 (the Lead's), A331, A332.
-- Fix round 2 (second review, fresh agent, FIXES NEEDED on seven points): the boss director now enables input and binds its keys the way the Pack 3 director does (it had none); an Equip that checks for room before taking the new item out is now caught by two added swap cases in the equipment test (a swap that lands exactly on the weight limit and one that needs the freed slot); the equipment hint says the room question depends on when it is asked; the breakdown's after-pass note no longer points at the order of the swap; the editor steps use the level Blueprint, which receives keys, and the bag view steps call Use Bag and add the sword first; RestartRound and PressDrop guard missing components; the bag view hint warns about the member name; the boss spec names the three patterns with their Pack 2 worlds.
 - Still open: Windows, and the verifier's `--engine` mode on this content.
 
 ### Fix round 1
@@ -649,7 +647,6 @@ total                                       39.2  PASSED
   - Typecheck and unit tests pass.
   - Nothing visible in the app changed, so no screenshots; logs and reports were in this session's scratch folder and are not kept.
 - Decisions made: A333 to A337.
-- Fix round 2 (second review, fresh agent, FIXES NEEDED on seven points): the boss director now enables input and binds its keys the way the Pack 3 director does (it had none); an Equip that checks for room before taking the new item out is now caught by two added swap cases in the equipment test (a swap that lands exactly on the weight limit and one that needs the freed slot); the equipment hint says the room question depends on when it is asked; the breakdown's after-pass note no longer points at the order of the swap; the editor steps use the level Blueprint, which receives keys, and the bag view steps call Use Bag and add the sword first; RestartRound and PressDrop guard missing components; the bag view hint warns about the member name; the boss spec names the three patterns with their Pack 2 worlds.
 - Still open: Windows; the verifier's `--engine` mode on this content; NewObject, soft references, smart pointers, and ConstructorHelpers have concept quests but no World 2 build quest (A333).
 
 ### Fix round 1
@@ -963,7 +960,6 @@ total                                       39.2  PASSED
   - Starters, each alone with the World 3 boss removed: the score board, roster, and announcer build and fail both their tests; the sentry fails to compile. The announcer's first starter run crashed the editor because its test read a label the empty starter never made; the test now checks for the label first, and the starter fails cleanly.
   - The full verifier reports no problems (4 release-time warnings); typecheck passes; unit tests 637 passed, 7 skipped. Nothing visible in the app changed, so no screenshots.
 - Decisions made: A504 to A506.
-- Fix round 2 (second review, fresh agent, FIXES NEEDED on seven points): the boss director now enables input and binds its keys the way the Pack 3 director does (it had none); an Equip that checks for room before taking the new item out is now caught by two added swap cases in the equipment test (a swap that lands exactly on the weight limit and one that needs the freed slot); the equipment hint says the room question depends on when it is asked; the breakdown's after-pass note no longer points at the order of the swap; the editor steps use the level Blueprint, which receives keys, and the bag view steps call Use Bag and add the sword first; RestartRound and PressDrop guard missing components; the bag view hint warns about the member name; the boss spec names the three patterns with their Pack 2 worlds.
 - Still open: Windows. TSet, TQueue, FQuat, FTransform, and the Kismet math library have concept quests but no World 3 build quest (A504).
 
 ### Fix round 1
@@ -1085,7 +1081,6 @@ total                                       39.2  PASSED
   - The full verifier reports no problems; typecheck and unit tests pass.
   - Nothing visible in the app changed, so no screenshots.
 - Decisions made: A560 to A562.
-- Fix round 2 (second review, fresh agent, FIXES NEEDED on seven points): the boss director now enables input and binds its keys the way the Pack 3 director does (it had none); an Equip that checks for room before taking the new item out is now caught by two added swap cases in the equipment test (a swap that lands exactly on the weight limit and one that needs the freed slot); the equipment hint says the room question depends on when it is asked; the breakdown's after-pass note no longer points at the order of the swap; the editor steps use the level Blueprint, which receives keys, and the bag view steps call Use Bag and add the sword first; RestartRound and PressDrop guard missing components; the bag view hint warns about the member name; the boss spec names the three patterns with their Pack 2 worlds.
 - Still open: Windows. Possession, game modes and states, and level travel cannot run in the headless test world, so they are taught in concept quests and the breakdown only.
 
 ### Fix round 1
@@ -1194,7 +1189,6 @@ total                                       39.2  PASSED
   - The full verifier reports no problems; typecheck and unit tests pass.
   - Nothing visible in the app changed, so no screenshots.
 - Decisions made: A681, A682.
-- Fix round 2 (second review, fresh agent, FIXES NEEDED on seven points): the boss director now enables input and binds its keys the way the Pack 3 director does (it had none); an Equip that checks for room before taking the new item out is now caught by two added swap cases in the equipment test (a swap that lands exactly on the weight limit and one that needs the freed slot); the equipment hint says the room question depends on when it is asked; the breakdown's after-pass note no longer points at the order of the swap; the editor steps use the level Blueprint, which receives keys, and the bag view steps call Use Bag and add the sword first; RestartRound and PressDrop guard missing components; the bag view hint warns about the member name; the boss spec names the three patterns with their Pack 2 worlds.
 - Still open: Windows. Key input and EnableInput are not exercised by the headless tests, which call the director's press functions directly.
 
 ### Fix round 1
@@ -1437,7 +1431,6 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
   - The full verifier reports no problems; typecheck and unit tests pass.
   - Nothing visible in the app changed, so no screenshots.
 - Decisions made: A720 to A722.
-- Fix round 2 (second review, fresh agent, FIXES NEEDED on seven points): the boss director now enables input and binds its keys the way the Pack 3 director does (it had none); an Equip that checks for room before taking the new item out is now caught by two added swap cases in the equipment test (a swap that lands exactly on the weight limit and one that needs the freed slot); the equipment hint says the room question depends on when it is asked; the breakdown's after-pass note no longer points at the order of the swap; the editor steps use the level Blueprint, which receives keys, and the bag view steps call Use Bag and add the sword first; RestartRound and PressDrop guard missing components; the bag view hint warns about the member name; the boss spec names the three patterns with their Pack 2 worlds.
 - Still open: Windows. Key input is not exercised by the headless tests, which call the director's press functions directly. Async loading through the streamable manager is taught and planned but not built.
 
 ### Fix round 1
@@ -1604,7 +1597,6 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
     - Tracker: neither `ClearTimer` in `Complete` nor the Active guard in `HandleTimeUp`: "A quest finished in time stays completed when its time runs out". No timer clearing in `ResetQuests`: "A reset stops every clock". No secret auto-start in `ReportItem`: "The first gem starts and finishes the secret".
     - Giver: no `RemoveDynamic` in `EndPlay`: "A destroyed giver has stopped listening". No quest filter in the handler: "Another quest's change leaves this label alone".
 - Decisions made: A870 to A873.
-- Fix round 2 (second review, fresh agent, FIXES NEEDED on seven points): the boss director now enables input and binds its keys the way the Pack 3 director does (it had none); an Equip that checks for room before taking the new item out is now caught by two added swap cases in the equipment test (a swap that lands exactly on the weight limit and one that needs the freed slot); the equipment hint says the room question depends on when it is asked; the breakdown's after-pass note no longer points at the order of the swap; the editor steps use the level Blueprint, which receives keys, and the bag view steps call Use Bag and add the sword first; RestartRound and PressDrop guard missing components; the bag view hint warns about the member name; the boss spec names the three patterns with their Pack 2 worlds.
 - Still open: Windows. The board is text, not a widget. Key input is not exercised by the headless tests, which call the director's press functions directly. `data-asset` shows A72 warnings until Pack 1 World 6 is on main.
 
 ### Fix round 1
