@@ -4,6 +4,27 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1186 2026-10-26 The macOS guide gives the Sequoia "Open Anyway" route and `xattr -dr` next to right-click Open (M5.2, qa)
+Mohammad's task named right-click Open or `xattr -d com.apple.quarantine`. On macOS 15 and later the right-click route often has no Open button on an unsigned app, and `-d` without `-r` only clears the top folder of an app bundle. Options: the two routes as asked; add System Settings, Privacy & Security, Open Anyway; use `xattr -dr`. Chosen: all three, with `xattr -dr` as the one that also fixes a "damaged and can't be opened" message. Why: a reader on a current Mac should not hit a dead end. Unverified: none of the three was run here (no Mac, and installing is Mohammad's step, A77). Reverse cost: edit one section of `docs/install/macos.md`.
+
+### A1185 2026-10-26 Artifact names and the dmg file names the READMEs rely on (M5.2, qa)
+The upload artifacts are `installers-windows-latest` and `installers-macos-latest` (the `release.yml` names, kept so the two workflows read alike; they never run in the same run, so there is no clash). The READMEs call the dmg "the one ending in -arm64" and "the one without that ending" rather than quoting file names, because electron-builder's dmg naming was not seen on this Windows machine. Reverse cost: edit the READMEs once the first macOS run shows the names.
+
+### A1184 2026-10-26 No app icon in M5.2 (qa)
+No icon is configured, so installers, the taskbar, and the Dock use Electron's default (electron-builder says so in its log). Options: design one now; ship the default and say so. Chosen: the default, noted in the READMEs and `packaging.md`, as the task said not to design an icon. Reverse cost: add `build/icon.ico` and `build/icon.icns` (the config already names `build` as `buildResources`).
+
+### A1183 2026-10-26 One README plus a guide per platform under `docs/install/` (M5.2, qa)
+Options: everything in `README.md`; `README.windows.md` and `README.macos.md` at the top level; a short top-level README plus `docs/install/windows.md` and `docs/install/macos.md`. Chosen: the third. Why: the top level stays short and shared (what the app is, getting a build, requirements, saves, AI review, building from source), each platform guide holds its own warnings and first-run steps, and a learner on one platform reads one file. The old README's "planned, not yet built" text and the `/project-lead` start instructions were removed because they are no longer true or are already in `CLAUDE.md`. Install steps say "download the artifact from the Actions run", with a placeholder line for a public release (the repository is private, A78). Reverse cost: move text between files.
+
+### A1182 2026-10-26 The package job checks the unpacked build for the bundled resource folders (M5.2, qa)
+Options: upload whatever electron-builder made; also check that `content`, `resources`, `solutions`, and `licenses/fonts` exist in each unpacked build. Chosen: check, in a shell step between packaging and upload, failing the job if one is missing or no unpacked build exists. Why: an installer without its quests builds fine and only fails on a learner's first launch, and `extraResources` is easy to break. It costs a few milliseconds. Reverse cost: delete one step.
+
+### A1181 2026-10-26 Packaging runs as its own job after the tests, repeating install and build (M5.2, qa)
+Options: add packaging steps to the `test` matrix job; a separate `package` job that `needs: test` and rebuilds; a separate job that downloads the test job's `out/`. Chosen: a separate job that `needs: test` and runs `npm ci` and `npm run package` itself. Why: the test job stays as it is (the task asked for that); installers come only from a commit whose tests passed on both platforms; passing `out/` between jobs would add an artifact upload and download and couple the two jobs for a saving of one build. electron-builder's downloads are cached (`ELECTRON_BUILDER_CACHE` under `.cache/electron-builder`, keyed on the lockfile). The job runs on a push to `main` and on manual runs from a branch; pull requests skip it to keep their runs short, and tag runs skip it because `release.yml` has its own `package` job and calls `ci.yml` (inside a called workflow `github.ref_type` is `tag`, so the condition keeps the two from building twice). Reverse cost: delete the job.
+
+### A1180 2026-10-26 CI installers are workflow artifacts kept 7 days, never a GitHub Release (M5.2, qa)
+Mohammad's rule is that publishing waits for him (M5.3). Options: upload as artifacts; create a draft or pre-release GitHub Release. Chosen: artifacts only, `retention-days: 7`, `compression-level: 0` (the files are already compressed), and the workflow keeps `permissions: contents: read`, so it could not publish if it tried. The 7 days follow the task; `release.yml` keeps its 30 days for tag builds. Anyone who needs an older build presses Run workflow. Reverse cost: change one number.
+
 ### A1060 2026-10-26 W7 how the tracker's reset test observes a stale clock (builder, M3.2 Pack 3 World 6)
 The reset mutation survived because a stale clock does nothing once the quest is no longer Active, so the state read the same either way. Options: restart the quest after the reset and check it is still Active past the old deadline; read the timer handle through the timer manager. Chosen: restart the quest, with its time limit set to zero first. Why: the handle is private to the tracker, so a learner's test cannot read it, and restarting a timed quest would replace the old clock under the same handle and hide the leak. With no limit on the restart, no new clock is set, so only a clock the reset left running can still fail the quest. The boss reference also renamed its local `bHidden` to `bHiddenOnBoard`, because `AActor` has a member of that name (MSVC error C4458).
 
@@ -42,7 +63,8 @@ A80 paused the push trigger until the Windows unit tests passed. W1 (progress), 
 
 ### A1020 2026-10-26 A `.gitattributes` keeps LF line endings on every checkout (W0, Windows Lead)
 GitHub's windows-latest runner checks out with `core.autocrlf=true`, so every text file arrived with CRLF and 8 tests in `tests/content/parseQuestFile.test.ts` failed: their fixtures are edited with `
-` patterns that no longer match (the parser itself already splits on `?
+` patterns that no longer match (the parser itself already splits on `
+?
 `). Options: make every test CRLF-proof; normalize in the parser and the tests; tell git to keep LF. Chosen: `* text=auto eol=lf`, with images, fonts, and Unreal maps and assets marked binary, so a Windows clone has the same bytes as the Mac and the packaged content is LF everywhere. The index was already all LF, so no file changes. Reproduced and proven in a worktree made with `core.autocrlf=true`: 6 failing files before, `parseQuestFile` passing after. Reverse cost: delete one file.
 
 ### A980 2026-10-26 The World Map's stage path says when its layout has settled (M2.1f, builder-ui-core)
