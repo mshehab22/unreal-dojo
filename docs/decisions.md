@@ -65,6 +65,7 @@ Reverse cost: medium once learners have progress saved.
 
 ### A1090 2026-10-27 Decision block A1090 to A1109 from the Lead (author-patterns, M4.P2.12)
 Assigned under A71; this world uses A1090 to A1100. Reverse cost: none.
+
 ### A1262 2026-10-27 The data wait limit rises from 15 s to 45 s (M5.1l, m5-1 lead)
 W12 gave every save, rules, and content read a 15 s wait limit. On the Windows CI run 40467374564 one app launch had its content reads answered after 16.2 to 16.7 s, so a learner on a slow first launch would see "taking too long" for a moment before the data replaced it. Options: keep 15 s; 30 s; 45 s; per-key limits with a long one only for content. Chosen: 45 s for every save, rules, and content read (the 120 s machine-probe limit is unchanged). A read main truly never answers still ends in the error view with Try again, 30 s later than before, and the Studio no-answer test now takes about 47 s. One constant, `DATA_QUERY_WAIT_LIMIT_MS`; a per-key split can come later if 45 s feels long for a save read. Reverse cost: change the constant and the e2e timeouts.
 
