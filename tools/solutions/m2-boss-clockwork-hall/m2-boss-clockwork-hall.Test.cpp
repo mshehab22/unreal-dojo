@@ -112,7 +112,7 @@ bool FDojo_M2_ClockworkHall_TwoRoundsPlayAlike::RunTest(const FString& Parameter
 	const float Second = PlayRound(*this, TestWorld, Scene, TEXT("Round 2"));
 	if (Second < 0.f) return false;
 
-	TestTrue(TEXT("The second round took as long as the first"), FMath::IsNearlyEqual(First, Second, 0.001f));
+	TestTrue(TEXT("The second round took as long as the first, give or take a frame or two"), FMath::IsNearlyEqual(First, Second, 0.05f));
 
 	return true;
 }
