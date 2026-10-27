@@ -38,6 +38,7 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 
 (The Lead lists here anything that passed on one machine and could not be run on the other.)
 
+- 2026-10-27, qa M5.1m: unverified on macOS. `e2e/run-errors.spec.ts` now jumps to the start of the Monaco file with Cmd+Up on a Mac (A1263). The failure was reproduced on Windows by skipping the jump (same text as the CI log), and the fix passes there with Ctrl+Home, but no Mac was available. The next macos-latest e2e run is the check; if `insertAtTop` still fails there, its message now names the line that was first instead of the marker.
 - 2026-10-27, app-shell M5.1g: unverified on macOS (Cmd+Q with nothing pending). `holdQuitForSaves` holds `before-quit` and quits again on a later turn (`setImmediate`); the concern is that a second `app.quit()` inside the first quit's own event could leave the window closed and the app in the Dock. Covered by a fake-app test only; to check on the Mac: open the app, press Cmd+Q without doing anything, and confirm the Dock icon goes away. A1211.
 
 - 2026-10-21, content-foundations M2.3: Pack 1 World 1 reference solutions and tests built and passed on the Mac (UE 5.8.3) by hand. Verified on Windows 2026-10-26: the whole Pack 1 `--engine` run passes on UE 5.8.3 (W6).

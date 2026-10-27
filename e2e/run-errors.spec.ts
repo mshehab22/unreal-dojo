@@ -62,14 +62,26 @@ async function openQuest(): Promise<void>
 	await expect(window.getByTestId("build-quest").locator(".monaco-editor .view-lines")).toBeVisible({ timeout: 15_000 });
 }
 
-/** Puts a line at the very top of the open file as one input, so auto-closed brackets never change it. */
+/** Moves the Monaco cursor to the start of the file: Cmd+Up on macOS, Ctrl+Home elsewhere (Ctrl+Home does nothing in Monaco on a Mac, A1263). */
+const JUMP_TO_FILE_START_KEY = process.platform === "darwin" ? "Meta+ArrowUp" : "Control+Home";
+
+/** The text of the editor's first line, found as the rendered line drawn at the top (Monaco draws only the visible lines, in no fixed DOM order). */
+async function readFirstEditorLine(): Promise<string>
+{
+	return window.evaluate<string>("(() => { const lines = [...document.querySelectorAll('[data-testid=build-quest] .monaco-editor .view-lines .view-line')]; const top = lines.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0]; return top ? top.textContent ?? '' : ''; })()");
+}
+
+/** Puts a line at the very top of the open file as one input, so auto-closed brackets never change it, and checks it landed on the first line. */
 async function insertAtTop(line: string): Promise<void>
 {
 	await window.getByTestId("build-quest").locator(".monaco-editor .view-lines").click();
-	await window.keyboard.press("Control+Home");
+	await window.keyboard.press(JUMP_TO_FILE_START_KEY);
 	await window.keyboard.insertText(`${line}\n`);
 	await window.evaluate("new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
 	await expect(window.getByTestId("build-quest").locator(".monaco-editor .view-lines")).toContainText(line.slice(0, 12));
+
+	// Monaco shows a non-breaking space for a space, so compare with plain spaces.
+	expect((await readFirstEditorLine()).replace(/ /g, " "), "the line should be the first line of the file").toBe(line);
 }
 
 /** Scrolls the run column so the first error box starts just under the sticky Run and Submit buttons, so a picture shows its headline. */

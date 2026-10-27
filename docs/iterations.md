@@ -1966,3 +1966,11 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
   - The wait limit for save, rules, and content reads rises from 15 s to 45 s, so a slow first launch no longer shows "taking too long" first. The Studio no-answer test waits for the longer limit and takes about 47 s.
 - Not done: a faster first answer by restructuring the load. There is nothing to make faster at 44 ms, and the options (one bundle file, glossary first) are logged in A1261 with when to do them.
 - Decisions made: A1260, A1261, A1262.
+
+## M5.1m The run-errors tests failed on macOS CI (qa and ui-quests, m5-1 lead)
+- What was asked: CI run 40488859958 failed `e2e/run-errors.spec.ts` on macos-latest only: at 1100x700 the Run result never appeared, at 1440x900 it showed an ordinary test failure instead of "could not build (not your code)", and the ordinary compile failure test never saw "did not compile". Windows passed. Find the cause from the log and the code, and fix it.
+- What was found: all three tests put one line at the top of the quest file with a helper that pressed Control+Home. In Monaco that goes to the start of the file on Windows, but on a Mac the key is Cmd+Up, so the line went in wherever the click had landed, in the middle of the file. The fake engine only reads the outside-failure marker when it is on a line of its own, and the stray `{` did not make the file fail the way the test expects. The fake scenario and the failure explainer have nothing Windows-only in them; the Apple linker, Xcode and Unix-path shapes are already covered by unit tests. Skipping the jump on Windows gave the same failure text as the CI log.
+- What changed: `insertAtTop` presses Cmd+Up on a Mac and Ctrl+Home elsewhere, and now checks that the rendered first line of the editor is the inserted line, so a wrong position fails on the spot with a clear message. Test code only.
+- Proof (Windows 11, from main 9bbcdf3, hidden windows): the three run-errors tests fail with the jump skipped (the guard names the line it found, "#pragma once") and pass with the fix. See the test results line below for the full runs.
+- Not done: running it on a Mac. Logged in problems.md as unverified on macOS.
+- Decisions made: A1263.
