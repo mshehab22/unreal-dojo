@@ -71,6 +71,9 @@ void ADojoM1DroneHandoff::StartRound()
 {
 	Pause->Close();
 
+	// Let go first: a controller whose pawn is destroyed under it can be destroyed with it, so the pawns are released before they go.
+	if (APlayerController* Player = FindPlayer()) Player->UnPossess();
+
 	for (AActor* OldPawn : { static_cast<AActor*>(Hero), static_cast<AActor*>(Scanner), static_cast<AActor*>(Cannon) })
 	{
 		if (IsValid(OldPawn)) OldPawn->Destroy();

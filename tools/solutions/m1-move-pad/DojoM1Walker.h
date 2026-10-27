@@ -15,7 +15,7 @@ class ADojoM1Walker : public APawn
 	GENERATED_BODY()
 
 public:
-	/** Turns ticking off. */
+	/** Creates the scene root a pawn needs to have a place in the world, and turns ticking off. */
 	ADojoM1Walker();
 
 	/** How far a full push moves the pawn in one second, in units. */

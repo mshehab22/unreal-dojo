@@ -25,7 +25,7 @@ class ADojoM1Charger : public APawn
 	GENERATED_BODY()
 
 public:
-	/** Turns ticking off. */
+	/** Creates the scene root a pawn needs to have a place in the world, and turns ticking off. */
 	ADojoM1Charger();
 
 	/** How long Space must be held for a full charge, in seconds. */

@@ -1,5 +1,6 @@
 #include "DojoM1Turntable.h"
 
+#include "Components/SceneComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
@@ -11,6 +12,8 @@
 ADojoM1Turntable::ADojoM1Turntable()
 {
 	PrimaryActorTick.bCanEverTick = false;
+
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
 void ADojoM1Turntable::PostInitializeComponents()

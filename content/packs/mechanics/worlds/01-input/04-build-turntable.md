@@ -57,7 +57,7 @@ class ADojoM1Turntable : public APawn
 	GENERATED_BODY()
 
 public:
-	/** Turns ticking off. */
+	/** Creates the scene root a pawn needs to have a place in the world, and turns ticking off. */
 	ADojoM1Turntable();
 
 	/** How fast a full push turns the pawn, in degrees per second. */
@@ -93,6 +93,7 @@ private:
 ```cpp
 #include "DojoM1Turntable.h"
 
+#include "Components/SceneComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
@@ -104,6 +105,8 @@ private:
 ADojoM1Turntable::ADojoM1Turntable()
 {
 	PrimaryActorTick.bCanEverTick = false;
+
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
 void ADojoM1Turntable::PostInitializeComponents()

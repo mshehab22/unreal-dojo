@@ -69,7 +69,7 @@ class ADojoM1Charger : public APawn
 	GENERATED_BODY()
 
 public:
-	/** Turns ticking off. */
+	/** Creates the scene root a pawn needs to have a place in the world, and turns ticking off. */
 	ADojoM1Charger();
 
 	/** How long Space must be held for a full charge, in seconds. */
@@ -147,6 +147,7 @@ private:
 ```cpp
 #include "DojoM1Charger.h"
 
+#include "Components/SceneComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
@@ -158,6 +159,8 @@ private:
 ADojoM1Charger::ADojoM1Charger()
 {
 	PrimaryActorTick.bCanEverTick = false;
+
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
 void ADojoM1Charger::PostInitializeComponents()

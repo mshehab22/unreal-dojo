@@ -57,7 +57,7 @@ class ADojoM1Walker : public APawn
 	GENERATED_BODY()
 
 public:
-	/** Turns ticking off. */
+	/** Creates the scene root a pawn needs to have a place in the world, and turns ticking off. */
 	ADojoM1Walker();
 
 	/** How far a full push moves the pawn in one second, in units. */
@@ -93,6 +93,7 @@ private:
 ```cpp
 #include "DojoM1Walker.h"
 
+#include "Components/SceneComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
@@ -104,6 +105,8 @@ private:
 ADojoM1Walker::ADojoM1Walker()
 {
 	PrimaryActorTick.bCanEverTick = false;
+
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
 void ADojoM1Walker::PostInitializeComponents()
