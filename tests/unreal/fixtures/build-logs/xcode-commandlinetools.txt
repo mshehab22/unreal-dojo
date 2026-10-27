@@ -1,0 +1,1 @@
+ERROR: Your Mac is set to use CommandLineTools for its build tools (/Library/Developer/CommandLineTools). Unreal expects Xcode as the build tools. Please install Xcode if it's not already, then do one of the following:

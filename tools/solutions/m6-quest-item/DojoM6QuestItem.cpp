@@ -18,12 +18,12 @@ void ADojoM6QuestItem::BeginPlay()
 	Label->SetText(FText::FromName(ItemTag));
 }
 
-bool ADojoM6QuestItem::Collect(AActor* Collector)
+bool ADojoM6QuestItem::Collect(AActor* Taker)
 {
 	if (bCollected) return false;
 
 	bCollected = true;
-	OnCollected.Broadcast(this, Collector);
+	OnCollected.Broadcast(this, Taker);
 	Destroy();
 	return true;
 }

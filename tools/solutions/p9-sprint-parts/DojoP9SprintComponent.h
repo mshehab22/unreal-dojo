@@ -37,6 +37,9 @@ public:
 	bool IsSprinting() const;
 
 protected:
+	/** Gets the sprint ready when play begins; the stamina part is found later, in StartSprint. */
+	virtual void BeginPlay() override;
+
 	/** Stops listening to the stamina part. */
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 

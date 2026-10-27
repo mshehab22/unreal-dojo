@@ -27,6 +27,7 @@ export function EngineStep({ selected, onSelect, onNext }: EngineStepProps)
 {
 	const engines = useDojoQuery(QUERY_KEYS.engines, (client) => client.detectEngines());
 	const toolchain = useDojoQuery(QUERY_KEYS.toolchain, (client) => client.checkToolchain());
+	const environment = useDojoQuery(QUERY_KEYS.environment, (client) => client.getEnvironmentStatus());
 	const pickFolder = useDojoAction((client) => client.pickEngineFolder());
 	const saveEngine = useDojoAction((client, enginePath: string) => client.updateSettings({ enginePath }), [QUERY_KEYS.settings, QUERY_KEYS.environment]);
 	const [manual, setManual] = useState<EngineInstall | null>(null);
@@ -72,6 +73,11 @@ export function EngineStep({ selected, onSelect, onNext }: EngineStepProps)
 				</Button>
 			}
 		>
+			{environment.data?.engineProblem && (
+				<div data-testid="first-run-engine-problem">
+					<AppErrorView error={environment.data.engineProblem} compact />
+				</div>
+			)}
 			{engines.error && <AppErrorView error={engines.error} onRetry={engines.reload} retryLabel="Look again" />}
 			{!engines.data && !engines.error && <LoadingBlock height="h-20" />}
 			{engines.data && options.length === 0 && (

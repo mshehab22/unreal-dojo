@@ -1,24 +1,25 @@
-// Real engine check of the fast loop on this machine: open the editor with its MCP server on a free port, run the sample test through RunTests, apply the Mac stale-editor rule, and quit cleanly.
-// Opt in with DOJO_ENGINE_ROOT=<engine root>; skipped otherwise, or when that folder has no engine (A187). Run under the shared engine lock.
-import { spawnSync } from "node:child_process";
+// Real engine check of the fast loop on this machine: open the windowless editor with its MCP server on a free port, run the sample test through RunTests, then the platform's code-change rule (Mac: the stale-editor rule, A45; Windows: Live Coding takes a .cpp change and a reflected header change reopens the editor, A1072), and quit cleanly.
+// Opt in with DOJO_ENGINE_ROOT=<engine root>; skipped otherwise, or when that folder has no engine (A187). Run under the shared engine lock. The editor is always windowless (A643, A1074).
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer, type AddressInfo } from "node:net";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createEngineLocator } from "../../src/main/services/unreal/createEngineLocator";
 import { createUnrealPlatform } from "../../src/main/services/unreal/createUnrealPlatform";
-import { createUnrealServices } from "../../src/main/services/unreal/createUnrealServices";
 import { EditorLauncher, type EditorSession } from "../../src/main/services/unreal/EditorLauncher";
 import { McpEditorClient } from "../../src/main/services/unreal/McpEditorClient";
 import { NodeCommandRunner } from "../../src/main/services/unreal/NodeCommandRunner";
 import { NodePortProbe } from "../../src/main/services/unreal/NodePortProbe";
-import { NodeProcessLauncher } from "../../src/main/services/unreal/NodeProcessLauncher";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
 import { SYSTEM_TIMER } from "../../src/main/services/unreal/SupervisedProcess";
+import { assertNoForeignLiveCodingSession } from "../support/liveCodingSessions";
+import { createIntegrationServices, LIVE_CODING_REQUESTED } from "../support/createIntegrationServices";
+import { keepEditorTimeoutEvidence } from "../support/keepEditorTimeoutEvidence";
+import { processesMentioning } from "../support/processesMentioning";
 import { MemoryUnrealSettings } from "../unreal/MemoryUnrealSettings";
 
 /** The engine to test against, from the environment. */
@@ -36,14 +37,14 @@ const STEP_TIMEOUT_MS = 10 * 60 * 1000;
 /** How long a starting editor gets to answer on MCP. */
 const EDITOR_READY_TIMEOUT_MS = 3 * 60 * 1000;
 
+/** The sample quest's test, as the editor names it. */
+const SAMPLE_TEST_NAME = "Dojo.Sample.Health.TakesDamage";
+
+/** True on Windows without real Live Coding (the default, A1072): the editor answers "not enabled" and the fast loop hands every compile to the headless loop (A1071). */
+const WINDOWS_FALLBACK = process.platform === "win32" && !LIVE_CODING_REQUESTED;
+
 /** Measured times, printed at the end for the spec. */
 const timings: Record<string, number> = {};
-
-/** True when any process still mentions the folder on its command line. */
-function processesMentioning(folder: string): string
-{
-	return spawnSync("pgrep", ["-fl", folder], { encoding: "utf8" }).stdout.trim();
-}
 
 /** A free loopback port: listen on 0, read the port, close. */
 async function freePort(): Promise<number>
@@ -71,6 +72,9 @@ async function sampleQuest()
 
 describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, () =>
 {
+	// Stops at once, with the reason, when another editor's Live Coding would make every build fail (A1076).
+	beforeAll(() => assertNoForeignLiveCodingSession());
+
 	let pickedFolder = "";
 	let sandboxFolder = "";
 	let port = 0;
@@ -81,7 +85,7 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 	function createRig()
 	{
 		const locator = createEngineLocator();
-		const services = createUnrealServices({
+		const { services, guard } = createIntegrationServices({
 			templateFolder: TEMPLATE_FOLDER,
 			solutionsFolder: join(__dirname, "..", "..", "tools", "solutions"),
 			engineInspector: locator,
@@ -95,7 +99,7 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 		// Since M1.4b the services build the fast loop themselves: their runner factory chooses the loop, and their launcher is the app's one editor.
 		const { editorLauncher, buildLedger: ledger, runnerFactory: factory } = services;
 
-		return { services, platform, editorLauncher, ledger, factory };
+		return { services, guard, platform, editorLauncher, ledger, factory };
 	}
 
 	/** The rig, which the first test creates. */
@@ -106,11 +110,12 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 		return rig;
 	}
 
-	/** Runs the sample quest (or changed files) through the loop-selecting runner and returns the result and its announced reason. */
-	async function runSample(timingName: string, changeSource = false)
+	/** Runs the sample quest through the loop-selecting runner and returns the result and its announced reasons. `cpp` changes the source file; `header` changes the source file and the reflected header. */
+	async function runSample(timingName: string, change: "none" | "cpp" | "header" = "none")
 	{
 		const { quest, files } = await sampleQuest();
-		const runFiles = changeSource ? { ...files, "SampleHealthComponent.cpp": `${files["SampleHealthComponent.cpp"]}\n// changed by the fast loop integration test\n` } : files;
+		const changedSource = change === "none" ? files : { ...files, "SampleHealthComponent.cpp": `${files["SampleHealthComponent.cpp"]}\n// changed by the fast loop integration test\n` };
+		const runFiles = change === "header" ? { ...changedSource, "SampleHealthComponent.h": `${files["SampleHealthComponent.h"]}\n// changed by the fast loop integration test\n` } : changedSource;
 		const reasons: string[] = [];
 
 		const startedAt = Date.now();
@@ -120,7 +125,7 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 		}, new AbortController().signal);
 		timings[timingName] = Date.now() - startedAt;
 
-		console.log(`${timingName}: loop=${result.loop} ok=${result.ok} ${result.testsPassed}/${result.testsTotal} in ${timings[timingName]} ms; ${reasons.join(" | ")}`);
+		console.log(`${timingName}: loop=${result.loop} ok=${result.ok} ${result.testsPassed}/${result.testsTotal} in ${timings[timingName]} ms; ${reasons.join(" | ")}${result.ok ? "" : ` ${result.error ?? ""} ${result.compilerOutput}`}`);
 
 		return { result, reasons };
 	}
@@ -130,16 +135,52 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 	{
 		const startedAt = Date.now();
 		const { editorLauncher } = requireRig();
-		session = await editorLauncher.launch({ engineRoot: ENGINE_ROOT, projectFile: join(sandboxFolder, "Dojo.uproject"), port, startMcpServer: true, windowless: true });
+		session = await editorLauncher.launch({ engineRoot: ENGINE_ROOT, projectFile: join(sandboxFolder, "Dojo.uproject"), port, startMcpServer: true, windowless: true, startLiveCoding: LIVE_CODING_REQUESTED });
 		const answering = await editorLauncher.waitUntilAnswering(session, EDITOR_READY_TIMEOUT_MS);
 		timings[timingName] = Date.now() - startedAt;
 
-		expect(answering).toBe(true);
+		expect(answering, answering ? "" : `The editor did not answer MCP within ${EDITOR_READY_TIMEOUT_MS} ms. ${await timeoutEvidence(timingName, session)}`).toBe(true);
+	}
+
+	/** Copies the sandbox's editor logs to a kept folder and describes the editor's state, for the message of a timed-out wait (A1270). */
+	function timeoutEvidence(label: string, editor: EditorSession | null): Promise<string>
+	{
+		const sessionState = editor === null ? "no session" : editor.isRunning() ? "running" : "not running";
+
+		return keepEditorTimeoutEvidence({ sandboxFolder, label, sessionState });
+	}
+
+	/** Waits for the editor the app reopened by itself after a full build (Windows) and until it answers. */
+	async function waitForReopenedEditor(timingName: string, previous: EditorSession | null): Promise<void>
+	{
+		const { editorLauncher } = requireRig();
+		const startedAt = Date.now();
+
+		while (Date.now() - startedAt < EDITOR_READY_TIMEOUT_MS)
+		{
+			const current = editorLauncher.current();
+
+			if (current !== null && current !== previous)
+			{
+				session = current;
+				const answering = await editorLauncher.waitUntilAnswering(current, EDITOR_READY_TIMEOUT_MS);
+
+				expect(answering, answering ? "" : `The reopened editor did not answer MCP within ${EDITOR_READY_TIMEOUT_MS} ms. ${await timeoutEvidence(timingName, current)}`).toBe(true);
+				timings[timingName] = Date.now() - startedAt;
+
+				return;
+			}
+
+			await new Promise<void>((resolve) => setTimeout(resolve, 500));
+		}
+
+		throw new Error(`The editor was not reopened after the full build. ${await timeoutEvidence(timingName, previous)}`);
 	}
 
 	afterAll(async () =>
 	{
 		await rig?.editorLauncher.dispose();
+		console.log(`Editor launches: ${JSON.stringify(rig?.guard.editorLaunchLines() ?? [])}`);
 		console.log(`Timings (ms): ${JSON.stringify(timings)}`);
 
 		if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true });
@@ -168,45 +209,117 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 		expect(requireRig().ledger.snapshotFor("sample-health")).not.toBeNull();
 	}, STEP_TIMEOUT_MS);
 
-	it("opens the editor with the MCP server on a free port, and the sample test passes through RunTests", async () =>
+	it("opens the editor with the MCP server on a free port, RunTests works through it, and the runner takes this platform's path", async () =>
 	{
 		await openEditor("editorLaunchToAnswering");
+
+		// RunTests straight through the editor's MCP server: the fast loop's test step, whatever the compile step does.
+		const direct = await session!.client.runTests([SAMPLE_TEST_NAME]);
+
+		expect(direct.tests.find((test) => test.name === SAMPLE_TEST_NAME)?.state).toMatch(/^success/i);
+
+		if (WINDOWS_FALLBACK)
+		{
+			// The unattended windowless editor has no Live Coding, so the compile answers "not enabled" and the run falls back to a full build (A1071); that closes the editor and reopens it afterwards.
+			const beforeFallback = session;
+			const fallback = await runSample("fallbackRun");
+
+			expect(fallback.result).toMatchObject({ ok: true, compiled: true, loop: "headless", testsPassed: 1, testsTotal: 1 });
+			expect(fallback.result.tests[0]?.name).toBe(SAMPLE_TEST_NAME);
+			expect(fallback.reasons[0]).toMatch(/Live Coding in the open editor/);
+			expect(fallback.reasons[1]).toBe('Full build: Live Coding answered "unavailable".');
+			expect(beforeFallback?.isRunning()).toBe(false);
+
+			await waitForReopenedEditor("editorReopenAfterFallback", beforeFallback);
+
+			return;
+		}
 
 		const first = await runSample("fastRunFirst");
 		const second = await runSample("fastRunSecond");
 
 		expect(first.result).toMatchObject({ ok: true, compiled: true, loop: "fast", testsPassed: 1, testsTotal: 1 });
-		expect(first.result.tests[0]?.name).toBe("Dojo.Sample.Health.TakesDamage");
+		expect(first.result.tests[0]?.name).toBe(SAMPLE_TEST_NAME);
 		expect(second.result).toMatchObject({ ok: true, loop: "fast" });
-		expect(second.reasons[0]).toMatch(/only the tests run again/);
+		expect(second.reasons[0]).toMatch(requireRig().platform.paths.liveCodingAvailable ? /Live Coding in the open editor/ : /only the tests run again/);
 	}, STEP_TIMEOUT_MS);
 
 	it("refuses to open a second editor on the port the first one holds, and starts no process (fix round 1)", async () =>
 	{
-		const { platform } = requireRig();
-		const secondLauncher = new EditorLauncher({ paths: platform.paths, launcher: new NodeProcessLauncher(platform.processTreeKiller), timer: SYSTEM_TIMER, portProbe: new NodePortProbe(), createClient: (clientPort) => new McpEditorClient(clientPort) });
+		const { platform, guard } = requireRig();
+		const secondLauncher = new EditorLauncher({ paths: platform.paths, launcher: guard, timer: SYSTEM_TIMER, portProbe: new NodePortProbe(), createClient: (clientPort) => new McpEditorClient(clientPort) });
 
-		await expect(secondLauncher.launch({ engineRoot: ENGINE_ROOT, projectFile: join(sandboxFolder, "Dojo.uproject"), port, startMcpServer: true, windowless: true })).rejects.toThrow(`Port ${port} is already in use`);
-		expect(secondLauncher.current()).toBeNull();
+		try
+		{
+			await expect(secondLauncher.launch({ engineRoot: ENGINE_ROOT, projectFile: join(sandboxFolder, "Dojo.uproject"), port, startMcpServer: true, windowless: true })).rejects.toThrow(`Port ${port} is already in use`);
+			expect(secondLauncher.current()).toBeNull();
+		}
+		finally
+		{
+			// If the port was not held after all, this launcher really started an editor that nothing else tracks; never leave it running.
+			await secondLauncher.dispose();
+		}
 	}, STEP_TIMEOUT_MS);
 
-	it("builds headless after a code change, then counts the open editor stale until it restarts (A45)", async () =>
+	// The Mac has no Live Coding, so a code change builds headless and leaves the open editor stale (A45). Windows has its own test below.
+	it.skipIf(process.platform === "win32")("builds headless after a code change, then counts the open editor stale until it restarts (A45)", async () =>
 	{
-		const changed = await runSample("headlessAfterChange", true);
+		const changed = await runSample("headlessAfterChange", "cpp");
 
 		expect(changed.result).toMatchObject({ ok: true, loop: "headless" });
-		expect(changed.reasons[0]).toMatch(requireRig().platform.paths.liveCodingAvailable ? /Live Coding/ : /Live Coding is not available on the Mac/);
+		expect(changed.reasons[0]).toMatch(/Live Coding is not available on the Mac/);
 
-		const stale = await runSample("staleEditorRun", true);
+		const stale = await runSample("staleEditorRun", "cpp");
 
 		expect(stale.result.loop).toBe("headless");
 		expect(stale.reasons[0]).toMatch(/Restart the editor/);
 
 		await openEditor("editorRestartToAnswering");
 
-		const fresh = await runSample("fastRunAfterRestart", true);
+		const fresh = await runSample("fastRunAfterRestart", "cpp");
 
 		expect(fresh.result).toMatchObject({ ok: true, loop: "fast", testsPassed: 1 });
+	}, STEP_TIMEOUT_MS);
+
+	// On Windows with Live Coding, a .cpp change is patched into the open editor. Without it (the default) the compile answers "not enabled" and the run builds headless. Either way a change to a reflected header goes straight to a full build, which closes the editor and opens it again afterwards (A45, A1071, A1072).
+	it.skipIf(process.platform !== "win32")("takes a .cpp change in the open editor or falls back, and a reflected header change builds headless and reopens the editor", async () =>
+	{
+		const beforeCppChange = session;
+		const patched = await runSample("afterCppChange", "cpp");
+
+		if (WINDOWS_FALLBACK)
+		{
+			expect(patched.result).toMatchObject({ ok: true, compiled: true, loop: "headless", testsPassed: 1 });
+			expect(patched.reasons.at(-1)).toBe('Full build: Live Coding answered "unavailable".');
+			expect(beforeCppChange?.isRunning()).toBe(false);
+
+			await waitForReopenedEditor("editorReopenAfterCppChange", beforeCppChange);
+		}
+		else
+		{
+			expect(patched.result).toMatchObject({ ok: true, compiled: true, loop: "fast", testsPassed: 1 });
+			expect(patched.reasons[0]).toMatch(/Live Coding in the open editor/);
+		}
+
+		const beforeFullBuild = session;
+		const rebuilt = await runSample("headlessAfterHeaderChange", "header");
+
+		expect(rebuilt.result).toMatchObject({ ok: true, loop: "headless", testsPassed: 1 });
+		expect(rebuilt.reasons[0]).toMatch(/declares reflected types/);
+		expect(beforeFullBuild?.isRunning()).toBe(false);
+
+		await waitForReopenedEditor("editorReopenAfterHeaderChange", beforeFullBuild);
+
+		const direct = await session!.client.runTests([SAMPLE_TEST_NAME]);
+
+		expect(direct.tests.find((test) => test.name === SAMPLE_TEST_NAME)?.state).toMatch(/^success/i);
+
+		if (!WINDOWS_FALLBACK)
+		{
+			const fresh = await runSample("fastRunAfterReopen", "header");
+
+			expect(fresh.result).toMatchObject({ ok: true, loop: "fast", testsPassed: 1 });
+		}
 	}, STEP_TIMEOUT_MS);
 
 	it("quits the editor cleanly and leaves no process on the sandbox", async () =>
@@ -217,5 +330,11 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 
 		expect(session?.isRunning()).toBe(false);
 		expect(processesMentioning(sandboxFolder)).toBe("");
+
+		// Every editor this suite started was windowless (A643, A1074): the guard refuses any other, and the arguments are checked here as well.
+		const editorLaunches = requireRig().guard.editorLaunchLines();
+
+		expect(editorLaunches.length).toBeGreaterThan(0);
+		expect(editorLaunches.every((line) => line.includes("-NullRHI"))).toBe(true);
 	}, STEP_TIMEOUT_MS);
 });

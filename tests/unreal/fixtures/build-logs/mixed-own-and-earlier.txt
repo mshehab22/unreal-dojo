@@ -1,0 +1,2 @@
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f1-training-dummy\DojoF1TrainingDummy.h(9): error C2143: syntax error: missing ';' before '}'
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f1-score-keeper\DojoF1ScoreKeeper.cpp(14): error C2065: 'Points': undeclared identifier

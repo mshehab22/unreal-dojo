@@ -158,6 +158,43 @@ describe("readLiveCodingAnswer", () =>
 		expect(readLiveCodingAnswer("Error: Live Coding is not available in this build configuration.").status).toBe("unavailable");
 	});
 
+	it("reads every answer that says Live Coding cannot run here as unavailable, ahead of the error match (A1071)", () =>
+	{
+		const notEnabled = "Error: Live Coding is not enabled for this session. Enable it in Editor Preferences.";
+
+		expect(readLiveCodingAnswer(notEnabled)).toEqual({ status: "unavailable", output: notEnabled });
+		expect(readLiveCodingAnswer("Error: Live Coding module is not loaded. Ensure Live Coding is enabled in Editor Preferences.").status).toBe("unavailable");
+		expect(readLiveCodingAnswer("Result: CompileNotStarted").status).toBe("unavailable");
+		expect(readLiveCodingAnswer("Live Coding cannot be enabled while hot-reloaded modules are active.").status).toBe("unavailable");
+	});
+
+	it("reads the engine toolset's Result line before any wording in the compile output (A1071)", () =>
+	{
+		expect(readLiveCodingAnswer("Result: Success\n\nCompile Output:\nno error reported, nothing to restart").status).toBe("succeeded");
+		expect(readLiveCodingAnswer("Result: NoChanges").status).toBe("no-changes");
+		expect(readLiveCodingAnswer("Result: Failure\n\nCompile Output:\nHealth.cpp(3): error C2065").status).toBe("failed");
+		expect(readLiveCodingAnswer("Result: CompileStillActive").status).toBe("busy");
+	});
+
+	it("sends a failure or cancel with no compiler error line to the full build so the real errors show (W8 fix rounds 1 and 2)", () =>
+	{
+		// Bare results.
+		expect(readLiveCodingAnswer("Result: Failure").status).toBe("needs-full-build");
+		expect(readLiveCodingAnswer("Result: Failure\n").status).toBe("needs-full-build");
+		expect(readLiveCodingAnswer("Result: Cancelled").status).toBe("needs-full-build");
+
+		// What a Launcher install really answers: only the Live Coding log in Compile Output, never Compiler Diagnostics.
+		expect(readLiveCodingAnswer("Result: Failure\n\nCompile Output:\nLogLiveCoding: Error: Live coding failed, please see Live console for more information").status).toBe("needs-full-build");
+		expect(readLiveCodingAnswer("Result: Cancelled\n\nCompile Output:\nLogLiveCoding: Live coding canceled").status).toBe("needs-full-build");
+	});
+
+	it("keeps a failure as failed when the text holds a real compiler or linker error line", () =>
+	{
+		expect(readLiveCodingAnswer("Result: Failure\n\nCompiler Diagnostics:\nHealth.cpp(3): error C2065: 'Helth': undeclared identifier").status).toBe("failed");
+		expect(readLiveCodingAnswer("Result: Failure\n\nCompile Output:\nLogLiveCoding: Live coding failed\n\nCompiler Diagnostics:\nHealth.cpp(9): fatal error C1083: cannot open include file").status).toBe("failed");
+		expect(readLiveCodingAnswer("Result: Failure\n\nCompile Output:\nLINK : fatal error LNK1104: cannot open file 'UnrealEditor-Dojo.dll'").status).toBe("failed");
+	});
+
 	it("reads plain text answers", () =>
 	{
 		expect(readLiveCodingAnswer("Live coding succeeded").status).toBe("succeeded");

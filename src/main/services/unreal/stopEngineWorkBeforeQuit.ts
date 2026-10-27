@@ -1,15 +1,12 @@
 // One quit sequence for everything Unreal: cancel running builds and tests, then close the editor, then let the app quit (A530).
+import type { QuittingApp } from "../../lifecycle/QuittingApp";
 import type { EditorLauncher } from "./EditorLauncher";
 
 /** How long quitting waits for cancelled builds and test runs to end. Killing a process tree takes well under a second. */
 export const QUIT_RUN_WAIT_MS = 5000;
 
-/** The part of Electron's `app` this needs, so tests pass a fake. */
-export interface QuittingApp
-{
-	on(eventName: "before-quit", listener: (event: { preventDefault(): void }) => void): void;
-	quit(): void;
-}
+/** The part of Electron's `app` this needs; it now lives with the other quit helpers and is re-exported here for existing imports. */
+export type { QuittingApp };
 
 /** The part of RunRegistry this needs. */
 export interface CancellableRuns

@@ -73,7 +73,7 @@ Acceptance:
   pieces:
     - { id: data, kind: data, label: UDojoQuestData data asset with Kind and ItemTag and Count and TimeLimitSeconds and Requires and bSecret, covers: [quest-data] }
     - { id: tracker, kind: class, label: UDojoQuestTracker world subsystem with a state map and OnQuestStateChanged and OnQuestProgress delegates, covers: [tracker] }
-    - { id: item, kind: class, label: ADojoQuestItem with an OnCollected delegate carrying the item and the collector, covers: [items] }
+    - { id: item, kind: class, label: ADojoQuestItem with an OnCollected delegate carrying the item and whoever took it, covers: [items] }
     - { id: course, kind: class, label: ADojoCheckpoint with OnReached and ADojoCourse that binds every gate with AddUniqueDynamic and broadcasts OnFinished, covers: [course] }
     - { id: clocks, kind: step, label: The tracker keeps a TMap of quest to FTimerHandle set with a timer delegate carrying the quest, covers: [clocks] }
     - { id: giver, kind: class, label: ADojoQuestGiver that binds to OnQuestStateChanged in BeginPlay and filters for its own quest and unbinds in EndPlay, covers: [givers] }

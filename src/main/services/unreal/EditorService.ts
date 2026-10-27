@@ -22,6 +22,12 @@ export interface EditorServiceDependencies
 
 	/** The platform toolchain check; a non-blocking problem (the missing Metal toolchain on the Mac) means the editor window cannot open. */
 	checkToolchain: () => Promise<ToolchainCheck>;
+
+	/** True in tests and agent runs: the editor always opens windowless (A643, A1074). Leave out in the app. */
+	alwaysWindowless?: boolean;
+
+	/** True to start Live Coding, hidden, in a windowless editor where the platform has it (Windows). Off by default: an unattended editor leaves Live Coding off, the compile answers "not enabled", and the run uses the headless loop (A1071); turning it on makes the Live Coding console window appear at the first compile (A1072). */
+	startLiveCodingWhenWindowless?: boolean;
 }
 
 /** Keeps one editor open on the sandbox in settings: reuses it when it is current and answering, restarts it when it is stale, on another sandbox, or on another engine. */
@@ -53,8 +59,9 @@ export class EditorService
 
 		if (currentIsFresh && (!engine.supportsFastLoop || (await current.client.isAnswering()))) return;
 
-		const windowless = engine.supportsFastLoop && (await this.windowCannotOpen());
-		const session = await editorLauncher.launch({ engineRoot, projectFile, port: settings.getMcpPort(), startMcpServer: engine.supportsFastLoop, windowless });
+		const windowless = this.dependencies.alwaysWindowless === true || (engine.supportsFastLoop && (await this.windowCannotOpen()));
+		const startLiveCoding = windowless && paths.liveCodingAvailable && this.dependencies.startLiveCodingWhenWindowless === true;
+		const session = await editorLauncher.launch({ engineRoot, projectFile, port: settings.getMcpPort(), startMcpServer: engine.supportsFastLoop, windowless, startLiveCoding });
 
 		if (!engine.supportsFastLoop) return;
 

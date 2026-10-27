@@ -1,0 +1,2 @@
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f1-training-dummy\DojoF1TrainingDummy.h(9): error C2143: syntax error: missing ';' before '}'
+C:\Dojo\DojoSandbox\Source\Dojo\Support\DojoTestWorld.cpp(31): error C2664: cannot convert argument 2 from 'bool' to 'FName'

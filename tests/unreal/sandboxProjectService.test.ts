@@ -1,10 +1,11 @@
 // Checks sandbox creation: template copy, EngineAssociation, plugins per engine, the first build, settings, and the Windows path warning.
 import { describe, expect, it } from "vitest";
 
-import type { EngineInstall } from "@shared/types/engine";
+import type { EngineInstall, ToolchainProblem } from "@shared/types/engine";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
 
 import { AppErrorException } from "../../src/main/errors/AppErrorException";
+import { BuildFailureExplainer } from "../../src/main/services/unreal/BuildFailureExplainer";
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
 import type { PlatformPaths } from "../../src/main/services/unreal/PlatformPaths";
 import { SandboxProjectService } from "../../src/main/services/unreal/SandboxProjectService";
@@ -25,7 +26,7 @@ const TEMPLATE_FILES = {
 };
 
 /** Builds the service over fakes; the engine reports `version`. */
-function createService(version: string, build: ScriptedProcess = { exitCode: 0, lines: ["@progress 'Compiling C++ source code...' 100%", "Result: Succeeded"] }, files: Record<string, string> = TEMPLATE_FILES, paths: PlatformPaths = new MacPlatformPaths("/Users/learner"))
+function createService(version: string, build: ScriptedProcess = { exitCode: 0, lines: ["@progress 'Compiling C++ source code...' 100%", "Result: Succeeded"] }, files: Record<string, string> = TEMPLATE_FILES, paths: PlatformPaths = new MacPlatformPaths("/Users/learner"), failureExplainer?: BuildFailureExplainer)
 {
 	const fileSystem = new FakeSandboxFileSystem(files);
 	const launcher = new FakeProcessLauncher([build]);
@@ -49,9 +50,24 @@ function createService(version: string, build: ScriptedProcess = { exitCode: 0, 
 			},
 			afterBuild: (succeeded) => void hookCalls.push(`after ${succeeded}`),
 		},
+		...(failureExplainer ? { failureExplainer } : {}),
 	});
 
 	return { service, fileSystem, launcher, savedPaths, hookCalls };
+}
+
+/** An explainer over a fixed toolchain answer and an engine that inspects fine, or fails with `inspectFailure`. */
+function failureExplainer(toolchain: { ok: boolean; problems: ToolchainProblem[] }, inspectFailure?: Error): BuildFailureExplainer
+{
+	return new BuildFailureExplainer({
+		checkToolchain: async () => ({ ...toolchain, tool: "vswhere", message: "check" }),
+		inspectEngine: async () =>
+		{
+			if (inspectFailure) throw inspectFailure;
+
+			return { path: "/Engines/UE", version: "5.8.3", source: "launcher", supportsFastLoop: true };
+		},
+	});
 }
 
 /** Reads the written project file. */
@@ -168,6 +184,119 @@ describe("SandboxProjectService", () =>
 		await service.create("/Engines/UE", longFolder, (update) => updates.push(update), new AbortController().signal).catch(() => undefined);
 
 		expect(updates[1]).toMatchObject({ phase: "preparing", lastLine: expect.stringMatching(/characters long/) });
+	});
+
+	it("attaches a plain-English failure to a failed first build or rebuild, and none to a build that passed (M5.1d)", async () =>
+	{
+		const explainer = failureExplainer({ ok: true, problems: [] });
+		const liveCoding = createService("5.8.3", { exitCode: 6, lines: ["ERROR: Unable to build while Live Coding is active. Exit the editor and game, or press Ctrl+Alt+F11"] }, TEMPLATE_FILES, undefined, explainer);
+
+		const created = await liveCoding.service.create("/Engines/UE", "/Picked", () => undefined, new AbortController().signal);
+
+		expect(created.ok).toBe(false);
+		expect(created.failure?.code).toBe("build-environment-failed");
+		expect(created.failure?.message).toContain("Live Coding");
+
+		const rebuilt = createService("5.8.3", { exitCode: 6, lines: ["Module.Dojo.cpp.obj : fatal error LNK1180: insufficient disk space"] }, { "/S/Dojo.uproject": "{}" }, undefined, explainer);
+		const rebuiltResult = await rebuilt.service.rebuild("/Engines/UE", "/S", () => undefined, new AbortController().signal);
+
+		expect(rebuiltResult.failure?.message).toContain("disk is full");
+
+		const passed = createService("5.8.3", undefined, TEMPLATE_FILES, undefined, explainer);
+		const passedResult = await passed.service.create("/Engines/UE", "/Picked", () => undefined, new AbortController().signal);
+
+		expect(passedResult).not.toHaveProperty("failure");
+	});
+
+	it("names a quest left in the sandbox when a rebuild fails in its code, and does not ask the toolchain", async () =>
+	{
+		const explainer = failureExplainer({ ok: false, problems: [{ error: { code: "toolchain-missing", message: "No C++ workload.", suggestedAction: "Install it." }, blocksBuild: true }] });
+		const script = { exitCode: 6, lines: ["/S/Source/Dojo/Quests/x-leftover/Leftover.h:9:3: error: expected ';' at end of declaration list", "Result: Failed"] };
+		const { service } = createService("5.8.3", script, { "/S/Dojo.uproject": "{}" }, undefined, explainer);
+
+		const result = await service.rebuild("/Engines/UE", "/S", () => undefined, new AbortController().signal);
+
+		expect(result.failure?.code).toBe("build-environment-failed");
+		expect(result.failure?.message).toContain("code already in it from x-leftover");
+		expect(result.failure?.suggestedAction).toContain("Open x-leftover");
+	});
+
+	it("explains a build that never started from the engine, and a failed build with a missing Visual Studio workload from the toolchain check", async () =>
+	{
+		const noTool = createService("5.8.3", { failsToStart: true }, { "/S/Dojo.uproject": "{}" }, undefined, failureExplainer({ ok: true, problems: [] }, new AppErrorException("engine-not-found", "Engine moved.", "Pick it again.")));
+		const moved = await noTool.service.rebuild("/Engines/UE", "/S", () => undefined, new AbortController().signal);
+
+		expect(moved.failure).toMatchObject({ code: "engine-not-found", message: "Engine moved." });
+
+		const noWorkload = createService("5.8.3", { exitCode: 6, lines: ["Result: Failed"] }, { "/S/Dojo.uproject": "{}" }, undefined, failureExplainer({ ok: false, problems: [{ error: { code: "toolchain-missing", message: "No C++ workload.", suggestedAction: "Install it." }, blocksBuild: true }] }));
+		const blocked = await noWorkload.service.rebuild("/Engines/UE", "/S", () => undefined, new AbortController().signal);
+
+		expect(blocked.failure).toMatchObject({ code: "toolchain-missing", message: "No C++ workload." });
+	});
+
+	it("refuses a folder inside the engine folder with sandbox-path-unsupported, before copying, building, or remembering anything (M5.1e)", async () =>
+	{
+		const { service, fileSystem, launcher, savedPaths } = createService("5.8.3");
+
+		const inside = service.create("/Engines/UE", "/Engines/UE/Projects", () => undefined, new AbortController().signal);
+
+		await expect(inside).rejects.toMatchObject({ appError: { code: "sandbox-path-unsupported", message: expect.stringContaining("inside your Unreal Engine install"), suggestedAction: expect.stringContaining("Pick a different folder") } });
+		expect(fileSystem.files.has("/Engines/UE/Projects/DojoSandbox/Dojo.uproject")).toBe(false);
+		expect(launcher.specs).toEqual([]);
+		expect(savedPaths).toEqual([]);
+	});
+
+	it("refuses a picked folder whose symbolic link leads into the engine folder, and an engine reached through a link, before copying anything (M5.1e)", async () =>
+	{
+		const linkedFolder = createService("5.8.3");
+		linkedFolder.fileSystem.links.set("/Users/learner/Shortcut", "/Engines/UE/Projects");
+
+		await expect(linkedFolder.service.create("/Engines/UE", "/Users/learner/Shortcut", () => undefined, new AbortController().signal)).rejects.toMatchObject({ appError: { code: "sandbox-path-unsupported" } });
+		expect(linkedFolder.fileSystem.files.has("/Engines/UE/Projects/DojoSandbox/Dojo.uproject")).toBe(false);
+		expect(linkedFolder.savedPaths).toEqual([]);
+		expect(linkedFolder.launcher.specs).toEqual([]);
+
+		const linkedEngine = createService("5.8.3");
+		linkedEngine.fileSystem.links.set("/Engines/Current", "/Engines/UE");
+
+		await expect(linkedEngine.service.create("/Engines/Current", "/Engines/UE/Projects", () => undefined, new AbortController().signal)).rejects.toMatchObject({ appError: { code: "sandbox-path-unsupported" } });
+		expect(linkedEngine.savedPaths).toEqual([]);
+
+		const control = createService("5.8.3");
+		control.fileSystem.links.set("/Users/learner/Shortcut", "/Users/learner/Real");
+
+		await expect(control.service.create("/Engines/UE", "/Users/learner/Shortcut", () => undefined, new AbortController().signal)).resolves.toMatchObject({ ok: true, sandboxPath: "/Users/learner/Real/DojoSandbox" });
+	});
+
+	it("refuses an engine-folder spelling that differs only in letter case or slashes on Windows, and allows the engine inside the picked folder", async () =>
+	{
+		const windows = new WindowsPlatformPaths({});
+		const { service } = createService("5.8.3", undefined, TEMPLATE_FILES, windows);
+
+		await expect(service.create("C:\\Program Files\\Epic Games\\UE_5.8", "c:/program files/epic games/ue_5.8/Projects", () => undefined, new AbortController().signal)).rejects.toMatchObject({ appError: { code: "sandbox-path-unsupported" } });
+		expect(service.folderBlockers("C:\\Program Files", "C:\\Program Files\\Epic Games\\UE_5.8")).toEqual([]);
+	});
+
+	it("answers folderBlockers from the engine saved in settings when no engine is given, and none before an engine is saved", () =>
+	{
+		const paths = new MacPlatformPaths("/Users/learner");
+		const withEngine = new SandboxProjectService({ paths, fileSystem: new FakeSandboxFileSystem(), builder: new UnrealBuilder(paths, new FakeProcessLauncher([]), new FakeTimer()), engineInspector: { inspectFolder: () => Promise.reject(new Error("unused")) }, pathStore: { setSandboxPath: () => undefined, setEnginePath: () => undefined }, timer: new FakeTimer(), templateFolder: "/T", savedEnginePath: () => "/Engines/UE" });
+		const withoutEngine = createService("5.8.3").service;
+
+		expect(withEngine.folderBlockers("/Engines/UE/Projects")).toHaveLength(1);
+		expect(withEngine.folderBlockers("/Users/learner/Dojo")).toEqual([]);
+		expect(withoutEngine.folderBlockers("/Engines/UE/Projects")).toEqual([]);
+	});
+
+	it("still creates in a folder with warnings, and lists them as preparing lines (M5.1e)", async () =>
+	{
+		const { service } = createService("5.8.3");
+		const updates: ProgressUpdate[] = [];
+
+		await service.create("/Engines/UE", "/Users/learner/OneDrive/Dojo", (update) => updates.push(update), new AbortController().signal);
+
+		expect(updates.filter((update) => update.lastLine.includes("synced by OneDrive"))).toHaveLength(1);
+		expect(service.folderWarnings("/Users/learner/OneDrive/Dojo")).toEqual([expect.stringContaining("synced by OneDrive")]);
 	});
 
 	it("warns about a long sandbox path on Windows only", () =>
