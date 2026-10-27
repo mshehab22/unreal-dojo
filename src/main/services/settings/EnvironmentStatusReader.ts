@@ -75,7 +75,7 @@ export function resolveReviewProvider(choice: ReviewProviderSetting, statuses: r
 /** Builds the environment status. Never throws: a source that fails reports as missing or unavailable. */
 export class EnvironmentStatusReader
 {
-	/** The toolchain check of this session, started by the first read and kept so repeat reads never spawn the tool again. Null until the first read. */
+	/** The toolchain check of this session, started at startup by `index.ts` through `refreshToolchain` (or by the first read if that did not happen) and kept so repeat reads never spawn the tool again. A read may wait for it while it runs. Null until it starts. */
 	private toolchainCheck: Promise<ToolchainCheck | null> | null = null;
 
 	/** The save notice, built on the first read. Undefined until then; null when the save loaded cleanly. */

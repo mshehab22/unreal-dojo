@@ -168,8 +168,13 @@ describe("holdQuitForSaves", () =>
 		holdQuitForSaves(app, { whenIdle: async () => true });
 
 		fire();
+
+		// Only promise callbacks run here (no timers), so the deferred quit has not happened yet.
+		for (let turn = 0; turn < 10; turn++) await Promise.resolve();
+
+		expect(app.quitCount).toBe(0);
+
 		await vi.advanceTimersByTimeAsync(0);
-		await vi.advanceTimersByTimeAsync(1);
 
 		expect(app.quitCount).toBe(1);
 	});

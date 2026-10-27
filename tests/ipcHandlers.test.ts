@@ -181,7 +181,8 @@ describe("registerHandlers", () =>
 	{
 		const injected: ToolchainCheck = { ok: true, tool: "vswhere", message: "From the injected check.", problems: [] };
 		let locatorCalls = 0;
-		const countingLocator = (): ReturnType<HandlerDependencies["getEngineLocator"]> =>
+		// An engine locator source that counts how often the handler asks for it.
+		const countingLocator =(): ReturnType<HandlerDependencies["getEngineLocator"]> =>
 		{
 			locatorCalls++;
 			return FAKE_DEPENDENCIES.getEngineLocator();
