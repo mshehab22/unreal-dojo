@@ -13,7 +13,7 @@ xp: 80
 estimatedMinutes: 20
 concepts:
   - A curve answers how much XP a level needs, so designers redraw the pace without code
-  - One big gain can pay for several levels
+  - After AddXP, Level and XP match what the curve asks for the total XP gained
   - A missing curve is reported with ensure and survived
 ---
 
@@ -23,16 +23,16 @@ When you add a Dojo F6 Level component to any actor, give it an XP curve that as
 
 The declarations are given; every body is yours:
 
-- `AddXP` adds XP and levels up as many times as the XP pays for, reading the XP each level needs from the curve, and returns how many levels it gained. At `MaxLevel` it stops: no more levels and no XP kept.
+- `AddXP` adds XP and reads the XP each level needs from the curve. Afterwards `Level` and `XP` match the curve for all the XP gained so far, with the leftover kept toward the next level, and it returns how many levels were gained. At `MaxLevel` it stops: no more levels and no XP kept.
 - `GetXPToNext` reads the curve at the current level; it is 0 at the top level or with no curve.
-- With no curve, AddXP reports it with `ensureMsgf` (the message names the component and says it has no XP curve) and returns 0. How you write the condition is your choice. The test checks that the missing curve is survived; whether it is reported is a rubric line, because a plain ensure reports only once per editor session. A curve value of 0 or less would never let the loop finish, so that is reported with an ensure too, and the loop stops.
+- With no curve, AddXP reports it with `ensureMsgf` (the message names the component and says it has no XP curve) and returns 0. How you write the condition is your choice. The test checks that the missing curve is survived; whether it is reported is a rubric line, because a plain ensure reports only once per editor session. A curve value of 0 or less is nonsense for a level, so that is reported with an ensure too, and AddXP stops there instead of hanging.
 - `ResetProgress` goes back to level 1 with no XP.
 
 Write it the obvious way first and run the tests. This one fails on purpose the first time for most people: read which assertion failed and why before you open the hints.
 
 ## See it in the editor
 
-In the Content Browser, right-click, choose Miscellaneous, then Curve, and pick CurveFloat. Name it C_LevelXP, add a key at time 1 with value 100 and one at time 5 with value 500. Add a Dojo F6 Level component to any actor, set its XP Curve, press Play, eject, select the actor, and run `ke * AddXP 350`: Level reads 3 and XP reads 50 in Details. Clear the curve, play again, and run it once more: one ensure appears in the Output Log, and the game keeps running.
+In the Content Browser, right-click, choose Miscellaneous, then Curve, and pick CurveFloat. Name it C_LevelXP, add a key at time 1 with value 100 and one at time 5 with value 500, then right-click each key and choose Linear interpolation so the levels in between read 200, 300, and 400. Add a Dojo F6 Level component to any actor, set its XP Curve, press Play, eject, select the actor, and run `ke * AddXP 350`: the Level component's Details panel shows Level as 3 and XP as 50. Clear the curve, play again, and run it once more: one ensure appears in the Output Log, and the game keeps running.
 
 # Files
 
@@ -86,8 +86,12 @@ public:
 	float GetXPToNext() const;
 
 private:
+	/** The current level, shown read-only in Details so the editor step can check it. */
+	UPROPERTY(VisibleAnywhere, Category = "Level")
 	int32 Level = 1;
 
+	/** XP gathered toward the next level, shown read-only in Details. */
+	UPROPERTY(VisibleAnywhere, Category = "Level")
 	float XP = 0.f;
 };
 ```
@@ -216,14 +220,16 @@ bool FDojo_F6_LevelCurve_MissingCurveIsReported::RunTest(const FString& Paramete
 
 # Rubric
 
-- AddXP loops, so one gain can pay for several levels, and keeps the leftover.
+- After AddXP, Level and XP match the curve for the total XP gained, and the leftover XP is kept toward the next level.
 - The XP each level needs is read from the curve at the current level, never computed in code.
 - AddXP stops at MaxLevel and keeps no XP there.
 - A missing curve is reported with ensureMsgf naming the component, and AddXP returns 0 instead of crashing.
-- A curve value of 0 or less is reported and cannot loop forever.
+- A curve value of 0 or less is reported with an ensure, and AddXP stops instead of hanging.
 - ResetProgress returns to level 1 with no XP.
 
 # Alternative
+
+AddXP repeats its check because one big gain can pay for several levels at once; a single `if` would level up once and silently drop the rest of the XP. That is the bug the first run was built to show.
 
 The XP per level could be a formula, such as 100 times the level, written in code. That is fine until a designer wants level 4 to be a wall and level 5 a breather; then every change is a code change. A curve lets them drag points in the curve editor and see the shape. For a handful of exact numbers, a data table with one row per level is the other common choice, and Unreal's `UCurveTable` stores many named curves in one table asset when a game needs several, such as XP, health, and damage per level.
 

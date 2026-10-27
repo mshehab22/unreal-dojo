@@ -14,7 +14,7 @@ concepts:
   - A few dozen copies, or a small shared part, are not worth the indirection
   - Copies that each need to change the shared part are not sharing it
   - Instances that need their own collision, physics, or behavior are actors or components, not instances
-  - Measure memory and draw calls before and after; do not share on a guess
+  - Measure memory and frame cost before and after; do not share on a guess
 ---
 
 # Predict

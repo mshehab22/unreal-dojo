@@ -1174,7 +1174,7 @@
     "title": "Type Object",
     "intent": "Turn \"what kind of thing is this\" into data: each weapon, quiver, or lantern points at an asset or a table row describing its kind, so designers add and tune kinds in the editor without a new C++ class or a recompile.",
     "problem": "An armory with forty weapon classes that differ only in the numbers their constructors set needs a programmer and a compile for every new weapon and every balance tweak, and designers cannot tune the weapons they own.",
-    "unrealForm": "This is mainstream Unreal. A UPrimaryDataAsset subclass like UDojoWeaponKind holds shared data (damage, durability, mesh), and each weapon actor keeps a TObjectPtr<const UDojoWeaponKind> to its kind; the Asset Manager can list and load primary assets by type and id. Data Table rows, structs deriving from FTableRowBase named by an FDataTableRowHandle, do the same for many small flat kinds. A Blueprint that only changes defaults is a kind the engine keeps as its class default object. You still write the object's own state, reading shared numbers through the kind, spawning objects with their kind set before BeginPlay, and what an object with no valid kind does.",
+    "unrealForm": "This is mainstream Unreal. A UPrimaryDataAsset subclass like UDojoWeaponKind holds shared data (damage, durability, mesh), and each weapon actor keeps a TObjectPtr<const UDojoWeaponKind> to its kind; the Asset Manager can list and load primary assets by type and id. Data Table rows, structs deriving from FTableRowBase named by an FDataTableRowHandle, do the same for many small flat kinds. A Blueprint that only changes defaults is a kind the engine keeps as its class default object. You still write the object's own state, reading shared numbers through the kind, spawning objects with their kind already set, and what an object with no valid kind does.",
     "whenNot": "If kinds mostly differ in behavior rather than numbers, data cannot express it without growing into a scripting system. With a few kinds that never change and nobody tunes, plain code is simpler. If every object really needs its own numbers, there is no kind to share.",
     "useCaseQuestIds": [
       "p10-weapon-kinds",
@@ -1317,7 +1317,7 @@
     "id": "flyweight",
     "title": "Flyweight",
     "intent": "When an arena holds thousands of near-identical things such as fans, seats, or torches, store what they all have in common once and let each copy keep only its own small leftovers, like a transform, a seat, or an excitement value.",
-    "problem": "A crowd of 3,000 fans where every fan carries its own copy of its style's name, scarf color, chant, and cheer volume, or a stand of 400 seats drawn as 400 separate mesh components, spends nearly all its memory and draw calls on duplicates of the same few things.",
+    "problem": "A crowd of 3,000 fans where every fan carries its own copy of its style's name, scarf color, chant, and cheer volume, or a stand of 400 seats built as 400 separate mesh components, spends nearly all its memory and per-component work (registering, updating, and culling each one) on duplicates of the same few things.",
     "unrealForm": "Assets are shared: many components reference one UStaticMesh, material, or texture. UInstancedStaticMeshComponent and UHierarchicalInstancedStaticMeshComponent draw thousands of copies of one mesh, each instance holding only a transform plus optional custom data floats the material reads. In gameplay code you keep per-copy structs small (a seat, a state, an index or const pointer to a shared definition) and keep the shared part read-only.",
     "whenNot": "With a few dozen copies or little data in common, the savings do not justify the indirection. If copies need to change the shared part each for itself, it is not shared. If each copy needs its own collision, physics, or logic, it should be an actor or component that shares the mesh asset, not an instance.",
     "useCaseQuestIds": [
@@ -1370,7 +1370,7 @@
       {
         "id": "flyweight-scenario-1",
         "type": "which-pattern",
-        "prompt": "An open-world map places 80,000 rocks of six kinds. Profiling shows draw calls and memory are the bottleneck. Which pattern drives the fix?",
+        "prompt": "An open-world map places 80,000 rocks of six kinds. Profiling shows frame time and memory are the bottleneck. Which pattern drives the fix?",
         "choices": [
           "flyweight",
           "object-pool",

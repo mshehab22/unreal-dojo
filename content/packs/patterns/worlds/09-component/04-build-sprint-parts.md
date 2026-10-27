@@ -15,7 +15,7 @@ concepts:
   - A stamina part owns the per-frame work and fills itself in InitializeComponent, before any part's BeginPlay
   - A sprint part finds its stamina sibling through the owner and stops when the sibling's delegate says it is empty
   - The same sprint part speeds up a character's own movement component when there is one, and still works on an actor with none
-  - Parts assembled at runtime arrive one at a time, so a part cannot assume its siblings exist before they do
+  - The same two parts give the same sprint whichever of them was added to the actor first
 ---
 
 # Brief
@@ -27,7 +27,7 @@ Anything in the arena that runs needs stamina, and most of it can sprint. Two pa
 The declarations, the constructors, the getters, and the exhaustion broadcast are given. Yours:
 
 - Stamina: fill to `MaxStamina` in `InitializeComponent`; `TrySpend`, `SetDrainPerSecond` (never below zero), and `Refill`; and `TickComponent`, which drains while a rate is set and regenerates otherwise. Every loss goes through `AfterLoss` so the broadcast fires.
-- Sprint: `StartSprint` (returns true if already sprinting), `StopSprint`, and unbinding from the stamina part in `EndPlay`. Bind once, even across many sprints.
+- Sprint: `BeginPlay`, where the sprint gets ready to work with its stamina part; `StartSprint` (returns true if already sprinting); `StopSprint`; and unbinding from the stamina part in `EndPlay`. Bind once, even across many sprints.
 
 Write the obvious version first and run the tests. One of them fails on purpose for most people. Read its name and message before you read the hints.
 
@@ -198,6 +198,9 @@ public:
 	bool IsSprinting() const;
 
 protected:
+	/** Gets the sprint ready to work with its stamina part when play begins. */
+	virtual void BeginPlay() override;
+
 	/** Stops listening to the stamina part. */
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
@@ -243,6 +246,11 @@ void UDojoP9SprintComponent::StopSprint()
 bool UDojoP9SprintComponent::IsSprinting() const
 {
 	return bSprinting;
+}
+
+void UDojoP9SprintComponent::BeginPlay()
+{
+	Super::BeginPlay();
 }
 
 void UDojoP9SprintComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -393,7 +401,7 @@ bool FDojo_P9_SprintParts_SprintSpeedsUpACharacter::RunTest(const FString& Param
 
 # Hints
 
-- The failing test adds the sprint part first and the stamina part second. On an actor that is already playing, registering a part runs its BeginPlay inside that call. What was on the actor when the sprint part's BeginPlay ran?
+- Once a test fails, read which one and how the actor was put together. On an actor that is already playing, registering a part runs its BeginPlay inside that call. What was on the actor when the sprint part's BeginPlay ran?
 - A sibling can arrive after you do. Look the stamina part up when you first need it, in StartSprint, and keep it once found.
 - Binding the same function to a delegate twice trips an ensure; `AddUniqueDynamic` binds only if it is not bound yet, so StartSprint can call it every time.
 
@@ -401,32 +409,31 @@ bool FDojo_P9_SprintParts_SprintSpeedsUpACharacter::RunTest(const FString& Param
 
 - Stamina is full from InitializeComponent, before any part's BeginPlay runs.
 - TrySpend is all or nothing; the drain and the regeneration happen only in the stamina part's TickComponent, scaled by DeltaTime, and every loss reaches AfterLoss.
-- The sprint finds its stamina sibling through the owner when it first needs it, so the parts work in either assembly order.
+- The sprint spends the owner's stamina whichever of the two parts was added to the actor first.
 - The sprint stops through the OnExhausted delegate, binds once, and unbinds in EndPlay.
 - The sprint changes MaxWalkSpeed only when the owner has a character movement component, and restores the speed it found.
 - Only the stamina part ticks.
 
 # Alternative
 
+The sprint looks its stamina sibling up in `StartSprint`, when it first needs it, and keeps it once found. Looking it up in `BeginPlay` feels tidier, but a part added to an actor that is already playing runs its `BeginPlay` inside that call, before any part added after it exists, so the lookup finds nothing and nothing finds it again. A part cannot assume which siblings are present when it starts; it can only ask when it needs one. The same asking works on a designer's actor, where Add Component order is whatever they clicked.
+
 The sprint could tick and drain stamina itself each frame with `TrySpend(CostPerSecond * DeltaTime)`. That works, but two parts would tick and both would change the same number in the same frame, so the result would depend on which ticked first unless you add a tick prerequisite. Letting the stamina part own every change and the sprint only set a rate keeps the order out of it. The sprint could also add a stamina part to its owner when it finds none. That hides a missing part a designer forgot, and two parts that each add what they need can end up with two stamina pools; refusing to sprint without one keeps assembly in one place.
 
 # Parsons
 
 ```yaml
-- id: start-sprint
-  prompt: Put StartSprint in order.
+- id: stop-sprint
+  prompt: Put StopSprint in order.
   lines:
-    - "bool UDojoP9SprintComponent::StartSprint()"
+    - "void UDojoP9SprintComponent::StopSprint()"
     - "{"
-    - "	if (bSprinting) return true;"
-    - "	if (!IsValid(Stamina)) Stamina = GetOwner()->FindComponentByClass<UDojoP9StaminaComponent>();"
-    - "	if (!IsValid(Stamina) || Stamina->IsExhausted()) return false;"
-    - "	Stamina->OnExhausted.AddUniqueDynamic(this, &UDojoP9SprintComponent::HandleExhausted);"
-    - "	Stamina->SetDrainPerSecond(CostPerSecond);"
-    - "	bSprinting = true;"
-    - "	return true;"
+    - "	if (!bSprinting) return;"
+    - "	bSprinting = false;"
+    - "	if (IsValid(Stamina)) Stamina->SetDrainPerSecond(0.f);"
+    - "	if (UCharacterMovementComponent* Movement = GetOwner()->FindComponentByClass<UCharacterMovementComponent>()) Movement->MaxWalkSpeed = NormalWalkSpeed;"
     - "}"
   distractors:
-    - line: "	ADojoP9Gladiator* Gladiator = Cast<ADojoP9Gladiator>(GetOwner());"
-      mistake: Casting the owner to one class ties the sprint to that class; it then fails on every other actor that carries it.
+    - line: "	Movement->MaxWalkSpeed = Movement->MaxWalkSpeed / SpeedMultiplier;"
+      mistake: Dividing undoes the multiplication only if nothing else changed the speed meanwhile; giving back the speed saved before the sprint is always right.
 ```

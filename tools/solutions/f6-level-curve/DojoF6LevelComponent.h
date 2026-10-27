@@ -45,7 +45,11 @@ public:
 	float GetXPToNext() const;
 
 private:
+	/** The current level, shown read-only in Details so the editor step can check it. */
+	UPROPERTY(VisibleAnywhere, Category = "Level")
 	int32 Level = 1;
 
+	/** XP gathered toward the next level, shown read-only in Details. */
+	UPROPERTY(VisibleAnywhere, Category = "Level")
 	float XP = 0.f;
 };

@@ -33,7 +33,7 @@ Refactor the lantern into a typed object:
 
 ## See it in the editor
 
-Before the refactor, place three `DojoP10Lantern` actors and change Fuel Seconds on one: the others do not follow. After it, make a Data Asset of Dojo P10 Lantern Kind called DA_OilLantern and point all three lanterns' Kind at it. Set Fuel Seconds to 5 in the asset and press Play: all three go out after five seconds. Clear one lantern's Kind: it burns for the default 30.
+Before the refactor, place three `DojoP10Lantern` actors and change Fuel Seconds on one: the others do not follow. After it, make a Data Asset of Dojo P10 Lantern Kind called DA_OilLantern and point all three lanterns' Kind at it. Set Display Name to Wall Lantern and Fuel Seconds to 5 in the asset and press Play: all three labels read Wall Lantern in gray. Run `ke * Light` in the console: all three turn orange and go out after five seconds. Clear one lantern's Kind and do it again: that one reads Oil Lantern and burns for the default 30.
 
 # Files
 
@@ -286,13 +286,13 @@ bool FDojo_P10_LanternRefactor_OneKindTunesEveryLantern::RunTest(const FString& 
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P10_LanternRefactor_NoTuningOnTheLantern, "Dojo.P10.LanternRefactor.NoTuningOnTheLantern", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** The lantern declares no editable number or color of its own; tuning lives on its kind. */
+/** The lantern declares no editable number, name, or color of its own; tuning lives on its kind. */
 bool FDojo_P10_LanternRefactor_NoTuningOnTheLantern::RunTest(const FString& Parameters)
 {
 	for (TFieldIterator<FProperty> It(ADojoP10Lantern::StaticClass(), EFieldIteratorFlags::ExcludeSuper); It; ++It)
 	{
 		const bool bEditable = It->HasAnyPropertyFlags(CPF_Edit) && !It->HasAnyPropertyFlags(CPF_EditConst);
-		const bool bTuning = It->IsA<FFloatProperty>() || It->IsA<FDoubleProperty>() || It->IsA<FIntProperty>() || It->IsA<FStructProperty>();
+		const bool bTuning = It->IsA<FFloatProperty>() || It->IsA<FDoubleProperty>() || It->IsA<FIntProperty>() || It->IsA<FStructProperty>() || It->IsA<FTextProperty>() || It->IsA<FStrProperty>() || It->IsA<FNameProperty>();
 		TestFalse(FString::Printf(TEXT("%s is tuning; it belongs on the lantern kind"), *It->GetName()), bEditable && bTuning);
 	}
 

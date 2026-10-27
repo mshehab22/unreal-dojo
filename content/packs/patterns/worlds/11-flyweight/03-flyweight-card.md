@@ -52,6 +52,8 @@ What you built for the crowd is the **Flyweight** pattern. Many objects are most
 
 ```cpp
 // The mesh is shared; each seat is only a transform added to one component.
+// Each instance gets one custom float for the material, so tell the component how many first.
+SeatComponent->NumCustomDataFloats = 1;
 for (int32 Seat = 0; Seat < SeatCount; Seat++)
 {
 	const int32 Instance = SeatComponent->AddInstance(FTransform(SeatLocation(Seat)));

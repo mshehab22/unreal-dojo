@@ -23,7 +23,7 @@ The system spec in `docs/systems/`, `docs/product.md`, `docs/decisions.md`, and 
 - **Accuracy:** check every Unreal claim against UE 5.8.
 - **Windows compiler:** no local or parameter in a solution or starter may share a name with a member of the class it sits in or of `AActor`, `UActorComponent`, or `UObject` (`Instigator`, `bHidden`, `Owner`, `Tags`, and so on). MSVC rejects it as C4458 and clang on the Mac does not warn (A1050, A1060).
 - **Rules:** check A64 (and A373 for starter comments), A66, A72 and every `firstQuestId`, A73, and that rubrics match briefs.
-- **Deliberate failure:** confirm it is not given away anywhere the learner sees before failing, including glossary hover cards and the rubric shown beside the brief.
+- **Deliberate failure:** confirm it is not given away anywhere the learner sees before failing, including glossary hover cards, the rubric and the concepts shown beside the brief (they state outcomes only, never the failure or its fix; reasoning belongs in the after-pass text).
 
 ## Report
 

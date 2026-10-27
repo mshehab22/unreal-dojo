@@ -11,7 +11,7 @@ prerequisites: [p10-type-object-when-not]
 xp: 25
 estimatedMinutes: 7
 concepts:
-  - Many copies that each carry the same heavy data waste memory, and drawing each one separately wastes draw calls
+  - Many copies that each carry the same heavy data waste memory, and a separate component for each one adds per-component work
   - What every copy shares can be stored once and pointed at; each copy keeps only what differs
   - Shared data must not be changed by one copy, or every copy changes with it
   - Unreal draws many copies of one mesh with one instanced static mesh component, one transform per copy
@@ -42,7 +42,7 @@ A full arena is mostly repetition. Three thousand fans in three supporter styles
 
 **Shared means read-only from the copy.** A fan must never change its style; the change would land on every fan who shares it. Anything one fan changes about itself belongs in its own part.
 
-**The same idea for drawing.** Forty torches as forty actors with forty `UStaticMeshComponent`s means forty components to register, move, and draw one by one. A `UInstancedStaticMeshComponent` draws one mesh many times: the mesh and material are given once, and each copy is only a transform added with `AddInstance`. The renderer can then draw all of them together.
+**The same idea for drawing.** Forty torches as forty actors with forty `UStaticMeshComponent`s means forty components, each registered with the scene, given its own render data, checked for visibility, and kept up to date as it moves. The renderer is good at merging identical meshes, so the cost is mostly this per-component upkeep and memory. A `UInstancedStaticMeshComponent` draws one mesh many times: the mesh and material are given once, and each copy is only a transform added with `AddInstance`. Forty torches become one component with forty entries.
 
 # Example
 
@@ -103,11 +103,11 @@ struct FDojoArenaFan
   prompt: "Why draw forty identical torches with one instanced static mesh component instead of forty actors?"
   choices:
     - Instanced torches can be different meshes each
-    - One component shares the mesh and draws every copy from a list of transforms, instead of forty components each with its own overhead
+    - One component shares the mesh and draws every copy from a list of transforms, instead of forty components each with its own upkeep
     - Actors cannot hold meshes
     - Instancing makes torches tick faster
   answerIndex: 1
-  explanation: The shared mesh is given once and each torch is only a transform, which saves components and lets the renderer draw them together.
+  explanation: The shared mesh is given once and each torch is only a transform, which saves forty components' worth of registration, render data, and upkeep.
 - id: explain-sharing
   type: explain-in-one-sentence
   prompt: In one sentence, say how the crowd stops paying for three thousand copies of three styles.

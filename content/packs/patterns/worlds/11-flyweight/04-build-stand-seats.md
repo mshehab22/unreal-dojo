@@ -308,21 +308,20 @@ A broken seat could stay as an instance with its transform scaled to zero throug
 # Parsons
 
 ```yaml
-- id: break-seat
-  prompt: Put BreakSeat in order.
+- id: build-seats
+  prompt: Put BuildSeats in order.
   lines:
-    - "bool ADojoP11Stands::BreakSeat(int32 Seat)"
+    - "void ADojoP11Stands::BuildSeats()"
     - "{"
-    - "	if (!IsSeatIntact(Seat)) return false;"
-    - "	SeatIntact[Seat] = false;"
+    - "	Seats->SetStaticMesh(SeatMesh);"
+    - "	SeatIntact.Init(true, Rows * SeatsPerRow);"
     - "	Seats->ClearInstances();"
-    - "	for (int32 Other = 0; Other < SeatIntact.Num(); Other++)"
+    - "	for (int32 Seat = 0; Seat < SeatIntact.Num(); Seat++)"
     - "	{"
-    - "		if (SeatIntact[Other]) Seats->AddInstance(FTransform(GetSeatLocation(Other)));"
+    - "		Seats->AddInstance(FTransform(GetSeatLocation(Seat)));"
     - "	}"
-    - "	return true;"
     - "}"
   distractors:
-    - line: "	Seats->RemoveInstance(Seat);"
-      mistake: The seat number is only the instance number until the first removal; after that it removes some other seat.
+    - line: "		Seats->AddInstance(GetSeatLocation(Seat));"
+      mistake: An instance is added from a transform, not from a bare location; wrap the location in an FTransform.
 ```

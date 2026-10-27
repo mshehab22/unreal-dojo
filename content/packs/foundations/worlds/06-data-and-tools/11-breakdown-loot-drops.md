@@ -17,7 +17,7 @@ concepts:
 
 # Spec
 
-When an enemy falls, it may drop loot. Each kind of enemy has its own drop list: a goblin drops coins often and a sword rarely; a troll drops more and better. Rare items get a little more likely as the player levels up, following a shape the designer draws. A dropped item appears on the ground with its mesh and, when picked up, its icon shows in the inventory. There will be about 200 items, each with a name, a rarity, a value, a mesh, and an icon; most are never seen in a given session.
+When an enemy falls, it may drop loot. Each kind of enemy has its own drop list: a goblin drops coins often and a sword rarely; a bandit chief drops more and better. Rare items get a little more likely as the player levels up, following a shape the designer draws. A dropped item appears on the ground with its mesh and, when picked up, its icon shows in the inventory. There will be about 200 items, each with a name, a rarity, a value, a mesh, and an icon; most are never seen in a given session.
 
 You are planning, not coding. Say where each piece of data lives (data asset, data table, curve, or code), how each asset is referenced (hard or soft), and how bad data is reported.
 

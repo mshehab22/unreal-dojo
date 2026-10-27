@@ -27,7 +27,7 @@ Most of the code is written. First read the marked lines and say in a sentence w
 
 ## See it in the editor
 
-Place a `DojoP11Crowd`. In its Details panel, add three Styles: Locals with Cheer Volume 1, Drummers with 2, and Visitors with 3; leave Fan Count at 3000. In the Level Blueprint, on Begin Play, call Excite on the crowd with 0.5 and print Get Loudness: 3000. While playing, select the crowd in the Outliner and change the Drummers' Cheer Volume to 4 in its Details panel, then print again from a key press: 4000. One edit, a thousand fans louder, because they all read the same style.
+Place a `DojoP11Crowd`. In its Details panel, add three Styles: Locals with Cheer Volume 1, Drummers with 2, and Visitors with 3; leave Fan Count at 3000. In the Level Blueprint, on a key press such as 1, call Excite on the crowd with 0.5 and then print Get Loudness: 3000. While playing, select the crowd in the Outliner and change the Drummers' Cheer Volume to 4 in its Details panel, then press a second key that only prints Get Loudness (calling Excite again would add more excitement): 4000. One edit, a thousand fans louder, because they all read the same style.
 
 # Files
 
@@ -312,7 +312,7 @@ bool FDojo_P11_CrowdStyles_NoStylesNoFans::RunTest(const FString& Parameters)
 # Hints
 
 - Loop over `Fans` by const reference; each fan gives you an excitement and a style index.
-- `Styles.IsValidIndex(Fan.StyleIndex)` guards a fan whose index names no style.
+- A fan whose style index is not a valid index into `Styles` must be skipped; `TArray` has a function that tests an index for you.
 - Do not copy the style out of the list in the loop; index into `Styles` and read `CheerVolume` where it lives.
 
 # Rubric

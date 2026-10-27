@@ -167,19 +167,19 @@ void ADojoM6QuestDirector::RestartRound()
 	StartRound();
 }
 
-void ADojoM6QuestDirector::HandleQuestStateChanged(UDojoM6QuestData* Quest, EDojoM6QuestState NewState)
+void ADojoM6QuestDirector::HandleQuestStateChanged(UDojoM6QuestData* ChangedQuest, EDojoM6QuestState NewState)
 {
 	if (Quest == CourseQuest && NewState == EDojoM6QuestState::EQS_Active && IsValid(Course)) Course->ResetCourse();
 
 	RefreshBoard();
 }
 
-void ADojoM6QuestDirector::HandleQuestProgress(UDojoM6QuestData* Quest, int32 Current, int32 Target)
+void ADojoM6QuestDirector::HandleQuestProgress(UDojoM6QuestData* ChangedQuest, int32 Current, int32 Target)
 {
 	RefreshBoard();
 }
 
-void ADojoM6QuestDirector::HandleItemCollected(ADojoM6QuestItem* Item, AActor* Collector)
+void ADojoM6QuestDirector::HandleItemCollected(ADojoM6QuestItem* Item, AActor* Taker)
 {
 	Items.Remove(Item);
 	Tracker->ReportItem(Item->ItemTag);

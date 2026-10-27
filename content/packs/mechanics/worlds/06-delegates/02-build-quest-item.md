@@ -22,7 +22,7 @@ When you place three Tool items and a satchel, tell the satchel to watch all thr
 
 Most of the code is written for you. Explain the marked lines, then fill the two gaps:
 
-1. `ADojoM6QuestItem::Collect`: refuse a second collection; otherwise mark it collected, announce it to every listener with the item and the collector, and then destroy the item.
+1. `ADojoM6QuestItem::Collect`: refuse a second collection; otherwise mark it collected, announce it to every listener with the item and whoever took it, and then destroy the item.
 2. `ADojoM6Satchel::Watch`: start listening to the item's collection, binding only once however many times Watch is called.
 
 Dependency direction: the satchel holds no list of items and the items hold no pointer to the satchel; the satchel only subscribes. Each notice carries the item itself, so one handler can serve every item and read its tag.
@@ -31,7 +31,7 @@ This item is the first piece of the Quest System boss.
 
 ## See it in the editor
 
-Place three `DojoM6QuestItem` actors and a `DojoM6Satchel`. In the level Blueprint, on BeginPlay, call Watch on the satchel for each item; on the 1 key, call Collect on the first item with the player pawn. Right after the Collect call, add a Print String of the satchel's Get Count with Tool. Press Play and press 1: the item disappears and 1 prints. Press 1 again: the item is gone, so nothing more is counted.
+Place three `DojoM6QuestItem` actors and a `DojoM6Satchel`. In the level Blueprint, on BeginPlay, call Watch on the satchel for each item; on the 1, 2, and 3 keys, call Collect on the first, second, and third item with the player pawn. Right after each Collect call, add a Print String of the satchel's Get Count with Tool. Press Play and press 1: the first item disappears and 1 prints. Press 2 and 3: each item disappears and the count climbs to 2 and then 3, one handler serving all three items. The refusal of a second collection cannot be seen here, because a collected item is already gone before you could press again; the automated test asks the same item twice and checks the second answer is false.
 
 # Files
 
@@ -48,7 +48,7 @@ class ADojoM6QuestItem; // @explain: A forward declaration, because the delegate
 class UTextRenderComponent;
 
 /** Broadcast when an item is collected, with the item and whoever collected it. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDojoM6OnItemCollected, ADojoM6QuestItem*, Item, AActor*, Collector); // @explain: Two parameters, each a type then a name; the item comes first so one handler can serve many items.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDojoM6OnItemCollected, ADojoM6QuestItem*, Item, AActor*, Taker); // @explain: Two parameters, each a type then a name; the item comes first so one handler can serve many items.
 
 /** A pickup that announces it was collected and then leaves the world; it knows nothing about quests or who listens. */
 UCLASS()
@@ -74,7 +74,7 @@ public:
 
 	/** Announces the collection to every listener, then destroys the item; false if it was already collected. */
 	UFUNCTION(BlueprintCallable, Category = "Quest Item")
-	bool Collect(AActor* Collector);
+	bool Collect(AActor* Taker);
 
 	/** True once collected. */
 	UFUNCTION(BlueprintPure, Category = "Quest Item")
@@ -112,10 +112,10 @@ void ADojoM6QuestItem::BeginPlay()
 	Label->SetText(FText::FromName(ItemTag));
 }
 
-bool ADojoM6QuestItem::Collect(AActor* Collector)
+bool ADojoM6QuestItem::Collect(AActor* Taker)
 {
 	// Your code: refuse a second collection.
-	// Your code: mark it collected, tell every listener with this item and the collector, then destroy the item.
+	// Your code: mark it collected, tell every listener with this item and the taker, then destroy the item.
 	return false;
 }
 
@@ -161,7 +161,7 @@ public:
 private:
 	/** Counts one item of the collected item's tag. */
 	UFUNCTION() // @explain: Dynamic delegates find their handler by name through reflection, so the handler must be a UFUNCTION.
-	void HandleCollected(ADojoM6QuestItem* Item, AActor* Collector);
+	void HandleCollected(ADojoM6QuestItem* Item, AActor* Taker);
 
 	TMap<FName, int32> Counts;
 
@@ -188,7 +188,7 @@ void ADojoM6Satchel::Watch(ADojoM6QuestItem* Item)
 	// Your code: listen to the item's collection with HandleCollected, binding only once.
 }
 
-void ADojoM6Satchel::HandleCollected(ADojoM6QuestItem* Item, AActor* Collector)
+void ADojoM6Satchel::HandleCollected(ADojoM6QuestItem* Item, AActor* Taker)
 {
 	if (!Item || Item->IsActorBeingDestroyed()) LateNotices++; // @explain: A notice from an item already on its way out means the item destroyed itself before telling anyone.
 	if (!Item) return;
@@ -302,7 +302,7 @@ bool FDojo_M6_QuestItem_BlueprintCanListen::RunTest(const FString& Parameters)
 
 # Rubric
 
-- Collect broadcasts with the item and the collector before calling Destroy, and refuses a second collection.
+- Collect broadcasts with the item and the taker before calling Destroy, and refuses a second collection.
 - Watch binds with AddUniqueDynamic, so watching an item twice counts it once.
 - The handler is a UFUNCTION with the delegate's exact parameters, and reads the tag from the item it receives.
 - The item holds no pointer to any listener; listeners subscribe.
@@ -318,15 +318,15 @@ The item could find a quest manager and call it directly when collected. That is
 - id: item-collect
   prompt: Put Collect in order.
   lines:
-    - "bool ADojoM6QuestItem::Collect(AActor* Collector)"
+    - "bool ADojoM6QuestItem::Collect(AActor* Taker)"
     - "{"
     - "	if (bCollected) return false;"
     - "	bCollected = true;"
-    - "	OnCollected.Broadcast(this, Collector);"
+    - "	OnCollected.Broadcast(this, Taker);"
     - "	Destroy();"
     - "	return true;"
     - "}"
   distractors:
-    - line: "	OnCollected.Broadcast(Collector);"
-      mistake: The delegate was declared with two parameters, the item and the collector, so Broadcast must pass both.
+    - line: "	OnCollected.Broadcast(Taker);"
+      mistake: The delegate was declared with two parameters, the item and the taker, so Broadcast must pass both.
 ```

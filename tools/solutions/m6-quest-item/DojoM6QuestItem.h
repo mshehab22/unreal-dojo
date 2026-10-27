@@ -8,7 +8,7 @@ class ADojoM6QuestItem;
 class UTextRenderComponent;
 
 /** Broadcast when an item is collected, with the item and whoever collected it. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDojoM6OnItemCollected, ADojoM6QuestItem*, Item, AActor*, Collector);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDojoM6OnItemCollected, ADojoM6QuestItem*, Item, AActor*, Taker);
 
 /** A pickup that announces it was collected and then leaves the world; it knows nothing about quests or who listens. */
 UCLASS()
@@ -34,7 +34,7 @@ public:
 
 	/** Announces the collection to every listener, then destroys the item; false if it was already collected. */
 	UFUNCTION(BlueprintCallable, Category = "Quest Item")
-	bool Collect(AActor* Collector);
+	bool Collect(AActor* Taker);
 
 	/** True once collected. */
 	UFUNCTION(BlueprintPure, Category = "Quest Item")
