@@ -345,6 +345,54 @@ Main resolves a build on the process exit event and kills it after 15 minutes, s
 ### A803 2026-10-21 Run and Submit register the run before the availability check (M1.6g fix round 1, builder-rules)
 A802's check ran before the run was registered, so a `cancelRun` or `cancelAll` that arrived while it was checking found no run. Options: begin the run first, then check; check, then look at cancellation. Chosen: the first. Both handlers now run the check inside `trackRun`, so the run id is registered from the first moment; after the check, a cancelled run stops with `run-cancelled` and no build starts. The engine integration tests and the review wiring tests pass an `assertQuestOpen` that always answers open, since they drive quests directly (the score keeper on a fresh save, for A65). Reverse cost: none.
 
+### A927 2026-10-26 World 11 was built in this session's own worktree, on 76798e5, with no engine (author-patterns, M4.P2.11)
+As in A769 and later: `m4-p2-world11` is checked out in this session's worktree, from 76798e5. Worlds 9 and 10 are not on main, so `p11-thousands-of-the-same` requires `p8-subclass-sandbox-when-not` for now. World 11 must merge only after World 10, with the prerequisite repointed to `p10-type-object-when-not` in the same merge. UE 5.8 is not installed on the MacBook Air, so under A75 the C++ was written without compiling. It uses only long-stable engine calls (`AddInstance`, `ClearInstances`, `GetInstanceCount`, `GetInstanceTransform`, `SetStaticMesh`, `GetComponents`). The engine proof (every solution passes, every starter fails, and the stub's deliberate failure) is pending on the Windows desktop. Reverse cost: none.
+
+### A926 2026-10-26 Glossary and card changes for Flyweight (author-patterns, M4.P2.11)
+Added `instanced-static-mesh` (components; aliases UInstancedStaticMeshComponent, ISM, UHierarchicalInstancedStaticMeshComponent, HISM, and AddInstance; Epic's 5.8 API page). The flyweight card was audited item by item. Rewritten:
+- `problem`: was a forest of trees, the chapter's own example; now the arena crowd and its stands.
+- `intent`: trees and tiles replaced by fans, seats, and torches.
+- `unrealForm`: adds per-instance custom data.
+- `whenNot`: adds per-copy physics and logic.
+- `flyweight-recall-3`: was terrain tile definitions with a move cost, the chapter's second example; now a fan's souvenir that writes to its shared style.
+
+Added `flyweight-recall-4` (NumCustomDataFloats) and `flyweight-scenario-3` (arrow churn points to Object Pool). Use cases: `p11-crowd-styles`, `p11-stand-seats`. No card item mentions instance renumbering, which is the stub's deliberate failure (A924). Reverse cost: low.
+
+### A925 2026-10-26 The refactor checks for one instanced component by counting mesh components (author-patterns, M4.P2.11)
+`p11-torch-refactor` keeps the public functions, so `TwelveTorchesInALine` passes on both versions. `OneSharedMeshComponent` gathers the line's `UStaticMeshComponent`s, which includes the instanced kind because it derives from it, and expects exactly one, an instanced one; the starter's twelve runtime-made components fail it. Reverse cost: low.
+
+### A924 2026-10-26 World 11's deliberate failure: a seat number used as an instance number (author-patterns, M4.P2.11)
+Options:
+- Setting `NumCustomDataFloats` after adding instances: an obscure setting, not the pattern.
+- Writing to a shared style: taught openly in the first quest and on the card.
+- `BreakSeat` calling `RemoveInstance(Seat)`.
+
+Chosen: the last. Removing an instance moves other instances in the component's list, so after the first break a seat number no longer names its instance. `BrokenSeatsLeaveTheRest` breaks seats 3, 10, and 39 and compares the drawn locations with the intact seats. The test is written to fail whether removal shifts later instances down or swaps the last one in, so it does not depend on which one 5.8 does. The reference redraws from the actor's seat state. Nothing the learner sees before the first run (concepts, rubric, brief, card, glossary) says instance numbers move; the card says each instance is one transform the component draws, and the concepts and rubric speak only of seats (fix round 1). Engine check pending (A927). Reverse cost: low.
+
+### A923 2026-10-26 Fans index their style with one byte, not a pointer (author-patterns, M4.P2.11)
+Options: a `const FDojoP11FanStyle*` per fan; a `uint8` index into the crowd's `Styles`; a data asset per style. Chosen: the index. It is 1 byte, and it survives the `TArray` growing, which a stored element pointer would not. The worked quest's Alternative explains the other two. A fan is at most 12 bytes, and a test checks `sizeof`. Reverse cost: low.
+
+### A922 2026-10-26 Flyweight arc, built away from the source's examples (author-patterns, M4.P2.11)
+Not used in briefs, cards, choices, distractors, or the card's items: a forest or trees, a terrain grid of grass, hills, and rivers, movement cost per tile, an enum of terrain kinds with switches, or the chapter's remarks on graphics hardware. The originality check was run against the research's Flyweight section, which is still in the repository; the source PDF is gone, so a direct check is pending. The arc, all in the arena:
+- `p11-thousands-of-the-same` (concept, no pattern name).
+- `p11-crowd-styles` (worked: 3,000 small fans and three shared styles; the learner writes GetLoudness).
+- `p11-flyweight-card`.
+- `p11-stand-seats` (stub: seats as instances of one component).
+- `p11-torch-refactor` (component per torch to one instanced component).
+- `p11-flyweight-when-not`.
+
+No boss and no breakdown. Reverse cost: low.
+
+### A921 2026-10-26 Pack 2 World 11 ids (author-patterns, M4.P2.11)
+- Folder `11-flyweight`; world id `flyweight`, unique across packs (A73).
+- Quest ids `p11-<slug>`; classes `ADojoP11<Name>`; structs `FDojoP11FanStyle` and `FDojoP11Fan`, each in its own header; tests `Dojo.P11.<Quest>.<Case>`.
+- No enums.
+
+Reverse cost: medium once learners have progress saved.
+
+### A920 2026-10-26 Decision block A920 to A939 from the Lead (author-patterns, M4.P2.11)
+Assigned under A71; this world uses A920 to A927. Reverse cost: none.
+
 ### A789 2026-10-21 World 8 was built in this session's own worktree, from main at a825d04 (author-patterns, M4.P2.8)
 As in A769: the session's file tools write only inside its own worktree, so `m4-p2-world8` is checked out there. It was first cut from main at a825d04, the Lead's World 8 start commit one past the e5ab9e5 named in the brief. After World 7 and Pack 1 World 5 merged, the branch was rebased onto main at f39cb0d and `p8-many-kinds-one-toolbox` now requires World 7's first quest, `p7-flags-to-modes`. Reverse cost: one line.
 

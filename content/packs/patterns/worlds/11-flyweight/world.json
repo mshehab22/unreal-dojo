@@ -1,0 +1,5 @@
+{
+	"id": "flyweight",
+	"title": "Thousands for the price of one",
+	"summary": "The arena fills up: thousands of fans, rows of seats, lines of torches, nearly all alike. Learn to store what they share once and keep only the small differences per copy, in gameplay structs and with Unreal's instanced meshes, so a full arena costs little memory and few draw calls."
+}

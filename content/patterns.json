@@ -1316,11 +1316,14 @@
   {
     "id": "flyweight",
     "title": "Flyweight",
-    "intent": "When a level holds thousands of near-identical things such as trees, tiles, or cards, store what they all have in common once and let each instance keep only its own small leftovers, like a transform or an owner.",
-    "problem": "A forest of 20,000 trees where every tree carries its own copy of the mesh, materials, and wind settings wastes memory and floods the GPU with redundant work. Most of that data is the same for every tree of a species.",
-    "unrealForm": "Instanced Static Mesh and Hierarchical Instanced Static Mesh components draw thousands of copies of one mesh, each instance only holding a transform. Assets in general are shared: many actors reference one UStaticMesh. In gameplay code you keep per-instance structs small (a coordinate and a pointer to a shared definition asset) and keep the shared part immutable.",
-    "whenNot": "If instances need to change the shared data per instance, sharing breaks or forces copy-on-write. With a few dozen objects the savings do not justify the indirection.",
-    "useCaseQuestIds": [],
+    "intent": "When an arena holds thousands of near-identical things such as fans, seats, or torches, store what they all have in common once and let each copy keep only its own small leftovers, like a transform, a seat, or an excitement value.",
+    "problem": "A crowd of 3,000 fans where every fan carries its own copy of its style's name, scarf color, chant, and cheer volume, or a stand of 400 seats drawn as 400 separate mesh components, spends nearly all its memory and draw calls on duplicates of the same few things.",
+    "unrealForm": "Assets are shared: many components reference one UStaticMesh, material, or texture. UInstancedStaticMeshComponent and UHierarchicalInstancedStaticMeshComponent draw thousands of copies of one mesh, each instance holding only a transform plus optional custom data floats the material reads. In gameplay code you keep per-copy structs small (a seat, a state, an index or const pointer to a shared definition) and keep the shared part read-only.",
+    "whenNot": "With a few dozen copies or little data in common, the savings do not justify the indirection. If copies need to change the shared part each for itself, it is not shared. If each copy needs its own collision, physics, or logic, it should be an actor or component that shares the mesh asset, not an instance.",
+    "useCaseQuestIds": [
+      "p11-crowd-styles",
+      "p11-stand-seats"
+    ],
     "recall": [
       {
         "id": "flyweight-recall-1",
@@ -1347,11 +1350,20 @@
       {
         "id": "flyweight-recall-3",
         "type": "spot-the-bug",
-        "prompt": "Tiles share one UDojoTileDefinition per terrain type. Which line corrupts every tile of that type?",
-        "code": "void ADojoMap::ApplyMud(FDojoTile& Tile)\n{\n    Tile.bIsMuddy = true;\n    Tile.Definition->MoveCost *= 2.0f;\n    RefreshTileVisual(Tile);\n}",
+        "prompt": "Fans share one FDojoFanStyle per supporter style. Which line changes every fan of that style?",
+        "code": "void ADojoCrowd::GiveSouvenir(FDojoFan& Fan)\n{\n    Fan.Excitement = 1.0f;\n    Styles[Fan.StyleIndex].CheerVolume *= 2.0f;\n    RefreshFanVisual(Fan);\n}",
         "bugLine": 4,
-        "fix": "Store the extra cost on the tile (for example a per-tile multiplier) and leave the shared definition untouched.",
-        "explanation": "Writing to shared intrinsic state changes every tile that points at that definition."
+        "fix": "Store any extra loudness on the fan (for example a per-fan bonus) and leave the shared style untouched.",
+        "explanation": "Writing to shared intrinsic state changes every fan that points at that style."
+      },
+      {
+        "id": "flyweight-recall-4",
+        "type": "fill-blank",
+        "prompt": "To give every instance of an instanced static mesh component one extra float that its material reads, set the component's ___ to 1.",
+        "acceptedAnswers": [
+          "NumCustomDataFloats"
+        ],
+        "explanation": "Each instance then carries one custom data value, set with SetCustomDataValue and read in the material with the Per Instance Custom Data node."
       }
     ],
     "scenarios": [
@@ -1408,6 +1420,33 @@
           }
         ],
         "explanation": "Each copy holds owner and flags plus a pointer to one shared card definition."
+      },
+      {
+        "id": "flyweight-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A practice arena spawns 2,000 identical training arrows per minute, and each lives for two seconds before it is gone. Profiling shows the cost is creating and destroying them, not their memory at rest. Which pattern drives the fix?",
+        "choices": [
+          "object-pool",
+          "flyweight",
+          "type-object",
+          "prototype"
+        ],
+        "answer": "object-pool",
+        "distractorNotes": [
+          {
+            "choice": "flyweight",
+            "why": "Sharing the arrow's mesh is already free through the asset; the cost here is churn, not duplicated data."
+          },
+          {
+            "choice": "type-object",
+            "why": "One arrow kind defined as data does not stop 2,000 spawns a minute."
+          },
+          {
+            "choice": "prototype",
+            "why": "Cloning an arrow is still creating one."
+          }
+        ],
+        "explanation": "Reuse a fixed set of arrows instead of creating and destroying them; Flyweight answers a different cost."
       }
     ]
   },
