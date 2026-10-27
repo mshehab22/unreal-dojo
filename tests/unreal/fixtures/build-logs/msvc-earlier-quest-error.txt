@@ -1,0 +1,2 @@
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f1-training-dummy\DojoF1TrainingDummy.h(9): error C2143: syntax error: missing ';' before '}'
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f1-training-dummy\DojoF1TrainingDummy.cpp(5): error C2662: 'void UDojoF1TrainingDummy::Hit(void)': cannot convert 'this' pointer from 'const UDojoF1TrainingDummy' to 'UDojoF1TrainingDummy &'

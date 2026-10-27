@@ -14,11 +14,11 @@ interface IRunner {
   // quest is { id, title, tests }; onProgress gets a BuildProgressEvent without runId and elapsedMs, which trackRun adds (A185).
   run(quest: QuestForWriting, files: Record<string, string>, onProgress: (update: ProgressUpdate) => void, signal: AbortSignal): Promise<RunResult>
 }
-interface RunResult { ok: boolean; compiled: boolean; compilerOutput: string; tests: TestCaseResult[]; testsPassed: number; testsTotal: number; durationMs: number; loop: 'fast' | 'headless'; error?: string }
+interface RunResult { ok: boolean; compiled: boolean; compilerOutput: string; tests: TestCaseResult[]; testsPassed: number; testsTotal: number; durationMs: number; loop: 'fast' | 'headless'; error?: string; unrelatedFailure?: AppError }
 interface TestCaseResult { name: string; passed: boolean; message?: string; durationMs?: number }
 ```
 
-`BuildProgressEvent` is defined in `src/shared/types/run.ts` (A85); that file is the source of truth. Fields: `runId` (the id the renderer passed in its request; every event of a run carries it), `phase` (`preparing`, `writing`, `building`, `launching`, `testing`, `parsing`, `reviewing`), `elapsedMs`, `lastLine`, `percent?`, `loop?` (`fast` or `headless`, once chosen), `loopReason?` (sent once with the choice). Services emit it through `sendBuildProgress` in `src/main/ipc/sendBuildProgress.ts`. `RunResult` and `TestCaseResult` above match `run.ts`.
+`BuildProgressEvent` is defined in `src/shared/types/run.ts` (A85); that file is the source of truth. Fields: `runId` (the id the renderer passed in its request; every event of a run carries it), `phase` (`preparing`, `writing`, `building`, `launching`, `testing`, `parsing`, `reviewing`), `elapsedMs`, `lastLine`, `percent?`, `loop?` (`fast` or `headless`, once chosen), `loopReason?` (sent once with the choice). Services emit it through `sendBuildProgress` in `src/main/ipc/sendBuildProgress.ts`. `RunResult` and `TestCaseResult` above match `run.ts`. `unrelatedFailure` is set only by `QuestRunService` when the run failed outside the learner's code (see "Failure explanation (M5.1d)" below); `SandboxSetupResult.failure` is its counterpart for a failed sandbox build.
 
 `RunnerFactory.forContext(context)` returns a `LoopSelectingRunner` once the fast loop pieces are given (M1.4, A480); it chooses at the start of each run with `chooseLoop`. On macOS: Live Coding is not available there, and the open editor keeps the code it loaded at launch. So on the Mac `LiveEditorRunner` is used only when no build has finished since that editor launched and the run needs no build; otherwise `HeadlessRunner`, and the open editor is marked stale with a "restart the editor" offer (A45). On Windows it returns `LiveEditorRunner` when the engine is 5.8+, the editor is open with the sandbox project, the MCP server answers, and the diff since the last successful full build touches no header of a reflected type; otherwise `HeadlessRunner`. The choice and the reason go into the progress stream so the UI can say "fast loop" or "full build". Only an editor the app opened counts (A484). The exact rules are under "Fast loop (M1.4)" below.
 
@@ -55,7 +55,7 @@ Everything below lives in `src/main/services/unreal/`. Every file system, regist
 | `EngineVersion.ts` | Parses `Build.version`; minimum 5.4 (D10); fast loop from 5.8 (D09) |
 | `LauncherInstalledFile.ts` | Reads engine folders out of `LauncherInstalled.dat`, skipping plugin entries such as `QuixelBridge_5.8` that share the engine's folder |
 | `EngineLocator.ts` | `findEngines()`, `requireEngines()`, `inspectFolder(folder)`, `checkToolchain()` |
-| `unrealErrors.ts` | Every plain-English `AppError` the locator and checkers raise |
+| `unrealErrors.ts` | Every plain-English `AppError` the locator, the checkers and the build failure explainer raise |
 | `createEngineLocator.ts` | Builds the real locator for this machine; the composition root (`src/main/index.ts`) calls it lazily on the first engine request |
 
 How engines are found, in order: the launcher list, then the registry (Windows only), then `UE_*` folders in the default roots (`%ProgramFiles%\Epic Games` on Windows; `/Users/Shared/Epic Games` and `~/Applications` on macOS). Each folder is listed once, with the first source that found it. Folders without a readable `Build.version` and engines older than 5.4 are left out. The list is newest first. A manual pick accepts the engine root or its `Engine` folder and explains a wrong folder (`engine-not-found`) or an old engine (`engine-version-unsupported`).
@@ -143,6 +143,34 @@ Wiring in the app (M1.4b, A489):
 - `EditorService.openEditor()` answers the `openEditor` request: it needs the engine and sandbox from settings, keeps an editor that is on this sandbox, not stale, and answering, and otherwise (re)launches it with the MCP server on the settings port (on 5.8 and later) and waits up to 3 minutes for it to answer. It opens a windowless editor when the toolchain reports a non-blocking problem, which today means the missing Metal toolchain on the Mac (A532). A quest id is accepted and ignored until per-quest maps exist (A533). `EditorService.isConnected()` answers `editorConnected` in `getEnvironmentStatus`.
 - Sandbox create and rebuild record into the ledger through `buildHooks`; the `PrerequisiteFiller` reports its writes; `resetQuest` removes the quest's folder and test from the sandbox after resetting progress, and records that (A534).
 - `src/main/index.ts` registers `stopEngineWorkBeforeQuit` in place of the run registry's own hook.
+
+### Failure explanation (M5.1d)
+
+When a build or test run fails for a reason that is not the learner's code, main says so in plain English and says what to do. The renderer reads `RunResult.unrelatedFailure` and `SandboxSetupResult.failure`; its own string guessing in `lib/sandboxFailure.ts` stays only as a fallback (A1200).
+
+| File | Job |
+| --- | --- |
+| `buildFailureSignatures.ts` | Data: build output lines that mean an outside failure (Live Coding active, disk full, file locked, path too long, Visual Studio, Windows SDK or Xcode not usable), each with a function that makes the ready `AppError` and keeps the matched line as `detail` |
+| `buildErrorLocations.ts` | Reads error lines in the MSVC shape (`path(line): error C1234:`), the clang shape (`path:line:col: error:`) and the linker shape, and says which part of the sandbox each points into: a quest folder or test file (by quest id), support code, the template or the engine, or unknown |
+| `BuildFailureExplainer.ts` | One class. `explainRun` (a quest run) answers an `AppError` or undefined; `explainSandbox` (a sandbox build) always answers. Pure apart from the injected `checkToolchain` and `inspectEngine`. Never throws |
+| `unrealErrors.ts` | The wording of every explanation |
+
+Wiring: `QuestRunService.runQuest` gives the explainer the quest id, its prerequisite ids and where each prerequisite's files came from (`earlierQuestCode`: the reference solution when every file the filler wrote there came from one, otherwise the learner's saved code) and sets `unrelatedFailure` on the result. `SandboxProjectService.buildSandbox` sets `failure` on a failed build. Both take the explainer as an optional dependency, built once in `createUnrealServices`.
+
+Rules, in order, first match wins (`explainRun`):
+
+1. Known outside signatures (`BUILD_FAILURE_SIGNATURES`) on any line of the output or the pipeline error. Codes: `build-environment-failed`, `toolchain-missing`, `sandbox-path-too-long`.
+2. A pipeline error (`RunResult.error`): a program could not start (the engine is inspected again; a moved or missing engine becomes that engine error, otherwise the engine's programs would not run), a timeout, a build tool that crashed while starting three times, no test report or an unreadable one, none of this quest's tests ran, or any other runner problem. Never "Cancelled.".
+3. An error line that points into this quest's `Quests/<id>/` folder or its `Tests/<id>.Test.cpp` is the learner's code: no `unrelatedFailure`, whatever else is in the output.
+4. Error lines only in earlier quests' folders (no support or engine lines): if an earlier quest's files came from the learner's saved code (or the quest is not named among the prerequisites), the learner is told an earlier quest breaks the build and to open or reset it; if every broken earlier quest came from a reference solution it is a content bug to report.
+5. Error lines only in `Support/`, a file directly in the module folder (the template) or the engine's `Source`, `Plugins`, `Build` or `Shaders`: suggest rebuilding the sandbox.
+6. Otherwise run the toolchain check: a blocking problem becomes the error. If there is none, no `unrelatedFailure`: the blame stays with the quest, the conservative default (A1199).
+
+A run that compiled and only has failing tests, a cancelled run and a passing run never get `unrelatedFailure`, and the toolchain check runs only for failures none of rules 1 to 5 could place (A1201). Mixed evidence (earlier quest plus support code) skips rules 4 and 5 and goes to the toolchain check. Linker lines such as `Module.Dojo.cpp.obj : error LNK2019` name no known folder, so they stay with the quest unless the toolchain check finds a problem.
+
+`explainSandbox` has no learner code to protect: it runs rules 1 and 2, then the toolchain check, and otherwise answers a generic `build-environment-failed` "the sandbox could not be built, this is about the setup on this computer" with the first error line as detail (A1203).
+
+Signature strings were read in the UE 5.8.3 build tool source on Windows (Live Coding active, Visual Studio and Windows SDK toolchain selection, the Xcode messages). The disk, file lock and path length strings are the compilers' and operating systems' own. Nothing was run against macOS (A1202). Fixtures for every shape are in `tests/unreal/fixtures/build-logs/`.
 
 ## Sandbox template (`resources/sandbox-template/`)
 

@@ -5,6 +5,7 @@ import type { SandboxSetupResult } from "@shared/types/engine";
 import type { RunResult, SyntaxCheckResult } from "@shared/types/run";
 
 import { AppErrorException } from "../../errors/AppErrorException";
+import type { BuildFailureExplainer, EarlierQuestCode } from "./BuildFailureExplainer";
 import type { FullBuildLedger } from "./FullBuildLedger";
 import type { FilledPrerequisite, PrerequisiteFiller } from "./PrerequisiteFiller";
 import type { ProgressListener } from "./ProgressUpdate";
@@ -56,6 +57,9 @@ export interface QuestRunDependencies
 
 	/** The fast loop's build record, told when a reset removes files (A481). */
 	buildLedger: FullBuildLedger;
+
+	/** Explains a failed run that is not the learner's code (M5.1d). Without it a run never carries `unrelatedFailure`. */
+	failureExplainer?: BuildFailureExplainer;
 }
 
 /** `runQuest`, `checkSnippetSyntax`, and `rebuildSandbox` behind one object for the IPC handlers. */
@@ -76,13 +80,14 @@ export class QuestRunService
 		const quest = await this.requireCodeQuest(questId);
 
 		const { prerequisites, bossIds } = await this.allPrerequisites(quest);
+		let filled: FilledPrerequisite[] = [];
 
 		if (prerequisites.length > 0)
 		{
 			onProgress({ phase: "preparing", lastLine: `Checking earlier quests this one compiles against: ${prerequisites.join(", ")}` });
 
 			const learner = this.dependencies.learner;
-			const filled = await this.dependencies.prerequisiteFiller.fill(context.sandboxFolder, prerequisites, {
+			filled = await this.dependencies.prerequisiteFiller.fill(context.sandboxFolder, prerequisites, {
 				isPassed: (questId) => learner.isPassed(questId),
 				savedFiles: (questId) => learner.savedFiles(questId),
 				isBoss: (questId) => bossIds.has(questId),
@@ -91,7 +96,9 @@ export class QuestRunService
 			for (const prerequisite of filled) onProgress({ phase: "writing", lastLine: describeFill(prerequisite) });
 		}
 
-		return this.dependencies.runnerFactory.forContext(context).run(quest, files, onProgress, signal);
+		const result = await this.dependencies.runnerFactory.forContext(context).run(quest, files, onProgress, signal);
+
+		return this.withFailureExplanation(result, context, quest.id, earlierQuestCode(prerequisites, filled));
 	}
 
 	/** Removes a reset quest's files and test from the sandbox in settings and records the change, so the fast loop does not trust the editor's copy (A481). Does nothing before setup. */
@@ -121,6 +128,24 @@ export class QuestRunService
 		const context = this.requireContext();
 
 		return this.dependencies.sandboxService.rebuild(context.engineRoot, context.sandboxFolder, onProgress, signal);
+	}
+
+	/** The result with `unrelatedFailure` set when the explainer finds the run failed outside the learner's code. A passing run, a cancel, and a failed explainer leave it untouched. */
+	private async withFailureExplanation(result: RunResult, context: RunnerContext, questId: string, earlierQuests: EarlierQuestCode[]): Promise<RunResult>
+	{
+		const explainer = this.dependencies.failureExplainer;
+		if (!explainer || result.ok) return result;
+
+		try
+		{
+			const unrelatedFailure = await explainer.explainRun({ engineRoot: context.engineRoot, questId, compiled: result.compiled, compilerOutput: result.compilerOutput, ...(result.error === undefined ? {} : { pipelineError: result.error }), earlierQuests });
+
+			return unrelatedFailure ? { ...result, unrelatedFailure } : result;
+		}
+		catch
+		{
+			return result;
+		}
 	}
 
 	/** The quest's prerequisites and theirs, transitively (a boss's spec names its own, A413), each once and never the quest itself, with the bosses among them. */
@@ -182,6 +207,18 @@ export function describeFill(prerequisite: FilledPrerequisite): string
 	const files = prerequisite.files.map((file) => `${file.name} from ${file.source}`).join(", ");
 
 	return `Filled ${prerequisite.questId} because ${prerequisite.reason}: ${files}.`;
+}
+
+/** Where each prerequisite's files in the sandbox came from: the reference solution when every file the filler wrote there did, else the learner's code (their own files, or filled from their saved code). */
+export function earlierQuestCode(prerequisites: string[], filled: FilledPrerequisite[]): EarlierQuestCode[]
+{
+	return prerequisites.map((questId) =>
+	{
+		const written = filled.find((prerequisite) => prerequisite.questId === questId)?.files ?? [];
+		const allFromReference = written.length > 0 && written.every((file) => file.source !== "your saved code");
+
+		return { questId, origin: allFromReference ? "reference-solution" : "saved-code" };
+	});
 }
 
 /** The prose that carries a quest's "Compiles against earlier quests:" line: a code quest's brief, a boss's spec. */

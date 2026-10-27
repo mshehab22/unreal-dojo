@@ -5,13 +5,14 @@ import type { PackOutline } from "@shared/types/catalog";
 import type { AuthoredQuest } from "@shared/types/content";
 import type { RunResult } from "@shared/types/run";
 
+import { BuildFailureExplainer } from "../../src/main/services/unreal/BuildFailureExplainer";
 import { FullBuildLedger } from "../../src/main/services/unreal/FullBuildLedger";
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
 import { PrerequisiteFiller } from "../../src/main/services/unreal/PrerequisiteFiller";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
 import { prerequisiteQuestIds } from "../../src/main/services/unreal/QuestDependencies";
 import { QuestFileWriter } from "../../src/main/services/unreal/QuestFileWriter";
-import { QuestRunService } from "../../src/main/services/unreal/QuestRunService";
+import { earlierQuestCode, QuestRunService } from "../../src/main/services/unreal/QuestRunService";
 import { ReferenceSolutions } from "../../src/main/services/unreal/ReferenceSolutions";
 import { RunnerFactory } from "../../src/main/services/unreal/RunnerFactory";
 import type { SandboxProjectService } from "../../src/main/services/unreal/SandboxProjectService";
@@ -80,6 +81,12 @@ interface ServiceOptions
 	files?: Record<string, string>;
 	settings?: MemoryUnrealSettings;
 	ledger?: FullBuildLedger;
+
+	/** Fields of the run result the fake runner answers with, over a passing result. */
+	result?: Partial<RunResult>;
+
+	/** The failure explainer the service is given, if any. */
+	failureExplainer?: BuildFailureExplainer;
 }
 
 /** The service over fakes. */
@@ -89,7 +96,7 @@ function createService(options: ServiceOptions = {})
 	const fileSystem = new FakeSandboxFileSystem({ ...SOLUTIONS, ...(options.files ?? {}) });
 	const writer = new QuestFileWriter(paths, fileSystem);
 	const runs: { questId: string; files: Record<string, string>; sandboxFolder: string }[] = [];
-	const result: RunResult = { ok: true, compiled: true, compilerOutput: "", tests: [], testsPassed: 0, testsTotal: 0, durationMs: 1, loop: "headless" };
+	const result: RunResult = { ok: true, compiled: true, compilerOutput: "", tests: [], testsPassed: 0, testsTotal: 0, durationMs: 1, loop: "headless", ...(options.result ?? {}) };
 	const runnerFactory = new RunnerFactory((context) => ({
 		run: async (runQuest, files) =>
 		{
@@ -119,6 +126,7 @@ function createService(options: ServiceOptions = {})
 		},
 		questFileWriter: writer,
 		buildLedger: options.ledger ?? new FullBuildLedger(),
+		...(options.failureExplainer ? { failureExplainer: options.failureExplainer } : {}),
 	});
 
 	return { service, fileSystem, runs, rebuilds };
@@ -372,5 +380,121 @@ describe("PrerequisiteFiller through runQuest", () =>
 
 		await service.rebuildSandbox(() => undefined, new AbortController().signal);
 		expect(rebuilds).toEqual(["/Engines/UE /S"]);
+	});
+});
+
+/** A compile error line in a quest folder of the fake sandbox, in the clang shape. */
+function errorIn(questId: string): string
+{
+	return `/S/Source/Dojo/Quests/${questId}/Broken.h:9:3: error: expected ';' at end of declaration list`;
+}
+
+/** An explainer over a toolchain that is fine and an engine that inspects fine. */
+function healthyExplainer(): { explainer: BuildFailureExplainer; toolchainChecks: () => number }
+{
+	let checks = 0;
+	const explainer = new BuildFailureExplainer({
+		checkToolchain: async () =>
+		{
+			checks++;
+
+			return { ok: true, tool: "xcode-select", message: "Xcode is ready.", problems: [] };
+		},
+		inspectEngine: async () => ({ path: "/Engines/UE", version: "5.8.3", source: "launcher", supportsFastLoop: true }),
+	});
+
+	return { explainer, toolchainChecks: () => checks };
+}
+
+describe("unrelated failures on a run (M5.1d)", () =>
+{
+	const failedCompile = { ok: false, compiled: false };
+
+	it("attaches a lesson-bug failure when an earlier quest filled from a reference solution breaks the build", async () =>
+	{
+		const { explainer } = healthyExplainer();
+		const { service } = createService({ failureExplainer: explainer, result: { ...failedCompile, compilerOutput: errorIn("f1-training-dummy") } });
+
+		const result = await service.runQuest("f1-score-keeper", { "Mine.h": "mine" }, () => undefined, new AbortController().signal);
+
+		expect(result.unrelatedFailure?.message).toContain("bug in the lesson");
+		expect(result.unrelatedFailure?.detail).toContain("f1-training-dummy");
+		expect(result.ok).toBe(false);
+	});
+
+	it("attaches an open-or-reset failure when an earlier quest the learner passed and saved breaks the build", async () =>
+	{
+		const { explainer } = healthyExplainer();
+		const { service } = createService({
+			failureExplainer: explainer,
+			passed: ["f1-training-dummy", "f1-popup-target"],
+			files: {
+				[`${questFolder("f1-training-dummy")}/DojoF1TrainingDummy.h`]: "learner h",
+				[`${questFolder("f1-training-dummy")}/DojoF1TrainingDummy.cpp`]: "learner cpp",
+				[`${questFolder("f1-popup-target")}/DojoF1PopupTarget.h`]: "learner target h",
+				[`${questFolder("f1-popup-target")}/DojoF1PopupTarget.cpp`]: "learner target cpp",
+			},
+			result: { ...failedCompile, compilerOutput: errorIn("f1-training-dummy") },
+		});
+
+		const result = await service.runQuest("f1-score-keeper", {}, () => undefined, new AbortController().signal);
+
+		expect(result.unrelatedFailure?.suggestedAction).toContain("Open f1-training-dummy");
+	});
+
+	it("leaves the result alone for an error in the quest itself, a passing run, a failed test, and no explainer", async () =>
+	{
+		const { explainer, toolchainChecks } = healthyExplainer();
+		const own = { ...failedCompile, compilerOutput: errorIn("f1-score-keeper") };
+
+		const cases = [
+			createService({ failureExplainer: explainer, result: own }),
+			createService({ failureExplainer: explainer }),
+			createService({ failureExplainer: explainer, result: { ok: false, compiled: true, testsTotal: 1 } }),
+			createService({ result: { ...failedCompile, compilerOutput: errorIn("f1-training-dummy") } }),
+		];
+
+		for (const { service } of cases)
+		{
+			const result = await service.runQuest("f1-score-keeper", {}, () => undefined, new AbortController().signal);
+
+			expect(result.unrelatedFailure).toBeUndefined();
+		}
+
+		expect(toolchainChecks()).toBe(0);
+	});
+
+	it("passes a pipeline error through the explainer and survives an explainer that throws", async () =>
+	{
+		const { explainer } = healthyExplainer();
+		const timedOut = { ...failedCompile, error: "The build took longer than 15 minutes and was stopped." };
+
+		const ran = await createService({ failureExplainer: explainer, result: timedOut }).service.runQuest("f1-training-dummy", {}, () => undefined, new AbortController().signal);
+		expect(ran.unrelatedFailure?.message).toContain("longer than its time limit");
+
+		const throwing = { explainRun: () => Promise.reject(new Error("explainer bug")) } as unknown as BuildFailureExplainer;
+		const survived = await createService({ failureExplainer: throwing, result: timedOut }).service.runQuest("f1-training-dummy", {}, () => undefined, new AbortController().signal);
+
+		expect(survived.error).toBe(timedOut.error);
+		expect(survived.unrelatedFailure).toBeUndefined();
+	});
+});
+
+describe("earlierQuestCode", () =>
+{
+	it("marks a prerequisite as a reference solution only when every file the filler wrote came from one", () =>
+	{
+		const filled = [
+			{ questId: "a", reason: "r", files: [{ name: "A.h", source: "the reference solution" as const }] },
+			{ questId: "b", reason: "r", files: [{ name: "B.h", source: "your saved code" as const }, { name: "B.cpp", source: "the reference solution" as const }] },
+			{ questId: "c", reason: "r", files: [{ name: "C.h", source: "the boss's reference solution" as const }] },
+		];
+
+		expect(earlierQuestCode(["a", "b", "c", "d"], filled)).toEqual([
+			{ questId: "a", origin: "reference-solution" },
+			{ questId: "b", origin: "saved-code" },
+			{ questId: "c", origin: "reference-solution" },
+			{ questId: "d", origin: "saved-code" },
+		]);
 	});
 });

@@ -1,10 +1,11 @@
 // Checks sandbox creation: template copy, EngineAssociation, plugins per engine, the first build, settings, and the Windows path warning.
 import { describe, expect, it } from "vitest";
 
-import type { EngineInstall } from "@shared/types/engine";
+import type { EngineInstall, ToolchainProblem } from "@shared/types/engine";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
 
 import { AppErrorException } from "../../src/main/errors/AppErrorException";
+import { BuildFailureExplainer } from "../../src/main/services/unreal/BuildFailureExplainer";
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
 import type { PlatformPaths } from "../../src/main/services/unreal/PlatformPaths";
 import { SandboxProjectService } from "../../src/main/services/unreal/SandboxProjectService";
@@ -25,7 +26,7 @@ const TEMPLATE_FILES = {
 };
 
 /** Builds the service over fakes; the engine reports `version`. */
-function createService(version: string, build: ScriptedProcess = { exitCode: 0, lines: ["@progress 'Compiling C++ source code...' 100%", "Result: Succeeded"] }, files: Record<string, string> = TEMPLATE_FILES, paths: PlatformPaths = new MacPlatformPaths("/Users/learner"))
+function createService(version: string, build: ScriptedProcess = { exitCode: 0, lines: ["@progress 'Compiling C++ source code...' 100%", "Result: Succeeded"] }, files: Record<string, string> = TEMPLATE_FILES, paths: PlatformPaths = new MacPlatformPaths("/Users/learner"), failureExplainer?: BuildFailureExplainer)
 {
 	const fileSystem = new FakeSandboxFileSystem(files);
 	const launcher = new FakeProcessLauncher([build]);
@@ -49,9 +50,24 @@ function createService(version: string, build: ScriptedProcess = { exitCode: 0, 
 			},
 			afterBuild: (succeeded) => void hookCalls.push(`after ${succeeded}`),
 		},
+		...(failureExplainer ? { failureExplainer } : {}),
 	});
 
 	return { service, fileSystem, launcher, savedPaths, hookCalls };
+}
+
+/** An explainer over a fixed toolchain answer and an engine that inspects fine, or fails with `inspectFailure`. */
+function failureExplainer(toolchain: { ok: boolean; problems: ToolchainProblem[] }, inspectFailure?: Error): BuildFailureExplainer
+{
+	return new BuildFailureExplainer({
+		checkToolchain: async () => ({ ...toolchain, tool: "vswhere", message: "check" }),
+		inspectEngine: async () =>
+		{
+			if (inspectFailure) throw inspectFailure;
+
+			return { path: "/Engines/UE", version: "5.8.3", source: "launcher", supportsFastLoop: true };
+		},
+	});
 }
 
 /** Reads the written project file. */
@@ -168,6 +184,41 @@ describe("SandboxProjectService", () =>
 		await service.create("/Engines/UE", longFolder, (update) => updates.push(update), new AbortController().signal).catch(() => undefined);
 
 		expect(updates[1]).toMatchObject({ phase: "preparing", lastLine: expect.stringMatching(/characters long/) });
+	});
+
+	it("attaches a plain-English failure to a failed first build or rebuild, and none to a build that passed (M5.1d)", async () =>
+	{
+		const explainer = failureExplainer({ ok: true, problems: [] });
+		const liveCoding = createService("5.8.3", { exitCode: 6, lines: ["ERROR: Unable to build while Live Coding is active. Exit the editor and game, or press Ctrl+Alt+F11"] }, TEMPLATE_FILES, undefined, explainer);
+
+		const created = await liveCoding.service.create("/Engines/UE", "/Picked", () => undefined, new AbortController().signal);
+
+		expect(created.ok).toBe(false);
+		expect(created.failure?.code).toBe("build-environment-failed");
+		expect(created.failure?.message).toContain("Live Coding");
+
+		const rebuilt = createService("5.8.3", { exitCode: 6, lines: ["Module.Dojo.cpp.obj : fatal error LNK1180: insufficient disk space"] }, { "/S/Dojo.uproject": "{}" }, undefined, explainer);
+		const rebuiltResult = await rebuilt.service.rebuild("/Engines/UE", "/S", () => undefined, new AbortController().signal);
+
+		expect(rebuiltResult.failure?.message).toContain("disk is full");
+
+		const passed = createService("5.8.3", undefined, TEMPLATE_FILES, undefined, explainer);
+		const passedResult = await passed.service.create("/Engines/UE", "/Picked", () => undefined, new AbortController().signal);
+
+		expect(passedResult).not.toHaveProperty("failure");
+	});
+
+	it("explains a build that never started from the engine, and a failed build with a missing Visual Studio workload from the toolchain check", async () =>
+	{
+		const noTool = createService("5.8.3", { failsToStart: true }, { "/S/Dojo.uproject": "{}" }, undefined, failureExplainer({ ok: true, problems: [] }, new AppErrorException("engine-not-found", "Engine moved.", "Pick it again.")));
+		const moved = await noTool.service.rebuild("/Engines/UE", "/S", () => undefined, new AbortController().signal);
+
+		expect(moved.failure).toMatchObject({ code: "engine-not-found", message: "Engine moved." });
+
+		const noWorkload = createService("5.8.3", { exitCode: 6, lines: ["Result: Failed"] }, { "/S/Dojo.uproject": "{}" }, undefined, failureExplainer({ ok: false, problems: [{ error: { code: "toolchain-missing", message: "No C++ workload.", suggestedAction: "Install it." }, blocksBuild: true }] }));
+		const blocked = await noWorkload.service.rebuild("/Engines/UE", "/S", () => undefined, new AbortController().signal);
+
+		expect(blocked.failure).toMatchObject({ code: "toolchain-missing", message: "No C++ workload." });
 	});
 
 	it("warns about a long sandbox path on Windows only", () =>
