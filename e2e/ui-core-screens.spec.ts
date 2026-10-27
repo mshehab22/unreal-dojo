@@ -5,6 +5,7 @@
 import type { Page } from "@playwright/test";
 
 import { expect, test } from "./support/dojoTest";
+import { scrollIntoViewNow } from "./support/hoverAtCentre";
 import type { ProofCamera } from "./support/ProofCamera";
 
 /** The two sizes every screen must work at (docs/systems/ui-core.md). */
@@ -12,6 +13,9 @@ const SIZES = [
 	{ width: 1100, height: 700 },
 	{ width: 1440, height: 900 },
 ] as const;
+
+/** How long the real bridge's Studio gets to show its panels or the error view. It loads content and progress in the main process, and a slow CI runner once took more than the 5 s default (Windows run 40452256211); a normal run needs well under a second. */
+const REAL_BRIDGE_STUDIO_TIMEOUT_MS = 20_000;
 
 /** Each screen's route hash, test id, screenshot name, and the element that proves its slowest data arrived, for a returning learner. */
 const SCREENS = [
@@ -184,7 +188,7 @@ test("a locked stage explains why on hover", async ({ dojo, camera }) =>
 	await expect(async () =>
 	{
 		await window.mouse.move(0, 0);
-		await locked.evaluate("(node) => node.scrollIntoView({ block: 'center', inline: 'center' })", undefined, { timeout: 3_000 });
+		await scrollIntoViewNow(locked);
 
 		const box = await locked.boundingBox({ timeout: 3_000 });
 
@@ -440,6 +444,6 @@ test("against the real bridge, the title works and the Studio shows real data or
 	// error view for whatever is still missing, never a blank or crashed screen.
 	await window.evaluate(`location.hash = "#/studio"`);
 	await expect(window.getByTestId("screen-studio")).toBeVisible();
-	await expect(window.getByTestId("app-error").or(window.getByTestId("studio-lead")).first()).toBeVisible();
+	await expect(window.getByTestId("app-error").or(window.getByTestId("studio-lead")).first()).toBeVisible({ timeout: REAL_BRIDGE_STUDIO_TIMEOUT_MS });
 	await saveScreenshot(camera, window, "studio-bridge-1100x700");
 });
