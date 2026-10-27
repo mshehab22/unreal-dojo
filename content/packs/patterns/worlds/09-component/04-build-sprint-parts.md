@@ -416,7 +416,7 @@ bool FDojo_P9_SprintParts_SprintSpeedsUpACharacter::RunTest(const FString& Param
 
 # Alternative
 
-The sprint looks its stamina sibling up in `StartSprint`, when it first needs it, and keeps it once found. Looking it up in `BeginPlay` feels tidier, but a part added to an actor that is already playing runs its `BeginPlay` inside that call, before any part added after it exists, so the lookup finds nothing and nothing finds it again. A part cannot assume which siblings are present when it starts; it can only ask when it needs one. The same asking works on a designer's actor, where Add Component order is whatever they clicked.
+The sprint looks its stamina sibling up in `StartSprint`, when it first needs it, and keeps it once found. Looking it up in `BeginPlay` feels tidier, but a part added to an actor that is already playing runs its `BeginPlay` inside that call, before any part added after it exists, so the lookup finds nothing and nothing finds it again. A part cannot assume which siblings are present when it starts; it can only ask when it needs one. The same asking also works on a designer's actor, where every part is already there by `BeginPlay`, so the code does not care how the actor was built.
 
 The sprint could tick and drain stamina itself each frame with `TrySpend(CostPerSecond * DeltaTime)`. That works, but two parts would tick and both would change the same number in the same frame, so the result would depend on which ticked first unless you add a tick prerequisite. Letting the stamina part own every change and the sprint only set a rate keeps the order out of it. The sprint could also add a stamina part to its owner when it finds none. That hides a missing part a designer forgot, and two parts that each add what they need can end up with two stamina pools; refusing to sprint without one keeps assembly in one place.
 
@@ -424,7 +424,7 @@ The sprint could tick and drain stamina itself each frame with `TrySpend(CostPer
 
 ```yaml
 - id: stop-sprint
-  prompt: Put StopSprint in order.
+  prompt: "Put StopSprint in order: leave if not sprinting, mark it stopped, stop the drain, then give the speed back."
   lines:
     - "void UDojoP9SprintComponent::StopSprint()"
     - "{"
@@ -434,6 +434,6 @@ The sprint could tick and drain stamina itself each frame with `TrySpend(CostPer
     - "	if (UCharacterMovementComponent* Movement = GetOwner()->FindComponentByClass<UCharacterMovementComponent>()) Movement->MaxWalkSpeed = NormalWalkSpeed;"
     - "}"
   distractors:
-    - line: "	Movement->MaxWalkSpeed = Movement->MaxWalkSpeed / SpeedMultiplier;"
+    - line: "	if (UCharacterMovementComponent* Movement = GetOwner()->FindComponentByClass<UCharacterMovementComponent>()) Movement->MaxWalkSpeed /= SpeedMultiplier;"
       mistake: Dividing undoes the multiplication only if nothing else changed the speed meanwhile; giving back the speed saved before the sprint is always right.
 ```
