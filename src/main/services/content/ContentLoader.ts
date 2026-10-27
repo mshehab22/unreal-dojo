@@ -12,11 +12,27 @@ import { readGlossary, readPatterns } from "./readGlossaryAndPatterns";
 import { packManifestSchema, worldManifestSchema } from "./schemas/contentFileSchemas";
 import { validateWith } from "./schemas/validateWith";
 
+/** Where a load spent its time, for the slow-load warning. Reads overlap, so their total can exceed the elapsed time. */
+export interface ContentLoadTimings
+{
+	/** How many quest files were read. */
+	questFileCount: number;
+
+	/** The time each quest file read took, added up. Divided by the file count it is the average cost of opening one file. */
+	totalReadMilliseconds: number;
+
+	/** The time parsing quest files took, added up. It runs on the main thread. */
+	totalParseMilliseconds: number;
+}
+
 /** What to load; with no options the loader reads every pack. */
 export interface ContentLoadOptions
 {
 	/** Only read this pack's folder. The glossary and patterns are always read. */
 	packId?: string;
+
+	/** Called once when the load ends, with where the time went. */
+	onTimings?: (timings: ContentLoadTimings) => void;
 }
 
 /** Matches a numbered folder or file name such as `01-actors` or `03-spawn-a-door.md`, capturing the number and the rest. */
@@ -37,6 +53,15 @@ interface LoadRun
 
 	/** The folder (relative to the content folder) each loaded world was read from, for problems that name it. */
 	worldFolders: Map<World, string>;
+
+	/** Where the quest file reads and parses spent their time. */
+	timings: ContentLoadTimings;
+}
+
+/** Returns the timings of a load that has read nothing yet. */
+function emptyTimings(): ContentLoadTimings
+{
+	return { questFileCount: 0, totalReadMilliseconds: 0, totalParseMilliseconds: 0 };
 }
 
 /** Loads content from one folder. One loader per folder; `load()` may be called again to reload. */
@@ -54,7 +79,7 @@ export class ContentLoader
 	async load(options: ContentLoadOptions = {}): Promise<LoadedContent>
 	{
 		const content: LoadedContent = { packs: [], glossary: [], patterns: [], files: [], questSources: {}, problems: [] };
-		const run: LoadRun = { content, parsedQuests: [], worldFolders: new Map() };
+		const run: LoadRun = { content, parsedQuests: [], worldFolders: new Map(), timings: emptyTimings() };
 
 		if (!(await this.isDirectory(this.root)))
 		{
@@ -80,6 +105,7 @@ export class ContentLoader
 		}));
 
 		content.files.sort();
+		options.onTimings?.(run.timings);
 
 		return content;
 	}
@@ -91,12 +117,12 @@ export class ContentLoader
 	async loadExamples(): Promise<{ quests: AuthoredQuest[]; files: string[]; questSources: Record<string, string>; problems: ContentProblem[] }>
 	{
 		const folder = join(this.root, "examples");
-		const run: LoadRun = { content: { packs: [], glossary: [], patterns: [], files: [], questSources: {}, problems: [] }, parsedQuests: [], worldFolders: new Map() };
+		const run: LoadRun = { content: { packs: [], glossary: [], patterns: [], files: [], questSources: {}, problems: [] }, parsedQuests: [], worldFolders: new Map(), timings: emptyTimings() };
 
 		if (!(await this.isDirectory(folder))) return { quests: [], files: [], questSources: {}, problems: [] };
 
 		const names = (await readdir(folder)).filter((name) => name.endsWith(".md")).sort();
-		const parsed = await Promise.all(names.map((name) => this.readQuest(join(folder, name), run.content)));
+		const parsed = await Promise.all(names.map((name) => this.readQuest(join(folder, name), run)));
 
 		run.parsedQuests = parsed.filter((result): result is QuestFromFile => result !== undefined);
 
@@ -201,7 +227,7 @@ export class ContentLoader
 			else content.problems.push({ file: `${folderPath}/${entry.name}`, message: "unexpected file; a world folder holds world.json and <nn>-<slug>.md quest files only" });
 		}
 
-		const parsed = await Promise.all(questFiles.map((name) => this.readQuest(join(folder, name), content)));
+		const parsed = await Promise.all(questFiles.map((name) => this.readQuest(join(folder, name), run)));
 		const quests = this.dropRepeatedOrder(parsed.filter((result): result is QuestFromFile => result !== undefined), content.problems);
 
 		// Quests of a world whose world.json failed are still checked for duplicate ids.
@@ -216,12 +242,20 @@ export class ContentLoader
 		return world;
 	}
 
-	/** Reads and parses one quest file. */
-	private async readQuest(path: string, content: LoadedContent): Promise<QuestFromFile | undefined>
+	/** Reads and parses one quest file, adding how long each took to the run's timings. */
+	private async readQuest(path: string, run: LoadRun): Promise<QuestFromFile | undefined>
 	{
+		const content = run.content;
 		const file = this.relativePath(path);
 		const problems = new ProblemList(file);
-		const quest = parseQuestFile(await readFile(path, "utf8"), problems);
+		const readStartedAt = performance.now();
+		const text = await readFile(path, "utf8");
+		const parseStartedAt = performance.now();
+		const quest = parseQuestFile(text, problems);
+
+		run.timings.questFileCount += 1;
+		run.timings.totalReadMilliseconds += parseStartedAt - readStartedAt;
+		run.timings.totalParseMilliseconds += performance.now() - parseStartedAt;
 
 		content.files.push(file);
 		content.problems.push(...problems.problems);
