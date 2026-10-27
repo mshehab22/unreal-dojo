@@ -4,6 +4,20 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1100 2026-10-27 World 12 fix round 1 (author-patterns, M4.P2.12)
+Reviewer verdict FIXES NEEDED, all taken except two notes. Changed:
+- The deliberate failure was named in the rubric, the card, a card item, and the brief's opening line (the reviewer disagreed with the first wording of A1093). All now say only "from the parent"; the brief opens on Swift; the editor steps use Swift.
+- Resolve's four "borrow" lines and four clamp lines are now two small functions on the row (`BorrowUnsetFrom` and `ZeroUnset`), and the chain guard is in the loop condition, so the Parsons block has one valid order (A314 grades exact order).
+- The kit's editor steps compared printed object names, which are the same ("Charm") before and after; they now use an Equal (Object) node and set the favor on the source only.
+- Wording: a copy is "offset by the template's own place" (it lands at the template's place only for a spawn at the origin); a spawn template gives the copy its own constructor-made components but copies other references as the same pointer; DuplicateObject copies every saved (non-Transient) property.
+- The references' class comments now say "Prototype pattern" (A373); the quest 2 starter does not.
+
+Not changed:
+- The rubric bullet "spawns the tuned blade's own class" has no test: a test would need a native subclass of the blade, which a test file cannot declare (UHT only reads headers). It is graded by the rubric review only.
+- The LayBlade Parsons block has three lines that work in any order (`SetActorLocation`, `Wake`, `Add`); exact-order grading (A314) marks another correct order wrong. This affects every Parsons block, not only this world, and is raised for the Lead.
+
+Reverse cost: low.
+
 ### A1099 2026-10-27 Engine builds were blocked by an open windowed editor; the proof passes -NoHotReloadFromIDE locally (author-patterns, M4.P2.12)
 While a windowed editor with Live Coding was open on this machine (Mohammad's KAEL project, which runs the installed `UnrealEditor.exe`), every sandbox build failed in about 10 s with "Unable to build while Live Coding is active". UnrealBuildTool names that check's mutex after the editor executable, which every project on the installed engine shares. Options: wait for Mohammad to close his editor; close it myself (no, never); change the app's build call. Chosen for this proof only: an uncommitted local edit adds UBT's own `-NoHotReloadFromIDE` flag to `UnrealBuilder.ts`, which turns that guard off for the sandbox build (the sandbox is never open in an editor), and the edit is reverted before the commit. A real fix belongs to the owner of `UnrealBuilder.ts`: the same flag in the committed build call. Reverse cost: none.
 
@@ -28,7 +42,7 @@ Options:
 - A template that is left visible: taught openly in the first quest.
 - `Resolve` that reads the parent's row as written, one level up.
 
-Chosen: the last. A natural first `Resolve` finds the row, then copies the parent's numbers into whatever the row left unset. That passes every one-level test, and fails `GrandchildBorrowsThroughItsParent`, where SwiftLong's blade count and reward are set two rows up, in Basic, while Swift leaves them unset. The book lists children before parents, so a precompute pass in array order also fails. The reference climbs the chain until every number is set. The card says a parent "may borrow from its own parent in turn" only in the sense of the data form, without the consequence for a single read. Engine check: see A1098. Reverse cost: low.
+Chosen: the last. A natural first `Resolve` finds the row, then copies the parent's numbers into whatever the row left unset. That passes every one-level test, and fails `GrandchildBorrowsThroughItsParent`, where SwiftLong's blade count and reward are set two rows up, in Basic, while Swift leaves them unset. The book lists children before parents, so a precompute pass in array order also fails. The reference climbs the chain until every number is set. Nothing the learner sees before the failure says a parent may borrow from its own parent: the brief, rubric, front matter, card, and card items say only that an unset number comes from the parent (fix round 1), and the brief opens on Swift, not SwiftLong. Engine check: see A1098. Reverse cost: low.
 
 ### A1092 2026-10-27 Prototype arc, built away from the source's examples (author-patterns, M4.P2.12)
 Not used in briefs, cards, choices, distractors, or the card's items: a spawner class per monster kind, ghosts, demons, a goblin and its archer, or the chapter's remarks on prototype-based languages. The originality check ran against the research's Prototype section (6 and 5 words, no hits in quests, solutions comments, glossary, or the card); the source PDF is gone, so a direct check against the book is pending. The arc, all in the trial hall:
@@ -50,7 +64,7 @@ No boss and no breakdown. Reverse cost: low.
 Reverse cost: medium once learners have progress saved.
 
 ### A1090 2026-10-27 Decision block A1090 to A1109 from the Lead (author-patterns, M4.P2.12)
-Assigned under A71; this world uses A1090 to A1099. Reverse cost: none.
+Assigned under A71; this world uses A1090 to A1100. Reverse cost: none.
 
 ### A1060 2026-10-26 W7 how the tracker's reset test observes a stale clock (builder, M3.2 Pack 3 World 6)
 The reset mutation survived because a stale clock does nothing once the quest is no longer Active, so the state read the same either way. Options: restart the quest after the reset and check it is still Active past the old deadline; read the timer handle through the timer manager. Chosen: restart the quest, with its time limit set to zero first. Why: the handle is private to the tracker, so a learner's test cannot read it, and restarting a timed quest would replace the old clock under the same handle and hide the leak. With no limit on the restart, no new clock is set, so only a clock the reset left running can still fail the quest. The boss reference also renamed its local `bHidden` to `bHiddenOnBoard`, because `AActor` has a member of that name (MSVC error C4458).

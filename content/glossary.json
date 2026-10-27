@@ -4130,7 +4130,7 @@
     ],
     "category": "object model",
     "short": "The function that makes a separate copy of a UObject, including the objects it owns.",
-    "long": "DuplicateObject takes a source object and an outer and returns a new object of the same class with the same property values. Subobjects the source owns, such as components or helper objects created inside it, are duplicated too, so the copy does not share them. Objects the source only points at stay shared between the two. It is the engine's own deep copy for objects that are not actors; actors are copied by spawning with a template. Prefer it to a hand-written Clone function that lists every field, which falls behind as soon as someone adds a field.",
+    "long": "DuplicateObject takes a source object and an outer and returns a new object of the same class with the same saved property values (Transient properties are skipped). Subobjects the source owns, such as components or helper objects created inside it, are duplicated too, so the copy does not share them. Objects the source only points at stay shared between the two. It is the engine's own deep copy for objects that are not actors; actors are copied by spawning with a template. Prefer it to a hand-written Clone function that lists every field, which falls behind as soon as someone adds a field.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/DuplicateObject?application_version=5.8",
     "related": [
       "newobject",

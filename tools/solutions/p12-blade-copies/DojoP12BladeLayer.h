@@ -5,7 +5,7 @@
 #include "GameFramework/Actor.h"
 #include "DojoP12BladeLayer.generated.h"
 
-/** Lays blades in the trial hall, each one starting from a blade a designer tuned by hand. */
+/** Lays blades in the trial hall, each one starting from a blade a designer tuned by hand. Prototype pattern, object form. */
 UCLASS()
 class ADojoP12BladeLayer : public AActor
 {

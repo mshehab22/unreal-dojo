@@ -13,22 +13,22 @@ xp: 110
 estimatedMinutes: 30
 concepts:
   - A trial row sets only the numbers that differ and names a parent row for the rest
-  - A number the row leaves unset comes from the nearest row up the chain that sets it
+  - A number the row leaves unset comes from its parent row
   - A parent is looked up by name each time, so a change to a parent reaches its children
   - Resolving works on a copy and never changes the rows in the book
 ---
 
 # Brief
 
-When you press Play with the setup below, asking the trial book to resolve SwiftLong gives 3 blades, a swing speed of 150, a time limit of 120, and a reward of 10, though that row sets only its time limit.
+When you press Play with the setup below, asking the trial book to resolve Swift gives 3 blades, a swing speed of 150, a time limit of 60, and a reward of 10, though that row sets only its swing speed.
 
-`ADojoP12TrialBook` lists the hall's trials as `FDojoP12TrialRow` rows. A row has a name, the name of an optional parent row, and four numbers: `BladeCount`, `SwingSpeed`, `TimeLimit`, and `Reward`. A number below zero means this row does not set it. The designers write each trial as a small change to another: Swift is Basic with faster blades, SwiftLong is Swift with more time, and Heavy is Basic with more blades and a bigger reward.
+`ADojoP12TrialBook` lists the hall's trials as `FDojoP12TrialRow` rows. A row has a name, the name of an optional parent row, and four numbers: `BladeCount`, `SwingSpeed`, `TimeLimit`, and `Reward`. A number below zero means this row does not set it. The designers write each trial as a small change to another: Swift is Basic with faster blades, and Heavy is Basic with more blades and a bigger reward.
 
 The declarations, the constructor, and `FindRow` are given. Yours is `Resolve`, which fills `OutTrial` with a trial's final numbers:
 
-- Each number is the row's own when it sets one; otherwise it comes from the nearest row up the chain of parents that sets it; a number no row on the way sets is 0.
+- Each number is the row's own when it sets one; otherwise it comes from the row's parent; a number nobody sets is 0.
 - `OutTrial` keeps the row's own name and parent name.
-- It returns false, leaving `OutTrial` untouched, for a name that has no row and for a chain that names a parent that does not exist.
+- It returns false, leaving `OutTrial` untouched, for a name that has no row and for a row that names a parent that does not exist.
 - Parents are looked up by name every time `Resolve` runs, so editing a parent changes its children, and rows may be listed in any order.
 - It never changes the rows in the book, and it does not run forever if rows name each other as parents: it gives up and returns false.
 
@@ -36,7 +36,7 @@ Write the obvious version first and run the tests. One of them fails on purpose 
 
 ## See it in the editor
 
-Place a `DojoP12TrialBook`. In Details add four Rows, in this order: SwiftLong (Parent Name Swift, Time Limit 120, everything else -1), Swift (Parent Name Basic, Swing Speed 150, everything else -1), Heavy (Parent Name Basic, Blade Count 5, Reward 25, the rest -1), and Basic (no parent, Blade Count 3, Swing Speed 90, Time Limit 60, Reward 10). In the Level Blueprint, on Begin Play, call Resolve on the book with Trial Name SwiftLong, break the Out Trial struct, and print its four numbers: 3, 150, 120, and 10. Change Basic's Reward to 40 while playing, resolve Swift from a key press, and it prints 40; Heavy keeps its 25. One edit to a parent reaches every child that did not set the number itself.
+Place a `DojoP12TrialBook`. In Details add three Rows, in this order: Swift (Parent Name Basic, Swing Speed 150, everything else -1), Heavy (Parent Name Basic, Blade Count 5, Reward 25, the rest -1), and Basic (no parent, Blade Count 3, Swing Speed 90, Time Limit 60, Reward 10). In the Level Blueprint, on Begin Play, call Resolve on the book with Trial Name Swift, break the Out Trial struct, and print its four numbers: 3, 150, 60, and 10. Change Basic's Reward to 40 while playing, resolve Swift from a key press, and it prints 40; Heavy keeps its 25. One edit to a parent reaches every child that did not set the number itself.
 
 # Files
 
@@ -48,7 +48,7 @@ Place a `DojoP12TrialBook`. In Details add four Rows, in this order: SwiftLong (
 #include "CoreMinimal.h"
 #include "DojoP12TrialRow.generated.h"
 
-/** One trial in the hall's book: its own numbers, and the trial it borrows the rest from. A number below zero means this row does not set it. */
+/** One trial in the hall's book: its own numbers, and the trial it borrows the rest from. A number below zero means this row does not set it. Prototype pattern, data form. */
 USTRUCT(BlueprintType)
 struct FDojoP12TrialRow
 {
@@ -77,6 +77,24 @@ struct FDojoP12TrialRow
 	/** Reward for finishing, or below zero when this row does not set it. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trial", meta = (ClampMin = "-1"))
 	int32 Reward = -1;
+
+	/** Takes from Parent every number this row does not set. */
+	void BorrowUnsetFrom(const FDojoP12TrialRow& Parent)
+	{
+		if (BladeCount < 0) BladeCount = Parent.BladeCount;
+		if (SwingSpeed < 0.f) SwingSpeed = Parent.SwingSpeed;
+		if (TimeLimit < 0.f) TimeLimit = Parent.TimeLimit;
+		if (Reward < 0) Reward = Parent.Reward;
+	}
+
+	/** Turns every number that is still unset into 0. */
+	void ZeroUnset()
+	{
+		BladeCount = FMath::Max(BladeCount, 0);
+		SwingSpeed = FMath::Max(SwingSpeed, 0.f);
+		TimeLimit = FMath::Max(TimeLimit, 0.f);
+		Reward = FMath::Max(Reward, 0);
+	}
 };
 ```
 
@@ -90,7 +108,7 @@ struct FDojoP12TrialRow
 #include "GameFramework/Actor.h"
 #include "DojoP12TrialBook.generated.h"
 
-/** The hall's book of trials: each row sets a few numbers and borrows the rest from its parent row. */
+/** The hall's book of trials: each row sets a few numbers and borrows the rest from its parent row. Prototype pattern, data form. */
 UCLASS()
 class ADojoP12TrialBook : public AActor
 {
@@ -308,16 +326,16 @@ bool FDojo_P12_TrialRows_ParentEditsReachChildren::RunTest(const FString& Parame
 
 # Rubric
 
-- Resolve gives each number from the row's own setting when it has one, else from the nearest row up the chain of parents that sets it, else 0.
-- A trial that borrows from a trial that borrows (three rows deep or more) gets each number from where it is set up the chain.
+- Resolve gives each number from the row's own setting when it has one, else from the row's parent, else 0.
+- A row with no parent keeps its own numbers, and OutTrial keeps the row's own name and parent name.
 - Parents are looked up by name each time Resolve runs, so editing a parent changes its children, and the order of rows in the book does not matter.
-- An unknown trial, or a chain naming a parent that does not exist, returns false and leaves OutTrial untouched; rows that loop through each other return false instead of running forever.
+- An unknown trial, or a row naming a parent that does not exist, returns false and leaves OutTrial untouched; rows that loop through each other return false instead of running forever.
 - Resolve works on a copy: the rows in the book are never changed.
 - A row names its parent and the parent knows nothing about its children; the book only reads.
 
 # Alternative
 
-Resolve could be done once, when the game starts: walk every row, write its final numbers into a second array, and answer every later question from that array. Reads then cost nothing and there is no chain to climb, but an edit to a parent stops reaching its children until someone resolves again, and the copy doubles the rows in memory. Climbing the chain on every read, as here, keeps edits live at the cost of a short walk. The same rows could also be a Data Table with a parent column, which gives designers a spreadsheet to edit; the resolving code would be the same.
+Resolve could be done once, when the game starts: walk every row, write its final numbers into a second array, and answer every later question from that array. Reads then cost nothing and no parent has to be looked up, but an edit to a parent stops reaching its children until someone resolves again, and the copy doubles the rows in memory. Looking parents up on every read, as here, keeps edits live at the cost of a short walk. The same rows could also be a Data Table with a parent column, which gives designers a spreadsheet to edit; the resolving code would be the same.
 
 # Parsons
 
@@ -330,21 +348,15 @@ Resolve could be done once, when the game starts: walk every row, write its fina
     - "	const FDojoP12TrialRow* Row = FindRow(TrialName);"
     - "	if (!Row) return false;"
     - "	FDojoP12TrialRow Result = *Row;"
-    - "	for (int32 Step = 0; !Row->ParentName.IsNone(); Step++)"
+    - "	for (int32 Step = 0; Step < Rows.Num() && !Row->ParentName.IsNone(); Step++)"
     - "	{"
-    - "		if (Step >= Rows.Num()) return false;"
     - "		Row = FindRow(Row->ParentName);"
     - "		if (!Row) return false;"
-    - "		if (Result.BladeCount < 0) Result.BladeCount = Row->BladeCount;"
-    - "		if (Result.SwingSpeed < 0.f) Result.SwingSpeed = Row->SwingSpeed;"
-    - "		if (Result.TimeLimit < 0.f) Result.TimeLimit = Row->TimeLimit;"
-    - "		if (Result.Reward < 0) Result.Reward = Row->Reward;"
+    - "		Result.BorrowUnsetFrom(*Row);"
     - "	}"
-    - "	Result.BladeCount = FMath::Max(Result.BladeCount, 0);"
-    - "	Result.SwingSpeed = FMath::Max(Result.SwingSpeed, 0.f);"
-    - "	Result.TimeLimit = FMath::Max(Result.TimeLimit, 0.f);"
-    - "	Result.Reward = FMath::Max(Result.Reward, 0);"
+    - "	if (!Row->ParentName.IsNone()) return false;"
     - "	OutTrial = Result;"
+    - "	OutTrial.ZeroUnset();"
     - "	return true;"
     - "}"
   distractors:

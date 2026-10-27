@@ -42,11 +42,11 @@ What you built for the blades and the trials is the **Prototype** pattern. A new
 - `FActorSpawnParameters::Template` starts a spawned actor from any actor of the same class. `DuplicateObject` copies a non-actor object.
 - A Blueprint child class keeps the parent's defaults and stores only the values it changed, and a Material Instance does the same with its parent material's parameters.
 
-**Borrowing from a record.** In the data form a record names another record as its parent and sets only the fields that differ. Anything it leaves unset comes from the parent, and the parent may borrow from its own parent in turn. The trial book was this. There is no need for a bare abstract "base" record: the plain Basic trial was a real trial and the parent of the others.
+**Borrowing from a record.** In the data form a record names another record as its parent and sets only the fields that differ. Anything it leaves unset comes from the parent. The trial book was this. There is no need for a bare abstract "base" record: the plain Basic trial was a real trial and the parent of the others.
 
 **Decisions you make each time.**
 
-- **Deep or shallow?** A copy of an object that owns other objects can copy them too or share them. `DuplicateObject` copies what the source owns and shares what it only points at; a spawn template copies pointers as pointers. Decide for each reference which you want.
+- **Deep or shallow?** A copy of an object that owns other objects can copy them too or share them. `DuplicateObject` copies what the source owns and shares what it only points at; a spawn template gives the copy its own constructor-made components but copies other object references as the same pointer. Decide for each reference which you want.
 - **Keep the example out of play.** A template actor in the world is a real actor. Park it, and remember the copy takes everything it had, parked state included.
 - **Snapshot or live?** A copy is a snapshot: later edits to the example do not reach copies made before. A record that looks its parent up each time stays live, and a record that copies the parent's numbers down once is fast to read but stale after an edit.
 - **Do not hand-write the copy.** A `Clone` that lists every field falls behind the first time a field is added.
@@ -82,7 +82,7 @@ World->SpawnActor<ADojoBlade>(TunedBlade->GetClass(), Where, FRotator::ZeroRotat
   type: fill-blank
   prompt: "In the data form, a row that leaves a number unset takes it from its ___ row."
   acceptedAnswers: [parent]
-  explanation: The row names a parent and sets only what differs; the rest comes from the parent, and from its parent in turn.
+  explanation: The row names a parent and sets only what differs; the rest comes from the parent.
 - id: deep-shallow
   type: multiple-choice
   prompt: "A kit owns a charm it made and points at a favor that belongs to someone else. After DuplicateObject on the kit, what does the copy have?"

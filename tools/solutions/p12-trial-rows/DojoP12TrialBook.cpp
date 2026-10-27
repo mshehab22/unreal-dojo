@@ -16,24 +16,17 @@ bool ADojoP12TrialBook::Resolve(FName TrialName, FDojoP12TrialRow& OutTrial) con
 	if (!Row) return false;
 
 	FDojoP12TrialRow Result = *Row;
-	for (int32 Step = 0; !Row->ParentName.IsNone(); Step++)
+	for (int32 Step = 0; Step < Rows.Num() && !Row->ParentName.IsNone(); Step++)
 	{
-		if (Step >= Rows.Num()) return false;
-
 		Row = FindRow(Row->ParentName);
 		if (!Row) return false;
 
-		if (Result.BladeCount < 0) Result.BladeCount = Row->BladeCount;
-		if (Result.SwingSpeed < 0.f) Result.SwingSpeed = Row->SwingSpeed;
-		if (Result.TimeLimit < 0.f) Result.TimeLimit = Row->TimeLimit;
-		if (Result.Reward < 0) Result.Reward = Row->Reward;
+		Result.BorrowUnsetFrom(*Row);
 	}
 
-	Result.BladeCount = FMath::Max(Result.BladeCount, 0);
-	Result.SwingSpeed = FMath::Max(Result.SwingSpeed, 0.f);
-	Result.TimeLimit = FMath::Max(Result.TimeLimit, 0.f);
-	Result.Reward = FMath::Max(Result.Reward, 0);
+	if (!Row->ParentName.IsNone()) return false;
 
 	OutTrial = Result;
+	OutTrial.ZeroUnset();
 	return true;
 }

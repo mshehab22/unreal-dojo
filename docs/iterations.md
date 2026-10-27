@@ -1725,4 +1725,4 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
   - Originality: the 6-word and 5-word check against the research's Prototype section found no hits in the quests, solutions, glossary entries, or card. The check against the book is pending because the PDF is gone.
 - Found while proving: engine builds failed in about 10 s with "Unable to build while Live Coding is active" while Mohammad's KAEL editor was open, because UnrealBuildTool's mutex is named after the shared `UnrealEditor.exe`. The proof ran with an uncommitted `-NoHotReloadFromIDE` added to `UnrealBuilder.ts`; the committed build call still needs it (A1099).
 - Also found: a template's own root place and its parked state are copied (A1094), and `SpawnActorAbsolute` still leaves a copy at the template's place for a spawn at exactly the origin.
-- Not done: the source n-gram check. No screenshots. Decisions A1090 to A1099.
+- Not done: the source n-gram check. No screenshots. Decisions A1090 to A1100.

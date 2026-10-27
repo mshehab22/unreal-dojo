@@ -1504,7 +1504,7 @@
         "acceptedAnswers": [
           "parent"
         ],
-        "explanation": "The record names a parent and sets only what differs; the rest comes from the parent and from its parent in turn."
+        "explanation": "The record names a parent and sets only what differs; the rest comes from the parent."
       },
       {
         "id": "prototype-recall-5",

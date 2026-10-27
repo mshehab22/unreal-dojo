@@ -13,14 +13,14 @@ xp: 100
 estimatedMinutes: 20
 concepts:
   - A copy function that lists every field by hand falls behind the first time a field is added
-  - DuplicateObject copies every property and also copies the objects the source owns
+  - DuplicateObject copies every saved property and also copies the objects the source owns
   - Objects the source only points at stay shared between the source and the copy
   - The function's name, signature, and results for the fields it already handled stay the same
 ---
 
 # Brief
 
-After the refactor, `Clone` gives a challenger kit a separate copy with every value of the original, including the ones added after `Clone` was written, and everything else about it behaves as before.
+After the refactor, `Clone` gives a challenger kit a separate copy with every saved value of the original, including the ones added after `Clone` was written, and everything else about it behaves as before.
 
 `UDojoP12Kit` is what a challenger carries into a trial: a label, `Health`, `Stamina`, `LuckBonus`, a `Charm` the kit owns, and a `Favor` charm that belongs to someone else and that the kit only points at. `Clone` makes a copy for the next challenger. It was written by hand, one field at a time, back when the kit had fewer fields, and the kit has grown since.
 
@@ -34,7 +34,7 @@ Two of the three tests pass on the starter and must pass after; one does not. Re
 
 ## See it in the editor
 
-Make a Blueprint function library or use the Level Blueprint. On Begin Play, Construct Object from Class with Class set to `DojoP12Kit`, set its Luck Bonus to 0.3 and its Health to 70, then call Clone on it and print the clone's Luck Bonus. Before the refactor it prints 0; after, 0.3. Print Charm on both kits and the object names differ, because the clone owns its own charm. Set the same Favor on both, and the printed names match, because the favor is shared.
+Make a Blueprint function library or use the Level Blueprint. On Begin Play, Construct Object from Class with Class set to `DojoP12Kit`, set its Luck Bonus to 0.3 and its Health to 70, then call Clone on it and print the clone's Luck Bonus. Before the refactor it prints 0; after, 0.3. Compare the two kits' Charm with an Equal (Object) node: false, because the clone owns its own charm. Set Favor on the first kit only, before you call Clone, then compare the clone's Favor with the first kit's Favor: true, because the favor is shared.
 
 # Files
 
@@ -70,7 +70,7 @@ public:
 #include "UObject/Object.h"
 #include "DojoP12Kit.generated.h"
 
-/** What a challenger carries into a trial: a few numbers, a charm of its own, and a favor shared with others. */
+/** What a challenger carries into a trial: a few numbers, a charm of its own, and a favor shared with others. Prototype pattern, object form. */
 UCLASS(Blueprintable, BlueprintType)
 class UDojoP12Kit : public UObject
 {
@@ -236,7 +236,7 @@ bool FDojo_P12_KitRefactor_CloneSharesTheFavor::RunTest(const FString& Parameter
 # Rubric
 
 - Clone is one DuplicateObject call with the kit as the source and its own outer as the outer; no field-by-field copying remains.
-- Every property of the source, including ones added later, is in the copy.
+- Every saved (non-Transient) property of the source, including ones added later, is in the copy.
 - The copy owns its own charm, with the source's strength, and changing one kit's charm leaves the other alone.
 - The favor, which the kit only points at, is shared by the source and the copy.
 - Clone keeps its name and signature, and the kit's fields and constructor are unchanged.

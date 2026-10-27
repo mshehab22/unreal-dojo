@@ -5,7 +5,7 @@
 #include "GameFramework/Actor.h"
 #include "DojoP12TrialBook.generated.h"
 
-/** The hall's book of trials: each row sets a few numbers and borrows the rest from its parent row. */
+/** The hall's book of trials: each row sets a few numbers and borrows the rest from its parent row. Prototype pattern, data form. */
 UCLASS()
 class ADojoP12TrialBook : public AActor
 {

@@ -5,7 +5,7 @@
 #include "UObject/Object.h"
 #include "DojoP12Kit.generated.h"
 
-/** What a challenger carries into a trial: a few numbers, a charm of its own, and a favor shared with others. */
+/** What a challenger carries into a trial: a few numbers, a charm of its own, and a favor shared with others. Prototype pattern, object form. */
 UCLASS(Blueprintable, BlueprintType)
 class UDojoP12Kit : public UObject
 {
