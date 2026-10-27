@@ -269,6 +269,24 @@ describe("LoopSelectingRunner on Windows", () =>
 		expect(rig.headless.runs).toBe(1);
 	});
 
+	it.each([
+		["a text answer", "Error: Live Coding is not enabled for this session. Enable it in Editor Preferences."],
+		["a tool error", new EditorClientError("tool", "CompileLiveCoding failed: Error: Live Coding is not enabled for this session. Enable it in Editor Preferences.")],
+	])("falls back to the headless loop, not a compile failure, when the editor says Live Coding is not enabled (%s, A1071)", async (_name, answer) =>
+	{
+		const rig = createRig(new WindowsPlatformPaths({}));
+		rig.ledger.recordBuild(QUEST.id, FILES, QUEST.tests, 5);
+		rig.timer.advance(10);
+		await rig.openEditor();
+		rig.client.compileAnswer = answer;
+
+		const result = await rig.run({ ...FILES, "SampleHealthComponent.cpp": "// x" });
+
+		expect(result).toMatchObject({ ok: true, compiled: true, loop: "headless" });
+		expect(rig.headless.runs).toBe(1);
+		expect(rig.events.filter((event) => event.loopReason !== undefined).at(-1)?.loopReason).toBe('Full build: Live Coding answered "unavailable".');
+	});
+
 	it("does not record a build that failed to compile", async () =>
 	{
 		const rig = createRig(new WindowsPlatformPaths({}));
@@ -287,7 +305,7 @@ describe("LiveEditorRunner", () =>
 	{
 		const paths = new MacPlatformPaths("/Users/learner");
 		const client = new FakeEditorToolClient();
-		const session = { engineRoot: "/e", projectFile: "/s/Dojo.uproject", port: 8000, launchedAt: 0, client, isRunning: () => true };
+		const session = { engineRoot: "/e", projectFile: "/s/Dojo.uproject", port: 8000, launchedAt: 0, client, isRunning: () => true, startsLiveCoding: false, isLiveCodingReady: () => false };
 		const runner = new LiveEditorRunner({ context: { engineRoot: "/e", sandboxFolder: "/s" }, session, writer: new QuestFileWriter(paths, new FakeSandboxFileSystem()), timer: new FakeTimer(), liveCodingAvailable: false, fallBackToHeadless: async () => { throw new Error("no fallback expected"); } });
 
 		const result = await runner.run({ ...QUEST, tests: "// nothing" }, FILES, () => undefined, new AbortController().signal);

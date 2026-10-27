@@ -4,15 +4,16 @@ import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { BuildPhase } from "@shared/types/run";
 
 import { createEngineLocator } from "../../src/main/services/unreal/createEngineLocator";
-import { createUnrealServices } from "../../src/main/services/unreal/createUnrealServices";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
+import { assertNoForeignLiveCodingSession } from "../support/liveCodingSessions";
+import { createIntegrationServices } from "../support/createIntegrationServices";
+import { processesMentioning } from "../support/processesMentioning";
 import { MemoryUnrealSettings } from "../unreal/MemoryUnrealSettings";
 
 /** The engine to test against, from the environment. */
@@ -33,12 +34,6 @@ const STEP_TIMEOUT_MS = 10 * 60 * 1000;
 /** Measured times, printed at the end for the spec. */
 const timings: Record<string, number> = {};
 
-/** True when any process still mentions the folder on its command line. */
-function processesMentioning(folder: string): string
-{
-	return spawnSync("pgrep", ["-fl", folder], { encoding: "utf8" }).stdout.trim();
-}
-
 /** Reads the sample quest as the runner receives it. */
 async function sampleQuest()
 {
@@ -53,11 +48,14 @@ async function sampleQuest()
 
 describe.skipIf(!HAS_ENGINE)(`headless loop against ${ENGINE_ROOT || "no engine"}`, () =>
 {
+	// Stops at once, with the reason, when another editor's Live Coding would make every build fail (A1076).
+	beforeAll(() => assertNoForeignLiveCodingSession());
+
 	let pickedFolder = "";
 	let sandboxFolder = "";
 	const settings = new MemoryUnrealSettings();
 	const services = HAS_ENGINE
-		? createUnrealServices({ templateFolder: TEMPLATE_FOLDER, solutionsFolder: join(__dirname, "..", "..", "tools", "solutions"), engineInspector: createEngineLocator(), settings, quests: { getAuthoredQuest: async () => undefined, listPacks: async () => [] }, learner: { isPassed: () => false, savedFiles: () => ({}) } })
+		? createIntegrationServices({ templateFolder: TEMPLATE_FOLDER, solutionsFolder: join(__dirname, "..", "..", "tools", "solutions"), engineInspector: createEngineLocator(), settings, quests: { getAuthoredQuest: async () => undefined, listPacks: async () => [] }, learner: { isPassed: () => false, savedFiles: () => ({}) } }).services
 		: null;
 
 	afterAll(async () =>

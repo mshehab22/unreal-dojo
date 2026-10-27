@@ -18,6 +18,7 @@ import { McpEditorClient } from "./McpEditorClient";
 import { NodePortProbe } from "./NodePortProbe";
 import { FullBuildLedger } from "./FullBuildLedger";
 import { PrerequisiteFiller } from "./PrerequisiteFiller";
+import type { ProcessLauncher } from "./ProcessLauncher";
 import { type AuthoredQuestSource, type LearnerRecord, QuestRunService } from "./QuestRunService";
 import { ReferenceSolutions } from "./ReferenceSolutions";
 import type { UnrealSettingsStore } from "./UnrealSettingsStore";
@@ -46,6 +47,15 @@ export interface UnrealServiceInputs
 
 	/** The reference solutions folder (`tools/solutions` in the source tree, A403). */
 	solutionsFolder: string;
+
+	/** Tests and agents set this so the editor is always opened windowless (A643, A1074). The app leaves it out: the learner's Open Editor button opens the real window. */
+	forceWindowlessEditor?: boolean;
+
+	/** Windows tests only: start Live Coding, hidden, in the windowless editor so the fast loop compiles there. Off by default because the first compile makes the Live Coding console window appear (A1072). The app leaves it out. */
+	liveCodingInWindowlessEditor?: boolean;
+
+	/** Wraps the real process launcher, so the integration suite can record or refuse launches (A1074). The app leaves it out. */
+	decorateProcessLauncher?: (launcher: ProcessLauncher) => ProcessLauncher;
 }
 
 /** The unreal-pipeline services the IPC handlers use. */
@@ -80,7 +90,7 @@ export function createUnrealServices(inputs: UnrealServiceInputs): UnrealService
 
 	const { paths, commandRunner } = platform;
 	const fileSystem = new NodeSandboxFileSystem();
-	const launcher = new NodeProcessLauncher(platform.processTreeKiller);
+	const launcher = (inputs.decorateProcessLauncher ?? ((real: ProcessLauncher) => real))(new NodeProcessLauncher(platform.processTreeKiller));
 	const builder = new UnrealBuilder(paths, launcher, SYSTEM_TIMER);
 	const testRunner = new AutomationTestRunner(paths, launcher, SYSTEM_TIMER, fileSystem);
 	const questFileWriter = new QuestFileWriter(paths, fileSystem);
@@ -119,7 +129,7 @@ export function createUnrealServices(inputs: UnrealServiceInputs): UnrealService
 	const snippetChecker = paths.buildPlatform === "Mac" ? new ClangSnippetSyntaxChecker(paths, fileSystem, commandRunner) : null;
 
 	const questRunService = new QuestRunService({ settings: inputs.settings, quests: inputs.quests, runnerFactory, prerequisiteFiller, sandboxService, snippetChecker, learner: inputs.learner, questFileWriter, buildLedger });
-	const editorService = new EditorService({ settings: inputs.settings, engineInspector: inputs.engineInspector, editorLauncher, ledger: buildLedger, paths, checkToolchain: () => platform.toolchainChecker.check() });
+	const editorService = new EditorService({ settings: inputs.settings, engineInspector: inputs.engineInspector, editorLauncher, ledger: buildLedger, paths, checkToolchain: () => platform.toolchainChecker.check(), alwaysWindowless: inputs.forceWindowlessEditor ?? false, startLiveCodingWhenWindowless: inputs.liveCodingInWindowlessEditor ?? false });
 
 	return { sandboxService, runnerFactory, questFileWriter, questRunService, buildLedger, editorLauncher, editorService };
 }

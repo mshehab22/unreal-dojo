@@ -1789,3 +1789,27 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Proof (Windows 11, from main d268ec7, hidden test windows): `npm run typecheck` passes; `npm test` 80 files, 924 passed, 28 skipped; `npx tsx tools/verify-content.ts` no problems (12 warnings from content); `npm run build` passes; `npx playwright test` 32 passed, 1 skipped (the real-engine flow); the concept, drill-fallback and new hover tests with `--repeat-each=10`, 30 passed of 30; the locked-stage World Map test, 10 of 10. The real-engine learner flow was not run here; the Lead schedules it on the engine lock.
 - Fix round 1: the review found that Escape no longer kept the card closed, because any small move over the term started a new open and counted another hover. The hook now arms one pointer open per entry; Escape or any close disarms it until the pointer leaves and enters again. The new test also presses Escape, makes a small move and checks no card opens in 1 s, then leaves and re-enters and checks it opens; that step fails on the first version of the hook. The hover count is not exposed by the fake, so the count is covered by the card staying closed (a hover is recorded only when it opens). An already open card keeps the card's own handling of a quick leave and return.
 - Decisions made: A1080.
+## W8 Windows engine integration suite (unreal-pipeline, builder-unreal)
+- What was asked: the first run of the real-engine checks on the Windows desktop (UE 5.8.3) gave 16 of 24 passing. Make them pass and make them safe to run on this machine.
+- What was found:
+  - Five tests died before checking anything because the "is any process left behind" check used a Mac and Linux command that Windows does not have, so the cleanup rules had never been checked on Windows.
+  - When the open editor said "Live Coding is not enabled", the app read the word "error" in it and showed the learner a compile failure with no compiler output. It should have quietly used the full build instead.
+  - The wiring test very likely opened a real Unreal Editor window for about half a minute, which the project rules forbid for tests.
+  - A run that fell back to a full build reopens the editor in the background. If a second editor was opened at the same moment, the first one was lost and kept running with nothing able to close it.
+  - While the suite ran, Mohammad's own editors (BadBoys, then KAEL) were open with Live Coding. Unreal's build tool refuses every build in that case, so most of the suite failed with "Unable to build while Live Coding is active".
+- What was done:
+  - One shared process check that works on Windows, and that matches both the short and the long spelling of a folder path.
+  - "Not enabled", "not loaded" and similar answers now count as "Live Coding is unavailable" and send the run to the full build. A bare failure with no compiler text after it also goes to the full build so the real errors show.
+  - Tests can no longer open a windowed editor: they ask for a windowless one, and a guard refuses any launch without the no-window flag. The learner's Open Editor button is unchanged.
+  - Editor launches now happen one at a time, so none can be lost.
+  - The suite stops at once with a plain message when another editor has Live Coding active.
+  - The scratch buffer syntax check test is skipped on Windows, because that checker does not exist yet.
+  - Live Coding in a windowless editor was worked out and built as an opt-in, switched on by an environment variable.
+- What is still open:
+  - The full engine suite has not passed in its final form. Only the fast loop file was run that way (6 passed, 1 skipped). The rest waits for W10, which stops the Live Coding block from another editor; the Lead reruns the suite after it merges.
+  - The Windows scratch buffer checker (A402) is still not built.
+  - The opt-in Live Coding path passed before its last small refactor and was not run again.
+  - During two opt-in runs the Live Coding console window appeared on Mohammad's screen. It is an engine behaviour: any Live Coding compile shows it. That is why the opt-in is off by default.
+- Commit: 92b1815 for the first round, 7cf2def for fix round 1, and fix round 2 follows on branch `w8-windows-integration`. Fix round 2: a failed or cancelled Live Coding compile now counts as a compile failure only when the answer holds a real compiler error line; the usual real answer has only the Live Coding log, and that goes to the full build so the learner sees the real errors.
+- Nothing visible to learners changed.
+- Decisions made: A1070 to A1076.
