@@ -1,0 +1,1 @@
+ERROR: UnrealBuildTool requires at minimum the MSVC 14.38.33130 toolchain. Please install a later toolchain such as 14.44 from the Visual Studio installer.

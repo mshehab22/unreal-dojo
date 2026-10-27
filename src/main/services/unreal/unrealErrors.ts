@@ -1,4 +1,4 @@
-// Every plain-English error the engine locator and toolchain checks can raise, in one place so the wording stays consistent.
+// Every plain-English error the engine locator, the toolchain checks, and the build failure explainer can raise, in one place so the wording stays consistent.
 import type { AppError } from "@shared/types/errors";
 
 /** No engine was found in the launcher list, the registry, or the default folders. */
@@ -124,5 +124,187 @@ export function platformUnsupported(platform: string): AppError
 		message: "Unreal Dojo works with Unreal on Windows and macOS only.",
 		suggestedAction: "Run Unreal Dojo on a Windows PC or a Mac.",
 		detail: `process.platform is ${platform}`,
+	};
+}
+
+/** The Unreal editor the learner opened has Live Coding on, and Unreal refuses to build next to it (message confirmed in the UE 5.8.3 build tool source). */
+export function liveCodingBlocksBuild(detail: string): AppError
+{
+	return {
+		code: "build-environment-failed",
+		message: "The build was refused because an Unreal editor you opened is still running with Live Coding on. This is not a problem in your code.",
+		suggestedAction: "Close that Unreal editor window (or press Ctrl+Alt+F11 inside it), then run again.",
+		detail,
+	};
+}
+
+/** The disk ran out of room during the build. */
+export function diskFull(detail: string): AppError
+{
+	return {
+		code: "build-environment-failed",
+		message: "The build stopped because the disk is full. This is not a problem in your code.",
+		suggestedAction: "Free some space (a build needs a few gigabytes), empty the Recycle Bin or Trash, then run again.",
+		detail,
+	};
+}
+
+/** Another program holds a file the build has to replace, usually an open Unreal editor or a virus scanner. */
+export function fileInUse(detail: string): AppError
+{
+	return {
+		code: "build-environment-failed",
+		message: "The build could not replace a file because another program is using it. This is not a problem in your code.",
+		suggestedAction: "Close any Unreal editor you opened, wait a few seconds, then run again. If it keeps happening, pause your virus scanner for the sandbox folder.",
+		detail,
+	};
+}
+
+/** A path the build uses is longer than Windows allows. */
+export function pathTooLongForBuild(detail: string): AppError
+{
+	return {
+		code: "sandbox-path-too-long",
+		message: "The build failed because a file path in the sandbox is too long for Windows. This is not a problem in your code.",
+		suggestedAction: "Create the sandbox again in a short folder such as C:\\Dojo from Settings, then run again.",
+		detail,
+	};
+}
+
+/** The build could not use Visual Studio, its C++ tools, or the Windows SDK. */
+export function visualStudioNotUsableByBuild(detail: string): AppError
+{
+	return {
+		code: "toolchain-missing",
+		message: "Unreal could not find a usable Visual Studio C++ toolchain or Windows SDK, so it could not compile. This is not a problem in your code.",
+		suggestedAction: "Open the Visual Studio Installer, choose Modify, make sure \"Game development with C++\" is ticked and up to date, then run again.",
+		detail,
+	};
+}
+
+/** The build could not use Xcode or its SDK. */
+export function xcodeNotUsableByBuild(detail: string): AppError
+{
+	return {
+		code: "toolchain-missing",
+		message: "Unreal could not use Xcode to compile. This is not a problem in your code.",
+		suggestedAction: "Install Xcode from the App Store, open it once, then run: sudo xcode-select -s /Applications/Xcode.app",
+		detail,
+	};
+}
+
+/** The build program or the headless editor could not be started, and the engine folder still looks like an engine. */
+export function engineProgramWontStart(detail: string): AppError
+{
+	return {
+		code: "build-environment-failed",
+		message: "Unreal Dojo could not start one of the engine's programs, although the engine folder is still there. This is not a problem in your code.",
+		suggestedAction: "In the Epic Games Launcher choose Verify on this engine, check that a virus scanner did not remove a file, then run again.",
+		detail,
+	};
+}
+
+/** A build or test run hit its time limit and was stopped. */
+export function runTookTooLong(detail: string): AppError
+{
+	return {
+		code: "build-environment-failed",
+		message: "The run took longer than its time limit and was stopped. This is not a problem in your code.",
+		suggestedAction: "Close other heavy programs and run again; the first build after an engine or sandbox change is the slowest.",
+		detail,
+	};
+}
+
+/** Unreal's build tool crashed while starting, several times, usually because another build began at the same moment. */
+export function buildToolKeepsCrashing(detail: string): AppError
+{
+	return {
+		code: "build-environment-failed",
+		message: "The Unreal build tool stopped while starting, three times in a row. Another Unreal build may be starting at the same moment. This is not a problem in your code.",
+		suggestedAction: "Wait for any other Unreal build or editor to finish, then run again.",
+		detail,
+	};
+}
+
+/** The editor ran but none of this quest's tests were among the results. */
+export function questTestsDidNotRun(detail: string): AppError
+{
+	return {
+		code: "build-environment-failed",
+		message: "Your code built, but the engine did not run this quest's tests, so there is no result yet. This is not a problem in your code.",
+		suggestedAction: "Use Rebuild sandbox in Settings and run again. If it still happens, report this quest: its test names may not match.",
+		detail,
+	};
+}
+
+/** The sandbox build failed in quest code that is already in the sandbox (a rebuild keeps it). */
+export function sandboxHoldsBrokenQuests(questIds: string[], detail: string): AppError
+{
+	const names = questIds.join(", ");
+
+	return {
+		code: "build-environment-failed",
+		message: `The sandbox could not be built because code already in it from ${names} has an error. The setup itself is fine.`,
+		suggestedAction: `Open ${names} and fix the error its build output shows (or reset it), then use Rebuild sandbox in Settings.`,
+		detail,
+	};
+}
+
+/** Any other pipeline problem a sandbox build reports. */
+export function runStoppedOutsideCode(detail: string): AppError
+{
+	return {
+		code: "build-environment-failed",
+		message: "The run stopped before it finished, for a reason outside your code.",
+		suggestedAction: "Run again. If it keeps happening, use Rebuild sandbox in Settings.",
+		detail,
+	};
+}
+
+/** The build broke in an earlier quest's code the learner saved. */
+export function earlierQuestBreaksBuild(questIds: string[], detail: string): AppError
+{
+	const names = questIds.join(", ");
+
+	return {
+		code: "build-environment-failed",
+		message: `This quest cannot build because code from an earlier quest (${names}) has an error. The error is not in this quest.`,
+		suggestedAction: `Open ${names} and fix the error its build output shows (or reset it), then come back and run this quest again.`,
+		detail,
+	};
+}
+
+/** The build broke in an earlier quest's reference solution, which is a lesson bug. */
+export function referenceSolutionBroken(questIds: string[], detail: string): AppError
+{
+	const names = questIds.join(", ");
+
+	return {
+		code: "build-environment-failed",
+		message: `This quest cannot build because the reference code Unreal Dojo uses for an earlier quest (${names}) has an error. That is a bug in the lesson, not in your code.`,
+		suggestedAction: "Please report it with the details below, which name the file.",
+		detail,
+	};
+}
+
+/** The build broke in the sandbox's support code, template, or the engine, not in any quest. */
+export function supportOrEngineCodeBroken(detail: string): AppError
+{
+	return {
+		code: "build-environment-failed",
+		message: "The build failed in the sandbox's support code or in the engine, not in your quest. This is not a problem in your code.",
+		suggestedAction: "Use Rebuild sandbox in Settings, then run again.",
+		detail,
+	};
+}
+
+/** The sandbox's own build failed and nothing more specific is known; no quest code is involved yet. */
+export function sandboxBuildFailed(detail: string): AppError
+{
+	return {
+		code: "build-environment-failed",
+		message: "The sandbox project could not be built. No quest code is involved yet, so this is about the setup on this computer.",
+		suggestedAction: "Open the details to read the first error. A full disk, a missing Visual Studio or Xcode part, or an open Unreal editor are the usual causes. Fix that, then use Rebuild sandbox in Settings.",
+		detail,
 	};
 }
