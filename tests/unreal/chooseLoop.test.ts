@@ -176,6 +176,14 @@ describe("readLiveCodingAnswer", () =>
 		expect(readLiveCodingAnswer("Result: CompileStillActive").status).toBe("busy");
 	});
 
+	it("sends a bare failed Result line, with no compiler output after it, to the full build so the real errors show (W8 fix round 1)", () =>
+	{
+		expect(readLiveCodingAnswer("Result: Failure").status).toBe("needs-full-build");
+		expect(readLiveCodingAnswer("Result: Failure\n").status).toBe("needs-full-build");
+		expect(readLiveCodingAnswer("Result: Cancelled").status).toBe("needs-full-build");
+		expect(readLiveCodingAnswer("Result: Failure\n\nCompiler Diagnostics:\nHealth.cpp(3): error C2065").status).toBe("failed");
+	});
+
 	it("reads plain text answers", () =>
 	{
 		expect(readLiveCodingAnswer("Live coding succeeded").status).toBe("succeeded");

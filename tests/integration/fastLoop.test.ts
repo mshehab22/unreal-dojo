@@ -198,7 +198,7 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 		expect(requireRig().ledger.snapshotFor("sample-health")).not.toBeNull();
 	}, STEP_TIMEOUT_MS);
 
-		it("opens the editor with the MCP server on a free port, RunTests works through it, and the runner takes this platform's path", async () =>
+	it("opens the editor with the MCP server on a free port, RunTests works through it, and the runner takes this platform's path", async () =>
 	{
 		await openEditor("editorLaunchToAnswering");
 

@@ -25,11 +25,17 @@ const RESULT_NAMES: Record<string, LiveCodingStatus> = {
 /** Wording that means Live Coding cannot run in this editor at all, so the headless loop must be used: a Mac build, a module that is not loaded, a session without Live Coding (A1071). It is checked before the generic error match, because these answers also begin with "Error:". */
 const UNAVAILABLE_WORDING = /not available|not enabled|not loaded|not started|cannot be enabled|unable to start/;
 
+/** An answer that is only a `Result:` line, with nothing after it. */
+const BARE_RESULT_LINE = /^\s*Result:\s*\S+\s*$/i;
+
 /** Reads the answer: a known result name in a JSON field or a `Result:` line first, then the text. Anything not recognised counts as needing a full build, the safe choice. */
 export function readLiveCodingAnswer(text: string): LiveCodingAnswer
 {
 	const structured = structuredStatus(text);
 	const output = outputOf(text);
+
+	// A bare `Result: Failure` has no `Compile Output:` or `Compiler Diagnostics:` after it (the toolset adds them only when they have text), so there is nothing to show; the headless loop will show the real compiler output.
+	if (structured === "failed" && BARE_RESULT_LINE.test(text)) return { status: "needs-full-build", output };
 
 	if (structured) return { status: structured, output };
 
