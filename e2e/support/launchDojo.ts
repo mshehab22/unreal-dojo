@@ -22,12 +22,16 @@ export interface DojoSession
 	mainLog: string[];
 }
 
+/** The start of the line main writes when the content load took 2 s or more. */
+const SLOW_CONTENT_LOAD_MARKER = "[content] slow load";
+
 /** Marks main's IPC lines in the runner's console, so they are easy to find in a CI job log. */
 const MAIN_IPC_LINE_PREFIX = "[dojo main]";
 
 /**
  * Collects main's stdout and stderr lines from when the window opens, each prefixed with the time it arrived. Every `[ipc]` line (a slow
- * call, a failed handler) is also printed to the runner's console as it arrives, so it is in the CI job log even when the test passes (A1252).
+ * call, a failed handler) and every `[content] slow load` line is also printed to the runner's console as it arrives, so it is in the CI job
+ * log even when the test passes (A1252, A1260).
  */
 function collectMainLog(electronApp: ElectronApplication): string[]
 {
@@ -43,7 +47,7 @@ function collectMainLog(electronApp: ElectronApplication): string[]
 			const stampedLine = `${new Date().toISOString()} ${stream} ${line}`;
 			lines.push(stampedLine);
 
-			if (line.includes("[ipc]")) console.log(`${MAIN_IPC_LINE_PREFIX} ${stampedLine}`);
+			if (line.includes("[ipc]") || line.includes(SLOW_CONTENT_LOAD_MARKER)) console.log(`${MAIN_IPC_LINE_PREFIX} ${stampedLine}`);
 		}
 	};
 

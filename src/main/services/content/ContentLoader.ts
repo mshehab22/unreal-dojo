@@ -18,7 +18,7 @@ export interface ContentLoadTimings
 	/** How many quest files were read. */
 	questFileCount: number;
 
-	/** The time each quest file read took, added up. Divided by the file count it is the average cost of opening one file. */
+	/** The time each quest file read took, added up. The reads overlap, and a pause of the main thread counts against every read still in flight, so read it together with the main-process stall. */
 	totalReadMilliseconds: number;
 
 	/** The time parsing quest files took, added up. It runs on the main thread. */

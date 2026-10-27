@@ -447,8 +447,8 @@ test("against the real bridge, the title works and the Studio shows real data or
 	await expect(window.getByTestId("screen-studio")).toBeVisible();
 	await expect(window.getByTestId("app-error").or(window.getByTestId("studio-lead")).first()).toBeVisible({ timeout: REAL_BRIDGE_STUDIO_TIMEOUT_MS });
 
-	// A read main never answered also ends in the error view now (A1250). That is the CI hang W12 could not explain, so it still fails
-	// here, and the failure attaches main's console, which names the call (A1252, A1253).
+	// A read main never answered ends in the error view after its wait limit (A1250), and a read that outlasts this test's own timeout fails
+	// above. Both are the CI hang W12 could not explain; the failure attaches main's console, which names the call (A1252, A1253).
 	await expect(window.locator('[data-testid="app-error"][data-error-code="no-answer"]')).toHaveCount(0);
 	await saveScreenshot(camera, window, "studio-bridge-1100x700");
 });

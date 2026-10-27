@@ -52,7 +52,7 @@ describe("loadContentWithDiagnostics", () =>
 
 		expect(lines).toHaveLength(1);
 		expect(lines[0]).toContain("[content] slow load: 150 quest files took 16.2 s in all.");
-		expect(lines[0]).toContain("Reading them added up to 12.0 s (80 ms per file)");
+		expect(lines[0]).toContain("Reading them added up to 12.0 s (80 ms per file,");
 		expect(lines[0]).toContain("parsing took 0.0 s");
 		expect(lines[0]).toMatch(/blocked for at most \d+ ms at a time/);
 		expect(lines[0]).not.toContain("\u2014");
@@ -70,24 +70,39 @@ describe("loadContentWithDiagnostics", () =>
 		expect(belowThreshold).toHaveLength(0);
 	});
 
-	it("reports a stretch where the main process was blocked", async () =>
+	it("reports a stretch where the main process was blocked, even one that starts straight away", async () =>
 	{
 		const lines: string[] = [];
 
-		// A load whose first step blocks the thread for a while, as another piece of startup work would.
-		const blocker = fakeLoader(() =>
-		{
-			const until = Date.now() + 250;
-			while (Date.now() < until) { /* hold the main thread */ }
-		});
+		// A load that holds the thread at once, with no await first, as startup work in main can.
+		const blocking: TimedContentLoader = {
+			load: async (options) =>
+			{
+				const until = Date.now() + 250;
 
-		const delayed: TimedContentLoader = { load: async (options) => { await new Promise((resolve) => setTimeout(resolve, 30)); return blocker.load(options); } };
+				while (Date.now() < until) { /* hold the main thread */ }
 
-		await loadContentWithDiagnostics(delayed, { slowAfterMilliseconds: 0, log: (line) => lines.push(line) });
+				options?.onTimings?.(TIMINGS);
+
+				return EMPTY_CONTENT;
+			},
+		};
+
+		await loadContentWithDiagnostics(blocking, { slowAfterMilliseconds: 0, log: (line) => lines.push(line) });
 
 		const stall = Number(/blocked for at most (\d+) ms/.exec(lines[0] ?? "")?.[1]);
 
 		expect(stall).toBeGreaterThanOrEqual(150);
+		expect(lines[0]).toContain("held up by something else running there, not by the disk");
+	});
+
+	it("points at the disk when reads were slow and the main process was not blocked", async () =>
+	{
+		const lines: string[] = [];
+
+		await loadContentWithDiagnostics(fakeLoader(), { now: clockOf(0, 16200), log: (line) => lines.push(line) });
+
+		expect(lines[0]).toContain("slow reads here point at the disk or a virus scanner");
 	});
 
 	it("lets a failed load fail the same way, with no warning", async () =>
