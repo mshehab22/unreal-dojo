@@ -30,7 +30,7 @@ The declarations, the constructor, and `FindRow` are given. Yours is `Resolve`, 
 - `OutTrial` keeps the row's own name and parent name.
 - It returns false, leaving `OutTrial` untouched, for a name that has no row and for a row that names a parent that does not exist.
 - Parents are looked up by name every time `Resolve` runs, so editing a parent changes its children, and rows may be listed in any order.
-- It never changes the rows in the book, and it does not run forever if rows name each other as parents: it gives up and returns false.
+- It never changes the rows in the book.
 
 Write the obvious version first and run the tests. One of them fails on purpose for most people. Read its name and message before you read the hints.
 
@@ -125,7 +125,7 @@ public:
 	/** The row called TrialName, or nullptr when there is none. */
 	const FDojoP12TrialRow* FindRow(FName TrialName) const;
 
-	/** Fills OutTrial with the trial's final numbers, each taken from the nearest row up the chain that sets it, or 0 when none does; false, leaving OutTrial alone, for an unknown trial or a missing parent. */
+	/** Fills OutTrial with the trial's final numbers, the row's own where it sets them, the rest from its parent row, and 0 for any number nobody sets; false, leaving OutTrial alone, for an unknown trial or a missing parent. */
 	UFUNCTION(BlueprintCallable, Category = "Trials")
 	bool Resolve(FName TrialName, FDojoP12TrialRow& OutTrial) const;
 };
@@ -329,7 +329,7 @@ bool FDojo_P12_TrialRows_ParentEditsReachChildren::RunTest(const FString& Parame
 - Resolve gives each number from the row's own setting when it has one, else from the row's parent, else 0.
 - A row with no parent keeps its own numbers, and OutTrial keeps the row's own name and parent name.
 - Parents are looked up by name each time Resolve runs, so editing a parent changes its children, and the order of rows in the book does not matter.
-- An unknown trial, or a row naming a parent that does not exist, returns false and leaves OutTrial untouched; rows that loop through each other return false instead of running forever.
+- An unknown trial, or a row naming a parent that does not exist, returns false and leaves OutTrial untouched.
 - Resolve works on a copy: the rows in the book are never changed.
 - A row names its parent and the parent knows nothing about its children; the book only reads.
 

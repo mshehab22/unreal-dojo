@@ -22,7 +22,7 @@ public:
 	/** The row called TrialName, or nullptr when there is none. */
 	const FDojoP12TrialRow* FindRow(FName TrialName) const;
 
-	/** Fills OutTrial with the trial's final numbers, each taken from the nearest row up the chain that sets it, or 0 when none does; false, leaving OutTrial alone, for an unknown trial or a missing parent. */
+	/** Fills OutTrial with the trial's final numbers, the row's own where it sets them, the rest from its parent row, and 0 for any number nobody sets; false, leaving OutTrial alone, for an unknown trial or a missing parent. */
 	UFUNCTION(BlueprintCallable, Category = "Trials")
 	bool Resolve(FName TrialName, FDojoP12TrialRow& OutTrial) const;
 };
