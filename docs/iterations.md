@@ -1709,6 +1709,25 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 - Proof (Windows 11, from main 20e9501, hidden test windows): the build test with `--repeat-each=5`, 5 passed; the whole `e2e/ui-quests-flow.spec.ts`, 11 passed; `npm run typecheck` passes; `npm test` 920 passed, 28 skipped. macOS not run here; the change is platform neutral (frames and the End key behave the same there).
 - Decisions made: none.
 
+## M5.1i Environment errors on Title, First-run and Settings; the screen crash view (ui-core, m5-1 builder)
+- What changed: when something is wrong with the learner's setup, the app now says so in plain words where they look. On the Title screen the engine chip reads "Missing" (not "Not set") when the engine they chose is gone, a new "Build tools" chip shows when Visual Studio or Xcode cannot build, and under the chips each problem is written out with what to do. Settings shows the same problems in its engine row and a new Build tools row. First-run's engine step shows the missing engine, its sandbox step lists why a folder cannot be used and will not let the learner continue with it, and a failed first build shows the reason the main process gave instead of a guess (the old guess is only a fallback). A note about the save file (restored from the backup) has a Dismiss button and stays gone across screens and window refocus. Any screen that throws while drawing now shows a card saying "Something went wrong on this screen" with Reload, Go to Studio and a details toggle; the navigation rail keeps working.
+- How to see it: the fake data source has new starting states; in the app window's developer tools run `localStorage.setItem("dojo.dataSource", "fake:engine-missing")` (or `toolchain-missing`, `sandbox-setup-fails`, `folder-blocked`, `screen-crash`, `save-notice`) and reload. `screen-crash` makes the Character screen throw. Or run `npx playwright test e2e/environment-errors.spec.ts` after `npm run build`.
+- What went wrong and how it was solved: the first crash test used a broken glossary, which also broke the Studio, so "Go to Studio" had nowhere safe to go; the crash now comes from broken pattern cards, which only the Character screen reads while drawing. The shared chip color type had to move into a plain TypeScript file because the unit-test setup cannot import a component file.
+- Proof: `npm run typecheck`, `npm test`, `npx tsx tools/verify-content.ts` and `npm run build` pass. The new e2e spec (6 tests: engine missing, build tools missing, sandbox setup failing with a reason, blocked folder, screen crash, save notice dismissal) and the existing `ui-core-screens` spec (12 tests) pass, each screen checked at 1100x700 and 1440x900 with no sideways scroll.
+- Screenshots: `docs/iterations/m5-1i-title-engine-missing.jpg`, `m5-1i-title-toolchain-missing.jpg`, `m5-1i-settings-engine-missing.jpg`, `m5-1i-settings-toolchain-missing.jpg`, `m5-1i-settings-save-notice.jpg`, `m5-1i-first-run-engine-missing.jpg`, `m5-1i-first-run-toolchain-missing.jpg`, `m5-1i-first-run-folder-blocked.jpg`, `m5-1i-first-run-build-explained.jpg`, `m5-1i-screen-error.jpg`.
+
+![[m5-1i-title-engine-missing.jpg|800]]
+*Title with the engine gone: the chip says Missing and the problem and the action are written out under the chips.*
+
+![[m5-1i-first-run-folder-blocked.jpg|800]]
+*First-run: a folder inside the engine folder is refused, with the reason, and "Use this folder" stays off.*
+
+![[m5-1i-screen-error.jpg|800]]
+*A screen that threw while drawing: the card replaces it and the rail on the left still works.*
+
+- Decisions made: A1215 to A1217 in `docs/decisions.md`.
+- Not done or left for later: the real values come from the main process (M5.1g); this task only draws them against the fake and the types. Not run on macOS.
+
 ## M5.1c Content load under 300 ms for 300 quests (app-shell, m5-1 builder)
 - What changed: the app now writes one line to its log when the lessons finish loading, saying how many quests loaded and how long it took. A new test builds a throwaway lessons folder on disk with 300 quests (copies of the real ones, renamed so nothing clashes, plus the real glossary and pattern cards), loads it the way the app does, and fails if loading takes too long. No loading code had to change; it was already fast enough.
 - How to see it: run `npx vitest run tests/contentLoadBudget.test.ts --reporter=verbose` and read the line that starts with `[content load budget]`. In the app, the log line is `[content] loaded N quests in X ms`.

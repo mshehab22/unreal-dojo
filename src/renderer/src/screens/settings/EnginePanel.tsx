@@ -1,13 +1,15 @@
-// Settings: the engine path and the sandbox, with a clean rebuild that shows its progress.
+// Settings: the engine path, the build tools, and the sandbox, with the environment problems explained and a clean rebuild that shows its progress.
 import { FolderOpenIcon, HammerIcon, SquareIcon } from "lucide-react";
 
-import type { EnvironmentStatus } from "@shared/types/engine";
+import type { EnvironmentStatus, SandboxSetupResult } from "@shared/types/engine";
+import type { AppError } from "@shared/types/errors";
 import type { Settings } from "@shared/types/settings";
 
 import { AppErrorView } from "@/components/AppErrorView";
 import { BuildProgressView } from "@/components/BuildProgressView";
 import { QuietBuildNotice } from "@/components/QuietBuildNotice";
 import { Panel } from "@/components/Panel";
+import { SaveNoticeView } from "@/components/SaveNoticeView";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { QUERY_KEYS } from "@/data/queryKeys";
@@ -15,9 +17,10 @@ import { useDojoAction } from "@/data/useDojoAction";
 import { useSandboxBuild } from "@/data/useSandboxBuild";
 import { buildOutcome } from "@/lib/buildOutcome";
 import { formatElapsed } from "@/lib/formatting";
-import { explainSandboxFailure } from "@/lib/sandboxFailure";
+import { describeSandboxFailure } from "@/lib/sandboxFailure";
 
 import { SettingRow } from "./SettingRow";
+import { ToolchainRow } from "./ToolchainRow";
 
 /** Props for EnginePanel. */
 interface EnginePanelProps
@@ -26,7 +29,15 @@ interface EnginePanelProps
 	readonly environment: EnvironmentStatus | undefined;
 }
 
-/** Engine and sandbox rows. */
+/** The error a failed rebuild shows: the main process's explanation when it sent one, else the guess from the compiler output, with that output as the detail. */
+function rebuildFailure(result: SandboxSetupResult): AppError
+{
+	const error = describeSandboxFailure(result, "rebuild");
+
+	return { ...error, detail: error.detail ?? (result.compilerOutput || undefined) };
+}
+
+/** Engine, build tools, and sandbox rows. */
 export function EnginePanel({ settings, environment }: EnginePanelProps)
 {
 	const pickEngine = useDojoAction(async (client) =>
@@ -50,8 +61,11 @@ export function EnginePanel({ settings, environment }: EnginePanelProps)
 					<FolderOpenIcon />
 					Pick another engine
 				</Button>
+				{environment?.engineProblem && <AppErrorView error={environment.engineProblem} compact />}
 				{pickEngine.error && <AppErrorView error={pickEngine.error} compact />}
+				<SaveNoticeView notice={environment?.saveNotice} compact />
 			</SettingRow>
+			{environment?.toolchain && <ToolchainRow toolchain={environment.toolchain} />}
 			<SettingRow label="Sandbox" description="The practice project where your code is compiled and tested.">
 				<div className="flex flex-wrap items-center gap-2">
 					<Badge variant={environment?.sandbox.ready ? "pass" : "warn"}>{environment?.sandbox.ready ? "Ready" : "Not built"}</Badge>
@@ -73,7 +87,7 @@ export function EnginePanel({ settings, environment }: EnginePanelProps)
 				{rebuild.status === "running" && rebuild.isQuiet && <QuietBuildNotice build={rebuild} />}
 				{rebuild.status === "cancelled" && <p className="text-xs text-paper-muted">The rebuild was cancelled. The sandbox keeps its last good build.</p>}
 				{rebuild.status === "succeeded" && rebuild.result && <p className="text-xs text-pass">Rebuilt in {formatElapsed(rebuild.result.durationMs)}.</p>}
-				{rebuild.status === "failed" && rebuild.result && <AppErrorView error={{ code: "sandbox-not-ready", ...explainSandboxFailure(rebuild.result.compilerOutput, "rebuild"), detail: rebuild.result.compilerOutput }} onRetry={rebuild.start} />}
+				{rebuild.status === "failed" && rebuild.result && <AppErrorView error={rebuildFailure(rebuild.result)} onRetry={rebuild.start} />}
 				{rebuild.status === "errored" && rebuild.error && <AppErrorView error={rebuild.error} onRetry={rebuild.start} />}
 			</SettingRow>
 		</Panel>

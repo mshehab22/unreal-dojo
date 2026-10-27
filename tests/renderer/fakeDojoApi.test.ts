@@ -67,4 +67,86 @@ describe("FakeDojoApi", () =>
 		expect(events.some((event) => event.runId === "run-1" && event.phase === "building")).toBe(true);
 		expect((await fake.getSettings()).sandboxPath).toBe(passed.sandboxPath);
 	}, 20_000);
+
+	it("reports a gone engine in the engine-missing scenario until another engine is chosen", async () =>
+	{
+		const fake = new FakeDojoApi("engine-missing");
+		const before = await fake.getEnvironmentStatus();
+
+		expect(before.engine).toBeNull();
+		expect(before.engineProblem?.code).toBe("engine-not-found");
+		expect((await fake.detectEngines()).map((engine) => engine.path)).not.toContain((await fake.getSettings()).enginePath);
+
+		const picked = await fake.pickEngineFolder();
+		await fake.updateSettings({ enginePath: picked?.path ?? null });
+
+		const after = await fake.getEnvironmentStatus();
+
+		expect(after.engine?.version).toBe("5.7.2");
+		expect(after.engineProblem).toBeUndefined();
+	});
+
+	it("reports a blocking toolchain problem on both the check and the environment in the toolchain-missing scenario only", async () =>
+	{
+		const broken = new FakeDojoApi("toolchain-missing");
+		const environment = await broken.getEnvironmentStatus();
+		const check = await broken.checkToolchain();
+
+		expect(check.ok).toBe(false);
+		expect(check.problems[0]?.blocksBuild).toBe(true);
+		expect(environment.toolchain?.problems[0]?.error.code).toBe("toolchain-missing");
+
+		const fine = new FakeDojoApi("returning");
+
+		expect((await fine.checkToolchain()).ok).toBe(true);
+		expect((await fine.getEnvironmentStatus()).toolchain).toBeUndefined();
+		expect((await fine.getEnvironmentStatus()).engineProblem).toBeUndefined();
+	});
+
+	it("fails the first sandbox setup with the main process's explanation in the sandbox-setup-fails scenario, then passes", async () =>
+	{
+		const fake = new FakeDojoApi("sandbox-setup-fails");
+		const engine = (await fake.detectEngines())[0];
+
+		if (!engine) throw new Error("the fake must detect an engine");
+
+		const failed = await fake.createSandbox({ runId: "run-1", enginePath: engine.path, folder: "/tmp/dojo" });
+		const passed = await fake.createSandbox({ runId: "run-2", enginePath: engine.path, folder: "/tmp/dojo" });
+
+		expect(failed.ok).toBe(false);
+		expect(failed.failure?.code).toBe("build-environment-failed");
+		expect(passed.ok).toBe(true);
+		expect(passed.failure).toBeUndefined();
+
+		const plainFailure = new FakeDojoApi("first-build-fails");
+		const guessed = await plainFailure.createSandbox({ runId: "run-3", enginePath: engine.path, folder: "/tmp/dojo" });
+
+		expect(guessed.ok).toBe(false);
+		expect(guessed.failure).toBeUndefined();
+	}, 30_000);
+
+	it("blocks the first sandbox folder pick in the folder-blocked scenario and allows the next", async () =>
+	{
+		const fake = new FakeDojoApi("folder-blocked");
+		const first = await fake.pickSandboxFolder();
+		const second = await fake.pickSandboxFolder();
+
+		expect(first?.blockers?.length).toBe(1);
+		expect(second?.blockers).toBeUndefined();
+	});
+
+	it("repeats the save notice on every read of the environment in the save-notice scenario, as the main process does", async () =>
+	{
+		const fake = new FakeDojoApi("save-notice");
+
+		expect((await fake.getEnvironmentStatus()).saveNotice?.code).toBe("save-failed");
+		expect((await fake.getEnvironmentStatus()).saveNotice?.code).toBe("save-failed");
+		expect((await new FakeDojoApi("returning").getEnvironmentStatus()).saveNotice).toBeUndefined();
+	});
+
+	it("hands the Character screen broken pattern cards only in the screen-crash scenario", async () =>
+	{
+		expect((await new FakeDojoApi("screen-crash").getPatternCards())[0]).toBeNull();
+		expect((await new FakeDojoApi("returning").getPatternCards())[0]).toBeTruthy();
+	});
 });

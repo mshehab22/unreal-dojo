@@ -4,9 +4,28 @@
 export const DATA_SOURCE_STORAGE_KEY = "dojo.dataSource";
 
 /** The fake's starting states. */
-export const FAKE_SCENARIOS = ["returning", "fresh", "first-build-fails", "first-build-goes-quiet", "quests"] as const;
+export const FAKE_SCENARIOS = [
+	"returning",
+	"fresh",
+	"first-build-fails",
+	"first-build-goes-quiet",
+	"quests",
+	"engine-missing",
+	"toolchain-missing",
+	"sandbox-setup-fails",
+	"folder-blocked",
+	"screen-crash",
+	"save-notice",
+] as const;
 
-/** One fake starting state: a learner part way in, a learner who never ran setup, a setup whose first build fails once, a setup whose first build goes quiet (its progress and answer never arrive, A821), or the returning learner with the real Pack 1 World 1 open on the map (the quest screens' flow). */
+/**
+ * One fake starting state: a learner part way in, a learner who never ran setup, a setup whose first build fails once, a setup whose first build goes quiet
+ * (its progress and answer never arrive, A821), or the returning learner with the real Pack 1 World 1 open on the map (the quest screens' flow).
+ * Environment scenarios (M5.1i): the engine in settings is gone (`engine-missing`), the build tools are missing (`toolchain-missing`),
+ * the first sandbox setup fails and says why (`sandbox-setup-fails`), the first folder pick cannot be used (`folder-blocked`),
+ * the Character screen throws while rendering so the screen error view can be seen (`screen-crash`),
+ * and the save was restored from its backup, a notice the fake repeats on every read as the main process does (`save-notice`). They exist only in the fake, which a packaged build never loads (A251).
+ */
 export type FakeScenario = (typeof FAKE_SCENARIOS)[number];
 
 /** Which data source to use. */
