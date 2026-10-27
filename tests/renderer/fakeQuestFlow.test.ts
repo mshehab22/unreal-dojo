@@ -9,6 +9,7 @@ import type { BuildProgressEvent } from "@shared/types/run";
 import { ContentLoader } from "../../src/main/services/content";
 import { FakeDojoApi } from "../../src/renderer/src/data/fake/FakeDojoApi";
 import { judgeBuild, testNamesIn } from "../../src/renderer/src/data/fake/FakeBuildJudge";
+import { OUTSIDE_FAILURE_MARKER } from "../../src/renderer/src/data/fake/FakeOutsideFailure";
 import { gradeParsons, gradeQuestion } from "../../src/renderer/src/data/fake/FakeItemGrader";
 import { matchRequiredPieces } from "../../src/renderer/src/data/fake/FakeReviews";
 import { withRetriedReview } from "../../src/renderer/src/screens/quests/loot/withRetriedReview";
@@ -259,4 +260,69 @@ describe("revealed hints persist (A500 to A502)", () =>
 		expect(quest.kind === "build" && quest.revealedHints).toEqual([first.text]);
 		expect(progress.quests["f1-training-dummy"]?.revealedHints).toEqual([0]);
 	});
+});
+
+/** The training dummy's starter files with the outside-failure marker added to the source file. */
+async function markedStarters(fake: FakeDojoApi): Promise<Record<string, string>>
+{
+	const quest = await fake.getQuest("f1-training-dummy");
+
+	if (quest.kind !== "build") throw new Error("build quest expected");
+
+	const starters = Object.fromEntries(quest.files.map((file) => [file.name, file.starter]));
+	const sourceName = quest.files[1]?.name ?? "";
+
+	return { ...starters, [sourceName]: `${OUTSIDE_FAILURE_MARKER}\n${starters[sourceName] ?? ""}` };
+}
+
+describe("the fake outside-failure marker (M5.1h, A1208)", () =>
+{
+	it("makes a Run answer with an unrelatedFailure and no tests", async () =>
+	{
+		const fake = new FakeDojoApi("quests");
+		const result = await fake.runQuest({ runId: "marked-run", questId: "f1-training-dummy", files: await markedStarters(fake) });
+
+		expect(result.ok).toBe(false);
+		expect(result.compiled).toBe(false);
+		expect(result.tests).toEqual([]);
+		expect(result.unrelatedFailure).toMatchObject({ code: "build-environment-failed" });
+		expect(result.unrelatedFailure?.suggestedAction.length).toBeGreaterThan(0);
+		expect(result.unrelatedFailure?.detail?.length).toBeGreaterThan(0);
+	}, 20_000);
+
+	it("makes a Submit reject with that error and record no attempt, XP, or spree change", async () =>
+	{
+		const fake = new FakeDojoApi("quests");
+		const before = await fake.getProgress();
+
+		await expect(fake.submitQuest({ runId: "marked-submit", questId: "f1-training-dummy", files: await markedStarters(fake) })).rejects.toMatchObject({ code: "build-environment-failed" });
+
+		const after = await fake.getProgress();
+
+		expect(after.attempts).toHaveLength(before.attempts.length);
+		expect(after.xp).toBe(before.xp);
+		expect(after.spree).toEqual(before.spree);
+	}, 20_000);
+
+	it("leaves an ordinary compile failure and an ordinary failing test as they were", async () =>
+	{
+		const fake = new FakeDojoApi("quests");
+		const quest = await fake.getQuest("f1-training-dummy");
+
+		if (quest.kind !== "build") throw new Error("build quest expected");
+
+		const starters = Object.fromEntries(quest.files.map((file) => [file.name, file.starter]));
+		const broken = judgeBuild(quest, { ...starters, "DojoF1TrainingDummy.cpp": "{" });
+		const failing = judgeBuild(quest, starters);
+
+		expect(broken.compiled).toBe(false);
+		expect(broken.unrelatedFailure).toBeUndefined();
+		expect(failing.compiled).toBe(true);
+		expect(failing.unrelatedFailure).toBeUndefined();
+
+		const submitted = await fake.submitQuest({ runId: "plain-fail", questId: "f1-training-dummy", files: starters });
+
+		expect(submitted.run.unrelatedFailure).toBeUndefined();
+		expect(submitted.outcome.attempt.passed).toBe(false);
+	}, 20_000);
 });

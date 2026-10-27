@@ -1,8 +1,9 @@
 // The renderer data layer: choosing the data source (never the fake in a packaged build) and the query cache.
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { chooseDataSource } from "../../src/renderer/src/data/dataSourceChoice";
 import { QueryCache } from "../../src/renderer/src/data/QueryCache";
+import { DATA_QUERY_WAIT_LIMIT_MS, PROBE_QUERY_WAIT_LIMIT_MS, waitLimitFor } from "../../src/renderer/src/data/queryWaitLimits";
 
 describe("chooseDataSource", () =>
 {
@@ -34,6 +35,63 @@ describe("chooseDataSource", () =>
 
 describe("QueryCache", () =>
 {
+	afterEach(() =>
+	{
+		vi.useRealTimers();
+	});
+
+	it("stops loading with a no-answer error when main never answers, and the fetch itself resolves (W12, A1250)", async () =>
+	{
+		vi.useFakeTimers();
+		const cache = new QueryCache(() => 1_000);
+		let settled = false;
+
+		cache.observe("daily", () => new Promise(() => undefined));
+		const fetching = cache.fetch("daily").then(() => (settled = true));
+
+		await vi.advanceTimersByTimeAsync(999);
+		expect(cache.read("daily")).toMatchObject({ isLoading: true, error: undefined });
+
+		await vi.advanceTimersByTimeAsync(1);
+		await fetching;
+		expect(settled).toBe(true);
+		expect(cache.read("daily")).toMatchObject({ data: undefined, isLoading: false, error: { code: "no-answer", detail: "daily: no answer from the main process after 1 s" } });
+	});
+
+	it("still shows an answer that comes after the wait limit, and Retry starts a fresh wait", async () =>
+	{
+		vi.useFakeTimers();
+		const cache = new QueryCache(() => 1_000);
+		const answers: ((value: string) => void)[] = [];
+
+		cache.observe("packs", () => new Promise<string>((resolve) => answers.push(resolve)));
+		await vi.advanceTimersByTimeAsync(1_000);
+		expect(cache.read("packs").error?.code).toBe("no-answer");
+
+		answers[0]?.("late packs");
+		await vi.advanceTimersByTimeAsync(0);
+		expect(cache.read("packs")).toEqual({ data: "late packs", error: undefined, isLoading: false });
+
+		void cache.fetch("packs");
+		expect(cache.read("packs")).toMatchObject({ data: "late packs", isLoading: true });
+		answers[1]?.("fresh packs");
+		await vi.advanceTimersByTimeAsync(0);
+		expect(cache.read("packs")).toEqual({ data: "fresh packs", error: undefined, isLoading: false });
+
+		// The answered fetch cleared its timer, so the wait limit passing later changes nothing.
+		await vi.advanceTimersByTimeAsync(5_000);
+		expect(cache.read("packs").error).toBeUndefined();
+	});
+
+	it("gives machine probes a longer wait than save and content reads", () =>
+	{
+		expect(waitLimitFor("daily")).toBe(DATA_QUERY_WAIT_LIMIT_MS);
+		expect(waitLimitFor("quest:p1-w1-q1")).toBe(DATA_QUERY_WAIT_LIMIT_MS);
+		expect(waitLimitFor("toolchain")).toBe(PROBE_QUERY_WAIT_LIMIT_MS);
+		expect(waitLimitFor("engines")).toBe(PROBE_QUERY_WAIT_LIMIT_MS);
+		expect(DATA_QUERY_WAIT_LIMIT_MS).toBeLessThan(PROBE_QUERY_WAIT_LIMIT_MS);
+	});
+
 	it("fetches on first read, refetches in the background on the next, and refreshes on invalidate", async () =>
 	{
 		const cache = new QueryCache();
@@ -62,6 +120,20 @@ describe("QueryCache", () =>
 		await cache.refetchObserved();
 
 		expect(calls).toEqual({ rules: 2, glossary: 1 });
+	});
+
+	it("forgets what no mounted screen reads, so a screen that mounts again starts from scratch", async () =>
+	{
+		const cache = new QueryCache();
+		const stopReadingPatternCards = cache.observe("pattern-cards", () => Promise.resolve("bad data"));
+
+		cache.observe("rules", () => Promise.resolve("rules"));
+		await cache.invalidate(["pattern-cards", "rules"]);
+		stopReadingPatternCards();
+		cache.forgetUnobserved();
+
+		expect(cache.read<string>("pattern-cards")).toMatchObject({ data: undefined, isLoading: true });
+		expect(cache.read<string>("rules").data).toBe("rules");
 	});
 
 	it("turns a rejection into an AppError and keeps the last good answer", async () =>

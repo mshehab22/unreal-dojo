@@ -28,7 +28,7 @@ Refactor the gladiator into a container of those parts:
 - In the constructor, create a health part, a stamina part, and a sprint part with `CreateDefaultSubobject`, kept in `HealthComponent`, `StaminaComponent`, and `SprintComponent` properties.
 - Remove the gladiator's own numbers and fields; the parts' defaults already match them, and designers now tune the parts in the Details panel.
 - Keep every public function, passing each call to the right part.
-- Keep the one rule that spans two parts, "going down stops the sprint", in the gladiator: it listens to the health part's `OnDepleted` and stops the sprint part.
+- Keep the one rule that spans two parts, "going down stops the sprint", in the gladiator: it listens to the health part's `OnDepleted`, stops listening when play ends (`EndPlay`), and stops the sprint part.
 - The gladiator no longer needs to tick.
 
 Compiles against earlier quests: p9-arena-parts (`Quests/p9-arena-parts/DojoP9HealthComponent.h`), p9-sprint-parts (`Quests/p9-sprint-parts/DojoP9StaminaComponent.h`, `Quests/p9-sprint-parts/DojoP9SprintComponent.h`).

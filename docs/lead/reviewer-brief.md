@@ -21,9 +21,9 @@ The system spec in `docs/systems/`, `docs/product.md`, `docs/decisions.md`, and 
 - **Engine:** run the pack with `--engine`, confirm every reference passes and every starter fails or does not compile as designed, and try at least two boss mutations of your own (A67).
 - **Originality (D13):** compare at 6 and 5 words against the sources the brief names, and read every card item for leftover book examples.
 - **Accuracy:** check every Unreal claim against UE 5.8.
-- **Windows compiler:** no local or parameter in a solution or starter may share a name with a member of the class it sits in or of `AActor`, `UActorComponent`, or `UObject` (`Instigator`, `bHidden`, `Owner`, `Tags`, and so on). MSVC rejects it as C4458 and clang on the Mac does not warn (A1050, A1060).
+- **Windows compiler:** no local or parameter in a solution or starter may share a name with a member of the class it sits in or of `AActor`, `UActorComponent`, or `UObject` (`Instigator`, `bHidden`, `Owner`, `Tags`, and so on). MSVC rejects it as C4458 and clang on the Mac does not warn (A1050, A1060). The verifier now flags it as an error on any machine (A1170), so a clean `verify-content` run covers it; still read new C++ that the scanner cannot see (macro-declared members, brace initializer lists).
 - **Rules:** check A64 (and A373 for starter comments), A66, A72 and every `firstQuestId`, A73, and that rubrics match briefs.
-- **Deliberate failure:** confirm it is not given away anywhere the learner sees before failing, including glossary hover cards and the rubric shown beside the brief.
+- **Deliberate failure:** confirm it is not given away anywhere the learner sees before failing, including glossary hover cards, the rubric and the concepts shown beside the brief (they state outcomes only, never the failure or its fix; reasoning belongs in the after-pass text).
 
 ## Report
 

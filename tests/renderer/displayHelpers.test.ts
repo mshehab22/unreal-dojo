@@ -1,4 +1,4 @@
-// Pure helpers behind the screens: level standing, loop wording (never fast on macOS), formatting, skill groups and names, glossary search, build failure wording.
+// Pure helpers behind the screens: level standing, loop wording (never fast on macOS), formatting, skill groups and names, glossary search, build failure wording, environment chip wording, dismissed notices.
 import { describe, expect, it } from "vitest";
 
 import type { GlossaryEntry } from "@shared/types/content";
@@ -8,7 +8,11 @@ import { levelStanding, xpToNextLevel } from "../../src/renderer/src/lib/levels"
 import { describeLoop } from "../../src/renderer/src/lib/loopDescription";
 import { hasPointerMoved } from "../../src/renderer/src/lib/pointerMovement";
 import { balancedRows, stagesPerRow } from "../../src/renderer/src/lib/pathRows";
-import { explainSandboxFailure } from "../../src/renderer/src/lib/sandboxFailure";
+import type { AppError } from "@shared/types/errors";
+
+import { dismissNotice, isNoticeDismissed } from "../../src/renderer/src/lib/dismissedNotices";
+import { engineChipState, toolchainChipState } from "../../src/renderer/src/lib/environmentChipStates";
+import { describeRebuildFailure, describeSandboxFailure, explainSandboxFailure } from "../../src/renderer/src/lib/sandboxFailure";
 import { groupSkills, skillPrefix } from "../../src/renderer/src/lib/skillGroups";
 import { skillGroupName, skillLabel } from "../../src/renderer/src/lib/skillNames";
 import { searchGlossary } from "../../src/renderer/src/lib/searchGlossary";
@@ -148,6 +152,19 @@ describe("explainSandboxFailure", () =>
 		expect(explainSandboxFailure(output, "first-run").message).toContain("not in anything you wrote");
 	});
 
+	it("names another open editor with Live Coding as the cause, on both a first build and a rebuild", () =>
+	{
+		const pipelineMessage = "Unreal refused to build because an Unreal editor with Live Coding is open. Close the other Unreal editor, then run again. Your code was not compiled.";
+		const rawLine = "Unable to build while Live Coding is active. Exit the editor and game, or press Ctrl+Alt+F11 if iterating on code in the editor or game";
+
+		for (const context of ["first-run", "rebuild"] as const)
+		{
+			expect(explainSandboxFailure(`${pipelineMessage}
+${rawLine}`, context).message).toContain("another Unreal editor with Live Coding is open");
+			expect(explainSandboxFailure(rawLine, context).suggestedAction).toContain("Close the other Unreal editor");
+		}
+	});
+
 	it("never mentions setup steps on a rebuild", () =>
 	{
 		const explanation = explainSandboxFailure(output, "rebuild");
@@ -187,5 +204,104 @@ describe("hasPointerMoved", () =>
 	{
 		expect(hasPointerMoved({ x: 10, y: 20 }, { x: 10, y: 20 })).toBe(false);
 		expect(hasPointerMoved({ x: 10, y: 20 }, { x: 11, y: 20 })).toBe(true);
+	});
+});
+
+describe("describeSandboxFailure", () =>
+{
+	const explained: AppError = { code: "build-environment-failed", message: "The build tools could not run.", suggestedAction: "Close the editor and build again." };
+
+	it("prefers the explanation the main process sent over any guess from the compiler output", () =>
+	{
+		expect(describeSandboxFailure({ compilerOutput: "error C2065: undeclared identifier", failure: explained }, "first-run")).toBe(explained);
+	});
+
+	it("falls back to the guess from the compiler output when no explanation came", () =>
+	{
+		const guessed = describeSandboxFailure({ compilerOutput: "error C2065: undeclared identifier" }, "first-run");
+
+		expect(guessed.code).toBe("sandbox-not-ready");
+		expect(guessed.message).toContain("compile error inside the sandbox template");
+	});
+});
+
+describe("describeRebuildFailure", () =>
+{
+	const explained: AppError = { code: "build-environment-failed", message: "The build tools could not run.", suggestedAction: "Build again.", detail: "UBT exited with code 6." };
+
+	it("keeps both the main process detail and the compiler output reachable", () =>
+	{
+		expect(describeRebuildFailure({ compilerOutput: "link error LNK1104", failure: explained }).detail).toBe("UBT exited with code 6.\n\nlink error LNK1104");
+	});
+
+	it("shows a detail that equals the compiler output once, and the output alone when main sent no detail", () =>
+	{
+		expect(describeRebuildFailure({ compilerOutput: "UBT exited with code 6.", failure: explained }).detail).toBe("UBT exited with code 6.");
+		expect(describeRebuildFailure({ compilerOutput: "link error LNK1104", failure: { ...explained, detail: undefined } }).detail).toBe("link error LNK1104");
+		expect(describeRebuildFailure({ compilerOutput: "" }).detail).toBeUndefined();
+	});
+});
+
+describe("engineChipState", () =>
+{
+	const engine = { path: "C:\\UE_5.8", version: "5.8.3", source: "launcher" as const, supportsFastLoop: true };
+	const problem: AppError = { code: "engine-not-found", message: "The engine folder is gone.", suggestedAction: "Pick it again in Settings." };
+
+	it("says Missing, with the message and action in the tooltip, when the engine in settings has a problem", () =>
+	{
+		const state = engineChipState({ engine: null, engineProblem: problem });
+
+		expect(state).toMatchObject({ value: "Missing", tone: "fail" });
+		expect(state.title).toBe("The engine folder is gone. Pick it again in Settings.");
+	});
+
+	it("says Too old, not Missing, when the engine is there but older than the app supports", () =>
+	{
+		const tooOld: AppError = { code: "engine-version-unsupported", message: "UE 5.2 is older than the oldest supported version.", suggestedAction: "Pick UE 5.4 or later." };
+
+		expect(engineChipState({ engine: null, engineProblem: tooOld })).toMatchObject({ value: "Too old", tone: "fail" });
+	});
+
+	it("says Not set only when no engine was ever chosen, and shows the version when the engine works", () =>
+	{
+		expect(engineChipState({ engine: null })).toMatchObject({ value: "Not set", tone: "fail" });
+		expect(engineChipState({ engine, engineProblem: null })).toMatchObject({ value: "UE 5.8.3", tone: "pass", title: "C:\\UE_5.8" });
+	});
+});
+
+describe("toolchainChipState", () =>
+{
+	const blocking: AppError = { code: "toolchain-missing", message: "The C++ workload is missing.", suggestedAction: "Install it, then check again." };
+	const smaller: AppError = { code: "toolchain-missing", message: "The editor window cannot open.", suggestedAction: "Update the graphics driver." };
+
+	it("shows no chip before any check ran", () =>
+	{
+		expect(toolchainChipState(null)).toBeNull();
+		expect(toolchainChipState(undefined)).toBeNull();
+	});
+
+	it("shows OK when nothing is wrong, Blocked for a problem that stops builds, and Warning for a smaller one", () =>
+	{
+		expect(toolchainChipState({ ok: true, tool: "vswhere", message: "All good.", problems: [] })).toMatchObject({ value: "OK", tone: "pass" });
+		expect(toolchainChipState({ ok: false, tool: "vswhere", message: "No.", problems: [{ error: smaller, blocksBuild: false }, { error: blocking, blocksBuild: true }] })).toMatchObject({
+			value: "Blocked",
+			tone: "fail",
+			title: "The C++ workload is missing. Install it, then check again.",
+		});
+		expect(toolchainChipState({ ok: true, tool: "xcode-select", message: "Mostly.", problems: [{ error: smaller, blocksBuild: false }] })).toMatchObject({ value: "Warning", tone: "warn" });
+	});
+});
+
+describe("dismissed notices", () =>
+{
+	it("remembers a dismissed notice by its code and message, and only that one", () =>
+	{
+		const notice: AppError = { code: "settings-invalid", message: "Your save was restored from the backup.", suggestedAction: "Nothing to do." };
+		const other: AppError = { ...notice, message: "Your save could not be read." };
+
+		expect(isNoticeDismissed(notice)).toBe(false);
+		dismissNotice(notice);
+		expect(isNoticeDismissed({ ...notice, suggestedAction: "Different words." })).toBe(true);
+		expect(isNoticeDismissed(other)).toBe(false);
 	});
 });

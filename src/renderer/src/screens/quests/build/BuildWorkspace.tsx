@@ -136,6 +136,9 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 		if (busy) return;
 
 		void autosave.saveNow();
+
+		// A rejected Submit's message is about the earlier attempt; a new Run replaces it.
+		submit.clearError();
 		const result = await run.start(quest.id, filesNow.current);
 
 		if (result) setLastResult({ result, source: "run" });
@@ -149,6 +152,7 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 		const submitted = { ...filesNow.current };
 
 		await autosave.saveNow();
+		run.clearError();
 		const outcome = await submit.start(quest.id, submitted);
 
 		if (!outcome) return;

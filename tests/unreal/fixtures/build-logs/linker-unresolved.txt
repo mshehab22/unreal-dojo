@@ -1,0 +1,2 @@
+Module.Dojo.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl UDojoF1ScoreKeeper::Reset(void)" referenced in function "void __cdecl Run(void)"
+C:\Dojo\DojoSandbox\Binaries\Win64\UnrealEditor-Dojo.dll : fatal error LNK1120: 1 unresolved externals

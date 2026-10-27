@@ -34,7 +34,7 @@ Write the obvious version first and run the tests. One of them fails on purpose 
 
 ## See it in the editor
 
-In the Content Browser, right-click, choose Miscellaneous, Data Table, pick DojoP10QuiverRow as the row structure, and name it DT_Quivers. Add a row named Hunting (6 arrows, 12 damage) and a row named Barbed (3 arrows, 30 damage). Place a `DojoP10Quiver`, open its Kind, pick DT_Quivers and the Hunting row. Press Play: "Hunting: 6"; run `ke * Draw` a few times and watch it count down. Make a Blueprint child of the quiver class, BP_BarbedQuiver, and set it as the Barbed row's Quiver Class: that is how a kind picks its own actor, and `SpawnOfKind`, called from C++ code such as a game mode, hands it out. Place a second quiver on the Hunting row, play, and draw from one: the other keeps its six.
+In the Content Browser, right-click, choose Miscellaneous, Data Table, pick DojoP10QuiverRow as the row structure, and name it DT_Quivers. Add a row named Hunting (Display Name Hunting, 6 arrows, 12 damage) and a row named Barbed (Display Name Barbed, 3 arrows, 30 damage). Place a `DojoP10Quiver`, open its Kind, pick DT_Quivers and the Hunting row. Press Play: "Hunting: 6"; run `ke * Draw` a few times and watch it count down to "Hunting: 0". Make a Blueprint child of the quiver class, BP_BarbedQuiver, and set it as the Barbed row's Quiver Class: that is how a kind picks its own actor, and `SpawnOfKind`, called from C++ code such as a game mode, hands it out. Place a second quiver on the Hunting row and play: both read "Hunting: 6", and `ke * Draw` counts both down together because it draws from every quiver. To draw from one, add a key event for 1 in the level Blueprint that calls Draw on the first quiver (select it in the level, then right-click in the graph to get a reference): press it twice and the first reads "Hunting: 4" while the second keeps its six.
 
 # Files
 
@@ -365,39 +365,36 @@ bool FDojo_P10_QuiverKinds_HandedOutQuiversAreFull::RunTest(const FString& Param
 # Hints
 
 - The failing test hands quivers out through SpawnOfKind and finds them empty. Look at the given BeginPlay, then ask what the quiver's Kind was at the moment SpawnActor ran it.
-- SpawnActor runs the new actor's BeginPlay before it returns. `SpawnActorDeferred` returns the actor before BeginPlay; set its Kind, then call `FinishSpawning(Transform)`.
 - `FindRow` on the row handle's table, with its last argument false, returns nullptr quietly for a missing row; `TSubclassOf::Get()` gives the class, or nullptr when the row names none.
+- SpawnActor runs the new actor's BeginPlay before it returns. `SpawnActorDeferred` returns the actor before BeginPlay; set its Kind, then call `FinishSpawning(Transform)`.
 
 # Rubric
 
 - Each quiver keeps its own ArrowsLeft; no draw ever changes the table's row.
 - Every shared number is read through the row when it is needed, so a retuned row reaches quivers already in play.
 - A missing table or row means no kind: no arrows, nothing drawn, and no crash.
-- SpawnOfKind spawns the row's quiver class or the plain quiver, sets the kind before BeginPlay with SpawnActorDeferred and FinishSpawning, and hands out a full quiver.
+- SpawnOfKind hands out a quiver of the row's quiver class, or the plain quiver when the row names none, that already has its kind and is full when it appears.
 - Draw, Refill, and the label agree on the count at every step.
 
 # Alternative
 
-Each quiver could copy its row into a member when it begins play and read the copy from then on. That is faster to read and keeps working if the table is unloaded, but a designer's change no longer reaches quivers already in play, and two copies of every number can drift. Reading through the handle keeps one source of truth; copying suits rows that are huge or read thousands of times a frame. The kind could also be a `UPrimaryDataAsset` per quiver, as the weapons were; a table wins when there are many small kinds with the same flat fields that designers want to see side by side.
+Each quiver could copy its row into a member when it begins play and read the copy from then on. That is faster to read and keeps working if the table is unloaded, but a designer's change no longer reaches quivers already in play, and two copies of every number can drift. Reading through the handle keeps one source of truth; copying suits rows that are huge or read thousands of times a frame. A handed-out quiver is built in two steps that matter here: the actor is created, then its BeginPlay runs, and BeginPlay fills the quiver from its kind. SpawnOfKind therefore spawns the actor deferred, sets the kind, and only then finishes the spawn, so the kind is in place when BeginPlay reads it; a plain SpawnActor runs BeginPlay first and hands out an empty quiver. The kind could also be a `UPrimaryDataAsset` per quiver, as the weapons were; a table wins when there are many small kinds with the same flat fields that designers want to see side by side.
 
 # Parsons
 
 ```yaml
-- id: spawn-of-kind
-  prompt: Put SpawnOfKind in order.
+- id: draw-arrow
+  prompt: "Put Draw in order: find the kind, give up if there is nothing to draw, spend one arrow, refresh the label, then return the damage."
   lines:
-    - "ADojoP10Quiver* ADojoP10Quiver::SpawnOfKind(UWorld* World, const FDataTableRowHandle& Kind, const FTransform& Transform)"
+    - "float ADojoP10Quiver::Draw()"
     - "{"
-    - "	if (!World) return nullptr;"
-    - "	const FDojoP10QuiverRow* Row = Kind.DataTable ? Kind.DataTable->FindRow<FDojoP10QuiverRow>(Kind.RowName, TEXT(\"SpawnOfKind\"), false) : nullptr;"
-    - "	UClass* QuiverClass = Row && Row->QuiverClass ? Row->QuiverClass.Get() : ADojoP10Quiver::StaticClass();"
-    - "	ADojoP10Quiver* Quiver = World->SpawnActorDeferred<ADojoP10Quiver>(QuiverClass, Transform);"
-    - "	if (!Quiver) return nullptr;"
-    - "	Quiver->Kind = Kind;"
-    - "	Quiver->FinishSpawning(Transform);"
-    - "	return Quiver;"
+    - "	const FDojoP10QuiverRow* Row = FindKind();"
+    - "	if (!Row || ArrowsLeft <= 0) return 0.f;"
+    - "	ArrowsLeft--;"
+    - "	RefreshLabel();"
+    - "	return Row->ArrowDamage;"
     - "}"
   distractors:
-    - line: "	ADojoP10Quiver* Quiver = World->SpawnActor<ADojoP10Quiver>(QuiverClass, Transform);"
-      mistake: SpawnActor runs BeginPlay before it returns, so the quiver fills itself while its Kind is still empty and is handed out with no arrows.
+    - line: "	Row->ArrowCount--;"
+      mistake: The row is shared by every quiver of that kind and is read-only; the arrows spent belong to this quiver's own count.
 ```

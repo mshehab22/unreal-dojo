@@ -5,7 +5,7 @@ import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/pr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { IPC_CHANNELS, type IpcResponse } from "@shared/ipc";
 import type { PackOutline } from "@shared/types/catalog";
@@ -16,8 +16,9 @@ import { createContentCatalog } from "../../src/main/content/createContentCatalo
 import { createHandlers } from "../../src/main/ipc/createHandlers";
 import { registerHandlers, type WrappedHandler } from "../../src/main/ipc/registerHandlers";
 import { createEngineLocator } from "../../src/main/services/unreal/createEngineLocator";
-import { createUnrealServices } from "../../src/main/services/unreal/createUnrealServices";
 import { RunRegistry } from "../../src/main/services/unreal/RunRegistry";
+import { assertNoForeignLiveCodingSession } from "../support/liveCodingSessions";
+import { createIntegrationServices } from "../support/createIntegrationServices";
 import { MemoryUnrealSettings } from "../unreal/MemoryUnrealSettings";
 
 /** The engine to test against, from the environment. */
@@ -48,12 +49,15 @@ async function solutionFiles(questId: string): Promise<Record<string, string>>
 
 describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, () =>
 {
+	// Stops at once, with the reason, when another editor's Live Coding would make every build fail (A1076).
+	beforeAll(() => assertNoForeignLiveCodingSession());
+
 	let pickedFolder = "";
 	const events: BuildProgressEvent[] = [];
 	const settings = new MemoryUnrealSettings();
 	const catalog = createContentCatalog(join(REPOSITORY, "content"));
 	const services = HAS_ENGINE
-		? createUnrealServices({ templateFolder: join(REPOSITORY, "resources", "sandbox-template"), solutionsFolder: join(REPOSITORY, "tools", "solutions"), engineInspector: createEngineLocator(), settings, quests: catalog, learner: { isPassed: () => false, savedFiles: () => ({}) } })
+		? createIntegrationServices({ templateFolder: join(REPOSITORY, "resources", "sandbox-template"), solutionsFolder: join(REPOSITORY, "tools", "solutions"), engineInspector: createEngineLocator(), settings, quests: catalog, learner: { isPassed: () => false, savedFiles: () => ({}) } }).services
 		: null;
 	const handlersByChannel = new Map<string, WrappedHandler>();
 
@@ -163,7 +167,7 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 		const fixtureQuests = [afterQuest, bossQuest];
 		const fixturePack = { id: "fx", worlds: [{ id: "fx-world", quests: [{ id: "fx-after-yard" }, { id: "fx-boss-yard" }] }] } as unknown as PackOutline;
 
-		const fixtureServices = createUnrealServices({
+		const fixtureServices = createIntegrationServices({
 			templateFolder: join(REPOSITORY, "resources", "sandbox-template"),
 			solutionsFolder,
 			engineInspector: createEngineLocator(),
@@ -173,7 +177,7 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 				listPacks: async () => [...(await catalog.listPacks()), fixturePack],
 			},
 			learner: { isPassed: (questId) => questId === "fx-boss-yard" || questId === "f1-popup-target", savedFiles: () => ({}) },
-		});
+		}).services;
 
 		// The score keeper run left reference copies of the pieces; a reset removes the pop-up target's files.
 		const sandboxFolder = settings.getSandboxPath() ?? "";
@@ -197,7 +201,8 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 		await fixtureServices.questFileWriter.remove(sandboxFolder, "fx-boss-yard");
 	}, STEP_TIMEOUT_MS);
 
-	it("checks a scratch buffer with the compiler: a clean reflected class passes, a typo is reported on its line, a header error is mapped and fails", async () =>
+	// The Windows snippet checker does not exist yet (A402), so the handler answers not-implemented there; this test runs where a checker exists.
+	it.skipIf(process.platform === "win32")("checks a scratch buffer with the compiler: a clean reflected class passes, a typo is reported on its line, a header error is mapped and fails", async () =>
 	{
 		const clean = ["#pragma once", "#include \"GameFramework/Actor.h\"", "#include \"Lantern.generated.h\"", "UCLASS()", "class ALantern : public AActor", "{", "\tGENERATED_BODY()", "public:", "\tUPROPERTY(EditAnywhere)", "\tfloat Brightness = 5.f;", "\tvirtual void BeginPlay() override { Super::BeginPlay(); }", "};", ""].join("\n");
 		const typo = clean.replace("float Brightness", "flot Brightness");

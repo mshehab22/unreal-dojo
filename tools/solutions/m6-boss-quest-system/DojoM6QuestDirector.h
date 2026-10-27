@@ -111,15 +111,15 @@ private:
 
 	/** A quest changed state: restart the course when its quest starts, then refresh the board. */
 	UFUNCTION()
-	void HandleQuestStateChanged(UDojoM6QuestData* Quest, EDojoM6QuestState NewState);
+	void HandleQuestStateChanged(UDojoM6QuestData* ChangedQuest, EDojoM6QuestState NewState);
 
 	/** A quest counted an item. */
 	UFUNCTION()
-	void HandleQuestProgress(UDojoM6QuestData* Quest, int32 Current, int32 Target);
+	void HandleQuestProgress(UDojoM6QuestData* ChangedQuest, int32 Current, int32 Target);
 
 	/** An item was collected: tell the tracker its tag. */
 	UFUNCTION()
-	void HandleItemCollected(ADojoM6QuestItem* Item, AActor* Collector);
+	void HandleItemCollected(ADojoM6QuestItem* Item, AActor* Taker);
 
 	/** The last course gate was passed: complete the course quest. */
 	UFUNCTION()

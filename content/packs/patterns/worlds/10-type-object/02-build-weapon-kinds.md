@@ -19,7 +19,7 @@ concepts:
 
 # Brief
 
-When you press Play with the setup below, the label above each spear reads Training Spear, and `ke * Swing` three times deals 20, 20, and then 10 as the spear wears.
+When you press Play with the setup below, the label above each spear reads Training Spear, and swinging one spear three times deals 20, 20, and then 10 as it wears.
 
 The armory now has one weapon class, `ADojoP10Weapon`, and one kind class, `UDojoP10WeaponKind`, a primary data asset. A kind holds what every weapon of that kind shares: its name, its damage, the durability a new one starts with, how much each swing wears it, and how worn it must be before its damage drops. A weapon points at its kind and keeps one number of its own, its durability, which starts at the kind's `MaxDurability`.
 
@@ -27,7 +27,9 @@ Most of the code is written. First read the marked lines and say in a sentence w
 
 ## See it in the editor
 
-In the Content Browser, right-click, choose Miscellaneous, Data Asset, pick Dojo P10 Weapon Kind, and name it DA_TrainingSpear. Open it and set Damage 20, Max Durability 30, and Wear Per Swing 10. Place two `DojoP10Weapon` actors and set Kind to DA_TrainingSpear on both. Press Play: both labels read Training Spear. Run `ke * Swing` three times and watch both wear together, because `ke *` swings every weapon. Stop, open DA_TrainingSpear, set Damage to 40, press Play again: both spears hit for 40, and no code changed.
+In the Content Browser, right-click, choose Miscellaneous, Data Asset, pick Dojo P10 Weapon Kind, and name it DA_TrainingSpear. Open it and set Display Name to Training Spear, Damage 20, Max Durability 30, and Wear Per Swing 10. Place two `DojoP10Weapon` actors and set Kind to DA_TrainingSpear on both. Press Play: both labels read Training Spear.
+
+Swing returns the damage, and the console command cannot show a returned value, so print it from the level Blueprint. In the level Blueprint, add a key event for 1 that calls Swing on the first spear and sends the result to Print String, and a key event for 2 that does the same for the second spear (select each spear in the level, then right-click in the Blueprint graph to get a reference to it). Press Play and press 1 four times: 20, 20, 10, 0. Press 2 once: 20, because the second spear has its own wear. Stop, open DA_TrainingSpear, set Damage to 40, and play again: press 1 and 2 and both print 40, and no code changed.
 
 # Files
 

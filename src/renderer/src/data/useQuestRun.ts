@@ -23,6 +23,9 @@ export interface QuestRun<Value>
 	error: AppError | null;
 	start: (questId: string, files: Record<string, string>) => Promise<Value | undefined>;
 	cancel: () => void;
+
+	/** Forgets an errored run's error, so a message about an earlier attempt does not sit beside a newer result. */
+	clearError: () => void;
 }
 
 /** Wraps `operation(client, request)` (runQuest or submitQuest) as a startable, cancellable run that refreshes `invalidates` when it ends. */
@@ -67,5 +70,11 @@ export function useQuestRun<Value>(operation: (client: DojoClient, request: RunR
 		if (runId) void dojo().cancelRun(runId);
 	}, [runId]);
 
-	return { status, progress, value, error, start, cancel };
+	const clearError = useCallback(() =>
+	{
+		setError(null);
+		setStatus((current) => (current === "errored" ? "idle" : current));
+	}, []);
+
+	return { status, progress, value, error, start, cancel, clearError };
 }

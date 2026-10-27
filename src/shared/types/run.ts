@@ -77,6 +77,9 @@ export interface RunResult
 
 	/** A pipeline problem unrelated to the learner's code (engine crashed, timeout), in plain English. */
 	error?: string;
+
+	/** Set when the run failed for a reason outside the learner's code (toolchain, engine, disk, an earlier quest), explained in plain English. Absent for a pass and for the learner's own compile or test failures. */
+	unrelatedFailure?: AppError;
 }
 
 /** What the renderer sends to run or submit a build, refactor, or boss integration quest. */
