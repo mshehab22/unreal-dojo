@@ -1,10 +1,11 @@
 // The save survives a real kill: a child process writes big saves through the real code and is killed at random moments, then the folder must load.
-import { spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { AtomicJsonFile } from "../../src/main/services/progress/AtomicJsonFile";
 import { createNewProgress, createNewQuestProgress } from "../../src/main/services/progress/createNewProgress";
@@ -12,17 +13,35 @@ import { migrateSave } from "../../src/main/services/progress/migrateSave";
 import { NodeFileSystem } from "../../src/main/services/progress/NodeFileSystem";
 import { playerProgressSchema } from "../../src/main/services/progress/progressSchema";
 import { ProgressStore, SAVE_FILE_NAME } from "../../src/main/services/progress/ProgressStore";
-import { REAL_DISK_TIMEOUT_MS } from "../support/realDiskBudget";
 import { localMoment } from "../support/progressFixtures";
+import { REAL_DISK_TIMEOUT_MS } from "../support/realDiskBudget";
 
 /** How many times the child is killed. */
 const KILL_COUNT = 20;
 
-/** The longest the child runs after it says it is ready, in milliseconds. Short enough to keep the disk traffic small, long enough to land inside several writes. */
-const LONGEST_RUN_BEFORE_KILL_MS = 600;
+/** Every this-many kills (starting with the first), the kill comes before the first save was acknowledged, so a kill during the very first write is covered. The others wait for progress. */
+const EARLY_KILL_EVERY = 10;
+
+/** The longest wait after the first acknowledged save before the kill, in milliseconds. Short enough to keep the disk traffic small, long enough to land inside several writes. */
+const LONGEST_WAIT_AFTER_FIRST_SAVE_MS = 600;
+
+/** The longest wait after "ready" for an early kill, in milliseconds. */
+const LONGEST_EARLY_WAIT_MS = 100;
+
+/** How long the child gets to say "ready", and then to acknowledge its first save, before the run is failed with a clear message, in milliseconds. */
+const CHILD_DEADLINE_MS = 15_000;
+
+/** The least number of the 20 runs that must have acknowledged at least one save, or the test has tested nothing. */
+const LEAST_RUNS_WITH_A_SAVE = 15;
+
+/** The repository root, where `tsx` is installed. */
+const REPOSITORY_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
 /** The child script, run with the same node that runs the tests. */
-const CHILD_SCRIPT = resolve("tests", "progress", "support", "killedSaveWriter.ts");
+const CHILD_SCRIPT = fileURLToPath(new URL("./support/killedSaveWriter.ts", import.meta.url));
+
+/** When the kill happens. */
+type KillMoment = { kind: "after-ready"; delayMs: number } | { kind: "after-first-save"; delayMs: number };
 
 /** What the parent learned from one killed child. */
 interface KilledRun
@@ -32,6 +51,16 @@ interface KilledRun
 
 	/** Whatever the child wrote to stderr. */
 	errorText: string;
+}
+
+/** What one run showed, gathered to check that the 20 runs together really tested a kill mid-write. */
+interface RunSummary
+{
+	/** How many saves the child acknowledged before it was killed. */
+	acknowledgedCount: number;
+
+	/** True when the folder held a `.tmp` or `.bak.tmp` right after the kill, which only a kill during a write leaves behind. */
+	foundLeftoverTemporaryFile: boolean;
 }
 
 /** The seed for this run: set DOJO_KILL_SEED to replay the same kill moments, otherwise the clock picks one. It is logged below. */
@@ -67,17 +96,57 @@ async function removeFolder(folder: string): Promise<void>
 	await rm(folder, { recursive: true, force: true, maxRetries: 20, retryDelay: 200 });
 }
 
-/** Runs the child, kills it with SIGKILL (TerminateProcess on Windows) `killAfterMs` after it says ready, and answers once it has exited. */
-function runUntilKilled(folder: string, templatePath: string, killAfterMs: number): Promise<KilledRun>
+/** Kills a child that is still running and waits until it has exited, so nothing keeps writing into a folder about to be removed. */
+async function killAndWait(child: ChildProcess): Promise<void>
+{
+	if (child.exitCode !== null || child.signalCode !== null) return;
+
+	const exited = new Promise<void>((resolveExit) => child.once("close", () => resolveExit()));
+	child.kill("SIGKILL");
+	await exited;
+}
+
+/**
+ * Runs the child and kills it with SIGKILL (TerminateProcess on Windows) at `moment`, then answers once it has exited.
+ * Fails with a clear message when the child does not say "ready", or does not acknowledge a first save when the kill waits for one, within the deadline.
+ */
+function runUntilKilled(folder: string, templatePath: string, moment: KillMoment, onSpawn: (child: ChildProcess) => void): Promise<KilledRun>
 {
 	return new Promise((resolvePromise, rejectPromise) =>
 	{
-		const child = spawn(process.execPath, ["--import", "tsx", CHILD_SCRIPT, folder, templatePath], { cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"] });
+		const child = spawn(process.execPath, ["--import", "tsx", CHILD_SCRIPT, folder, templatePath], { cwd: REPOSITORY_ROOT, stdio: ["ignore", "pipe", "pipe"] });
+		onSpawn(child);
+
 		const acknowledged: number[] = [];
 		let errorText = "";
 		let unfinishedLine = "";
 		let killed = false;
+		let failure: Error | undefined;
 		let killTimer: ReturnType<typeof setTimeout> | undefined;
+
+		/** Kills the child now. */
+		const killNow = (): void =>
+		{
+			killed = true;
+			child.kill("SIGKILL");
+		};
+
+		/** Fails the run with a message and kills the child. */
+		const fail = (message: string): void =>
+		{
+			failure = new Error(`${message}${errorText ? `: ${errorText}` : ""}`);
+			killNow();
+		};
+
+		/** Gives the child `CHILD_DEADLINE_MS` to reach its next step, then fails the run. */
+		let deadlineTimer = setTimeout(() => fail("the child did not say ready in time"), CHILD_DEADLINE_MS);
+
+		/** Starts the kill timer for the chosen moment. */
+		const scheduleKill = (delayMs: number): void =>
+		{
+			clearTimeout(deadlineTimer);
+			killTimer = setTimeout(killNow, delayMs);
+		};
 
 		child.stdout.setEncoding("utf8");
 		child.stderr.setEncoding("utf8");
@@ -91,15 +160,15 @@ function runUntilKilled(folder: string, templatePath: string, killAfterMs: numbe
 			{
 				if (line === "ready")
 				{
-					killTimer = setTimeout(() =>
-					{
-						killed = true;
-						child.kill("SIGKILL");
-					}, killAfterMs);
+					clearTimeout(deadlineTimer);
+
+					if (moment.kind === "after-ready") scheduleKill(moment.delayMs);
+					else deadlineTimer = setTimeout(() => fail("the child did not acknowledge a first save in time"), CHILD_DEADLINE_MS);
 				}
 				else
 				{
 					acknowledged.push(Number(line));
+					if (acknowledged.length === 1 && moment.kind === "after-first-save") scheduleKill(moment.delayMs);
 				}
 			}
 		});
@@ -114,9 +183,11 @@ function runUntilKilled(folder: string, templatePath: string, killAfterMs: numbe
 		// "close" comes after stdout has been read to its end, so every printed number is counted.
 		child.on("close", () =>
 		{
+			clearTimeout(deadlineTimer);
 			clearTimeout(killTimer);
 
-			if (killed) resolvePromise({ acknowledged, errorText });
+			if (failure) rejectPromise(failure);
+			else if (killed) resolvePromise({ acknowledged, errorText });
 			else rejectPromise(new Error(`the child ended before it was killed: ${errorText}`));
 		});
 	});
@@ -154,10 +225,30 @@ function isValidSave(text: string): boolean
 describe("the save survives a kill mid-write", { timeout: REAL_DISK_TIMEOUT_MS }, () =>
 {
 	let root = "";
+	let runningChild: ChildProcess | undefined;
+	const summaries: RunSummary[] = [];
 
+	// Whatever happened in the test, the child is dead before its folder is removed.
 	afterEach(async () =>
 	{
+		if (runningChild) await killAndWait(runningChild);
+		runningChild = undefined;
+
 		if (root) await removeFolder(root);
+		root = "";
+	});
+
+	// Across all 20 runs: most acknowledged a save, and at least one kill left a temp file, which proves a kill really landed mid-write.
+	afterAll(() =>
+	{
+		if (summaries.length < KILL_COUNT) return;
+
+		const runsWithASave = summaries.filter((summary) => summary.acknowledgedCount > 0).length;
+		const runsWithLeftovers = summaries.filter((summary) => summary.foundLeftoverTemporaryFile).length;
+		console.info(`saveKillSafety: seed ${baseSeed}: ${runsWithASave} of ${KILL_COUNT} runs acknowledged a save, ${runsWithLeftovers} left a temp file, acknowledged per run: ${summaries.map((summary) => summary.acknowledgedCount).join(" ")}`);
+
+		expect(runsWithASave, `seed ${baseSeed}: too few runs acknowledged a save, so the kills tested nothing`).toBeGreaterThanOrEqual(LEAST_RUNS_WITH_A_SAVE);
+		expect(runsWithLeftovers, `seed ${baseSeed}: no kill landed mid-write, so the kills tested nothing`).toBeGreaterThanOrEqual(1);
 	});
 
 	console.info(`saveKillSafety: seed ${baseSeed} (set DOJO_KILL_SEED=${baseSeed} to replay the same kill moments)`);
@@ -167,9 +258,12 @@ describe("the save survives a kill mid-write", { timeout: REAL_DISK_TIMEOUT_MS }
 		it(`kill ${index + 1} of ${KILL_COUNT}`, async () =>
 		{
 			const random = seededRandom(baseSeed + index);
-			const killAfterMs = Math.floor(random() * LONGEST_RUN_BEFORE_KILL_MS);
+			const early = index % EARLY_KILL_EVERY === 0;
+			const moment: KillMoment = early
+				? { kind: "after-ready", delayMs: Math.floor(random() * LONGEST_EARLY_WAIT_MS) }
+				: { kind: "after-first-save", delayMs: Math.floor(random() * LONGEST_WAIT_AFTER_FIRST_SAVE_MS) };
 			const seededSaves = index % 3;
-			const label = `seed ${baseSeed}, kill ${index + 1}, killed ${killAfterMs} ms after ready, ${seededSaves} saves before the child`;
+			const label = `seed ${baseSeed}, kill ${index + 1}, killed ${moment.delayMs} ms ${moment.kind === "after-ready" ? "after ready" : "after the first save"}, ${seededSaves} saves before the child`;
 
 			root = await mkdtemp(join(tmpdir(), "dojo-kill-"));
 			const folder = join(root, "save");
@@ -181,12 +275,18 @@ describe("the save survives a kill mid-write", { timeout: REAL_DISK_TIMEOUT_MS }
 			const seedFile = new AtomicJsonFile(new NodeFileSystem(), folder, join(folder, SAVE_FILE_NAME));
 			for (let seedIndex = 0; seedIndex < seededSaves; seedIndex++) await seedFile.write(templateSave());
 
-			const run = await runUntilKilled(folder, templatePath, killAfterMs);
+			const run = await runUntilKilled(folder, templatePath, moment, (child) =>
+			{
+				runningChild = child;
+			});
 			expect(run.errorText, label).toBe("");
 
 			const lastAcknowledged = run.acknowledged.at(-1) ?? 0;
 			console.info(`saveKillSafety: ${label}: ${lastAcknowledged} saves acknowledged`);
 			expect(run.acknowledged, label).toEqual(Array.from({ length: lastAcknowledged }, (_unused, position) => position + 1));
+
+			const leftovers = (await readdir(folder)).filter((name) => name.endsWith(".tmp"));
+			summaries.push({ acknowledgedCount: lastAcknowledged, foundLeftoverTemporaryFile: leftovers.length > 0 });
 
 			// The main file is whole: it parses and passes the schema (it is absent only if the very first save never landed).
 			const mainText = await readIfPresent(join(folder, SAVE_FILE_NAME));
@@ -206,8 +306,8 @@ describe("the save survives a kill mid-write", { timeout: REAL_DISK_TIMEOUT_MS }
 
 			// The next save overwrites any leftover temp files, so none remain.
 			await store.save({ ...loaded.progress, xp: loaded.progress.xp + 1 });
-			const leftovers = (await readdir(folder)).filter((name) => name.endsWith(".tmp"));
-			expect(leftovers, label).toEqual([]);
+			const leftoversAfterSave = (await readdir(folder)).filter((name) => name.endsWith(".tmp"));
+			expect(leftoversAfterSave, label).toEqual([]);
 			expect((await store.load(localMoment(2026, 10, 27))).progress.xp, label).toBe(loaded.progress.xp + 1);
 		});
 	}

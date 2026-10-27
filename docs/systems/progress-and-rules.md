@@ -53,7 +53,7 @@ Rematch: a due pattern or term surfaces as a quest from a different world than t
 
 ## Architecture (keep current)
 
-Last updated by M1.6b (content-backed progress and drill methods).
+Last updated by M5.1b (atomic backup via .bak.tmp, getLoadRecovery, whenIdle, kill test), after M1.6b (content-backed progress and drill methods).
 
 ### Layers
 - Pure rule classes (no I/O, time and randomness passed in): `PassRules`, `XpRules`, `HintSpellRules`, `LevelRules`, `PatternCardRules`, `SkillRules`, `MasteryRules`, `SpreeRules`, `StreakRules`, `SeerStoneRules`, `ChestRules`, `TestOutRules`, `RematchSelector`, `UnlockGraph`, `DrillScheduler`, `DailyQuestService`, and the scheduler `Sm2Scheduler` behind the `ReviewScheduler` interface (FSRS replaces it by implementing the same interface; the review log already holds every review).

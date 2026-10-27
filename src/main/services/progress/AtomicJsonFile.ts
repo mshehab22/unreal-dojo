@@ -81,6 +81,11 @@ export class AtomicJsonFile
 			await this.fileSystem.copy(this.path, this.backupTemporaryPath);
 			await this.fileSystem.rename(this.backupTemporaryPath, this.backupPath);
 		}
+		else
+		{
+			// No good main file to back up: clear a half-copied backup left by a killed process, so it does not outlive this save.
+			await this.fileSystem.removeIfPresent(this.backupTemporaryPath);
+		}
 
 		await this.fileSystem.rename(this.temporaryPath, this.path);
 	}

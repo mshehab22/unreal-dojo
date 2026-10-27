@@ -40,6 +40,9 @@ function paddingLengthFor(sequenceNumber: number): number
 	return MINIMUM_PADDING_LENGTH + ((sequenceNumber * PADDING_LENGTH_STEP) % PADDING_LENGTH_SPREAD);
 }
 
+/** A backstop so a parent that died without killing this child never leaves it writing forever: the child ends itself after this long. */
+const MAXIMUM_RUN_MS = 120_000;
+
 /** Prints one line to stdout and waits until the line has left this process, so a printed number was really reported. */
 function printLine(line: string): Promise<void>
 {
@@ -49,7 +52,7 @@ function printLine(line: string): Promise<void>
 	});
 }
 
-/** Saves sequence numbers 1, 2, 3 and so on, printing each number only after its write call returned. Never ends; the parent kills it. */
+/** Saves sequence numbers 1, 2, 3 and so on, printing each number only after its write call returned. The parent kills it; it ends itself after `MAXIMUM_RUN_MS`. */
 async function main(): Promise<void>
 {
 	const [folder, templatePath] = process.argv.slice(2);
@@ -57,6 +60,8 @@ async function main(): Promise<void>
 
 	const template = JSON.parse(readFileSync(templatePath, "utf8")) as TemplateSave;
 	const file = new AtomicJsonFile(new NodeFileSystem(), folder, join(folder, SAVE_FILE_NAME));
+
+	setTimeout(() => process.exit(0), MAXIMUM_RUN_MS);
 
 	await printLine("ready");
 

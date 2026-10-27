@@ -115,6 +115,17 @@ describe("ProgressStore", () =>
 		expect(JSON.parse(fileSystem.files.get(`${savePath}.bak`) ?? "").playerName).toBe("Second");
 	});
 
+	it("removes a stale .bak.tmp on the next save even when there is no main file to back up", async () =>
+	{
+		const { store, fileSystem } = memoryStore();
+		fileSystem.files.set(`${savePath}.bak.tmp`, "{ half a backup");
+
+		await store.save(namedSave("First", 100));
+
+		expect([...fileSystem.files.keys()]).toEqual([savePath]);
+		expect((await store.load(now)).progress.playerName).toBe("First");
+	});
+
 	it("loads the new save when the app crashes right after the rename", async () =>
 	{
 		const { store, fileSystem } = memoryStore();
