@@ -110,6 +110,10 @@ export class SandboxProjectService
 		const engine = await this.dependencies.engineInspector.inspectFolder(enginePath);
 		const sandboxFolder = await this.resolvedSandboxFolder(pickedFolder);
 
+		// A symbolic link can hide the engine folder from the first check, so check again on the real paths before copying.
+		const [resolvedBlocker] = await this.blockersOnRealPaths(enginePath, paths.parentFolder(sandboxFolder));
+		if (resolvedBlocker !== undefined) throw sandboxPathUnsupported(pickedFolder, resolvedBlocker);
+
 		if ((await fileSystem.listEntries(sandboxFolder)).length > 0) throw sandboxFolderNotEmpty(sandboxFolder);
 
 		onProgress({ phase: "writing", lastLine: `Copying the sandbox template to ${sandboxFolder}` });
@@ -163,6 +167,23 @@ export class SandboxProjectService
 		{
 			throw sandboxCopyFailed(pickedFolder, (error as Error).message);
 		}
+	}
+
+	/** The blockers for a picked folder whose symbolic links are already resolved, against the engine as spelled and with its own links resolved. */
+	private async blockersOnRealPaths(enginePath: string, resolvedPickedFolder: string): Promise<string[]>
+	{
+		const spellings = [enginePath];
+
+		try
+		{
+			spellings.push(await this.dependencies.fileSystem.realPath(enginePath));
+		}
+		catch
+		{
+			// The engine was just inspected, so a path that cannot be resolved has nothing more to tell.
+		}
+
+		return spellings.flatMap((spelling) => this.folderBlockers(resolvedPickedFolder, spelling)).slice(0, 1);
 	}
 
 	/** Sets EngineAssociation to `major.minor` and removes the 5.8 plugins for older engines. */

@@ -35,7 +35,7 @@ export class RunPreflight
 		const engineRoot = this.dependencies.settings.getEnginePath();
 		const sandboxFolder = this.dependencies.settings.getSandboxPath();
 
-		if (engineRoot === null || sandboxFolder === null) throw new AppErrorException("sandbox-not-ready", "The sandbox project has not been set up yet.", "Finish first-run setup (pick the engine and create the sandbox), then run again.");
+		if (engineRoot === null || sandboxFolder === null) throw new AppErrorException("sandbox-not-ready", "The sandbox project has not been set up yet.", "Unreal Dojo shows its first-run setup until this is done. Finish it (pick the engine and create the sandbox), then run again.");
 
 		await this.requireEngine(engineRoot);
 		await this.requireSandbox(sandboxFolder);

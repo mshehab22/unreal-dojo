@@ -8,6 +8,7 @@ import type { PlayerProgress } from "@shared/types/progress";
 import type { CodeReview } from "@shared/types/review";
 import type { RunRequest } from "@shared/types/run";
 
+import { AppErrorException } from "../../src/main/errors/AppErrorException";
 import { CodeAttemptRecorder } from "../../src/main/services/review/CodeAttemptRecorder";
 import type { ReviewedCodeQuest } from "../../src/main/services/review/codeReviewInputFrom";
 import { QuestSubmitService, UNRELATED_FAILURE_DETAIL_LINES, type CodeAttemptSubmission } from "../../src/main/services/review/QuestSubmitService";
@@ -48,8 +49,8 @@ function outputOfLines(count: number): string
 	return Array.from({ length: count }, (_unused, index) => `output line ${index + 1}`).join("\n");
 }
 
-/** A Submit service over real progress and a real recorder, with spies on the review and the recording. */
-function submitHarness(run: ReturnType<typeof sampleRun>)
+/** A Submit service over real progress and a real recorder, with spies on the review and the recording. The run is a result, or an error the run rejects with. */
+function submitHarness(run: ReturnType<typeof sampleRun> | Error)
 {
 	const { service: progress } = createTestProgressService(undefined, [0], (start: PlayerProgress) =>
 	{
@@ -62,7 +63,12 @@ function submitHarness(run: ReturnType<typeof sampleRun>)
 	const service = new QuestSubmitService({
 		getAuthoredQuest: async (questId): Promise<AuthoredQuest | undefined> => (questId === QUEST_ID ? QUEST : undefined),
 		getPatternCards: async (): Promise<PatternCard[]> => [],
-		runQuest: async () => run,
+		runQuest: async () =>
+		{
+			if (run instanceof Error) throw run;
+
+			return run;
+		},
 		reviewCode: async (input) =>
 		{
 			calls.reviewed.push(input);
@@ -126,6 +132,23 @@ describe("a Submit that failed outside the quest", () =>
 
 		await expectAppError(service.submit(REQUEST, () => undefined, controller.signal), "run-cancelled");
 		expect(calls.recorded).toHaveLength(0);
+	});
+
+	it.each([
+		["engine-not-found", "Unreal Engine could not be found at /Engines/UE."],
+		["sandbox-not-ready", "The sandbox project could not be found at /S."],
+	] as const)("rejects with the preflight's %s error when the run itself rejects (M5.1e), with no review and no attempt, XP, or spree change", async (code, message) =>
+	{
+		const { service, progress, calls } = submitHarness(new AppErrorException(code, message, "Fix it in Settings."));
+		const before = structuredClone(progress.getProgress());
+
+		const exception = await expectAppError(service.submit(REQUEST, () => undefined, new AbortController().signal), code);
+
+		expect(exception.appError.message).toBe(message);
+		expect(calls.reviewed).toHaveLength(0);
+		expect(calls.recorded).toHaveLength(0);
+		expect(progress.getProgress()).toEqual(before);
+		expect(progress.getProgress().spree).toEqual({ current: 3, best: 3, armor: 0 });
 	});
 
 	it("control: a normal failed compile is still recorded and counts as an attempt", async () =>

@@ -314,7 +314,7 @@ export function engineMovedOrUninstalled(enginePath: string, detail?: string): A
 {
 	const error: AppError = {
 		code: "engine-not-found",
-		message: `Unreal Engine is no longer at ${enginePath}. It was moved, renamed, or uninstalled.`,
+		message: `Unreal Engine could not be found at ${enginePath}. It may have been moved, renamed or uninstalled, or its drive is not connected.`,
 		suggestedAction: "Pick the engine folder again in Settings (Engine and sandbox), then run again.",
 	};
 

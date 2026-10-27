@@ -246,6 +246,28 @@ describe("SandboxProjectService", () =>
 		expect(savedPaths).toEqual([]);
 	});
 
+	it("refuses a picked folder whose symbolic link leads into the engine folder, and an engine reached through a link, before copying anything (M5.1e)", async () =>
+	{
+		const linkedFolder = createService("5.8.3");
+		linkedFolder.fileSystem.links.set("/Users/learner/Shortcut", "/Engines/UE/Projects");
+
+		await expect(linkedFolder.service.create("/Engines/UE", "/Users/learner/Shortcut", () => undefined, new AbortController().signal)).rejects.toMatchObject({ appError: { code: "sandbox-path-unsupported" } });
+		expect(linkedFolder.fileSystem.files.has("/Engines/UE/Projects/DojoSandbox/Dojo.uproject")).toBe(false);
+		expect(linkedFolder.savedPaths).toEqual([]);
+		expect(linkedFolder.launcher.specs).toEqual([]);
+
+		const linkedEngine = createService("5.8.3");
+		linkedEngine.fileSystem.links.set("/Engines/Current", "/Engines/UE");
+
+		await expect(linkedEngine.service.create("/Engines/Current", "/Engines/UE/Projects", () => undefined, new AbortController().signal)).rejects.toMatchObject({ appError: { code: "sandbox-path-unsupported" } });
+		expect(linkedEngine.savedPaths).toEqual([]);
+
+		const control = createService("5.8.3");
+		control.fileSystem.links.set("/Users/learner/Shortcut", "/Users/learner/Real");
+
+		await expect(control.service.create("/Engines/UE", "/Users/learner/Shortcut", () => undefined, new AbortController().signal)).resolves.toMatchObject({ ok: true, sandboxPath: "/Users/learner/Real/DojoSandbox" });
+	});
+
 	it("refuses an engine-folder spelling that differs only in letter case or slashes on Windows, and allows the engine inside the picked folder", async () =>
 	{
 		const windows = new WindowsPlatformPaths({});

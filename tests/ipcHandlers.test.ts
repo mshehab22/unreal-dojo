@@ -385,7 +385,7 @@ describe("payload validation", () =>
 		expect(events).toEqual([expect.objectContaining({ runId: "setup-1", phase: "building", percent: 100 })]);
 	});
 
-	it("answers pickSandboxFolder with the picked folder, its warnings, and its blockers",async () =>
+	it("answers pickSandboxFolder with the picked folder, its warnings, and its blockers", async () =>
 	{
 		const invoke = createInvoker();
 

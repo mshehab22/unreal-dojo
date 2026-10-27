@@ -16,19 +16,19 @@ export function sandboxCopyFailed(folder: string, detail: string): AppErrorExcep
 /** The folder has no `Dojo.uproject`, so there is nothing to rebuild. */
 export function sandboxNotReady(folder: string): AppErrorException
 {
-	return new AppErrorException("sandbox-not-ready", "There is no sandbox project in that folder.", "Create the sandbox again from Settings.", folder);
+	return new AppErrorException("sandbox-not-ready", "There is no sandbox project in that folder.", "Put the sandbox folder back where it was, then try again.", folder);
 }
 
 /** The picked folder cannot hold a sandbox at all; `reason` is the rule's plain-English sentence. */
 export function sandboxPathUnsupported(folder: string, reason: string): AppErrorException
 {
-	return new AppErrorException("sandbox-path-unsupported", reason, "Pick a different folder, one that is outside the Unreal Engine folder and on this computer's own disk.", folder);
+	return new AppErrorException("sandbox-path-unsupported", reason, "Pick a different folder, one that is outside the Unreal Engine folder.", folder);
 }
 
-/** The sandbox folder in Settings no longer holds `Dojo.uproject`: it was moved or deleted. */
+/** `Dojo.uproject` could not be read in the sandbox folder in Settings. The reader answers the same for a moved folder, a deleted one, a locked one, and a drive that is not connected, so the wording covers them all. */
 export function sandboxMovedOrDeleted(folder: string): AppErrorException
 {
-	return new AppErrorException("sandbox-not-ready", `The sandbox folder was moved or deleted, so there is no project to build in at ${folder}.`, "Put the folder back where it was, or set the sandbox up again from Settings, then run again.", folder);
+	return new AppErrorException("sandbox-not-ready", `The sandbox project could not be found at ${folder}. The folder may have been moved, renamed or deleted, or its drive is not connected.`, "Put the folder back where it was (or reconnect its drive), then run again.", folder);
 }
 
 /** The learner cancelled. */

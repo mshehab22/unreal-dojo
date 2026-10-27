@@ -420,7 +420,7 @@ describe("PrerequisiteFiller through runQuest", () =>
 			const outcome = call(service);
 
 			await expect(outcome).rejects.toBeInstanceOf(AppErrorException);
-			await expect(outcome).rejects.toMatchObject({ appError: { code: "engine-not-found", message: expect.stringContaining("/Engines/UE"), suggestedAction: expect.stringContaining("Pick the engine folder again in Settings") } });
+			await expect(outcome).rejects.toMatchObject({ appError: { code: "engine-not-found", message: expect.stringMatching(/could not be found at \/Engines\/UE.*drive is not connected/), suggestedAction: expect.stringContaining("Pick the engine folder again in Settings") } });
 			expect(runs).toEqual([]);
 			expect(rebuilds).toEqual([]);
 		});
@@ -442,14 +442,14 @@ describe("PrerequisiteFiller through runQuest", () =>
 			await expect(call(service)).rejects.toMatchObject({ appError: { code: "engine-version-unsupported" } });
 		});
 
-		it.each(calls)("%s rejects with sandbox-not-ready, saying the folder was moved or deleted, when Dojo.uproject is gone", async (_name, call) =>
+		it.each(calls)("%s rejects with sandbox-not-ready, saying the project could not be found (moved, deleted, or its drive gone) and to put the folder back, when Dojo.uproject is gone", async (_name, call) =>
 		{
 			const { service, fileSystem, runs, rebuilds } = createService();
 			fileSystem.files.delete("/S/Dojo.uproject");
 
 			const outcome = call(service);
 
-			await expect(outcome).rejects.toMatchObject({ appError: { code: "sandbox-not-ready", message: expect.stringContaining("moved or deleted"), suggestedAction: expect.stringContaining("Settings") } });
+			await expect(outcome).rejects.toMatchObject({ appError: { code: "sandbox-not-ready", message: expect.stringMatching(/could not be found.*moved, renamed or deleted.*drive is not connected/), suggestedAction: expect.stringContaining("Put the folder back where it was") } });
 			await expect(outcome).rejects.toMatchObject({ appError: { message: expect.stringContaining("/S") } });
 			expect(runs).toEqual([]);
 			expect(rebuilds).toEqual([]);

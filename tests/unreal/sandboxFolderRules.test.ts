@@ -96,11 +96,27 @@ describe("SandboxFolderRules warnings", () =>
 		expect(warnings.join(" ")).toMatch(/characters long.*other than plain English.*OneDrive/);
 	});
 
-	it("gives the machine fixture's own Windows folder both its length and its OneDrive warning", () =>
+	it("warns that the machine fixture's own Windows folder is synced by OneDrive", () =>
 	{
 		const warnings = windowsWarnings("C:\\Users\\learner\\OneDrive - Personal\\Documents\\Unreal Projects\\Practice\\UnrealDojo");
 
 		expect(warnings.some((warning) => warning.includes("synced by OneDrive"))).toBe(true);
+	});
+
+	it("warns about Google Drive for desktop on Windows, where My Drive or Shared drives sits right under a drive letter", () =>
+	{
+		expect(windowsWarnings("G:\\My Drive\\Dojo")).toEqual([expect.stringContaining("synced by Google Drive")]);
+		expect(windowsWarnings("h:\\SHARED DRIVES\\Team\\Dojo")).toEqual([expect.stringContaining("synced by Google Drive")]);
+		expect(windowsWarnings("C:\\Dojo\\My Drive")).toEqual([]);
+		expect(windowsWarnings("C:\\Users\\learner\\My Drive\\Dojo")).toEqual([]);
+		expect(macWarnings("/My Drive/Dojo")).toEqual([]);
+	});
+
+	it("treats any folder under Library/CloudStorage on a Mac as cloud-synced, and Library/CloudStorage itself as not", () =>
+	{
+		expect(macWarnings("/Users/learner/Library/CloudStorage/Box-Box/Dojo")).toEqual([expect.stringContaining("synced by a cloud storage service")]);
+		expect(macWarnings("/Users/learner/Library/CloudStorage/GoogleDrive-me@example.com/My Drive/Dojo")).toEqual([expect.stringContaining("synced by Google Drive")]);
+		expect(macWarnings("/Users/learner/Library/CloudStorage")).toEqual([]);
 	});
 });
 
