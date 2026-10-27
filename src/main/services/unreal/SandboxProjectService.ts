@@ -1,13 +1,15 @@
 // Creates the learner's sandbox Unreal project from the shipped template and runs its first full build.
 import type { EngineInstall, SandboxSetupResult } from "@shared/types/engine";
+import type { AppError } from "@shared/types/errors";
 
+import type { BuildFailureExplainer } from "./BuildFailureExplainer";
 import type { PlatformPaths } from "./PlatformPaths";
 import type { ProgressListener } from "./ProgressUpdate";
 import type { SandboxFileSystem } from "./SandboxFileSystem";
 import type { SandboxPathStore } from "./SandboxPathStore";
 import { runCancelled, sandboxCopyFailed, sandboxFolderNotEmpty, sandboxNotReady } from "./sandboxErrors";
 import type { Timer } from "./SupervisedProcess";
-import type { UnrealBuilder } from "./UnrealBuilder";
+import type { BuildOutcome, UnrealBuilder } from "./UnrealBuilder";
 
 /** The project file name inside every sandbox. */
 export const PROJECT_FILE_NAME = "Dojo.uproject";
@@ -43,6 +45,9 @@ export interface SandboxProjectDependencies
 
 	/** Told around every full build, so the fast loop can close an editor on this sandbox first and record the build (M1.4b). */
 	buildHooks?: SandboxBuildHooks;
+
+	/** Explains a failed full build in plain English (M5.1d). Without it a failed setup carries no `failure`. */
+	failureExplainer?: BuildFailureExplainer;
 }
 
 /** Called before and after the full build of create and rebuild. */
@@ -186,7 +191,24 @@ export class SandboxProjectService
 		this.dependencies.buildHooks?.afterBuild(outcome.succeeded);
 
 		const compilerOutput = outcome.pipelineError ? `${outcome.pipelineError}\n${outcome.filteredOutput}`.trim() : outcome.filteredOutput;
+		const result: SandboxSetupResult = { ok: outcome.succeeded, sandboxPath: sandboxFolder, durationMs: timer.now() - startedAt, compilerOutput };
 
-		return { ok: outcome.succeeded, sandboxPath: sandboxFolder, durationMs: timer.now() - startedAt, compilerOutput };
+		const failure = outcome.succeeded ? undefined : await this.explainFailure(enginePath, outcome);
+		if (failure) result.failure = failure;
+
+		return result;
+	}
+
+	/** Why a failed build failed, in plain English; undefined when no explainer was given or it failed itself. */
+	private async explainFailure(enginePath: string, outcome: BuildOutcome): Promise<AppError | undefined>
+	{
+		try
+		{
+			return await this.dependencies.failureExplainer?.explainSandbox({ engineRoot: enginePath, compilerOutput: outcome.filteredOutput, ...(outcome.pipelineError === undefined ? {} : { pipelineError: outcome.pipelineError }) });
+		}
+		catch
+		{
+			return undefined;
+		}
 	}
 }

@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 
 import { AppErrorException } from "../../errors/AppErrorException";
 import { AutomationTestRunner } from "./AutomationTestRunner";
+import { BuildFailureExplainer } from "./BuildFailureExplainer";
 import { createUnrealPlatform } from "./createUnrealPlatform";
 import type { EngineInspector } from "./SandboxProjectService";
 import { HeadlessRunner } from "./HeadlessRunner";
@@ -102,7 +103,9 @@ export function createUnrealServices(inputs: UnrealServiceInputs): UnrealService
 		},
 	};
 
-	const sandboxService = new SandboxProjectService({ paths, fileSystem, builder, engineInspector: inputs.engineInspector, pathStore: inputs.settings, timer: SYSTEM_TIMER, templateFolder: inputs.templateFolder, buildHooks });
+	const failureExplainer = new BuildFailureExplainer({ checkToolchain: () => platform.toolchainChecker.check(), inspectEngine: (engineRoot) => inputs.engineInspector.inspectFolder(engineRoot) });
+
+	const sandboxService = new SandboxProjectService({ paths, fileSystem, builder, engineInspector: inputs.engineInspector, pathStore: inputs.settings, timer: SYSTEM_TIMER, templateFolder: inputs.templateFolder, buildHooks, failureExplainer });
 	const runnerFactory = new RunnerFactory((context) => new HeadlessRunner({ context, paths, fileSystem, writer: questFileWriter, builder, testRunner, timer: SYSTEM_TIMER }), {
 		paths,
 		editorLauncher,
@@ -118,7 +121,7 @@ export function createUnrealServices(inputs: UnrealServiceInputs): UnrealService
 	// Only the Mac check exists so far; Windows answers not-implemented (A402).
 	const snippetChecker = paths.buildPlatform === "Mac" ? new ClangSnippetSyntaxChecker(paths, fileSystem, commandRunner) : null;
 
-	const questRunService = new QuestRunService({ settings: inputs.settings, quests: inputs.quests, runnerFactory, prerequisiteFiller, sandboxService, snippetChecker, learner: inputs.learner, questFileWriter, buildLedger });
+	const questRunService = new QuestRunService({ settings: inputs.settings, quests: inputs.quests, runnerFactory, prerequisiteFiller, sandboxService, snippetChecker, learner: inputs.learner, questFileWriter, buildLedger, failureExplainer });
 	const editorService = new EditorService({ settings: inputs.settings, engineInspector: inputs.engineInspector, editorLauncher, ledger: buildLedger, paths, checkToolchain: () => platform.toolchainChecker.check() });
 
 	return { sandboxService, runnerFactory, questFileWriter, questRunService, buildLedger, editorLauncher, editorService };

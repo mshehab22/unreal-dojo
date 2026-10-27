@@ -1,0 +1,2 @@
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f1-training-dummy\DojoF1TrainingDummy.h(7): error C2011: 'UDojoF1Thing': 'class' type redefinition
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f1-score-keeper\DojoF1ScoreKeeper.h(4): note: see previous definition of 'UDojoF1Thing'

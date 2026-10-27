@@ -77,6 +77,9 @@ export interface HandlerDependencies
 	/** Reads the engine, sandbox, review provider, loop mode, and editor connection for the Title chips. */
 	readEnvironmentStatus: () => Promise<EnvironmentStatus>;
 
+	/** Runs the toolchain check and keeps its answer for the environment status (A1210). When absent, the engine locator's check answers directly. */
+	checkToolchain?: () => Promise<ToolchainCheck>;
+
 	/** Returns the review methods and Submit (M1.7c). A function so the review service is built on first use. */
 	getReviewHandlers: () => ReviewHandlerService;
 }
@@ -232,7 +235,7 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 				return folder === null ? null : dependencies.getEngineLocator().inspectFolder(folder);
 			},
 		},
-		checkToolchain: { argumentSchemas: [], handle: () => dependencies.getEngineLocator().checkToolchain() },
+		checkToolchain: { argumentSchemas: [], handle: () => (dependencies.checkToolchain ? dependencies.checkToolchain() : dependencies.getEngineLocator().checkToolchain()) },
 		getEnvironmentStatus: { argumentSchemas: [], handle: () => dependencies.readEnvironmentStatus() },
 		completeFirstRun: { argumentSchemas: [], handle: () => dependencies.settingsService.completeFirstRun() },
 

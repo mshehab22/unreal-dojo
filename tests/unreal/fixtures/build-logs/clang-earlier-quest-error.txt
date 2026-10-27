@@ -1,0 +1,3 @@
+/Users/learner/DojoSandbox/Source/Dojo/Quests/f1-training-dummy/DojoF1TrainingDummy.h:9:3: error: expected ';' at end of declaration list
+/Users/learner/DojoSandbox/Source/Dojo/Quests/f1-training-dummy/DojoF1TrainingDummy.cpp:5:1: error: member function 'Hit' not viable: 'this' argument has type 'const UDojoF1TrainingDummy'
+2 errors generated.

@@ -1,0 +1,4 @@
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f1-score-keeper\DojoF1ScoreKeeper.cpp(14): error C2065: 'Points': undeclared identifier
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f1-score-keeper\DojoF1ScoreKeeper.cpp(21,9): error C2039: 'AddPoints': is not a member of 'UDojoF1ScoreKeeper'
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f1-score-keeper\DojoF1ScoreKeeper.h(12): note: see declaration of 'UDojoF1ScoreKeeper'
+ERROR: Failed to produce item: C:\Dojo\DojoSandbox\Binaries\Win64\UnrealEditor-Dojo.dll
