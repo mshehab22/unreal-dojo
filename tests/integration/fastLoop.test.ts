@@ -18,6 +18,7 @@ import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpda
 import { SYSTEM_TIMER } from "../../src/main/services/unreal/SupervisedProcess";
 import { assertNoForeignLiveCodingSession } from "../support/liveCodingSessions";
 import { createIntegrationServices, LIVE_CODING_REQUESTED } from "../support/createIntegrationServices";
+import { keepEditorTimeoutEvidence } from "../support/keepEditorTimeoutEvidence";
 import { processesMentioning } from "../support/processesMentioning";
 import { MemoryUnrealSettings } from "../unreal/MemoryUnrealSettings";
 
@@ -138,7 +139,15 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 		const answering = await editorLauncher.waitUntilAnswering(session, EDITOR_READY_TIMEOUT_MS);
 		timings[timingName] = Date.now() - startedAt;
 
-		expect(answering).toBe(true);
+		expect(answering, answering ? "" : `The editor did not answer MCP within ${EDITOR_READY_TIMEOUT_MS} ms. ${await timeoutEvidence(timingName, session)}`).toBe(true);
+	}
+
+	/** Copies the sandbox's editor logs to a kept folder and describes the editor's state, for the message of a timed-out wait (A1270). */
+	function timeoutEvidence(label: string, editor: EditorSession | null): Promise<string>
+	{
+		const sessionState = editor === null ? "no session" : editor.isRunning() ? "running" : "not running";
+
+		return keepEditorTimeoutEvidence({ sandboxFolder, label, sessionState });
 	}
 
 	/** Waits for the editor the app reopened by itself after a full build (Windows) and until it answers. */
@@ -154,7 +163,9 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 			if (current !== null && current !== previous)
 			{
 				session = current;
-				expect(await editorLauncher.waitUntilAnswering(current, EDITOR_READY_TIMEOUT_MS)).toBe(true);
+				const answering = await editorLauncher.waitUntilAnswering(current, EDITOR_READY_TIMEOUT_MS);
+
+				expect(answering, answering ? "" : `The reopened editor did not answer MCP within ${EDITOR_READY_TIMEOUT_MS} ms. ${await timeoutEvidence(timingName, current)}`).toBe(true);
 				timings[timingName] = Date.now() - startedAt;
 
 				return;
@@ -163,7 +174,7 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 			await new Promise<void>((resolve) => setTimeout(resolve, 500));
 		}
 
-		throw new Error("The editor was not reopened after the full build");
+		throw new Error(`The editor was not reopened after the full build. ${await timeoutEvidence(timingName, previous)}`);
 	}
 
 	afterAll(async () =>
