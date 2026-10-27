@@ -8,7 +8,7 @@ class UDojoS1EquipmentComponent;
 class UDojoS1InventoryComponent;
 class UTextRenderComponent;
 
-/** Shows a bag and its wearer's equipment as text and rewrites itself whenever either announces a change; it never checks on them. */
+/** Shows a bag and its wearer's equipment as text and rewrites itself whenever either announces a change, as the listener in the Observer pattern; it never checks on them. */
 UCLASS()
 class ADojoS1BagView : public AActor
 {

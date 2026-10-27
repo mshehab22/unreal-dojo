@@ -11,7 +11,7 @@ class UDojoS1InventoryComponent;
 /** Broadcast after the worn items changed, with the component itself so one handler can serve many wearers. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDojoS1OnEquipmentChanged, UDojoS1EquipmentComponent*, Equipment);
 
-/** The slots an actor wears items in; it moves items between its bag and its slots and announces each change, while the bag knows nothing about it. */
+/** The slots an actor wears items in (the Component pattern); it moves items between its bag and its slots and announces each change like the sender in the Observer pattern, while the bag knows nothing about it. */
 UCLASS(ClassGroup = (Dojo), meta = (BlueprintSpawnableComponent))
 class UDojoS1EquipmentComponent : public UActorComponent
 {

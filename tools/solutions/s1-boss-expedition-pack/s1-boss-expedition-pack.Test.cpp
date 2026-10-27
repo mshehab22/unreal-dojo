@@ -393,9 +393,101 @@ bool FDojo_S1_Expedition_ReachAndKeys::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S1_Expedition_NearestPileWins, "Dojo.S1.Expedition.NearestPileWins", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Puts three piles in reach at different distances, listed farthest first, and checks they are picked up nearest first. */
+bool FDojo_S1_Expedition_NearestPileWins::RunTest(const FString& Parameters)
+{
+	using namespace DojoS1ExpeditionTest;
+
+	FDojoTestWorld TestWorld;
+
+	FDay Day = MakeDay(TestWorld, false);
+	const FKinds& Kinds = Day.Kinds;
+	AddSpot(Day.Director, Kinds.Stone, 1, FVector(150.f, 0.f, 0.f));
+	AddSpot(Day.Director, Kinds.Dagger, 1, FVector(50.f, 0.f, 0.f));
+	AddSpot(Day.Director, Kinds.Potion, 1, FVector(100.f, 0.f, 0.f));
+	Begin(Day);
+
+	Go(TestWorld, Day, FVector(0.f, 0.f, 0.f));
+	Day.Director->PressPickUp();
+	TestEqual(TEXT("The dagger, 50 away, goes first"), Day.Bag->CountOf(Kinds.Dagger), 1);
+	TestEqual(TEXT("The others wait"), Day.Bag->CountOf(Kinds.Potion) + Day.Bag->CountOf(Kinds.Stone), 0);
+
+	Day.Director->PressPickUp();
+	TestEqual(TEXT("The potion, 100 away, goes second"), Day.Bag->CountOf(Kinds.Potion), 1);
+	TestEqual(TEXT("The stone still waits"), Day.Bag->CountOf(Kinds.Stone), 0);
+
+	Day.Director->PressPickUp();
+	TestEqual(TEXT("The stone, 150 away, goes last"), Day.Bag->CountOf(Kinds.Stone), 1);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S1_Expedition_FinaleNeedsEverything, "Dojo.S1.Expedition.FinaleNeedsEverything", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Wears the sword and the helmet before any potion is in the bag, and checks the round ends at exactly three potions and that healing stops at the maximum. */
+bool FDojo_S1_Expedition_FinaleNeedsEverything::RunTest(const FString& Parameters)
+{
+	using namespace DojoS1ExpeditionTest;
+
+	FDojoTestWorld TestWorld;
+
+	FDay Day = MakeDay(TestWorld, false);
+	const FKinds& Kinds = Day.Kinds;
+	Day.Director->StartHealth = 60;
+	AddSpot(Day.Director, Kinds.Sword, 1, FVector(1000.f, 0.f, 0.f));
+	AddSpot(Day.Director, Kinds.Helmet, 1, FVector(1500.f, 0.f, 0.f));
+	AddSpot(Day.Director, Kinds.Potion, 2, FVector(2000.f, 0.f, 0.f));
+	AddSpot(Day.Director, Kinds.Potion, 2, FVector(2500.f, 0.f, 0.f));
+	AddSpot(Day.Director, Kinds.Potion, 1, FVector(3000.f, 0.f, 0.f));
+	Begin(Day);
+	const float Start = TestWorld.GetWorld()->GetTimeSeconds();
+
+	Go(TestWorld, Day, FVector(1000.f, 0.f, 0.f));
+	Day.Director->PressPickUp();
+	Day.Director->SelectSlot(0);
+	Day.Director->PressEquip();
+	TestTrue(TEXT("The sword alone is not ready"), Day.Director->IsRunning());
+
+	Go(TestWorld, Day, FVector(1500.f, 0.f, 0.f));
+	Day.Director->PressPickUp();
+	Day.Director->SelectSlot(0);
+	Day.Director->PressEquip();
+	TestTrue(TEXT("The sword is in the hand"), Day.Equipment->GetEquipped(EDojoS1EquipSlot::EES_Hand) == Kinds.Sword);
+	TestTrue(TEXT("The helmet is on the head"), Day.Equipment->GetEquipped(EDojoS1EquipSlot::EES_Head) == Kinds.Helmet);
+	TestTrue(TEXT("Sword and helmet with no potions are not ready"), Day.Director->IsRunning());
+
+	Go(TestWorld, Day, FVector(2000.f, 0.f, 0.f));
+	Day.Director->PressPickUp();
+	TestEqual(TEXT("Two potions are in the bag"), Day.Bag->CountOf(Kinds.Potion), 2);
+	TestTrue(TEXT("Two potions are not enough"), Day.Director->IsRunning());
+
+	Day.Director->SelectSlot(0);
+	Day.Director->PressUse();
+	TestEqual(TEXT("A potion heals 25 from 60"), Day.Director->GetHealth(), 85);
+	Day.Director->PressUse();
+	TestEqual(TEXT("Healing stops at the maximum"), Day.Director->GetHealth(), 100);
+	TestEqual(TEXT("Both potions were used"), Day.Bag->CountOf(Kinds.Potion), 0);
+
+	Go(TestWorld, Day, FVector(2500.f, 0.f, 0.f));
+	Day.Director->PressPickUp();
+	TestEqual(TEXT("Two potions are in the bag again"), Day.Bag->CountOf(Kinds.Potion), 2);
+	TestTrue(TEXT("Two potions are still not enough"), Day.Director->IsRunning());
+
+	Go(TestWorld, Day, FVector(3000.f, 0.f, 0.f));
+	Day.Director->PressPickUp();
+	const float Finish = TestWorld.GetWorld()->GetTimeSeconds() - Start;
+	TestEqual(TEXT("Three potions are in the bag"), Day.Bag->CountOf(Kinds.Potion), 3);
+	TestFalse(TEXT("Exactly three potions end the round"), Day.Director->IsRunning());
+	TestEqual(TEXT("The board shows the finale"), BoardOf(Day), ReadyBoard(TEXT("100/100"), TEXT("Potion x3"), Finish));
+
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S1_Expedition_UnbindsWhenItLeaves, "Dojo.S1.Expedition.UnbindsWhenItLeaves", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Destroys the director and its view and checks the hero's bag and equipment have no listeners left. */
+/** Destroys the director and checks that its view left with it and the hero's bag and equipment have no listeners left. */
 bool FDojo_S1_Expedition_UnbindsWhenItLeaves::RunTest(const FString& Parameters)
 {
 	using namespace DojoS1ExpeditionTest;
@@ -409,10 +501,11 @@ bool FDojo_S1_Expedition_UnbindsWhenItLeaves::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Something listens to the bag"), Day.Bag->OnInventoryChanged.IsBound());
 	TestTrue(TEXT("Something listens to the equipment"), Day.Equipment->OnEquipmentChanged.IsBound());
 
-	Day.Director->GetBagView()->Destroy();
+	ADojoS1BagView* View = Day.Director->GetBagView();
 	Day.Director->Destroy();
-	TestFalse(TEXT("Nobody listens to the bag after both leave"), Day.Bag->OnInventoryChanged.IsBound());
-	TestFalse(TEXT("Nobody listens to the equipment after both leave"), Day.Equipment->OnEquipmentChanged.IsBound());
+	TestFalse(TEXT("The view leaves with the director"), IsValid(View));
+	TestFalse(TEXT("Nobody listens to the bag after the director leaves"), Day.Bag->OnInventoryChanged.IsBound());
+	TestFalse(TEXT("Nobody listens to the equipment after the director leaves"), Day.Equipment->OnEquipmentChanged.IsBound());
 
 	Day.Bag->Add(Day.Kinds.Potion, 2);
 	TestEqual(TEXT("The bag carries on"), Day.Bag->CountOf(Day.Kinds.Potion), 2);

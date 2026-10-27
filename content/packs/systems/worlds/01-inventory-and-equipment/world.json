@@ -1,5 +1,5 @@
 {
 	"id": "inventory-and-equipment",
 	"title": "Inventory and equipment",
-	"summary": "An expedition needs a bag. Plan a carrying system from scratch, then build its parts: item kinds as data assets, piles in the world, a bag with stacks and a weight limit, equipment slots that swap items without losing any, and a panel that follows both by listening, all packed into one expedition."
+	"summary": "An expedition needs a bag. Plan a carrying system from scratch, then build its parts: item kinds as data assets, piles in the world, a bag with stacks and a weight limit, equipment slots that swap with the bag, and a panel that follows both by listening, all packed into one expedition."
 }

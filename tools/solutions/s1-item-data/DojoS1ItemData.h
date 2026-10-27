@@ -13,7 +13,7 @@ enum class EDojoS1EquipSlot : uint8
 	EES_Hand UMETA(DisplayName = "Hand")
 };
 
-/** One kind of item, kept in an asset so designers add kinds without code; every stack and world item points at one. */
+/** One kind of item, kept in an asset so designers add kinds without code; every stack and world item points at one (the Type Object pattern). */
 UCLASS(BlueprintType)
 class UDojoS1ItemData : public UDataAsset
 {
@@ -44,7 +44,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "0"))
 	int32 HealAmount = 0;
 
-	/** How many fit in one slot: MaxStack, but never below 1, even when a designer types 0 or less. */
+	/** How many fit in one slot: MaxStack, but never below 1, even when an old asset or code leaves it at 0 or less. */
 	UFUNCTION(BlueprintPure, Category = "Item")
 	int32 GetStackLimit() const;
 

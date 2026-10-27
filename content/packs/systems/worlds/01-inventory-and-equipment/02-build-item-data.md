@@ -8,7 +8,7 @@ difficulty: 2
 patterns: [type-object]
 skills: [data, assets]
 terms: [data-asset, uenum, ustruct, tobjectptr, ftext, destroy]
-prerequisites: [s1-inventory-plan]
+prerequisites: [s1-inventory-plan, p10-type-object-when-not, p1-observer-when-not]
 xp: 60
 estimatedMinutes: 15
 concepts:
@@ -53,7 +53,7 @@ enum class EDojoS1EquipSlot : uint8
 	EES_Hand UMETA(DisplayName = "Hand")
 };
 
-/** One kind of item, kept in an asset so designers add kinds without code; every stack and world item points at one. */
+/** One kind of item, kept in an asset so designers add kinds without code; every stack and world item points at one (the Type Object pattern). */
 UCLASS(BlueprintType)
 class UDojoS1ItemData : public UDataAsset // @explain: A data asset is an object saved as a file in the Content Browser, so a designer adds a new kind of item by making a file, with no code.
 {
@@ -65,7 +65,7 @@ public:
 	FText DisplayName;
 
 	/** How many of this item fit in one bag slot; 1 means the item never stacks. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "1")) // @explain: ClampMin only limits what can be typed in the Details panel; Blueprints and code can still set 0, which is why the stack limit is guarded.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "1")) // @explain: ClampMin only limits what can be typed in the Details panel; code and assets saved before the limit existed can still hold 0, which is why the stack limit is guarded.
 	int32 MaxStack = 1;
 
 	/** Weight of one item; the bag has a weight limit. */
@@ -84,7 +84,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "0"))
 	int32 HealAmount = 0;
 
-	/** How many fit in one slot: MaxStack, but never below 1, even when a designer types 0 or less. */
+	/** How many fit in one slot: MaxStack, but never below 1, even when an old asset or code leaves it at 0 or less. */
 	UFUNCTION(BlueprintPure, Category = "Item")
 	int32 GetStackLimit() const;
 
@@ -394,13 +394,13 @@ bool FDojo_S1_ItemData_DesignersCanEdit::RunTest(const FString& Parameters)
 # Hints
 
 - Take has two jobs after the numbers: keep the label true, and tidy up when the pile is empty. Do them in the order that leaves the label showing the final count.
-- `FMath::Clamp(Amount, 0, Count)` gives a safe amount to give in one call; `FMath::Max(1, MaxStack)` is the whole of the stack limit.
+- `FMath::Clamp` keeps a number between two limits, which is what a safe amount to give needs, and `FMath::Max` picks the larger of two numbers, which is what a stack limit of at least 1 needs.
 - `AActor::Destroy` removes the actor from the world; only call it when this call took the last items, not when someone asked for nothing from an empty pile.
 
 # Rubric
 
 - The item kind is a data asset, so a designer adds a kind by making a file, and every number a pile needs is read from it.
-- `GetStackLimit` never returns less than 1, whatever a designer typed.
+- `GetStackLimit` never returns less than 1, whatever the asset holds.
 - `Take` gives at most what the pile holds and never a negative number, and returns exactly what it gave.
 - The label always shows the pile's current count.
 - A pile that is emptied by a call leaves the world; asking for nothing never removes it.

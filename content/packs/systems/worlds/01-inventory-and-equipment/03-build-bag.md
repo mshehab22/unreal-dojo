@@ -34,7 +34,7 @@ This is the second piece of the Expedition Pack boss.
 
 ## See it in the editor
 
-Add a `DojoS1InventoryComponent` to a Blueprint actor and set Slot Count 4 and Max Weight 20 in Details. In its event graph, call Add with `DA_Potion` and 3 on a key press, and bind a custom event to the component's On Inventory Changed that prints Get Total Weight. Press Play and press the key seven times: the weight rises by 3, then 3, then stops at the limit once the slots or the weight run out. Print the Get Slots array to see the piles.
+Add a `DojoS1InventoryComponent` to a Blueprint actor and set Slot Count 4 and Max Weight 20 in Details. In its event graph, call Add with `DA_Potion` and 3 on a key press, and bind a custom event to the component's On Inventory Changed that prints Get Total Weight. Press Play and press the key seven times: the weight rises by 3 per press up to 18, the seventh press adds only 2 to reach the limit of 20, and further presses add nothing. Print the Get Slots array to see the piles.
 
 # Files
 
@@ -54,7 +54,7 @@ class UDojoS1ItemData;
 /** Broadcast after the bag's contents changed, with the bag itself so one handler can serve many bags. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDojoS1OnInventoryChanged, UDojoS1InventoryComponent*, Inventory);
 
-/** A bag any actor can carry: stacks of items in a limited number of slots under a weight limit, announcing every change and knowing nothing about who listens. */
+/** A bag any actor can carry (the Component pattern): stacks of items in a limited number of slots under a weight limit, announcing every change like the sender in the Observer pattern and knowing nothing about who listens. */
 UCLASS(ClassGroup = (Dojo), meta = (BlueprintSpawnableComponent))
 class UDojoS1InventoryComponent : public UActorComponent
 {
@@ -449,7 +449,7 @@ bool FDojo_S1_Bag_AnnouncesAfterChange::RunTest(const FString& Parameters)
 
 - Add walks the slots forward, topping up piles of the right item, and then opens new slots for what is left; Remove walks backward from the last slot, and a slot that empties is removed from the array.
 - Removing from an array while walking it is safe when you walk backward by index and do not touch the removed element again. `TArray::RemoveAt` is the call.
-- `OnInventoryChanged.Broadcast(this)` goes after the last change to the slots, and the bag may only announce when at least one item moved.
+- The delegate's `Broadcast` goes after the last change to the slots, and the bag may only announce when at least one item moved.
 
 # Rubric
 

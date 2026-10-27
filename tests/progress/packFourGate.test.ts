@@ -70,8 +70,12 @@ describe("Pack 4 gate on the shipped content", () =>
 
 	it("locks a later quest on the gate alone, even with its own prerequisites passed", () =>
 	{
-		const withoutBosses = graph.availability(stateWithPassed(["s1-inventory-plan"]))["s1-item-data"];
-		const withBosses = graph.availability(stateWithPassed(["s1-inventory-plan", COMMUNICATION_BOSS, COMPONENT_BOSS]))["s1-item-data"];
+		const itemData = quests.find((quest) => quest.id === "s1-item-data");
+		const ownPrerequisites = itemData?.prerequisites ?? [];
+		const withoutBosses = graph.availability(stateWithPassed(ownPrerequisites))["s1-item-data"];
+		const withBosses = graph.availability(stateWithPassed([...ownPrerequisites, COMMUNICATION_BOSS, COMPONENT_BOSS]))["s1-item-data"];
+
+		expect(ownPrerequisites).toContain("s1-inventory-plan");
 
 		expect(withoutBosses?.status).toBe("locked");
 		expect(withoutBosses?.lockedReason).toMatch(/^Beat /);

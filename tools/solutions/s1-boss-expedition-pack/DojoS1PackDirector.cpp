@@ -36,8 +36,12 @@ void ADojoS1PackDirector::BeginPlay()
 	HeroBag->OnInventoryChanged.AddUniqueDynamic(this, &ADojoS1PackDirector::HandleInventoryChanged);
 	HeroEquipment->OnEquipmentChanged.AddUniqueDynamic(this, &ADojoS1PackDirector::HandleEquipmentChanged);
 
-	BagView = GetWorld()->SpawnActor<ADojoS1BagView>(GetActorLocation() + FVector(0.f, 0.f, 150.f), FRotator::ZeroRotator);
-	BagView->Show(HeroBag, HeroEquipment);
+	BagView = GetWorld()->SpawnActor<ADojoS1BagView>(GetActorLocation() + ViewOffset, FRotator::ZeroRotator);
+
+	if (BagView != nullptr)
+	{
+		BagView->Show(HeroBag, HeroEquipment);
+	}
 
 	StartRound();
 }
@@ -52,6 +56,11 @@ void ADojoS1PackDirector::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (HeroEquipment != nullptr)
 	{
 		HeroEquipment->OnEquipmentChanged.RemoveDynamic(this, &ADojoS1PackDirector::HandleEquipmentChanged);
+	}
+
+	if (IsValid(BagView))
+	{
+		BagView->Destroy();
 	}
 
 	Super::EndPlay(EndPlayReason);
@@ -239,19 +248,19 @@ void ADojoS1PackDirector::StartRound()
 
 void ADojoS1PackDirector::ClearHero()
 {
-	// Empty the bag first so every worn item has room to come off, then empty it again.
-	for (int32 Pass = 0; Pass < 2; ++Pass)
-	{
-		for (const FDojoS1ItemStack& Pile : HeroBag->GetSlots())
-		{
-			HeroBag->Remove(Pile.Item, Pile.Count);
-		}
+	// Empty the bag before each worn item comes off, so every one has room, and again after the last.
+	EmptyBag();
+	HeroEquipment->Unequip(EDojoS1EquipSlot::EES_Head);
+	EmptyBag();
+	HeroEquipment->Unequip(EDojoS1EquipSlot::EES_Hand);
+	EmptyBag();
+}
 
-		if (Pass == 0)
-		{
-			HeroEquipment->Unequip(EDojoS1EquipSlot::EES_Head);
-			HeroEquipment->Unequip(EDojoS1EquipSlot::EES_Hand);
-		}
+void ADojoS1PackDirector::EmptyBag()
+{
+	for (const FDojoS1ItemStack& Pile : HeroBag->GetSlots())
+	{
+		HeroBag->Remove(Pile.Item, Pile.Count);
 	}
 }
 

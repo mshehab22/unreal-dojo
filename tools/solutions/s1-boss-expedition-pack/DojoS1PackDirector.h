@@ -12,7 +12,7 @@ class UDojoS1InventoryComponent;
 class UDojoS1ItemData;
 class UTextRenderComponent;
 
-/** Runs the expedition pack: connects the hero's bag and equipment to loose piles in the world, keeps the status board, and calls the finale. */
+/** Runs the expedition pack: connects the hero's bag and equipment components to loose piles in the world, keeps the status board by listening, and calls the finale. */
 UCLASS()
 class ADojoS1PackDirector : public AActor
 {
@@ -61,6 +61,10 @@ public:
 	/** A pile this close to the hero can be picked up. */
 	UPROPERTY(EditAnywhere, Category = "Expedition", meta = (ClampMin = "0.0"))
 	float PickUpRange = 200.f;
+
+	/** Where the bag view appears, relative to the director. */
+	UPROPERTY(EditAnywhere, Category = "Expedition")
+	FVector ViewOffset = FVector(0.f, 0.f, 150.f);
 
 	/** How far in front of the hero a dropped item lands. */
 	UPROPERTY(EditAnywhere, Category = "Expedition", meta = (ClampMin = "0.0"))
@@ -135,6 +139,9 @@ private:
 
 	/** Empties the bag and the equipment slots. */
 	void ClearHero();
+
+	/** Removes every pile from the bag. */
+	void EmptyBag();
 
 	/** Spawns one loose pile and remembers it. */
 	void SpawnPile(UDojoS1ItemData* Item, int32 Count, const FVector& Where);

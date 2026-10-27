@@ -4,10 +4,10 @@ title: Plan a bag with equipment slots
 order: 1
 kind: breakdown
 difficulty: 4
-patterns: [component, observer, type-object]
+patterns: [component]
 skills: [planning, data, delegates]
 terms: [data-asset, actor-component, dynamic-multicast-delegate, tarray, tmap, ustruct]
-prerequisites: [f5-boss-beacon-drill, p9-boss-prop-gauntlet, p10-type-object-when-not, p1-observer-when-not]
+prerequisites: [f5-boss-beacon-drill, p9-boss-prop-gauntlet]
 xp: 120
 estimatedMinutes: 25
 concepts:
@@ -121,4 +121,4 @@ Acceptance:
 
 # Alternative Note
 
-Both plans pass. Two components keep the bag simple enough to reuse on a chest or a shop, and let equipment come and go on characters that never wear anything; the cost is that a move between them touches two components and two events, so the order of those changes matters. One inventory component makes every move a single operation on one list of slots and gives the panel one event, which suits systems where the body and the bag are really the same grid; the cost is that every character carries rules for slots it may never use. This is the Component pattern from Pack 2's "Actors built from parts" world, with Observer from "The lens, then the first payoff" carrying the announcements and Type Object from "Kinds as data" holding the item kinds. A plan where the bag calls the panel, where the panel checks the bag every frame, or where each kind of item is a class of its own fails the first three acceptance lines.
+Both plans pass. Two components keep the bag simple enough to reuse on a chest or a shop, and let equipment come and go on characters that never wear anything; the cost is that a move between them touches two components and two events, so the order of those changes matters. One inventory component makes every move a single operation on one list of slots and gives the panel one event, which suits systems where the body and the bag are really the same grid; the cost is that every character carries rules for slots it may never use. This is the Component pattern from Pack 2's "Actors built from parts" world; the announcements and the item kinds as data are two more ideas from Pack 2, and the builds that follow name them when you reach them. A plan where the bag calls the panel, where the panel checks the bag every frame, or where each kind of item is a class of its own fails the first three acceptance lines.

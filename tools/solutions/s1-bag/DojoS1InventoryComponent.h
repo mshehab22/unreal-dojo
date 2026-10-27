@@ -11,7 +11,7 @@ class UDojoS1ItemData;
 /** Broadcast after the bag's contents changed, with the bag itself so one handler can serve many bags. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDojoS1OnInventoryChanged, UDojoS1InventoryComponent*, Inventory);
 
-/** A bag any actor can carry: stacks of items in a limited number of slots under a weight limit, announcing every change and knowing nothing about who listens. */
+/** A bag any actor can carry (the Component pattern): stacks of items in a limited number of slots under a weight limit, announcing every change like the sender in the Observer pattern and knowing nothing about who listens. */
 UCLASS(ClassGroup = (Dojo), meta = (BlueprintSpawnableComponent))
 class UDojoS1InventoryComponent : public UActorComponent
 {

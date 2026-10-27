@@ -59,7 +59,7 @@ class UDojoS1InventoryComponent;
 /** Broadcast after the worn items changed, with the component itself so one handler can serve many wearers. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDojoS1OnEquipmentChanged, UDojoS1EquipmentComponent*, Equipment);
 
-/** The slots an actor wears items in; it moves items between its bag and its slots and announces each change, while the bag knows nothing about it. */
+/** The slots an actor wears items in (the Component pattern); it moves items between its bag and its slots and announces each change like the sender in the Observer pattern, while the bag knows nothing about it. */
 UCLASS(ClassGroup = (Dojo), meta = (BlueprintSpawnableComponent))
 class UDojoS1EquipmentComponent : public UActorComponent
 {
@@ -444,7 +444,7 @@ Equipment could be a second set of slots inside the bag itself, so a swap is two
     - "}"
   distractors:
     - line: "	for (int32 Index = 0; Index < Worn.Num(); ++Index)"
-      mistake: A TMap has no index operator; it is walked with a range-based loop that yields key and value pairs.
+      mistake: A TMap is not indexed by position, its operator[] takes a key, so it is walked with a range-based loop that yields key and value pairs.
     - line: "			Total += Entry.Key->PowerBonus;"
       mistake: The key is the slot, an enum with no power; the bonus is on the item in Entry.Value.
 ```

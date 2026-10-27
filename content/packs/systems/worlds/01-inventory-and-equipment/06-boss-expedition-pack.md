@@ -123,7 +123,7 @@ Feel: tune the weight limit and the number of slots until a perfect pack exists 
 - The director subscribes to the bag and the equipment, and the bag view subscribes by itself; neither the bag nor the equipment points at the director or the view.
 - E reaches the nearest pile within 200, the earlier pile winning ties, and takes only what the bag accepted, leaving the rest lying where it was.
 - Drop, use, and equip act on the selected slot, do nothing for an empty slot, and use is refused at full health without consuming the potion.
-- A refused equip leaves the hero, the bag, and the piles exactly as they were.
+- A refused equip loses and duplicates nothing, and leaves the worn items and the piles on the ground as they were.
 - The board and the bag view change only on events, and the finale is checked from the same events.
 - Every binding made in BeginPlay is removed in EndPlay, and nothing runs in Tick.
 - R starts a fresh round only after the finale, and a second round plays exactly like the first; the submission gives the tuned numbers with one sentence on why.
