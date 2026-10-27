@@ -63,6 +63,9 @@ export interface SandboxFolderChoice
 
 	/** Plain-English warnings, for example a Windows path over 100 characters. Empty when there is nothing to say. */
 	warnings: string[];
+
+	/** Plain-English reasons this folder cannot be used at all, for example inside the engine folder. Absent or empty when the folder can be used. */
+	blockers?: string[];
 }
 
 /** Final answer of creating or rebuilding the sandbox project. Progress streams on the build progress channel meanwhile. */
@@ -79,6 +82,9 @@ export interface SandboxSetupResult
 
 	/** Filtered compiler output when the build failed. */
 	compilerOutput: string;
+
+	/** The reason the setup failed, explained in plain English. Absent when it passed. */
+	failure?: AppError;
 }
 
 /** Everything the Title screen chips and the Settings screen show about the environment, in one call. */
@@ -98,4 +104,13 @@ export interface EnvironmentStatus
 
 	/** True when the editor is open on the sandbox project and its MCP server answers. */
 	editorConnected: boolean;
+
+	/** Why the engine in settings cannot be used (moved, uninstalled, too old). Absent or null when there is no problem or no engine is set. */
+	engineProblem?: AppError | null;
+
+	/** The last toolchain check of this session, or null when none ran yet. */
+	toolchain?: ToolchainCheck | null;
+
+	/** A one-time notice about the save file (restored from the backup, started fresh, refused). Absent or null when there is nothing to say. */
+	saveNotice?: AppError | null;
 }
