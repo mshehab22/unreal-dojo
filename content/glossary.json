@@ -158,7 +158,8 @@
       "skeletal-mesh-component",
       "collision-preset",
       "socket"
-    ]
+    ],
+    "firstQuestId": "f6-soft-references"
   },
   {
     "id": "skeletal-mesh-component",
@@ -2534,7 +2535,8 @@
       "data-table",
       "tsoftobjectptr",
       "uproperty"
-    ]
+    ],
+    "firstQuestId": "f6-data-assets"
   },
   {
     "id": "primary-data-asset",
@@ -2552,7 +2554,8 @@
       "data-asset",
       "tsoftobjectptr",
       "packaging"
-    ]
+    ],
+    "firstQuestId": "f6-data-assets"
   },
   {
     "id": "data-table",
@@ -2573,7 +2576,8 @@
       "ustruct",
       "fname",
       "curve-float"
-    ]
+    ],
+    "firstQuestId": "f6-data-tables"
   },
   {
     "id": "table-row-base",
@@ -2590,7 +2594,8 @@
       "data-table",
       "ustruct",
       "fname"
-    ]
+    ],
+    "firstQuestId": "f6-data-tables"
   },
   {
     "id": "curve-float",
@@ -2610,7 +2615,8 @@
       "data-table",
       "data-asset",
       "fmath"
-    ]
+    ],
+    "firstQuestId": "f6-curves"
   },
   {
     "id": "root-component",
@@ -3183,7 +3189,8 @@
     "related": [
       "ue-log",
       "console-command"
-    ]
+    ],
+    "firstQuestId": "f6-logging"
   },
   {
     "id": "on-screen-debug-message",
@@ -3201,7 +3208,8 @@
       "ue-log",
       "gengine",
       "fstring"
-    ]
+    ],
+    "firstQuestId": "f6-logging"
   },
   {
     "id": "check-macro",
@@ -3219,7 +3227,8 @@
       "isvalid",
       "ue-log"
     ],
-    "linkMode": "code-only"
+    "linkMode": "code-only",
+    "firstQuestId": "f6-check-and-ensure"
   },
   {
     "id": "ensure-macro",
@@ -3238,7 +3247,8 @@
       "isvalid",
       "ue-log"
     ],
-    "linkMode": "code-only"
+    "linkMode": "code-only",
+    "firstQuestId": "f6-check-and-ensure"
   },
   {
     "id": "live-coding",
@@ -3750,7 +3760,8 @@
       "log-category",
       "build-configurations",
       "open-level"
-    ]
+    ],
+    "firstQuestId": "f6-logging"
   },
   {
     "id": "profiling",
