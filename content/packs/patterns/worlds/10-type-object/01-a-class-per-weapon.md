@@ -7,7 +7,7 @@ difficulty: 2
 patterns: []
 skills: [type-object, object-model]
 terms: [data-asset, primary-data-asset, tobjectptr, editanywhere, uclass]
-prerequisites: [p8-subclass-sandbox-when-not]
+prerequisites: [p9-component-when-not]
 xp: 25
 estimatedMinutes: 7
 concepts:
@@ -88,7 +88,7 @@ float Durability = 0.f;
   explanation: TObjectPtr is the UE5 way to hold a UObject reference in a property, and const says the weapon only reads its kind.
 - id: spot-class-per-kind
   type: spot-the-bug
-  prompt: This trident is one of forty weapon classes. Which line is the reason designers cannot tune it?
+  prompt: This trident is one of forty weapon classes. A designer wants it to hit harder. Which line would they need a programmer to change?
   code: |
     ADojoArenaTrident::ADojoArenaTrident()
     {

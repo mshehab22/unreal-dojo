@@ -21,7 +21,7 @@ concepts:
 
 When you press Play after the refactor, the wall shows the same twelve torches, 150 units apart, and the same functions report them. What changed is that the line now has one component instead of twelve.
 
-`ADojoP11TorchLine` was written to make one `UStaticMeshComponent` per torch at runtime, each with the same mesh, and the arena now has a dozen lines of up to forty torches. Every torch is a whole component: registered, transformed, attached, and drawn on its own, though only its location differs from the others.
+`ADojoP11TorchLine` was written to make one `UStaticMeshComponent` per torch at runtime, each with the same mesh, and the arena now has a dozen lines of up to forty torches. Every torch is a whole component: registered, attached, updated, and checked for visibility on its own, though only its location differs from the others.
 
 Refactor the line onto one `UInstancedStaticMeshComponent`:
 
@@ -32,7 +32,7 @@ Refactor the line onto one `UInstancedStaticMeshComponent`:
 
 ## See it in the editor
 
-Before the refactor, place a `DojoP11TorchLine`, set Torch Mesh to the engine's Cylinder (turn on Show Engine Content in the Content Browser settings, then look in Engine > BasicShapes), and press Play: select the line while playing and its component list shows twelve static mesh components. After it, the same line shows one Torches component with twelve instances, and looks the same.
+Before the refactor, place a `DojoP11TorchLine`, set Torch Mesh to the engine's Cylinder (turn on Show Engine Content in the Content Browser settings, then look in Engine > BasicShapes), and press Play: twelve cylinders stand in a row along the wall. In the Level Blueprint, on a key press, print Get Torch Count on the line: 12. After the refactor, press Play and the same key prints 12 again, the row looks the same, and selecting the line while playing shows one Torches component with twelve instances.
 
 # Files
 

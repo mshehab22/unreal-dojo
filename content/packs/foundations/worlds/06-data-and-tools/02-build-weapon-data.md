@@ -39,7 +39,7 @@ In the Content Browser, right-click, choose Miscellaneous, then Data Asset, and 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/DataAsset.h" // @explain: UDataAsset lives here; it is a UObject made to be saved as an asset and edited in Details.
+#include "Engine/DataAsset.h"
 #include "DojoF6WeaponData.generated.h"
 
 class UStaticMesh;

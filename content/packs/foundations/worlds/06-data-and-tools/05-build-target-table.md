@@ -360,7 +360,7 @@ bool FDojo_F6_TargetTable_WarnsWithoutATable::RunTest(const FString& Parameters)
 # Hints
 
 - Three outcomes in SpawnTarget, each ending in a return: no table, no row, a target. HasRow is one line.
-- `FindRow<FDojoF6TargetRow>(RowName, Context, false)` returns a pointer to the row or nullptr, and the false keeps the table quiet so your own warning is the only one; `DEFINE_LOG_CATEGORY_STATIC(Name, Log, All)` makes a category for one file.
+- The table's row lookup takes the row name and a context string for its own messages, and a third flag that turns off its built-in complaint when the row is missing; turn that off so your own warning is the only one. It hands back a pointer to the row, or nullptr when there is none. A log category for one file can be declared statically near the top of the source file, with a name, a default verbosity, and a compile-time maximum.
 - `UDataTable::FindRow` is in `Engine/DataTable.h`; the log category macros and `UE_LOG` are in `Logging/LogMacros.h`.
 
 # Rubric

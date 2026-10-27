@@ -44,7 +44,7 @@ Arena props start simple. Then a crate needs to break, a statue needs to break, 
 
 **Finding a part.** Code that has an actor and wants its health calls `Actor->FindComponentByClass<UDojoArenaHealth>()`, which returns the first component of that class the actor carries, or `nullptr`. The caller does not care whether the actor is a crate, a statue, or a gladiator.
 
-**Adding a part at runtime.** A part made while the game runs is created with `NewObject<UDojoArenaHealth>(Actor)`, added to the actor's list with `AddInstanceComponent`, and switched on with `RegisterComponent`. A small `UBlueprintFunctionLibrary` of static functions, one per kind of prop, can do that assembly and also be called from Blueprint.
+**Adding a part at runtime.** A part made while the game runs is created with `NewObject<UDojoArenaHealth>(Actor)`, which makes the actor its owner at once, and switched on with `RegisterComponent`. Calling `AddInstanceComponent` as well lists it on the actor so the editor's Details panel and saving can see it. A small `UBlueprintFunctionLibrary` of static functions, one per kind of prop, can do that assembly and also be called from Blueprint.
 
 A `USceneComponent` is the kind of component that also has a place in the world and can have other components attached; health and loot need neither, so they are plain `UActorComponent`s.
 
@@ -105,11 +105,11 @@ if (UDojoArenaHealth* Health = Prop->FindComponentByClass<UDojoArenaHealth>()) H
   prompt: "A prop is assembled while the game runs. What turns a part made with NewObject into a working part of the actor?"
   choices:
     - Nothing; NewObject is enough
-    - AddInstanceComponent to list it on the actor, then RegisterComponent to switch it on
+    - RegisterComponent, which switches it on
     - Calling the part's constructor again
     - SpawnActor with the part's class
   answerIndex: 1
-  explanation: A component made at runtime does nothing until it is registered; adding it as an instance component also lets the editor and saving see it.
+  explanation: A component made at runtime with the actor as its outer is owned by the actor already, but it does nothing until it is registered; AddInstanceComponent is only for the editor and saving to see it.
 - id: explain-parts
   type: explain-in-one-sentence
   prompt: In one sentence, say why a crate, a statue, and a chest are easier to build from parts than from a tree of parent classes.
