@@ -183,8 +183,7 @@ A new Lead on Windows starts with `docs/lead/handbook.md`: setup, the loop, the 
 
 Mohammad will use the app on Windows and will not reinstall UE on the Mac. Everything that needs Unreal runs on the Windows desktop from now on. Done there on 2026-10-26: CI green on Windows with the push trigger back on; Pack 1 World 6, Pack 2 Worlds 9 to 11, and Pack 3 World 6 proven and merged; the integration suite and the real-engine learner flow run (fixes in W8 and W9). Still waiting there:
 - Engine proofs for content: Pack 1 World 6, Pack 2 Worlds 9 and 10 (steps in problems.md), Pack 3 World 6 (M3.2), and every later world.
-- The integration suite (`tests/integration`, `--no-file-parallelism`) for M1.3c, M1.6g, M2.1e, M3.4.
-- The real-engine learner flow (`DOJO_E2E_ENGINE=1`, e2e/learner-flow.spec.ts), adapted to Windows paths.
+- Done 2026-10-27 on main 3e9f6ca: the integration suite (22 passed, 1 reopen timeout that passed on rerun, see problems.md) and the real-engine learner flow (passed end to end in 1.8 h, most of it waiting on the engine lock).
 - M1.5-style Windows pipeline verification: Build.bat, UnrealEditor-Cmd.exe, Live Coding fast loop, the VS workload checks, nsis packaging, and every "unverified on Windows" item in problems.md.
 
 The repository is on GitHub, private: https://github.com/mshehab22/unreal-dojo (A78). Mohammad pushes `main` with GitHub Desktop. Next on Windows: install Git, Node 24, and UE 5.8, clone the repository with GitHub Desktop, run `npm install`, and open the folder in Claude Code; the engine proofs listed above (and in problems.md and each world's iterations entry) run there.
