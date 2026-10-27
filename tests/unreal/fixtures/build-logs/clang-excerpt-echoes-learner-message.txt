@@ -1,0 +1,3 @@
+/Users/learner/DojoSandbox/Source/Dojo/Quests/f1-score-keeper/DojoF1ScoreKeeper.h:12:3: error: static_assert failed
+   12 |   static_assert(false, "No space left on device");
+      |   ^

@@ -128,6 +128,11 @@ describe("locatedErrors", () =>
 			"C:\\Quests\\DojoSandbox\\Intermediate\\Build\\Win64\\Gen.cpp(1): error C1: x",
 			"Source\\Dojo\\Quests\\q3\\A.cpp(1): error C1: x",
 			"/Users/learner/Quests/DojoSandbox/Source/Dojo/Quests/q4/A.cpp:1:1: error: x",
+			"C:\\Tests\\DojoSandbox\\Source\\Dojo\\Tests\\q5.Test.cpp(1): error C1: x",
+			"C:\\Tests\\DojoSandbox\\Source\\Dojo\\Support\\DojoTestActor.cpp(1): error C1: x",
+			"C:\\Tests\\q9.Test.cpp(1): error C1: x",
+			"C:\\Tests\\DojoSandbox\\Intermediate\\Build\\Gen.cpp(1): error C1: x",
+			"C:\\Program Files\\Epic Games\\UE_5.8\\Engine\\Source\\Runtime\\Core\\Public\\Core.h(1): error C1: x",
 		].join("\n"));
 
 		expect(places.map((error) => error.place)).toEqual([
@@ -137,7 +142,20 @@ describe("locatedErrors", () =>
 			{ kind: "unknown" },
 			{ kind: "quest", questId: "q3" },
 			{ kind: "quest", questId: "q4" },
+			{ kind: "quest", questId: "q5" },
+			{ kind: "support" },
+			{ kind: "unknown" },
+			{ kind: "unknown" },
+			{ kind: "engine" },
 		]);
+	});
+
+	it("reads Apple linker output as errors that name no file", () =>
+	{
+		const places = locatedErrors(log("apple-linker-undefined-symbols.txt"));
+
+		expect(places).toHaveLength(3);
+		expect(places.every((error) => error.place.kind === "unknown")).toBe(true);
 	});
 
 	it("names the quests of every part of a line, notes and include chains included", () =>
@@ -175,13 +193,39 @@ describe("BuildFailureExplainer rule 1: known outside failures", () =>
 		expect(calls.toolchain).toBe(0);
 	});
 
-	it("wins over lines in the learner's own folder, because the rules run in order", async () =>
+	it("wins over lines in the learner's own folder for a full disk, a locked file and a long path, which can happen after compiling started", async () =>
 	{
 		const { explainer } = createExplainer();
 
-		const failure = await explainer.explainRun(runEvidence(log("msvc-own-quest-error.txt") + log("live-coding-active.txt")));
+		expect((await explainer.explainRun(runEvidence(log("msvc-own-quest-error.txt") + log("disk-full-clang.txt"))))?.message).toContain("disk is full");
+		expect((await explainer.explainRun(runEvidence(log("msvc-own-quest-error.txt") + log("file-locked-lnk1104.txt"))))?.message).toContain("another program is using it");
+		expect((await explainer.explainRun(runEvidence(log("msvc-own-quest-error.txt") + log("path-too-long.txt"))))?.message).toContain("too long for Windows");
+	});
 
-		expect(failure?.message).toContain("Live Coding");
+	it("ignores the failures that stop a build before compiling when the output names the learner's quest, because the compiler obviously ran", async () =>
+	{
+		const { explainer } = createExplainer();
+		const own = log("msvc-own-quest-error.txt");
+
+		expect(await explainer.explainRun(runEvidence(own + log("live-coding-active.txt")))).toBeUndefined();
+		expect(await explainer.explainRun(runEvidence(own + log("visual-studio-missing.txt")))).toBeUndefined();
+		expect(await explainer.explainRun(runEvidence(own + log("xcode-commandlinetools.txt")))).toBeUndefined();
+	});
+
+	it("does not match the learner's message echoed in a clang code excerpt line", async () =>
+	{
+		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+
+		expect(await explainer.explainRun(runEvidence(log("clang-excerpt-echoes-learner-message.txt")))).toBeUndefined();
+		expect(calls.toolchain).toBe(0);
+	});
+
+	it("does not take 'not enough space' said about something other than the disk for a full disk", async () =>
+	{
+		const { explainer } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+		const line = "C:\\Program Files\\Epic Games\\UE_5.8\\Engine\\Source\\Runtime\\Core\\Private\\Misc\\Buffer.cpp(88): error C2338: not enough space in the buffer";
+
+		expect(await explainer.explainRun(runEvidence(line))).toBeUndefined();
 	});
 
 	it("does not match a signature phrase on a line that names the learner's quest or test file, because the learner wrote that text (A1199)", async () =>
@@ -350,13 +394,21 @@ describe("BuildFailureExplainer rule 4: an earlier quest", () =>
 		expect(failure?.suggestedAction).toContain("report");
 	});
 
-	it("treats a quest folder the run did not name as the learner's leftover code", async () =>
+	it.each(["clang-error-in-dependent-quest.txt", "msvc-error-in-dependent-quest.txt", "msvc-earlier-quest-error.txt"])("keeps the blame with the quest for %s when the broken quest is not one of the earlier quests", async (fixture) =>
+	{
+		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+		const earlier = fixture === "msvc-earlier-quest-error.txt" ? [] : earlierDummy("saved-code");
+
+		expect(await explainer.explainRun(runEvidence(log(fixture), { earlierQuests: earlier }))).toBeUndefined();
+		expect(calls.toolchain).toBe(0);
+	});
+
+	it("keeps the blame when only some of the broken quests are earlier ones", async () =>
 	{
 		const { explainer } = createExplainer();
+		const output = log("msvc-earlier-quest-error.txt") + log("msvc-error-in-dependent-quest.txt");
 
-		const failure = await explainer.explainRun(runEvidence(log("msvc-earlier-quest-error.txt")));
-
-		expect(failure?.message).toContain("code from an earlier quest (f1-training-dummy)");
+		expect(await explainer.explainRun(runEvidence(output, { earlierQuests: earlierDummy("saved-code") }))).toBeUndefined();
 	});
 
 	it("names the learner's quest when a reference quest and a saved one both break", async () =>
@@ -383,6 +435,15 @@ describe("BuildFailureExplainer rule 5: support code, the template, or the engin
 		expect(failure?.message).toContain("support code or in the engine");
 		expect(failure?.suggestedAction).toContain("Rebuild sandbox");
 		expect(failure?.detail).toContain("error");
+		expect(calls.toolchain).toBe(0);
+	});
+
+	it.each(["msvc-engine-header-after-learner-header.txt", "clang-engine-header-after-learner-header.txt"])("keeps the blame with the quest for %s: an engine header error that is not a missing file may come from the learner's header, and MSVC prints no include chain", async (fixture) =>
+	{
+		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
+
+		expect(await explainer.explainRun(runEvidence(log(fixture)))).toBeUndefined();
+		expect(await explainer.explainRun(runEvidence(log(fixture) + log("msvc-support-error.txt")))).toBeUndefined();
 		expect(calls.toolchain).toBe(0);
 	});
 
@@ -417,11 +478,11 @@ describe("BuildFailureExplainer rule 6: the toolchain check", () =>
 		expect(calls.toolchain).toBe(2);
 	});
 
-	it("never asks when a linker or compiler line proves the toolchain ran, even one that names no known folder", async () =>
+	it.each(["linker-unresolved.txt", "apple-linker-undefined-symbols.txt"])("never asks when a linker line such as the ones in %s proves the toolchain ran", async (fixture) =>
 	{
 		const { explainer, calls } = createExplainer({ toolchain: BROKEN_TOOLCHAIN });
 
-		expect(await explainer.explainRun(runEvidence(log("linker-unresolved.txt")))).toBeUndefined();
+		expect(await explainer.explainRun(runEvidence(log(fixture)))).toBeUndefined();
 		expect(calls.toolchain).toBe(0);
 	});
 

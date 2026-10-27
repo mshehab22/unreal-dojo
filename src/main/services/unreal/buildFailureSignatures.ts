@@ -19,6 +19,9 @@ export interface BuildFailureSignature
 	/** Matches one line of build output. */
 	pattern: RegExp;
 
+	/** True for a failure that stops the build before any code is compiled. Output that names the learner's quest proves the compiler ran, so the explainer ignores such a signature then. */
+	beforeCompiling?: boolean;
+
 	/** Makes the error from the raw matched line, which becomes its detail. */
 	explain: (matchedLine: string) => AppError;
 }
@@ -26,7 +29,7 @@ export interface BuildFailureSignature
 /** Known outside failures, most specific first. The explainer never matches them on a line that names a quest or test file, because the learner wrote that line's text (A1199). The Live Coding, Visual Studio, Windows SDK and Xcode strings were read in the UE 5.8.3 build tool source; the disk and file lock strings are the compilers' and the operating systems' own. */
 export const BUILD_FAILURE_SIGNATURES: BuildFailureSignature[] = [
 	// UnrealBuildTool, HotReload.cs: "Unable to build while Live Coding is active. Exit the editor and game, ..."
-	{ name: "live-coding-active", pattern: /Unable to build while Live Coding is active/i, explain: liveCodingBlocksBuild },
+	{ name: "live-coding-active", pattern: /Unable to build while Live Coding is active/i, beforeCompiling: true, explain: liveCodingBlocksBuild },
 
 	// MSVC LNK1180 and the system messages for a full disk; clang and the Unix tools say "No space left on device". The bare words "not enough space" are not enough: a learner can write them in a message.
 	{ name: "disk-full", pattern: /not enough (?:space|room) on the disk|No space left on device|ERROR_DISK_FULL|LNK1180/i, explain: diskFull },
@@ -41,6 +44,7 @@ export const BUILD_FAILURE_SIGNATURES: BuildFailureSignature[] = [
 	{
 		name: "visual-studio-or-sdk-missing",
 		pattern: /Unable to find (?:requested Windows SDK|valid .* C\+\+ toolchain)|UnrealBuildTool (?:requires at minimum|has banned) the MSVC|No (?:suitable )?Visual Studio installation|Visual (?:Studio|C\+\+).{0,40}(?:was not found|not installed|could not be found)|Cannot open include file: '(?:windows|winnt|winsock2)\.h'/i,
+		beforeCompiling: true,
 		explain: visualStudioNotUsableByBuild,
 	},
 
@@ -48,6 +52,7 @@ export const BUILD_FAILURE_SIGNATURES: BuildFailureSignature[] = [
 	{
 		name: "xcode-missing",
 		pattern: /Your Mac is set to use CommandLineTools|Selected Xcode .* (?:doesn't|does not) exist|requires Xcode .* or newer|xcode-select: error|xcrun: error: (?:invalid active developer path|unable to find utility|SDK .* cannot be located)|You have not agreed to the Xcode license/i,
+		beforeCompiling: true,
 		explain: xcodeNotUsableByBuild,
 	},
 ];

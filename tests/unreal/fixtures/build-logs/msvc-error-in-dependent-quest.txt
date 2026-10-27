@@ -1,0 +1,1 @@
+C:\Dojo\DojoSandbox\Source\Dojo\Quests\f2-target-rack\DojoF2TargetRack.cpp(18): error C2039: 'Hit': is not a member of 'UDojoF1TrainingDummy'
