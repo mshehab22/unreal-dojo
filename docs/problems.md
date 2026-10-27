@@ -9,6 +9,7 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 - 2026-10-26, unreal-pipeline (Windows): the first Windows integration suite run had 8 failures of 24. Five are the tests' `pgrep` process check, one is the known A402 snippet checker gap, and two are a product bug: the windowless editor answers "Live Coding is not enabled for this session", which the runner reads as a compile failure instead of falling back to headless. The wiring test also likely opened a windowed editor, against A643. Owner: builder-unreal, W8 in progress.
 - 2026-10-26, content authors and unreal-pipeline: MSVC treats C4458 (a local or parameter that hides a class member, such as `Instigator` or `bHidden` on an actor) as an error, and clang on the Mac does not warn, so Mac-written solutions can break the Windows build. Two were found and fixed (A1050, A1060). Until a Mac-side check exists (for example a clang shadow warning in the sandbox, or a verifier lint for known AActor member names), every world's engine proof on Windows catches it. Owner: unreal-pipeline, to decide.
 - 2026-10-26, content-engine: `verify-content --quest <id> --solutions <folder>` reports "0 quests, 0 problems" and exits 0 when the scoped quest has no folder in `<folder>` (seen when a shell ate a backslash). A scoped run that judges nothing should fail. Owner: content-engine.
+- 2026-10-26, ui-quests: a glossary hover card that opens under a resting pointer covers the concept quest's "Read the card" button. W9 in progress.
 
 
 - 2026-10-21, qa: no GitHub remote and no `gh` CLI on the Mac, so M0.6 cannot show a green Actions run. Workaround: the workflow is written and each step run locally (A05). Owner: Lead, after Mohammad runs `gh auth login`.
@@ -49,6 +50,9 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 ## Solved
 
 - 2026-10-27, ui-quests (W9): in the real-engine learner flow a glossary hover card opened under a resting pointer after the predict reveal and covered "Read the card" for 30 s. The card now opens only after a real pointer move onto the term, once per entry, so Escape keeps it closed (A1080). Also found: the W5 World Map hover test passed its `scrollIntoView` to Playwright's `evaluate` as a string, which Playwright evaluates as an expression and never calls, so that scroll never ran; it now passes a function.
+- 2026-10-26, content authors and unreal-pipeline: MSVC treats C4458 (a local or parameter that hides a class member, such as `Instigator` or `bHidden`) as an error and clang on the Mac does not warn. Solved by V1 (2026-10-27): the content verifier lints every solution and starter for it, with no engine (A1170, A1171, A1174); the sandbox template keeps its flags (A1173).
+
+- 2026-10-26, content-engine: `verify-content --quest <id> --solutions <folder>` reported "0 quests, 0 problems" and exited 0 when the folder had nothing for that quest. Solved by V1 (2026-10-27): a scoped run that judges nothing, a missing `--solutions` folder, and an engine run with nothing to build now fail (A1172).
 
 - 2026-10-21, ui-core: Cmd/Ctrl+K palette highlighted rows under a resting pointer. Fixed in M2.1d (highlight on real pointer movement, with a resting-pointer e2e test).
 
