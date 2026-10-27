@@ -41,7 +41,11 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 - 2026-10-21, content-engine M1.8: `verify-content --engine` ran only on the Mac with UE 5.8.3. Verified on Windows 2026-10-26: whole-pack `--engine` runs pass for foundations, patterns, and mechanics on UE 5.8.3 once two MSVC-only errors were fixed (A1050, A1060).
 - 2026-10-21, unreal-pipeline: M1.2a sandbox template, headless build and test, and the MCP calls passed on the Mac (UE 5.8.3), and on Windows UE 5.8.3 on 2026-10-26 (MCP up in 7 s in the windowless editor). Still unverified on UE 5.4 to 5.7: that `L_Sandbox.umap`, saved by 5.8, opens there, and that the C++ APIs used by `FDojoTestWorld` (`UWorld::SetBegunPlay`, `UWorld::CreateWorld` with its 5.8 signature, `FWorldContext::SetCurrentWorld`) exist with the same signatures.
 
+- 2026-10-27, unreal-pipeline W10: `-NoHotReloadFromIDE` on the sandbox build was proven on Windows with UE 5.8.3 only. Not run on macOS (the Mac build command gained the same argument, which UBT accepts on every platform) or on UE 5.4 to 5.7 (the switch is an old UBT option).
+
 ## Solved
+
+- 2026-10-27, unreal-pipeline (found by Mohammad on the Windows desktop, W10): every sandbox build and every engine proof failed in UBT with "Unable to build while Live Coding is active" whenever any other Unreal project's editor was open with Live Coding on, because UBT's guard checks a mutex named after the shared `UnrealEditor.exe`. Solved in W10: `UnrealBuilder` passes `-NoHotReloadFromIDE` (not while the app's own sandbox editor is open), and a guard error that still appears is reported as a plain pipeline message naming the cause (A1220 to A1223). Unverified on UE 5.4 to 5.7 and on macOS: the switch is an old UBT option, and the macOS command line only gains that one argument.
 
 - 2026-10-21, ui-core: Cmd/Ctrl+K palette highlighted rows under a resting pointer. Fixed in M2.1d (highlight on real pointer movement, with a resting-pointer e2e test).
 

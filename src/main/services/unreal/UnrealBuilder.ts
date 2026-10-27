@@ -19,6 +19,15 @@ export const STARTUP_CRASH_GIVE_UP_MESSAGE = `The Unreal build tool stopped whil
 /** How many raw lines a failed build shows when none of its lines passed the LogFilter (A891). */
 export const UNFILTERED_TAIL_LINES = 20;
 
+/** The UBT switch that turns off its hot reload and Live Coding guard for this build (W10, A1220). */
+export const NO_HOT_RELOAD_FROM_IDE_ARGUMENT = "-NoHotReloadFromIDE";
+
+/** The line UBT prints when it refuses to build because an editor with Live Coding is running on the same editor executable. */
+const LIVE_CODING_GUARD_LINE = /Unable to build while Live Coding is active/;
+
+/** The pipeline error when UBT's Live Coding guard stopped the build; it names the cause, which is not the learner's code (W10, A1223). */
+export const LIVE_CODING_GUARD_MESSAGE = "Unreal refused to build because an Unreal editor with Live Coding is open. Close the other Unreal editor (or press Ctrl+Alt+F11 in it to turn Live Coding off), then run again. Your code was not compiled.";
+
 /** The editor target every sandbox has. */
 export const EDITOR_TARGET = "DojoEditor";
 
@@ -63,29 +72,35 @@ export interface BuildOutcome
 	durationMs: number;
 }
 
-/** Runs `Build.sh` (macOS) or `UnrealBuildTool.exe` (Windows) for `DojoEditor <platform> Development` with `-WaitMutex -Progress`. */
+/** Runs `Build.sh` (macOS) or `UnrealBuildTool.exe` (Windows) for `DojoEditor <platform> Development` with `-WaitMutex -Progress`, and `-NoHotReloadFromIDE` unless the app's own sandbox editor is open (A1220). */
 export class UnrealBuilder
 {
 	private readonly paths: PlatformPaths;
 	private readonly launcher: ProcessLauncher;
 	private readonly timer: Timer;
+	private readonly isSandboxEditorOpen: () => boolean;
 	private readonly logFilter = new LogFilter();
 
-	/** Takes the platform's paths, a process launcher, and the clock. */
-	constructor(paths: PlatformPaths, launcher: ProcessLauncher, timer: Timer)
+	/** Takes the platform's paths, a process launcher, the clock, and (optionally) a check for the app's own sandbox editor being open; without it no such editor is assumed. */
+	constructor(paths: PlatformPaths, launcher: ProcessLauncher, timer: Timer, isSandboxEditorOpen: () => boolean = () => false)
 	{
 		this.paths = paths;
 		this.launcher = launcher;
 		this.timer = timer;
+		this.isSandboxEditorOpen = isSandboxEditorOpen;
 	}
 
 	/** Builds and resolves when the build program exits. Never throws. */
 	async build(request: BuildRequest): Promise<BuildOutcome>
 	{
 		const paths = this.paths;
+
+		// An editor of any other project must not block this build, but the app's own sandbox editor holds modules this build would replace, so UBT keeps its guard then (A1220).
+		const guardArguments = this.isSandboxEditorOpen() ? [] : [NO_HOT_RELOAD_FROM_IDE_ARGUMENT];
+
 		const spec = {
 			command: paths.buildProgram(request.engineRoot),
-			commandArguments: [EDITOR_TARGET, paths.buildPlatform, "Development", paths.optionArgument("Project", request.projectFile), "-WaitMutex", "-Progress"],
+			commandArguments: [EDITOR_TARGET, paths.buildPlatform, "Development", paths.optionArgument("Project", request.projectFile), "-WaitMutex", "-Progress", ...guardArguments],
 			verbatimArguments: paths.verbatimArguments,
 		};
 
@@ -159,6 +174,14 @@ export function crashedWhileStarting(outcome: SupervisedOutcome): boolean
 	return outcome.lines.some((line) => line.startsWith("Unhandled exception.")) && !outcome.lines.some((line) => line.startsWith("Log file:"));
 }
 
+/** True when UBT refused to build because an editor with Live Coding is running. */
+export function stoppedByLiveCodingGuard(outcome: SupervisedOutcome): boolean
+{
+	if (!outcome.started || outcome.timedOut || outcome.cancelled || outcome.exitCode === 0) return false;
+
+	return outcome.lines.some((line) => LIVE_CODING_GUARD_LINE.test(line));
+}
+
 /** The filtered output, or for a failed (not cancelled) build whose lines all fell through the filter, its last raw lines, so a failure is never silent (A891). */
 function filteredOrTail(filteredOutput: string, lines: string[], succeeded: boolean): string
 {
@@ -178,6 +201,9 @@ function buildPipelineError(outcome: SupervisedOutcome): string | undefined
 
 	// Still a startup crash after the last attempt: not the learner's code (A890).
 	if (crashedWhileStarting(outcome)) return STARTUP_CRASH_GIVE_UP_MESSAGE;
+
+	// UBT's Live Coding guard fired: another editor is the cause, not the learner's code (A1223).
+	if (stoppedByLiveCodingGuard(outcome)) return LIVE_CODING_GUARD_MESSAGE;
 
 	return undefined;
 }
