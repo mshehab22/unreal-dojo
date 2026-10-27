@@ -1453,11 +1453,14 @@
   {
     "id": "prototype",
     "title": "Prototype",
-    "intent": "Make new objects by duplicating one that is already set up the way you want, such as a hand-tuned elite guard or a class default object, so the copy starts with that tuning instead of bare defaults.",
-    "problem": "Spawners need to make not just the right class but the right starting setup: a fast ghost, a slow armored ghost, a ghost holding a key. Writing a spawner class per variant multiplies classes, and constructors cannot easily capture tuned state.",
-    "unrealForm": "Every UClass has a Class Default Object, and NewObject and SpawnActor copy property defaults from it, so Unreal is prototype-based at its core. FActorSpawnParameters::Template spawns a copy of a specific actor including its tuned values, and DuplicateObject deep-copies a UObject. Blueprint child classes inherit and override defaults, and Material Instances inherit parent parameters.",
-    "whenNot": "When kinds are better described as data assets (Type Object) or composed from components, cloning live objects adds confusion about what gets copied. If shallow versus deep copy of subobjects is unclear, cloning will produce subtle shared-state bugs.",
-    "useCaseQuestIds": [],
+    "intent": "Make a new object by copying one that is already tuned the way you want, such as a hand-tuned blade in the trial hall, or let a data row borrow whatever it does not set from a parent row, so a variant is a small change and not a new class.",
+    "problem": "The trial hall needs dozens of blades and trials that are almost like one a designer already tuned. A class per variant multiplies classes, a plain spawn starts from the bare class defaults, and a constructor cannot hold hand-made tuning. Rows written out in full repeat every number and drift apart when one of them is changed.",
+    "unrealForm": "Each UClass owns one Class Default Object (CDO) built from its constructor, and plain NewObject and SpawnActor calls begin from it, so Unreal is prototype-based at its core. FActorSpawnParameters::Template spawns a copy of a specific actor of the same class, taking its property values, and DuplicateObject copies a UObject together with the objects it owns. Blueprint child classes and Material Instances inherit from a parent and store only what they changed. In the data form a row names a parent row, and a resolver fills in every number the row leaves unset.",
+    "whenNot": "When kinds are only numbers, a Data Table or data asset (Type Object) is easier to edit in bulk than hidden template actors. When copies must follow later edits, point them at a shared record instead of copying. If it is unclear which references a copy shares or duplicates, or a template is left live in the world, copying causes subtle bugs. Never tune a variant by writing to the class default object at runtime.",
+    "useCaseQuestIds": [
+      "p12-blade-copies",
+      "p12-trial-rows"
+    ],
     "recall": [
       {
         "id": "prototype-recall-1",
@@ -1473,7 +1476,7 @@
       {
         "id": "prototype-recall-2",
         "type": "multiple-choice",
-        "prompt": "Which spawn parameter lets SpawnActor copy property values from an existing actor instead of the class defaults?",
+        "prompt": "Which field of FActorSpawnParameters starts a spawned actor from an existing actor's values instead of the class defaults?",
         "choices": [
           "Template",
           "Owner",
@@ -1481,25 +1484,47 @@
           "Name"
         ],
         "answerIndex": 0,
-        "explanation": "FActorSpawnParameters::Template is clone-from-prototype."
+        "explanation": "Setting Template to an actor of the same class makes the spawn begin from that actor."
       },
       {
         "id": "prototype-recall-3",
         "type": "explain-in-one-sentence",
-        "prompt": "In one sentence, how does Prototype differ from a factory that calls a constructor?",
-        "modelAnswer": "Cloning copies the prototype's current state as well as its class, so one spawner can produce differently tuned variants without new code.",
+        "prompt": "In one sentence, how does copying a tuned example differ from spawning a fresh object of its class?",
+        "modelAnswer": "A fresh spawn gets the class defaults, while a copy also gets the example's tuned values, so one layer can make many different looks without any new classes.",
         "rubric": [
-          "Mentions copying state, not just class",
-          "Mentions variants without new classes or code"
+          "Says a plain spawn uses the class defaults",
+          "Says a copy carries the example's tuned values, so variants need no new class"
         ],
-        "explanation": "A constructor gives you the defaults; a clone gives you the tuning."
+        "explanation": "The class knows its defaults; only an example you hand over knows its tuning."
+      },
+      {
+        "id": "prototype-recall-4",
+        "type": "fill-blank",
+        "prompt": "In the data form, a record that leaves a value unset takes it from its ___ record.",
+        "acceptedAnswers": [
+          "parent"
+        ],
+        "explanation": "The record names a parent and sets only what differs; the rest comes from the parent."
+      },
+      {
+        "id": "prototype-recall-5",
+        "type": "multiple-choice",
+        "prompt": "A tuned blade is placed in the level and used as a spawn template, and nobody hides it. What does it do?",
+        "choices": [
+          "It plays like any other blade, drawn and colliding",
+          "It vanishes after its first copy",
+          "It becomes the class default",
+          "It is never drawn because it is a template"
+        ],
+        "answerIndex": 0,
+        "explanation": "A template is a real actor. Hide it and turn its collision off, and wake each copy, since a copy takes the template's values."
       }
     ],
     "scenarios": [
       {
         "id": "prototype-scenario-1",
         "type": "which-pattern",
-        "prompt": "A level designer hand-tunes one elite guard in the level (patrol speed, sight range, loadout) and wants a spawner to produce exact copies of that guard during an alarm. Which pattern?",
+        "prompt": "A designer hand-tunes one challenger loadout (starting stamina, a charm, some luck) and the lobby must give each joining player their own separate copy of it. Which pattern?",
         "choices": [
           "factory-method",
           "object-pool",
@@ -1509,24 +1534,24 @@
         "answer": "prototype",
         "distractorNotes": [
           {
-            "choice": "type-object",
-            "why": "A data asset would need the designer to move the tuning out of the placed guard first."
-          },
-          {
             "choice": "factory-method",
-            "why": "A factory decides which class to make; here the point is copying a tuned instance."
+            "why": "A factory decides which class to make; here the point is copying a tuned instance, charm and all."
           },
           {
             "choice": "object-pool",
-            "why": "Pooling reuses existing guards; it does not copy a template's state."
+            "why": "Pooling reuses finished objects; it does not copy a tuned one."
+          },
+          {
+            "choice": "type-object",
+            "why": "A shared kind record would make every player read the same loadout, not own a separate copy."
           }
         ],
-        "explanation": "Spawn with the placed guard as the Template."
+        "explanation": "DuplicateObject gives each player an independent copy that starts exactly like the tuned loadout."
       },
       {
         "id": "prototype-scenario-2",
         "type": "which-pattern",
-        "prompt": "You need 30 enemy kinds with different stats and want designers to edit them in a spreadsheet-like view. A teammate proposes keeping 30 hidden template actors to clone. Which pattern is the better fit?",
+        "prompt": "Designers want sixty blade kinds that differ only in numbers, edited side by side in a spreadsheet view. A teammate proposes sixty hidden template blades in the level. Which pattern is the better fit?",
         "choices": [
           "flyweight",
           "prototype",
@@ -1548,7 +1573,47 @@
             "why": "A global registry does not describe the kinds themselves."
           }
         ],
-        "explanation": "A Data Table or data asset per kind is the cleaner Unreal form; Prototype rarely wins when kinds are pure data."
+        "explanation": "A Data Table or data asset per kind is the cleaner Unreal form; copying a template rarely wins when kinds are pure data."
+      },
+      {
+        "id": "prototype-scenario-3",
+        "type": "which-pattern",
+        "prompt": "The trial book has forty trials, each written as the basic trial plus one or two changes. The designers want to retune the basic trial and have all forty follow. Which pattern?",
+        "choices": [
+          "flyweight",
+          "command",
+          "prototype",
+          "state"
+        ],
+        "answer": "prototype",
+        "distractorNotes": [
+          {
+            "choice": "flyweight",
+            "why": "Flyweight shares one stored copy to save memory; here rows borrow from a parent to save authoring."
+          },
+          {
+            "choice": "command",
+            "why": "Nothing here is an action to record or undo."
+          },
+          {
+            "choice": "state",
+            "why": "A trial does not change how it behaves over time; it just borrows numbers."
+          }
+        ],
+        "explanation": "In its data form, each row names a parent and sets only what differs, so an edit to the parent reaches every row that borrows from it."
+      },
+      {
+        "id": "prototype-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "Blades laid in the hall must always match the newest tuned damage, even ones laid hours ago. Is copying a tuned template blade the right tool?",
+        "choices": [
+          "Yes; a copy follows its template",
+          "No; a copy is a snapshot, so blades should read a shared record instead",
+          "Yes, if the template ticks",
+          "No; templates cannot be used during play"
+        ],
+        "answerIndex": 1,
+        "explanation": "A copy keeps the values it was made with. When every blade must follow one edit, point them all at one shared record."
       }
     ]
   },
