@@ -56,7 +56,7 @@ public:
 	UDojoP9HealthComponent();
 
 	/** Health at the start of play. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health", meta = (ClampMin = "1.0", ExposeOnSpawn = "true")) // @explain: ExposeOnSpawn makes an Add Component by Class node in a Blueprint show this setting as a pin, filled in before the part registers.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health", meta = (ClampMin = "1.0", ExposeOnSpawn = "true")) // @explain: ExposeOnSpawn, together with BlueprintReadWrite, makes an Add Component by Class node in a Blueprint show this setting as a pin, filled in before the part registers.
 	float MaxHealth = 100.f;
 
 	/** Broadcast once, when health reaches zero. */
