@@ -35,7 +35,8 @@ Every commit message ends with `Co-Authored-By: Claude Opus 5.5 <noreply@anthrop
 
 - **One at a time.** Unreal builds and tests take a directory lock so sessions never run two at once. Take it with `until mkdir "<lock>" 2>/dev/null; do sleep 20; done` and release it with `rmdir "<lock>"` as soon as the run ends, also on failure. Use one lock path for every session on the machine, for example `$(node -p "require('os').tmpdir()")/dojo-engine.lock`, and put it in every brief.
 - **Integration tests** run only with an engine and only one file at a time: `DOJO_ENGINE_ROOT=<engine root> npx vitest run tests/integration --no-file-parallelism`. Without the flag the files build sandboxes at once and fail in about 200 ms (A612). Run them whenever a branch touches `src/main/ipc`, `createHandlers`, or a service they use.
-- **Content proof:** `npx tsx tools/verify-content.ts --pack <id> --engine <engine root>` builds every reference solution and checks every starter. Boss mutations are edits to a scratch copy of the solution, run with `--quest <id> --solutions <copy>`.
+- **Content proof:** `npx tsx tools/verify-content.ts --pack <id> --engine <engine root>` builds every reference solution and checks every starter. Boss mutations are edits to a scratch copy of the solution, run with `--quest <id> --solutions <copy>`. Every run builds all solutions in the folder it is given, so one broken solution anywhere fails every quest; a scratch folder with only the world's own solutions isolates a world.
+- **Hold the lock once per batch.** The `sleep 20` loop is not fair, and with five testers the waits reached 2.5 hours. A tester with several runs (mutations, reruns) takes the lock once and runs them all inside it.
 - **Never** open the windowed Unreal editor; headless and `-NullRHI` only (A643).
 
 ## Background only (A77)
@@ -50,6 +51,7 @@ The Windows desktop is the engine machine from now on.
 - **Engine root:** usually `C:\Program Files\Epic Games\UE_5.8`; `npx tsx tools/locate-engine.ts` prints what the app finds.
 - **Shell:** run `tools/lead/merge.sh` and the lock commands in Git Bash. The app itself calls `UnrealBuildTool.exe` directly and anchors test names with `$`; both are handled in code.
 - **Paths:** keep the sandbox path short (the app warns past 100 characters on Windows).
+- **Done on 2026-10-26:** items 0 to 3 below (CI green with push back on; all five worlds proven and merged; the suite and learner flow run, their fixes in W8 and W9). Left: item 4.
 - **What is waiting there,** in order:
   0. Make CI green on Windows, then turn the push trigger in `.github/workflows/ci.yml` back on (A80): `npm test` fails in 6 test files on windows-latest (path separators, CRLF line endings with no `.gitattributes`, the prerequisite filler, save-store renames). Details in problems.md. Reproduce with `npm test` on the Windows machine and split the fixes by owner.
   1. The engine proofs for the content branches marked "ready, engine proof pending" on the board (Pack 1 World 6, Pack 2 Worlds 9 to 11, Pack 3 World 6). The exact steps are in problems.md and in each world's iterations entry. A world merges once its proof passes.
@@ -67,5 +69,7 @@ On the Mac the GitHub CLI is installed at `~/.local/bin/gh` and signed in as msh
 - **Unread rules:** an engine-gated test suite that nobody runs hides breaks. Name the flag and the command in every brief.
 - **Scratch folders:** the scratch folder can be wiped; keep anything the next Lead needs (proof recipes, scripts) in the repo.
 - **Messaging limit:** session messages pause after about ten in a row with no message from Mohammad; they resume when he types.
+- **MSVC catches what clang does not (Windows, 2026-10-26):** a local or parameter named like an actor member (`Instigator`, `bHidden`, `Owner`, `Tags`) is error C4458 on Windows and silent on the Mac. Reviewers of Mac-written C++ check for it (A1050, A1060).
+- **Shared scratch:** the session scratchpad is shared by every agent of the session, and one agent's cleanup can delete another's files. Each agent works in its own subfolder.
 - **Shared node_modules (Windows, 2026-10-26):** worktrees here link `node_modules` to one installed copy with a junction (`cmd //c "mklink /J node_modules <shared path>"`), which saves a minute per worktree. `git worktree remove --force` follows the junction and empties the shared copy, and so does `npm ci` inside a linked worktree; both broke every running session once. Before removing a worktree, run `cmd //c rmdir node_modules` in it; never install inside a linked worktree; the merge script's `npm ci` runs only in the main checkout, which has its own copy.
 - **Long branches:** a branch cut long ago conflicts in `src/shared/ipc.ts`, the fake API, and test fakes. Resolve import lines by combining both sides, and add any new dependency to every fake.
