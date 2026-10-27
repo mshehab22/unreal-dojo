@@ -9,6 +9,9 @@ import { app, BrowserWindow, dialog, ipcMain, safeStorage } from "electron";
 import { createContentCatalog } from "./content/createContentCatalog";
 import { resolveContentRoot } from "./content/resolveContentRoot";
 import { createHandlers } from "./ipc/createHandlers";
+import { holdQuitForSaves } from "./lifecycle/holdQuitForSaves";
+import { reloadOnceOnRendererCrash } from "./lifecycle/reloadOnceOnRendererCrash";
+import { showStartupFailure } from "./lifecycle/showStartupFailure";
 import { registerHandlers } from "./ipc/registerHandlers";
 import { sendBuildProgress } from "./ipc/sendBuildProgress";
 import { createEngineLocator } from "./services/unreal/createEngineLocator";
@@ -97,6 +100,9 @@ async function start(): Promise<void>
 
 	let unrealServices: UnrealServices | null = null;
 
+	// Pending progress saves get up to 3 s to finish before quitting (A1211).
+	holdQuitForSaves(app, progressService);
+
 	// Runs, then the editor, before quitting; never builds the Unreal services just to quit (A530).
 	stopEngineWorkBeforeQuit(app, { runs: runRegistry, editorLauncher: () => unrealServices?.editorLauncher ?? null });
 
@@ -124,6 +130,9 @@ async function start(): Promise<void>
 		pathExists,
 		reviewStatuses: () => getReviewService().getProviderStatuses(),
 		editorConnected: async () => (unrealServices ? unrealServices.editorService.isConnected() : false),
+		checkToolchain: () => getEngineLocator().checkToolchain(),
+		saveRefusal: () => progressService.getRefusal(),
+		saveLoadRecovery: () => progressService.getLoadRecovery(),
 	});
 
 	// Breakdowns and explain items are graded by the review service; it falls back to tests only on its own (replaces A318, A460).
@@ -157,15 +166,24 @@ async function start(): Promise<void>
 			sendProgress: sendBuildProgress,
 			settingsService,
 			readEnvironmentStatus: () => environmentStatusReader.read(),
+			checkToolchain: () => environmentStatusReader.refreshToolchain(),
 			getReviewHandlers,
 		}),
 	);
-	createMainWindow();
+	openMainWindow();
 
 	app.on("activate", () =>
 	{
-		if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+		if (BrowserWindow.getAllWindows().length === 0) openMainWindow();
 	});
+}
+
+/** Opens the main window and reloads it once if its page process dies (A1212). */
+function openMainWindow(): void
+{
+	const window = createMainWindow();
+
+	reloadOnceOnRendererCrash(window.webContents, (message) => console.warn(message));
 }
 
 /** A folder shipped next to the asar when packaged (extraResources), or in the source tree in development: the sandbox template, the reference solutions (A404). */
@@ -181,5 +199,9 @@ app.on("window-all-closed", () =>
 
 start().catch((error: unknown) =>
 {
-	console.error("Unreal Dojo failed to start", error);
+	showStartupFailure(error, {
+		log: (message, failure) => console.error(message, failure),
+		showErrorBox: (title, content) => dialog.showErrorBox(title, content),
+		quit: () => app.quit(),
+	});
 });

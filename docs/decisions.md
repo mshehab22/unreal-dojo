@@ -4,6 +4,15 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1212 2026-10-27 A failed start shows a plain dialog and quits; a crashed window reloads once (M5.1g, builder)
+Before, a failed `start()` only wrote to the log and left the app running with no window. Options: leave it; show the error with its stack; show a plain dialog, log the detail, and quit. For a crashed page process (`render-process-gone`): leave it; reload every time; reload once. Chosen: the plain dialog (title "Unreal Dojo could not start", no stack, no error text) then quit, even if the dialog itself fails; and one reload per window, with later crashes only logged, so a page that crashes on load never loops. A clean exit is ignored. Reverse cost: delete one call in `index.ts` each.
+
+### A1211 2026-10-27 Quit waits up to 3 s for pending saves (M5.1g, builder)
+The last change should reach the disk before the app closes, but a stuck disk must not freeze the quit. Options: no wait; wait without a limit; wait up to 3 s through the bounded `whenIdle` (A1195). Chosen: 3 s (`QUIT_SAVE_WAIT_MS`), held once in `src/main/lifecycle/holdQuitForSaves.ts`, separate from the Unreal quit sequence so each does one job. The quit is always held for the length of one `whenIdle` call, which answers at once when nothing is pending. Reverse cost: change the constant or remove one call in `index.ts`.
+
+### A1210 2026-10-27 The toolchain check is cached for the session (M5.1g, builder)
+Title refetches the environment status on every window focus, and the check runs vswhere (Windows) or xcode-select (macOS). Options: check on every read; check once per session and refresh on request; check on a timer. Chosen: once per session, started by the first read; `refreshToolchain()` runs it again and replaces the kept answer, and the existing `checkToolchain` IPC call (the "Check again" button) goes through it. A build failure outside the learner's code should call the same refresh (M5.1d's side). Concurrent first reads share one check. A check that cannot run caches null for the session until a refresh. Reverse cost: drop the cache field.
+
 ### A1209 2026-10-27 The detail tail is capped at 40 lines and comes from the build output only (M5.1f, builder)
 A rejected Submit shows the learner why the run failed, so the end of the build output goes into `detail`. Options: the whole output; the last 40 lines; the last 40 lines plus the test messages. Chosen: the last 40 lines of `compilerOutput`, after the failure's own detail and a blank line (named constant `UNRELATED_FAILURE_DETAIL_LINES`). The cause of a crash is at the end of the log, a full build log can be megabytes, and test messages belong to the learner's code, not to a failure outside it. When the failure has no detail and the output is empty, `detail` stays undefined. Reverse cost: change one constant.
 
