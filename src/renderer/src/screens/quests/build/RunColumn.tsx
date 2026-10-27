@@ -106,7 +106,7 @@ export function RunColumn({ run, submit, lastResult, lastResultSource, canSubmit
 				<AppErrorView
 					error={failedCall.error}
 					{...(isOutsideFailureCode(failedCall.error.code) ? { headline: NOT_YOUR_CODE_HEADLINE } : {})}
-					onRetry={failedCall === submit ? onSubmit : onRun}
+					onRetry={busy ? undefined : failedCall === submit ? onSubmit : onRun}
 					retryLabel={failedCall === submit ? "Submit again" : "Run again"}
 					compact
 				/>
@@ -124,7 +124,7 @@ export function RunColumn({ run, submit, lastResult, lastResultSource, canSubmit
 						<AppErrorView
 							error={lastResult.unrelatedFailure}
 							headline={NOT_YOUR_CODE_HEADLINE}
-							onRetry={lastResultSource === "submit" ? onSubmit : onRun}
+							onRetry={busy ? undefined : lastResultSource === "submit" ? onSubmit : onRun}
 							retryLabel={lastResultSource === "submit" ? "Submit again" : "Run again"}
 							compact
 						/>

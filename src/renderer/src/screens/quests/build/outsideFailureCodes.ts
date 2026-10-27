@@ -15,6 +15,7 @@ const OUTSIDE_FAILURE_CODES: ReadonlySet<AppErrorCode> = new Set<AppErrorCode>([
 	"sandbox-path-unsupported",
 	"sandbox-copy-failed",
 	"editor-launch-failed",
+	"save-failed",
 ]);
 
 /** True when a rejected Run or Submit with this code is not the learner's doing. */

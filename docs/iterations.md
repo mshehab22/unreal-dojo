@@ -1716,7 +1716,7 @@ What to look for: anything confusing, slow, or wrong. Note the step number for e
 - Screenshots: `docs/iterations/m5-1h-outside-run-1100.jpg`, `docs/iterations/m5-1h-outside-run-1440.jpg`, `docs/iterations/m5-1h-outside-submit-1100.jpg`, `docs/iterations/m5-1h-outside-submit-1440.jpg`, `docs/iterations/m5-1h-compile-failure-1100.jpg`.
 
 ![[m5-1h-outside-run-1440.jpg|800]]
-*After Run at 1440x900: the "Not your code" box with its message and action, and the label under it saying the run could not build.*
+*After Run at 1440x900: the "Not your code" box with its message and action, and the label under it saying the run could not build (the label sits above the box, so it is scrolled out of this picture; the e2e test checks its text).*
 
 ![[m5-1h-outside-submit-1100.jpg|800]]
 *After a rejected Submit at 1100x700: the same box with Submit again and its details open; there is no loot screen.*
