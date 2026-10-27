@@ -502,7 +502,8 @@
       "enhanced-input",
       "input-mapping-context",
       "player-controller"
-    ]
+    ],
+    "firstQuestId": "m1-binding-input"
   },
   {
     "id": "engine-subsystem",
@@ -2361,7 +2362,8 @@
       "input-modifier",
       "enhanced-input-component",
       "legacy-input"
-    ]
+    ],
+    "firstQuestId": "m1-actions-and-values"
   },
   {
     "id": "input-action",
@@ -2380,7 +2382,8 @@
       "input-mapping-context",
       "finputactionvalue",
       "enhanced-input-component"
-    ]
+    ],
+    "firstQuestId": "m1-actions-and-values"
   },
   {
     "id": "input-mapping-context",
@@ -2401,7 +2404,8 @@
       "local-player-subsystem",
       "input-trigger",
       "input-modifier"
-    ]
+    ],
+    "firstQuestId": "m1-actions-and-values"
   },
   {
     "id": "input-trigger",
@@ -2422,7 +2426,8 @@
       "input-modifier",
       "input-mapping-context",
       "input-action"
-    ]
+    ],
+    "firstQuestId": "m1-triggers-and-events"
   },
   {
     "id": "input-modifier",
@@ -2442,7 +2447,8 @@
       "input-trigger",
       "input-mapping-context",
       "finputactionvalue"
-    ]
+    ],
+    "firstQuestId": "m1-actions-and-values"
   },
   {
     "id": "etriggerevent",
@@ -2460,7 +2466,8 @@
       "input-trigger",
       "enhanced-input-component",
       "input-action"
-    ]
+    ],
+    "firstQuestId": "m1-binding-input"
   },
   {
     "id": "finputactionvalue",
@@ -2478,7 +2485,8 @@
       "enhanced-input-component",
       "input-modifier",
       "fvector"
-    ]
+    ],
+    "firstQuestId": "m1-actions-and-values"
   },
   {
     "id": "enhanced-input-component",
@@ -2496,7 +2504,8 @@
       "etriggerevent",
       "input-action",
       "enhanced-input"
-    ]
+    ],
+    "firstQuestId": "m1-binding-input"
   },
   {
     "id": "legacy-input",
@@ -2516,7 +2525,8 @@
       "enhanced-input",
       "setup-player-input-component",
       "player-controller"
-    ]
+    ],
+    "firstQuestId": "m1-actions-and-values"
   },
   {
     "id": "setup-player-input-component",
@@ -2535,7 +2545,8 @@
       "pawn",
       "player-controller",
       "super"
-    ]
+    ],
+    "firstQuestId": "m1-binding-input"
   },
   {
     "id": "data-asset",
@@ -4098,5 +4109,43 @@
       "profiling"
     ],
     "firstQuestId": "p11-thousands-of-the-same"
+  },
+  {
+    "id": "input-consumption",
+    "term": "Input Consumption",
+    "aliases": [
+      "bConsumeInput",
+      "input consumption",
+      "consume lower priority mappings"
+    ],
+    "category": "input",
+    "short": "The rule that an input action which takes a key hides that key from lower priority mapping contexts.",
+    "long": "Every input action has a Consume Input setting, on by default. When a higher priority mapping context maps a key to such an action, the lower priority contexts never see that key: their mappings of it are dropped when the player's mappings are rebuilt. This is how a pause or menu context stops gameplay keys without touching gameplay code, even if nothing is bound to its action. Turn the setting off on the higher action to let the key reach both layers.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/EnhancedInput/UInputAction?application_version=5.8",
+    "related": [
+      "input-mapping-context",
+      "input-action",
+      "local-player-subsystem"
+    ],
+    "firstQuestId": "m1-priority-and-consume"
+  },
+  {
+    "id": "finputactioninstance",
+    "term": "FInputActionInstance",
+    "aliases": [
+      "action instance",
+      "FInputActionInstance::GetElapsedTime"
+    ],
+    "category": "input",
+    "short": "The running state of an input action, which a handler can take to read its value and how long it has been going.",
+    "long": "A handler bound with BindAction may take a const FInputActionInstance& instead of the plain value. The instance gives GetValue, GetTriggerEvent, GetElapsedTime (seconds the action has been started, ongoing, or triggered) and GetTriggeredTime (seconds spent triggered). A charge bar reads the elapsed time of a Hold action and divides it by the full charge time.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/EnhancedInput/FInputActionInstance?application_version=5.8",
+    "related": [
+      "finputactionvalue",
+      "etriggerevent",
+      "input-trigger",
+      "enhanced-input-component"
+    ],
+    "firstQuestId": "m1-triggers-and-events"
   }
 ]
