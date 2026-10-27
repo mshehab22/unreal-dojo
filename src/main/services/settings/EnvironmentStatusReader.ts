@@ -78,8 +78,8 @@ export class EnvironmentStatusReader
 	/** The toolchain check of this session, started by the first read and kept so repeat reads never spawn the tool again. Null until the first read. */
 	private toolchainCheck: Promise<ToolchainCheck | null> | null = null;
 
-	/** True once the save notice has been handed out; it is shown once. */
-	private saveNoticeHandedOut = false;
+	/** The save notice, built on the first read. Undefined until then; null when the save loaded cleanly. */
+	private saveNotice: AppError | null | undefined = undefined;
 
 	/** Keeps the sources. */
 	constructor(private readonly sources: EnvironmentSources)
@@ -107,14 +107,14 @@ export class EnvironmentStatusReader
 			editorConnected,
 			engineProblem: engineReading.problem,
 			toolchain,
-			saveNotice: this.takeSaveNotice(),
+			saveNotice: this.readSaveNotice(),
 		};
 	}
 
 	/** Runs the toolchain check again and keeps its answer for later reads. Used by "Check again" and after a failure outside the learner's code (A1210). */
 	refreshToolchain(): Promise<ToolchainCheck>
 	{
-		const check = this.sources.checkToolchain();
+		const check = this.startToolchainCheck();
 		this.toolchainCheck = check.catch(() => null);
 
 		return check;
@@ -135,26 +135,32 @@ export class EnvironmentStatusReader
 		}
 	}
 
-	/** The toolchain check of this session; the first call starts it. Null when the check itself could not run. */
+	/** The toolchain check of this session; the first call starts it, and a read that comes while it runs waits for it. Null when the check itself could not run. */
 	private readToolchain(): Promise<ToolchainCheck | null>
 	{
 		if (this.toolchainCheck === null)
 		{
-			this.toolchainCheck = this.sources.checkToolchain().catch(() => null);
+			this.toolchainCheck = this.startToolchainCheck().catch(() => null);
 		}
 
 		return this.toolchainCheck;
 	}
 
-	/** The notice about the save file the first time there is one, then null (A1192). */
-	private takeSaveNotice(): AppError | null
+	/** Starts the check. A source that throws before it returns a promise becomes a rejected promise, so the error never escapes a caller. */
+	private startToolchainCheck(): Promise<ToolchainCheck>
 	{
-		if (this.saveNoticeHandedOut) return null;
+		return Promise.resolve().then(() => this.sources.checkToolchain());
+	}
 
-		const notice = buildSaveNotice(this.sources.saveRefusal(), this.sources.saveLoadRecovery());
-		if (notice) this.saveNoticeHandedOut = true;
+	/** The notice about the save file, built on the first read and kept: every read of the session returns it, and the screen decides when it was dismissed (A1192). */
+	private readSaveNotice(): AppError | null
+	{
+		if (this.saveNotice === undefined)
+		{
+			this.saveNotice = buildSaveNotice(this.sources.saveRefusal(), this.sources.saveLoadRecovery());
+		}
 
-		return notice;
+		return this.saveNotice;
 	}
 
 	/** True when the sandbox folder holds `Dojo.uproject` and has been built (`Binaries` exists). */

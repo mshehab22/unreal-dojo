@@ -1,8 +1,8 @@
 // Checks that quitting waits for pending saves, for at most the limit, and holds only once.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { holdQuitForSaves, QUIT_SAVE_WAIT_MS, type SaveQueue } from "../../src/main/lifecycle/holdQuitForSaves";
-import type { QuittingApp } from "../../src/main/services/unreal/stopEngineWorkBeforeQuit";
+import { holdQuitForSaves, QUIT_SAVE_WAIT_MS, type Defer, type SaveQueue } from "../../src/main/lifecycle/holdQuitForSaves";
+import type { QuittingApp } from "../../src/main/lifecycle/QuittingApp";
 
 /** A stand-in for Electron's app that records quits and replays before-quit; `fire` answers whether the quit was held. */
 function createApp(): { app: QuittingApp & { quitCount: number }; fire: () => boolean }
@@ -41,6 +41,14 @@ function createBusySaves(): { saves: SaveQueue & { waits: number[] }; finish: ()
 	return { saves, finish: () => finish() };
 }
 
+/** A deferral the test runs by hand with `runLater`, so the later turn is under its control. */
+function createDeferrer(): { defer: Defer; runLater: () => void }
+{
+	const waiting: (() => void)[] = [];
+
+	return { defer: (action) => void waiting.push(action), runLater: () => waiting.splice(0).forEach((action) => action()) };
+}
+
 describe("holdQuitForSaves", () =>
 {
 	beforeEach(() =>
@@ -57,29 +65,50 @@ describe("holdQuitForSaves", () =>
 	{
 		const { app, fire } = createApp();
 		const { saves, finish } = createBusySaves();
-		holdQuitForSaves(app, saves);
+		const { defer, runLater } = createDeferrer();
+		holdQuitForSaves(app, saves, QUIT_SAVE_WAIT_MS, defer);
 
 		expect(fire()).toBe(true);
 		expect(app.quitCount).toBe(0);
 
 		finish();
 		await vi.advanceTimersByTimeAsync(0);
+		runLater();
 
 		expect(app.quitCount).toBe(1);
 		expect(fire()).toBe(false);
+	});
+
+	it("does not quit inside the turn that saw the saves finish, even when nothing was pending", async () =>
+	{
+		const { app, fire } = createApp();
+		const { defer, runLater } = createDeferrer();
+		holdQuitForSaves(app, { whenIdle: async () => true }, QUIT_SAVE_WAIT_MS, defer);
+
+		expect(fire()).toBe(true);
+		await vi.advanceTimersByTimeAsync(0);
+
+		expect(app.quitCount).toBe(0);
+
+		runLater();
+
+		expect(app.quitCount).toBe(1);
 	});
 
 	it("waits at most the limit when a save never finishes", async () =>
 	{
 		const { app, fire } = createApp();
 		const { saves } = createBusySaves();
-		holdQuitForSaves(app, saves);
+		const { defer, runLater } = createDeferrer();
+		holdQuitForSaves(app, saves, QUIT_SAVE_WAIT_MS, defer);
 
 		fire();
 		await vi.advanceTimersByTimeAsync(QUIT_SAVE_WAIT_MS - 1);
+		runLater();
 		expect(app.quitCount).toBe(0);
 
 		await vi.advanceTimersByTimeAsync(1);
+		runLater();
 
 		expect(saves.waits).toEqual([3000]);
 		expect(app.quitCount).toBe(1);
@@ -89,7 +118,8 @@ describe("holdQuitForSaves", () =>
 	{
 		const { app, fire } = createApp();
 		const { saves, finish } = createBusySaves();
-		holdQuitForSaves(app, saves);
+		const { defer, runLater } = createDeferrer();
+		holdQuitForSaves(app, saves, QUIT_SAVE_WAIT_MS, defer);
 
 		expect(fire()).toBe(true);
 		expect(fire()).toBe(true);
@@ -97,6 +127,7 @@ describe("holdQuitForSaves", () =>
 
 		finish();
 		await vi.advanceTimersByTimeAsync(0);
+		runLater();
 
 		expect(app.quitCount).toBe(1);
 		expect(fire()).toBe(false);
@@ -106,10 +137,12 @@ describe("holdQuitForSaves", () =>
 	it("quits when the save queue itself fails", async () =>
 	{
 		const { app, fire } = createApp();
-		holdQuitForSaves(app, { whenIdle: () => Promise.reject(new Error("disk gone")) });
+		const { defer, runLater } = createDeferrer();
+		holdQuitForSaves(app, { whenIdle: () => Promise.reject(new Error("disk gone")) }, QUIT_SAVE_WAIT_MS, defer);
 
 		fire();
 		await vi.advanceTimersByTimeAsync(0);
+		runLater();
 
 		expect(app.quitCount).toBe(1);
 	});
@@ -118,12 +151,26 @@ describe("holdQuitForSaves", () =>
 	{
 		const { app, fire } = createApp();
 		const { saves } = createBusySaves();
-		holdQuitForSaves(app, saves, 500);
+		const { defer, runLater } = createDeferrer();
+		holdQuitForSaves(app, saves, 500, defer);
 
 		fire();
 		await vi.advanceTimersByTimeAsync(500);
+		runLater();
 
 		expect(saves.waits).toEqual([500]);
+		expect(app.quitCount).toBe(1);
+	});
+
+	it("defers with setImmediate when no deferral is given", async () =>
+	{
+		const { app, fire } = createApp();
+		holdQuitForSaves(app, { whenIdle: async () => true });
+
+		fire();
+		await vi.advanceTimersByTimeAsync(0);
+		await vi.advanceTimersByTimeAsync(1);
+
 		expect(app.quitCount).toBe(1);
 	});
 });

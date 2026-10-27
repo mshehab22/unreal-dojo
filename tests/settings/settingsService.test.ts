@@ -401,7 +401,16 @@ describe("EnvironmentStatusReader", () =>
 			editorConnected: async () => { throw new Error("no MCP"); },
 		})).read();
 
-		expect(status).toMatchObject({ engine: null, sandbox: { path: "/Sandboxes/DojoSandbox", ready: false }, reviewProvider: null, loopMode: "headless", editorConnected: false });
+		expect(status).toEqual({
+			engine: null,
+			sandbox: { path: "/Sandboxes/DojoSandbox", ready: false },
+			reviewProvider: null,
+			loopMode: "headless",
+			editorConnected: false,
+			engineProblem: expect.objectContaining({ code: "engine-not-found" }),
+			toolchain: { ok: true, tool: "vswhere", message: "Visual Studio is ready.", problems: [] },
+			saveNotice: null,
+		});
 	});
 
 	it("reports nothing set on a fresh install", async () =>

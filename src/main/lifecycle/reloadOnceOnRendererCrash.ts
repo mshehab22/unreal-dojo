@@ -5,9 +5,10 @@ export interface CrashableContents
 {
 	on(eventName: "render-process-gone", listener: (event: unknown, details: { reason: string }) => void): void;
 	reload(): void;
+	isDestroyed(): boolean;
 }
 
-/** Reloads the page the first time its process is gone for any reason other than a clean exit. Later crashes are only logged. */
+/** Reloads the page the first time its process is gone for any reason other than a clean exit. Later crashes are only logged, and a destroyed window is left alone. */
 export function reloadOnceOnRendererCrash(contents: CrashableContents, log: (message: string) => void): void
 {
 	let reloaded = false;
@@ -15,6 +16,7 @@ export function reloadOnceOnRendererCrash(contents: CrashableContents, log: (mes
 	contents.on("render-process-gone", (_event, details) =>
 	{
 		if (details.reason === "clean-exit") return;
+		if (contents.isDestroyed()) return;
 
 		if (reloaded)
 		{

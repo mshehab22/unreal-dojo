@@ -135,6 +135,9 @@ async function start(): Promise<void>
 		saveLoadRecovery: () => progressService.getLoadRecovery(),
 	});
 
+	// The toolchain check starts now, in the background, so it is usually done before the Title screen first asks (A1210).
+	void environmentStatusReader.refreshToolchain().catch(() => undefined);
+
 	// Breakdowns and explain items are graded by the review service; it falls back to tests only on its own (replaces A318, A460).
 	const graders: ProgressGraders = { gradeExplain: (input) => getReviewService().gradeExplain(input), gradeBreakdown: (input) => getReviewService().gradeBreakdown(input) };
 	const progressContentService = new ProgressContentService(contentCatalog, progressService, graders, new MathRandomSource(), () => randomUUID());
@@ -201,7 +204,13 @@ start().catch((error: unknown) =>
 {
 	showStartupFailure(error, {
 		log: (message, failure) => console.error(message, failure),
-		showErrorBox: (title, content) => dialog.showErrorBox(title, content),
+		// A hidden e2e run never gets a modal native box (A77, A970); the detail is already logged.
+		showErrorBox: (title, content) =>
+		{
+			if (isHiddenTestWindow(process.env, app.isPackaged)) return;
+
+			dialog.showErrorBox(title, content);
+		},
 		quit: () => app.quit(),
 	});
 });

@@ -31,6 +31,8 @@ Format: date, system, problem, what was tried, current workaround, who owns it.
 
 (The Lead lists here anything that passed on one machine and could not be run on the other.)
 
+- 2026-10-27, app-shell M5.1g: unverified on macOS (Cmd+Q with nothing pending). `holdQuitForSaves` holds `before-quit` and quits again on a later turn (`setImmediate`); the concern is that a second `app.quit()` inside the first quit's own event could leave the window closed and the app in the Dock. Covered by a fake-app test only; to check on the Mac: open the app, press Cmd+Q without doing anything, and confirm the Dock icon goes away. A1211.
+
 - 2026-10-21, content-foundations M2.3: Pack 1 World 1 reference solutions and tests built and passed on the Mac (UE 5.8.3) by hand. Verified on Windows 2026-10-26: the whole Pack 1 `--engine` run passes on UE 5.8.3 (W6).
 - 2026-10-21, app-shell M0.1: the Windows nsis installer and the e2e smoke test had only run on the Mac. Verified on Windows 2026-10-26: the full e2e suite passes there (hidden windows) and in CI on windows-latest, and `npm run package` builds `dist/Unreal Dojo Setup 0.1.0.exe` (121 MB, x64, per-user, not one-click) with all three packs, all 74 solutions, the sandbox template, and the font licenses in `resources`. Still unverified: installing it and launching the installed app (not done by sessions, A77). The installer is unsigned (a certificate costs money, so that waits for Mohammad) and uses the default Electron icon (no app icon set yet).
 - 2026-10-21, app-shell M0.1: the Intel (x64) dmg is configured but was not launched on an Intel Mac.

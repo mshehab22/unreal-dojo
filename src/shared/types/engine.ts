@@ -108,9 +108,9 @@ export interface EnvironmentStatus
 	/** Why the engine in settings cannot be used (moved, uninstalled, too old). Absent or null when there is no problem or no engine is set. */
 	engineProblem?: AppError | null;
 
-	/** The last toolchain check of this session, or null when none ran yet. */
+	/** The last toolchain check of this session, or null when the check could not run. The first read waits for the check, which the app starts at startup. */
 	toolchain?: ToolchainCheck | null;
 
-	/** A one-time notice about the save file (restored from the backup, started fresh, refused). Absent or null when there is nothing to say. */
+	/** A notice about the save file (restored from the backup, started fresh, refused). Returned on every read of the session; the screen hides it once the learner dismisses it. Absent or null when there is nothing to say. */
 	saveNotice?: AppError | null;
 }

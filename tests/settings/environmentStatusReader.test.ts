@@ -146,6 +146,21 @@ describe("EnvironmentStatusReader toolchain", () =>
 		expect(calls).toBe(2);
 	});
 
+	it("does not let a check that throws at once escape, on a read or on a refresh", async () =>
+	{
+		const { sources } = createSources({
+			checkToolchain: () =>
+			{
+				throw new Error("spawn failed");
+			},
+		});
+		const reader = new EnvironmentStatusReader(sources);
+
+		expect((await reader.read()).toolchain).toBeNull();
+		await expect(reader.refreshToolchain()).rejects.toThrow("spawn failed");
+		expect((await reader.read()).toolchain).toBeNull();
+	});
+
 	it("reports no toolchain when the check cannot run, without failing the read", async () =>
 	{
 		const { sources } = createSources({ checkToolchain: async () => { throw new Error("vswhere crashed"); } });
@@ -166,7 +181,7 @@ describe("EnvironmentStatusReader save notice", () =>
 		expect(status.saveNotice).toBeNull();
 	});
 
-	it("tells about a restore from the backup once, then stays quiet", async () =>
+	it("tells about a restore from the backup on every read", async () =>
 	{
 		const { sources } = createSources({ saveLoadRecovery: () => ({ kind: "backup", quarantinedPath: "/data/progress.json.bad" }) });
 		const reader = new EnvironmentStatusReader(sources);
@@ -177,7 +192,7 @@ describe("EnvironmentStatusReader save notice", () =>
 		expect(first.saveNotice?.code).toBe("save-failed");
 		expect(first.saveNotice?.message).toContain("backup");
 		expect(first.saveNotice?.detail).toContain("/data/progress.json.bad");
-		expect(second.saveNotice).toBeNull();
+		expect(second.saveNotice).toEqual(first.saveNotice);
 	});
 
 	it("tells about a fresh start when the file and its backup were both bad", async () =>
@@ -195,6 +210,7 @@ describe("EnvironmentStatusReader save notice", () =>
 		const reader = new EnvironmentStatusReader(sources);
 
 		expect((await reader.read()).saveNotice).toEqual(REFUSED_SAVE);
-		expect((await reader.read()).saveNotice).toBeNull();
+		expect((await reader.read()).saveNotice).toEqual(REFUSED_SAVE);
+		expect((await reader.read()).saveNotice).toEqual(REFUSED_SAVE);
 	});
 });
