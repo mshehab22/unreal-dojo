@@ -129,6 +129,17 @@ export class QueryCache
 		return Promise.all(keys.map((key) => this.fetch(key)));
 	}
 
+	/** Forgets every key no mounted screen is reading, so a screen that mounts again fetches from scratch instead of showing a cached answer that may be what broke it. */
+	forgetUnobserved(): void
+	{
+		for (const [key, entry] of [...this.entries.entries()])
+		{
+			if (entry.observers === 0) this.entries.delete(key);
+		}
+
+		this.notify();
+	}
+
 	/** Forgets everything, for tests and a data source switch. */
 	clear(): void
 	{

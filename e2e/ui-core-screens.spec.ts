@@ -447,15 +447,15 @@ test("against the real bridge, the title works and the Studio shows real data or
 	await expect(window.getByTestId("screen-studio")).toBeVisible();
 	await expect(window.getByTestId("app-error").or(window.getByTestId("studio-lead")).first()).toBeVisible({ timeout: REAL_BRIDGE_STUDIO_TIMEOUT_MS });
 
-	// A read main never answered also ends in the error view now (A1250). That is the CI hang W12 could not explain, so it still fails
-	// here, and the failure attaches main's console, which names the call (A1252, A1253).
+	// A read main never answered ends in the error view after its wait limit (A1250), and a read that outlasts this test's own timeout fails
+	// above. Both are the CI hang W12 could not explain; the failure attaches main's console, which names the call (A1252, A1253).
 	await expect(window.locator('[data-testid="app-error"][data-error-code="no-answer"]')).toHaveCount(0);
 	await saveScreenshot(camera, window, "studio-bridge-1100x700");
 });
 
 test("a Studio read that main never answers ends in the AppError view, and Try again loads the Studio (W12, A1250)", async ({ dojo, camera }) =>
 {
-	test.setTimeout(60_000);
+	test.setTimeout(100_000);
 
 	const { window, electronApp } = dojo;
 
@@ -470,9 +470,9 @@ test("a Studio read that main never answers ends in the AppError view, and Try a
 	await expect(window.getByTestId("screen-studio")).toBeVisible();
 	await expect(window.getByTestId("studio-lead")).toHaveCount(0);
 
-	// The data wait limit is 15 s; the view must come soon after it, never an endless loading block.
+	// The data wait limit is 45 s (A1262); the view must come soon after it, never an endless loading block.
 	const noAnswer = window.locator('[data-testid="app-error"][data-error-code="no-answer"]');
-	await expect(noAnswer).toBeVisible({ timeout: 25_000 });
+	await expect(noAnswer).toBeVisible({ timeout: 60_000 });
 	await expect(noAnswer).toContainText("taking too long");
 	await expect(window.getByTestId("screen-studio").getByTestId("loading")).toHaveCount(0);
 	await saveScreenshot(camera, window, "studio-no-answer-1100x700");

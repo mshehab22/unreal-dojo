@@ -1,6 +1,9 @@
 // Decides what the fake engine says about a learner's files: whether they compile and which of the quest's tests pass.
 import type { LearnerQuest } from "@shared/types/catalog";
+import type { AppError } from "@shared/types/errors";
 import type { TestCaseResult } from "@shared/types/run";
+
+import { hasOutsideFailureMarker, OUTSIDE_FAILURE_OUTPUT, outsideFailureError } from "./FakeOutsideFailure";
 
 /** The fake engine's verdict on one set of files. */
 export interface FakeBuildVerdict
@@ -8,6 +11,9 @@ export interface FakeBuildVerdict
 	compiled: boolean;
 	compilerOutput: string;
 	tests: TestCaseResult[];
+
+	/** Set when the build failed for a reason outside the learner's code; nothing was compiled or tested. */
+	unrelatedFailure?: AppError;
 }
 
 /** A quest with files, as the judge reads it. */
@@ -56,9 +62,11 @@ function trainingDummyPasses(files: Record<string, string>): { reflected: boolea
 	};
 }
 
-/** Judges files for a quest. A bracket mismatch fails to compile; otherwise the training dummy is checked for real, and any other quest passes once every file changed from its starter. */
+/** Judges files for a quest. The outside-failure marker fails the build before any file is read; a bracket mismatch fails to compile; otherwise the training dummy is checked for real, and any other quest passes once every file changed from its starter. */
 export function judgeBuild(quest: CodeQuest, files: Record<string, string>): FakeBuildVerdict
 {
+	if (hasOutsideFailureMarker(files)) return { compiled: false, compilerOutput: OUTSIDE_FAILURE_OUTPUT, tests: [], unrelatedFailure: outsideFailureError() };
+
 	const broken = unbalancedBracket(files);
 
 	if (broken)

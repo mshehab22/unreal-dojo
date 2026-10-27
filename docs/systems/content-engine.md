@@ -65,7 +65,7 @@ Errors name the file (relative to `content/`), and the section and line when kno
 
 ## Parser structure
 
-- `ContentLoader` (`load({ packId? })`, `loadExamples()`) walks the folder and returns `LoadedContent` with every problem; it never throws on bad content.
+- `ContentLoader` (`load({ packId? })`, `loadExamples()`) walks the folder and returns `LoadedContent` with every problem; it never throws on bad content. `load` also takes an optional `onTimings` callback that receives the quest file count and the summed read and parse times (M5.1l, A1260); the app's slow-load warning uses it.
 - `parseQuestFile` parses one quest file: `splitQuestFile` cuts front matter and sections (fence aware through `FenceTracker`), gray-matter parses the front matter and every ` ```yaml ` block (`parseYaml`), `checkSectionLayout` checks the order, and zod schemas in `schemas/` validate the data. `validateWith` turns zod issues into problems with a field path and plain words (`Questions[3].modelAnswer: missing (expected text)`, `kind: "essay" is not allowed (expected one of: ...)`, `dificulty: unknown field`). Cross references (plan edges and `covers`, ids repeated inside a quest, the hint count) are checked after the schemas pass.
 - `ProblemList` collects problems for one file so one run reports all of them.
 
@@ -130,6 +130,12 @@ MacBook Air M5 (10 cores, 24 GB), UE 5.8.3, 2026-10-21 (M1.8):
 | `--engine`, 5 code examples | 195 to 258 s in all | first build 25 to 30 s, one headless run of all tests 23 to 35 s, starter checks 143 to 193 s (about 30 to 40 s per quest: an incremental build plus one headless run) |
 
 | `--engine`, 5 examples plus Pack 1 World 1's 4 build quests, through M1.3's runners (round 2) | 472 s in all | first build 48 s, one headless run of all 9 quests' tests 30 s, nine starter checks 393 s (about 44 s each); nothing else was using the engine |
+
+Windows desktop, 2026-10-27 (M5.1c), other builders using the machine:
+
+| Run | Time | Notes |
+| --- | --- | --- |
+| App content load (`tests/contentLoadBudget.test.ts`): fresh `ContentCatalog` on real disk, 300 real quests cloned over 25-quest worlds with the real glossary and patterns, until `listPacks`, `getGlossaryAliases`, and `getQuestAvailability` have answered | median of three: 122 ms quietest, 130 to 190 ms typical; first (cold) run: 186 ms quietest, 200 to 235 ms typical, 337 ms worst seen; the budget gates the median at 300 ms | 11 runs; the budget held without any loader change, so no follow-up was needed (A1196 to A1198) |
 
 Starter checks dominate. For a full pack, M2 or later can cut this with one batched starter build, falling back to one quest at a time only when that build fails (see A208).
 

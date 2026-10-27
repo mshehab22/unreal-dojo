@@ -14,13 +14,21 @@ export async function stubFirstAnswerNeverComes(electronApp: ElectronApplication
 
 		if (!original) throw new Error(`no ipcMain handler found on ${stubbedChannel}`);
 
+		// The unanswered promise is kept in a list: with nothing pointing at it, the garbage collector can drop it after a while and
+		// Electron then rejects the call with "reply was never sent", which hides the wait limit this stub exists to test (M5.1l).
+		const unanswered: Promise<unknown>[] = [];
 		let calls = 0;
 		ipcMain.removeHandler(stubbedChannel);
 		ipcMain.handle(stubbedChannel, (event, ...methodArguments) =>
 		{
 			calls += 1;
 
-			return calls === 1 ? new Promise(() => undefined) : original(event, ...methodArguments);
+			if (calls !== 1) return original(event, ...methodArguments);
+
+			const never = new Promise<unknown>(() => undefined);
+			unanswered.push(never);
+
+			return never;
 		});
 	}, channel);
 }

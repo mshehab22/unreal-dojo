@@ -1,0 +1,2 @@
+C:\Program Files\Epic Games\UE_5.8\Engine\Source\Runtime\Engine\Classes\Kismet\GameplayStatics.h(20): error C2236: unexpected token 'class'. Did you forget a ';'?
+C:\Program Files\Epic Games\UE_5.8\Engine\Source\Runtime\Engine\Classes\Kismet\GameplayStatics.h(20): error C2143: syntax error: missing ';' before '*'

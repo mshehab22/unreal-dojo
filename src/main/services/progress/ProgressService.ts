@@ -31,7 +31,7 @@ import { DrillScheduler } from "./DrillScheduler";
 import { HintSpellRules } from "./HintSpellRules";
 import { LevelRules } from "./LevelRules";
 import { PatternCardRules } from "./PatternCardRules";
-import type { ProgressStore } from "./ProgressStore";
+import type { LoadRecoveryReport, ProgressStore } from "./ProgressStore";
 import type { RandomSource } from "./RandomSource";
 import { RematchSelector } from "./RematchSelector";
 import type { ReviewScheduler } from "./ReviewScheduler";
@@ -164,6 +164,9 @@ export class ProgressService
 	/** Why the save could not be opened, or null when it is open. A refused service answers every save call with this error. */
 	private refusal: AppError | null = null;
 
+	/** What the load at startup found. "none" for a service built without a load. */
+	private loadRecovery: LoadRecoveryReport = { kind: "none" };
+
 	/** Builds the service around a loaded save. Use `ProgressService.openOrRefuse` in the app. */
 	constructor(
 		private progress: PlayerProgress,
@@ -178,8 +181,10 @@ export class ProgressService
 	static async open(store: ProgressStore, clock: Clock, random: RandomSource, scheduler?: ReviewScheduler): Promise<ProgressService>
 	{
 		const loaded = await store.load(clock.now());
+		const service = new ProgressService(loaded.progress, store, clock, random, scheduler);
+		service.loadRecovery = loaded.quarantinedPath === undefined ? { kind: loaded.recovery } : { kind: loaded.recovery, quarantinedPath: loaded.quarantinedPath };
 
-		return new ProgressService(loaded.progress, store, clock, random, scheduler);
+		return service;
 	}
 
 	/** Like `open`, but never throws: a save that cannot be opened (newer version, locked, unreadable) gives a refused service so the app still starts. */
@@ -204,6 +209,34 @@ export class ProgressService
 	getRefusal(): AppError | null
 	{
 		return this.refusal;
+	}
+
+	/** How the load at startup recovered: "none", "backup" (the main file was bad), or "fresh" (both were bad), plus where the bad file was moved when it was. */
+	getLoadRecovery(): LoadRecoveryReport
+	{
+		return { ...this.loadRecovery };
+	}
+
+	/**
+	 * Resolves with true once every queued change has been saved, or with false when `timeoutMs` runs out first. Never rejects:
+	 * a failed change is its caller's error, not this wait's (A1195). The app waits on this before it quits.
+	 */
+	async whenIdle(timeoutMs: number): Promise<boolean>
+	{
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const timedOut = new Promise<boolean>((resolve) =>
+		{
+			timer = setTimeout(() => resolve(false), Math.max(0, timeoutMs));
+		});
+
+		try
+		{
+			return await Promise.race([this.drainMutations(), timedOut]);
+		}
+		finally
+		{
+			clearTimeout(timer);
+		}
 	}
 
 	/** The revealed hint indexes of one quest, in reveal order. Empty for an untouched quest, and on a refused save, so quest screens still load (A502). */
@@ -830,6 +863,21 @@ export class ProgressService
 		this.pendingMutation = run;
 
 		return run;
+	}
+
+	/** Waits until the mutation queue stops growing: every change queued so far, and any queued while waiting, has finished. Always resolves true. */
+	private async drainMutations(): Promise<boolean>
+	{
+		let last: Promise<unknown>;
+
+		do
+		{
+			last = this.pendingMutation;
+			await last.catch(() => undefined);
+		}
+		while (last !== this.pendingMutation);
+
+		return true;
 	}
 
 	/** Throws the refusal when the save could not be opened, so a refused service never overwrites the file it could not read. */

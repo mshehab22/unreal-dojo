@@ -1,8 +1,6 @@
 // A small environment chip: a colored dot, a label, and a value, used on Title and First-run.
+import type { ChipTone } from "@/lib/environmentChipStates";
 import { cn } from "@/lib/utils";
-
-/** How a chip's dot is colored. */
-export type ChipTone = "pass" | "warn" | "fail" | "neutral";
 
 /** Props for StatusChip. */
 interface StatusChipProps

@@ -1,7 +1,7 @@
 // Checks the folder loader: packs and worlds in order, glossary and patterns, duplicate ids, naming rules, and empty folders.
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { ContentLoader } from "../../src/main/services/content/ContentLoader";
+import { ContentLoader, type ContentLoadTimings } from "../../src/main/services/content/ContentLoader";
 import { createContentFixture, readExamples, retagQuest, writePack, writeWorld, type ContentFixture } from "./contentFixture";
 
 /** A minimal valid glossary entry with the given id. */
@@ -232,5 +232,24 @@ describe("ContentLoader", () =>
 		const content = await new ContentLoader(fixture.root).load({ packId: "two" });
 
 		expect(content.packs.map((pack) => pack.id)).toEqual(["two"]);
+	});
+
+	it("reports how many quest files it read and where their time went", async () =>
+	{
+		const concept = (await readExamples()).get("01-concept-uproperty.md") ?? "";
+
+		await writePack(fixture, "foundations");
+		await writeWorld(fixture, "foundations", "01-first");
+		await fixture.write("packs/foundations/worlds/01-first/01-a.md", retagQuest(concept, "a", 1));
+		await fixture.write("packs/foundations/worlds/01-first/02-b.md", retagQuest(concept, "b", 2));
+
+		const reported: ContentLoadTimings[] = [];
+
+		await new ContentLoader(fixture.root).load({ onTimings: (timings) => reported.push({ ...timings }) });
+
+		expect(reported).toHaveLength(1);
+		expect(reported[0]?.questFileCount).toBe(2);
+		expect(reported[0]?.totalReadMilliseconds).toBeGreaterThan(0);
+		expect(reported[0]?.totalParseMilliseconds).toBeGreaterThan(0);
 	});
 });

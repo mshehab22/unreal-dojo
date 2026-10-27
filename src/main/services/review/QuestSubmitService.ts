@@ -45,7 +45,10 @@ export interface QuestSubmitDependencies
 	recordCodeAttempt: (submission: CodeAttemptSubmission) => Promise<AttemptOutcome>;
 }
 
-/** Runs a Submit end to end. A cancel stops it between steps; nothing is recorded for a cancelled Submit. */
+/** How many lines of the build output are added to the detail of a failure outside the quest (A1209). */
+export const UNRELATED_FAILURE_DETAIL_LINES = 40;
+
+/** Runs a Submit end to end. A cancel stops it between steps; nothing is recorded for a cancelled Submit or for a run that failed outside the quest. */
 export class QuestSubmitService
 {
 	/** Caps the files the reviewer reads and the attempt stores. */
@@ -68,6 +71,7 @@ export class QuestSubmitService
 
 		const run = await this.dependencies.runQuest(request, onProgress, signal);
 		this.stopIfCancelled(signal);
+		this.stopIfUnrelated(run);
 
 		// The engine builds every file in full; the reviewer reads the same capped copy the attempt stores, so a finding always points at code the explainer can see (A603).
 		const reviewedFiles = this.fileRules.capFiles(request.files);
@@ -94,5 +98,17 @@ export class QuestSubmitService
 	private stopIfCancelled(signal: AbortSignal): void
 	{
 		if (signal.aborted) throw new AppErrorException("run-cancelled", "The submit was cancelled.", "Submit again when you are ready.");
+	}
+
+	/** Throws the run's own AppError when it failed outside the quest, with the end of the build output as detail, so the attempt is not charged to the learner (A1208). */
+	private stopIfUnrelated(run: RunResult): void
+	{
+		const failure = run.unrelatedFailure;
+		if (!failure) return;
+
+		const outputTail = run.compilerOutput.split(/\r?\n/).filter((line) => line.length > 0).slice(-UNRELATED_FAILURE_DETAIL_LINES).join("\n");
+		const detail = [failure.detail, outputTail].filter((part) => part).join("\n\n");
+
+		throw new AppErrorException(failure.code, failure.message, failure.suggestedAction, detail || undefined);
 	}
 }
