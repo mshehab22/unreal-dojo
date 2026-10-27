@@ -51,8 +51,7 @@ A80 paused the push trigger until the Windows unit tests passed. W1 (progress), 
 
 ### A1020 2026-10-26 A `.gitattributes` keeps LF line endings on every checkout (W0, Windows Lead)
 GitHub's windows-latest runner checks out with `core.autocrlf=true`, so every text file arrived with CRLF and 8 tests in `tests/content/parseQuestFile.test.ts` failed: their fixtures are edited with `
-` patterns that no longer match (the parser itself already splits on `
-?
+` patterns that no longer match (the parser itself already splits on `?
 `). Options: make every test CRLF-proof; normalize in the parser and the tests; tell git to keep LF. Chosen: `* text=auto eol=lf`, with images, fonts, and Unreal maps and assets marked binary, so a Windows clone has the same bytes as the Mac and the packaged content is LF everywhere. The index was already all LF, so no file changes. Reproduced and proven in a worktree made with `core.autocrlf=true`: 6 failing files before, `parseQuestFile` passing after. Reverse cost: delete one file.
 
 ### A980 2026-10-26 The World Map's stage path says when its layout has settled (M2.1f, builder-ui-core)
