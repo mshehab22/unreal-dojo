@@ -55,6 +55,7 @@ const FAKE_DEPENDENCIES: HandlerDependencies = {
 	progressService: createTestProgressService().service,
 	getSandboxService: () => ({
 		folderWarnings: (pickedFolder) => (pickedFolder.length > 10 ? ["long path"] : []),
+		folderBlockers: (pickedFolder) => (pickedFolder.length > 10 ? ["inside the engine"] : []),
 		create: async (_enginePath, pickedFolder, onProgress) =>
 		{
 			onProgress({ phase: "building", lastLine: "Result: Succeeded", percent: 100 });
@@ -363,11 +364,11 @@ describe("payload validation", () =>
 		expect(events).toEqual([expect.objectContaining({ runId: "setup-1", phase: "building", percent: 100 })]);
 	});
 
-	it("answers pickSandboxFolder with the picked folder and its warnings", async () =>
+	it("answers pickSandboxFolder with the picked folder, its warnings, and its blockers",async () =>
 	{
 		const invoke = createInvoker();
 
-		expect(await invoke(IPC_CHANNELS.pickSandboxFolder)).toEqual({ ok: true, value: { path: "/Picked/UE_5.8", warnings: ["long path"] } });
+		expect(await invoke(IPC_CHANNELS.pickSandboxFolder)).toEqual({ ok: true, value: { path: "/Picked/UE_5.8", warnings: ["long path"], blockers: ["inside the engine"] } });
 	});
 
 	it("runs a quest under its run id, streaming stamped progress, and checks a snippet", async () =>

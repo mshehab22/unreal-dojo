@@ -38,6 +38,8 @@ interface TestCaseResult { name: string; passed: boolean; message?: string; dura
 
 ## Architecture (built so far)
 
+Last updated by M5.1e (bad paths and preflight), after M5.1d (failure explanation).
+
 Everything below lives in `src/main/services/unreal/`. Every file system, registry, and process call goes through an injected interface, so both platforms are unit tested on any machine (`tests/unreal/`).
 
 | File | Job |
@@ -92,7 +94,7 @@ IPC: `createSandbox`, `cancelRun`, and `pickSandboxFolder` answer (A189); `runQu
 
 | File | Job |
 | --- | --- |
-| `QuestRunService.ts` | `runQuest`, `checkSnippetSyntax`, `rebuildSandbox` for the IPC handlers. Prerequisites are followed transitively through each one's own dependency line, a boss's in its spec (A413). Reads the engine and sandbox from settings (`sandbox-not-ready` before setup), the quest from the content catalog (`quest-not-found` for an unknown or non-code quest), fills prerequisites, then runs through `RunnerFactory` |
+| `QuestRunService.ts` | `runQuest`, `checkSnippetSyntax`, `rebuildSandbox` for the IPC handlers. Prerequisites are followed transitively through each one's own dependency line, a boss's in its spec (A413). Reads the engine and sandbox from settings through `RunPreflight` (M5.1e: `sandbox-not-ready` before setup or when the sandbox was moved or deleted, `engine-not-found` when the engine moved or was uninstalled), the quest from the content catalog (`quest-not-found` for an unknown or non-code quest), fills prerequisites, then runs through `RunnerFactory` |
 | `QuestDependencies.ts` | Every known quest id (from the content catalog) on the brief's "Compiles against earlier quests:" line, so "f1-popup-target as extended by f1-boss-training-yard" names both (A268, A407) |
 | `ReferenceSolutions.ts` | `<solutions>/<quest-id>/<FileName>`: `tools/solutions` in development, `<resources>/solutions` when packaged (extraResources, A406) |
 | `PrerequisiteFiller.ts` | Per prerequisite: not passed (tested out or not done) gets its whole reference; passed with files missing gets only those, from the progress save's `savedFiles`, else the reference; files already present are never touched. A boss prerequisite with an empty folder and nothing saved gets its reference code (never its tests) and its piece overrides, which win over the piece's own files and reference in any order. One `writing` line per folder names every file and its source (A65, A401, A408, A409) |
@@ -171,6 +173,21 @@ Quest paths are anchored on the module folder (`Source/Dojo/Quests/`, `Source/Do
 `explainSandbox` has no quest being run, so it answers every failure: rules 1 and 2 (an unlisted pipeline text gets a generic outside-your-code message), then, when ANY line of the output names a quest folder or test file (a rebuild keeps the quests already in the sandbox), "open or reset those quests", then errors only in support source, the template or an engine missing file (rebuild; an unknown-located line or any other engine error sends it to the generic message instead), then the toolchain check when no compiler or linker line exists, and last a generic `build-environment-failed` "the sandbox could not be built, this is about the setup on this computer" with the first error line as detail (A1203).
 
 Signature strings were read in the UE 5.8.3 build tool source on Windows (Live Coding active, Visual Studio and Windows SDK toolchain selection, the Xcode messages). The disk, file lock and path length strings are the compilers' and operating systems' own. Nothing was run against macOS (A1202). Fixtures for every shape are in `tests/unreal/fixtures/build-logs/`.
+
+### Bad paths and preflight (M5.1e)
+
+Bad folders are explained before they hurt, and a moved engine or deleted sandbox never shows a raw `ENOENT`.
+
+| File | Job |
+| --- | --- |
+| `SandboxFolderRules.ts` | Pure, takes `PlatformPaths`. `warnings(pickedFolder, sandboxFolder)`: a Windows sandbox path over 100 characters; letters outside plain ASCII; a cloud-synced folder (OneDrive, Dropbox, Google Drive, iCloud Drive, also `Library/Mobile Documents` on a Mac); a Windows network path (`\\server\share`, the local `\\?\` prefix excepted); under `Program Files` on Windows. `blockers(pickedFolder, engineRoot)`: the folder is the engine root or inside it. Separators are normalised and, on Windows, letter case is ignored (through `PlatformPaths.pathKey`). An engine root inside the picked folder is ignored (A1204) |
+| `RunPreflight.ts` | `check()` returns the engine and sandbox from settings after proving both are still there: the engine must pass `EngineLocator.inspectFolder`, and the sandbox must still hold `Dojo.uproject`. Used by `runQuest`, `checkSnippetSyntax` and `rebuildSandbox` before they do anything else |
+| `sandboxErrors.ts`, `unrealErrors.ts` | The new wording: `sandboxPathUnsupported`, `sandboxMovedOrDeleted`, `engineMovedOrUninstalled` |
+
+- `SandboxProjectService.folderWarnings` uses the rules; `folderBlockers(pickedFolder, enginePath?)` uses the engine given, else the one saved in settings (`savedEnginePath`, set by `createUnrealServices`). The `pickSandboxFolder` answer carries both (`warnings`, `blockers`). `create` refuses a blocked folder first, before copying or remembering anything, with `sandbox-path-unsupported`; a folder with only warnings is still created and each warning is sent as a `preparing` line. `sandbox-path-too-long` is still raised only by the build failure explainer, after a build hits Windows' limit.
+- Preflight failures are rejected calls with an `AppErrorException`, never a `RunResult` with `unrelatedFailure` (A1205). `engine-not-found` names the saved path and says to pick the engine again in Settings; an engine that is too old keeps its own `engine-version-unsupported`; any other locator failure, including a raw `ENOENT`, becomes `engine-not-found` with the raw text as `detail`. `sandbox-not-ready` says the sandbox folder was moved or deleted. The engine is checked first, then the sandbox.
+- Submit sits on `runQuest` without catching it (`QuestSubmitService.submit`), so a preflight rejection ends the Submit before the review and before anything is recorded.
+- Settings' Rebuild sandbox cannot bring back a deleted sandbox (it rebuilds an existing project and refuses a folder with no `Dojo.uproject`), so the sandbox message says to put the folder back or set the sandbox up again.
 
 ## Sandbox template (`resources/sandbox-template/`)
 

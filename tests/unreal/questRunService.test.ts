@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PackOutline } from "@shared/types/catalog";
 import type { AuthoredQuest } from "@shared/types/content";
+import type { EngineInstall } from "@shared/types/engine";
 import type { RunResult } from "@shared/types/run";
 
 import { BuildFailureExplainer } from "../../src/main/services/unreal/BuildFailureExplainer";
@@ -14,7 +15,9 @@ import { prerequisiteQuestIds } from "../../src/main/services/unreal/QuestDepend
 import { QuestFileWriter } from "../../src/main/services/unreal/QuestFileWriter";
 import { earlierQuestCode, QuestRunService } from "../../src/main/services/unreal/QuestRunService";
 import { ReferenceSolutions } from "../../src/main/services/unreal/ReferenceSolutions";
+import { AppErrorException } from "../../src/main/errors/AppErrorException";
 import { RunnerFactory } from "../../src/main/services/unreal/RunnerFactory";
+import { RunPreflight } from "../../src/main/services/unreal/RunPreflight";
 import type { SandboxProjectService } from "../../src/main/services/unreal/SandboxProjectService";
 import { FakeSandboxFileSystem } from "./FakeSandboxFileSystem";
 import { MemoryUnrealSettings } from "./MemoryUnrealSettings";
@@ -87,13 +90,23 @@ interface ServiceOptions
 
 	/** The failure explainer the service is given, if any. */
 	failureExplainer?: BuildFailureExplainer;
+
+	/** How the fake engine locator answers; by default the engine is fine. */
+	inspectEngine?: (folder: string) => Promise<EngineInstall>;
+}
+
+/** An engine the locator accepts. */
+async function healthyEngine(folder: string): Promise<EngineInstall>
+{
+	return { path: folder, version: "5.8.3", source: "launcher", supportsFastLoop: true };
 }
 
 /** The service over fakes. */
 function createService(options: ServiceOptions = {})
 {
 	const paths = new MacPlatformPaths("/Users/learner");
-	const fileSystem = new FakeSandboxFileSystem({ ...SOLUTIONS, ...(options.files ?? {}) });
+	const fileSystem = new FakeSandboxFileSystem({ ...SOLUTIONS, "/S/Dojo.uproject": "{}", ...(options.files ?? {}) });
+	const settings = options.settings ?? new MemoryUnrealSettings("/Engines/UE", "/S");
 	const writer = new QuestFileWriter(paths, fileSystem);
 	const runs: { questId: string; files: Record<string, string>; sandboxFolder: string }[] = [];
 	const result: RunResult = { ok: true, compiled: true, compilerOutput: "", tests: [], testsPassed: 0, testsTotal: 0, durationMs: 1, loop: "headless", ...(options.result ?? {}) };
@@ -109,7 +122,8 @@ function createService(options: ServiceOptions = {})
 	const rebuilds: string[] = [];
 
 	const service = new QuestRunService({
-		settings: options.settings ?? new MemoryUnrealSettings("/Engines/UE", "/S"),
+		settings,
+		preflight: new RunPreflight({ settings, paths, fileSystem, engineInspector: { inspectFolder: options.inspectEngine ?? healthyEngine } }),
 		quests: { getAuthoredQuest: async (questId) => QUESTS.find((entry) => entry.id === questId), listPacks: async () => packs },
 		runnerFactory,
 		prerequisiteFiller: new PrerequisiteFiller(writer, new ReferenceSolutions(paths, fileSystem, SOLUTIONS_ROOT)),
@@ -380,6 +394,89 @@ describe("PrerequisiteFiller through runQuest", () =>
 
 		await service.rebuildSandbox(() => undefined, new AbortController().signal);
 		expect(rebuilds).toEqual(["/Engines/UE /S"]);
+	});
+
+	describe("preflight (M5.1e)", () =>
+	{
+		const signal = new AbortController().signal;
+
+		/** The three calls that need the engine and sandbox, each as a function of the service. */
+		const calls: [string, (service: QuestRunService) => Promise<unknown>][] = [
+			["runQuest", (service) => service.runQuest("f1-training-dummy", { "Mine.h": "mine" }, () => undefined, signal)],
+			["checkSnippetSyntax", (service) => service.checkSnippetSyntax("int x;")],
+			["rebuildSandbox", (service) => service.rebuildSandbox(() => undefined, signal)],
+		];
+
+		/** The engine folder was renamed or uninstalled: the locator cannot read it any more. */
+		function engineGone(): Promise<EngineInstall>
+		{
+			return Promise.reject(new AppErrorException("engine-not-found", "That folder does not look like an Unreal Engine install.", "Pick the folder that contains the Engine folder.", "No Engine/Build/Build.version under /Engines/UE"));
+		}
+
+		it.each(calls)("%s rejects with the friendly engine-moved error, naming the path, when the engine folder is gone", async (_name, call) =>
+		{
+			const { service, runs, rebuilds } = createService({ inspectEngine: engineGone });
+
+			const outcome = call(service);
+
+			await expect(outcome).rejects.toBeInstanceOf(AppErrorException);
+			await expect(outcome).rejects.toMatchObject({ appError: { code: "engine-not-found", message: expect.stringContaining("/Engines/UE"), suggestedAction: expect.stringContaining("Pick the engine folder again in Settings") } });
+			expect(runs).toEqual([]);
+			expect(rebuilds).toEqual([]);
+		});
+
+		it.each(calls)("%s turns a raw ENOENT from the locator into the same friendly error and keeps the raw text only as detail", async (_name, call) =>
+		{
+			const { service } = createService({ inspectEngine: () => Promise.reject(new Error("ENOENT: no such file or directory, open '/Engines/UE/Engine/Build/Build.version'")) });
+
+			const outcome = call(service);
+
+			await expect(outcome).rejects.toMatchObject({ appError: { code: "engine-not-found", message: expect.not.stringContaining("ENOENT"), detail: expect.stringContaining("ENOENT") } });
+		});
+
+		it.each(calls)("%s keeps the unsupported-version error of an engine that is too old", async (_name, call) =>
+		{
+			const tooOld = new AppErrorException("engine-version-unsupported", "Unreal Engine 5.3 is too old.", "Install a newer one.");
+			const { service } = createService({ inspectEngine: () => Promise.reject(tooOld) });
+
+			await expect(call(service)).rejects.toMatchObject({ appError: { code: "engine-version-unsupported" } });
+		});
+
+		it.each(calls)("%s rejects with sandbox-not-ready, saying the folder was moved or deleted, when Dojo.uproject is gone", async (_name, call) =>
+		{
+			const { service, fileSystem, runs, rebuilds } = createService();
+			fileSystem.files.delete("/S/Dojo.uproject");
+
+			const outcome = call(service);
+
+			await expect(outcome).rejects.toMatchObject({ appError: { code: "sandbox-not-ready", message: expect.stringContaining("moved or deleted"), suggestedAction: expect.stringContaining("Settings") } });
+			await expect(outcome).rejects.toMatchObject({ appError: { message: expect.stringContaining("/S") } });
+			expect(runs).toEqual([]);
+			expect(rebuilds).toEqual([]);
+		});
+
+		it("checks the engine before the sandbox, so a learner with both gone is told about the engine", async () =>
+		{
+			const { service, fileSystem } = createService({ inspectEngine: engineGone });
+			fileSystem.files.delete("/S/Dojo.uproject");
+
+			await expect(service.runQuest("f1-training-dummy", {}, () => undefined, signal)).rejects.toMatchObject({ appError: { code: "engine-not-found" } });
+		});
+
+		it("checks setup first: no saved engine or sandbox still says the sandbox is not set up", async () =>
+		{
+			const { service } = createService({ settings: new MemoryUnrealSettings("/Engines/UE", null) });
+
+			await expect(service.checkSnippetSyntax("int x;")).rejects.toMatchObject({ appError: { code: "sandbox-not-ready", message: expect.stringContaining("not been set up") } });
+		});
+
+		it("lets a healthy engine and sandbox through to the run", async () =>
+		{
+			const { service, runs } = createService();
+
+			await expect(service.runQuest("f1-training-dummy", { "Mine.h": "mine" }, () => undefined, signal)).resolves.toMatchObject({ ok: true });
+			expect(runs).toHaveLength(1);
+		});
 	});
 });
 

@@ -12,6 +12,7 @@ import { NodeProcessLauncher } from "./NodeProcessLauncher";
 import { NodeSandboxFileSystem } from "./NodeSandboxFileSystem";
 import { QuestFileWriter } from "./QuestFileWriter";
 import { RunnerFactory } from "./RunnerFactory";
+import { RunPreflight } from "./RunPreflight";
 import { ClangSnippetSyntaxChecker } from "./ClangSnippetSyntaxChecker";
 import { EditorLauncher } from "./EditorLauncher";
 import { EditorService } from "./EditorService";
@@ -105,7 +106,7 @@ export function createUnrealServices(inputs: UnrealServiceInputs): UnrealService
 
 	const failureExplainer = new BuildFailureExplainer({ checkToolchain: () => platform.toolchainChecker.check(), inspectEngine: (engineRoot) => inputs.engineInspector.inspectFolder(engineRoot) });
 
-	const sandboxService = new SandboxProjectService({ paths, fileSystem, builder, engineInspector: inputs.engineInspector, pathStore: inputs.settings, timer: SYSTEM_TIMER, templateFolder: inputs.templateFolder, buildHooks, failureExplainer });
+	const sandboxService = new SandboxProjectService({ paths, fileSystem, builder, engineInspector: inputs.engineInspector, pathStore: inputs.settings, timer: SYSTEM_TIMER, templateFolder: inputs.templateFolder, buildHooks, failureExplainer, savedEnginePath: () => inputs.settings.getEnginePath() });
 	const runnerFactory = new RunnerFactory((context) => new HeadlessRunner({ context, paths, fileSystem, writer: questFileWriter, builder, testRunner, timer: SYSTEM_TIMER }), {
 		paths,
 		editorLauncher,
@@ -121,7 +122,8 @@ export function createUnrealServices(inputs: UnrealServiceInputs): UnrealService
 	// Only the Mac check exists so far; Windows answers not-implemented (A402).
 	const snippetChecker = paths.buildPlatform === "Mac" ? new ClangSnippetSyntaxChecker(paths, fileSystem, commandRunner) : null;
 
-	const questRunService = new QuestRunService({ settings: inputs.settings, quests: inputs.quests, runnerFactory, prerequisiteFiller, sandboxService, snippetChecker, learner: inputs.learner, questFileWriter, buildLedger, failureExplainer });
+	const preflight = new RunPreflight({ settings: inputs.settings, paths, engineInspector: inputs.engineInspector, fileSystem });
+	const questRunService = new QuestRunService({ settings: inputs.settings, quests: inputs.quests, runnerFactory, prerequisiteFiller, sandboxService, snippetChecker, learner: inputs.learner, questFileWriter, buildLedger, failureExplainer, preflight });
 	const editorService = new EditorService({ settings: inputs.settings, engineInspector: inputs.engineInspector, editorLauncher, ledger: buildLedger, paths, checkToolchain: () => platform.toolchainChecker.check() });
 
 	return { sandboxService, runnerFactory, questFileWriter, questRunService, buildLedger, editorLauncher, editorService };

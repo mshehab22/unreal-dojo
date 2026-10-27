@@ -234,6 +234,49 @@ describe("SandboxProjectService", () =>
 		expect(blocked.failure).toMatchObject({ code: "toolchain-missing", message: "No C++ workload." });
 	});
 
+	it("refuses a folder inside the engine folder with sandbox-path-unsupported, before copying, building, or remembering anything (M5.1e)", async () =>
+	{
+		const { service, fileSystem, launcher, savedPaths } = createService("5.8.3");
+
+		const inside = service.create("/Engines/UE", "/Engines/UE/Projects", () => undefined, new AbortController().signal);
+
+		await expect(inside).rejects.toMatchObject({ appError: { code: "sandbox-path-unsupported", message: expect.stringContaining("inside your Unreal Engine install"), suggestedAction: expect.stringContaining("Pick a different folder") } });
+		expect(fileSystem.files.has("/Engines/UE/Projects/DojoSandbox/Dojo.uproject")).toBe(false);
+		expect(launcher.specs).toEqual([]);
+		expect(savedPaths).toEqual([]);
+	});
+
+	it("refuses an engine-folder spelling that differs only in letter case or slashes on Windows, and allows the engine inside the picked folder", async () =>
+	{
+		const windows = new WindowsPlatformPaths({});
+		const { service } = createService("5.8.3", undefined, TEMPLATE_FILES, windows);
+
+		await expect(service.create("C:\\Program Files\\Epic Games\\UE_5.8", "c:/program files/epic games/ue_5.8/Projects", () => undefined, new AbortController().signal)).rejects.toMatchObject({ appError: { code: "sandbox-path-unsupported" } });
+		expect(service.folderBlockers("C:\\Program Files", "C:\\Program Files\\Epic Games\\UE_5.8")).toEqual([]);
+	});
+
+	it("answers folderBlockers from the engine saved in settings when no engine is given, and none before an engine is saved", () =>
+	{
+		const paths = new MacPlatformPaths("/Users/learner");
+		const withEngine = new SandboxProjectService({ paths, fileSystem: new FakeSandboxFileSystem(), builder: new UnrealBuilder(paths, new FakeProcessLauncher([]), new FakeTimer()), engineInspector: { inspectFolder: () => Promise.reject(new Error("unused")) }, pathStore: { setSandboxPath: () => undefined, setEnginePath: () => undefined }, timer: new FakeTimer(), templateFolder: "/T", savedEnginePath: () => "/Engines/UE" });
+		const withoutEngine = createService("5.8.3").service;
+
+		expect(withEngine.folderBlockers("/Engines/UE/Projects")).toHaveLength(1);
+		expect(withEngine.folderBlockers("/Users/learner/Dojo")).toEqual([]);
+		expect(withoutEngine.folderBlockers("/Engines/UE/Projects")).toEqual([]);
+	});
+
+	it("still creates in a folder with warnings, and lists them as preparing lines (M5.1e)", async () =>
+	{
+		const { service } = createService("5.8.3");
+		const updates: ProgressUpdate[] = [];
+
+		await service.create("/Engines/UE", "/Users/learner/OneDrive/Dojo", (update) => updates.push(update), new AbortController().signal);
+
+		expect(updates.filter((update) => update.lastLine.includes("synced by OneDrive"))).toHaveLength(1);
+		expect(service.folderWarnings("/Users/learner/OneDrive/Dojo")).toEqual([expect.stringContaining("synced by OneDrive")]);
+	});
+
 	it("warns about a long sandbox path on Windows only", () =>
 	{
 		const longFolder = `C:\\Users\\learner\\${"Very Long Folder Name\\".repeat(4)}`;

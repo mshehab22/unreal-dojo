@@ -11,6 +11,7 @@ import type { FilledPrerequisite, PrerequisiteFiller } from "./PrerequisiteFille
 import type { ProgressListener } from "./ProgressUpdate";
 import { prerequisiteQuestIds } from "./QuestDependencies";
 import type { QuestFileWriter } from "./QuestFileWriter";
+import type { RunPreflight } from "./RunPreflight";
 import type { RunnerFactory } from "./RunnerFactory";
 import type { RunnerContext } from "./Runner";
 import type { SandboxProjectService } from "./SandboxProjectService";
@@ -60,6 +61,9 @@ export interface QuestRunDependencies
 
 	/** Explains a failed run that is not the learner's code (M5.1d). Without it a run never carries `unrelatedFailure`. */
 	failureExplainer?: BuildFailureExplainer;
+
+	/** Confirms before every run that the engine and sandbox in settings are still there (M5.1e). */
+	preflight: RunPreflight;
 }
 
 /** `runQuest`, `checkSnippetSyntax`, and `rebuildSandbox` behind one object for the IPC handlers. */
@@ -73,10 +77,10 @@ export class QuestRunService
 		this.dependencies = dependencies;
 	}
 
-	/** Builds and tests the learner's files for a build or refactor quest. Throws an AppError exception when the quest or sandbox is missing; build and test failures resolve in the RunResult. */
+	/** Builds and tests the learner's files for a build or refactor quest. Rejects with an AppError exception when the quest, engine, or sandbox is missing (never a RunResult, M5.1e); build and test failures resolve in the RunResult. */
 	async runQuest(questId: string, files: Record<string, string>, onProgress: ProgressListener, signal: AbortSignal): Promise<RunResult>
 	{
-		const context = this.requireContext();
+		const context = await this.dependencies.preflight.check();
 		const quest = await this.requireCodeQuest(questId);
 
 		const { prerequisites, bossIds } = await this.allPrerequisites(quest);
@@ -117,15 +121,15 @@ export class QuestRunService
 		const checker = this.dependencies.snippetChecker;
 		if (!checker) throw new AppErrorException("not-implemented", "The syntax check is not available on this computer yet.", "Use Run on a build quest to compile your code for now.", "No snippet checker for this platform (A402)");
 
-		const context = this.requireContext();
+		const context = await this.dependencies.preflight.check();
 
 		return checker.check(context.engineRoot, context.sandboxFolder, code);
 	}
 
-	/** Runs a clean full build of the sandbox in settings. */
-	rebuildSandbox(onProgress: ProgressListener, signal: AbortSignal): Promise<SandboxSetupResult>
+	/** Runs a clean full build of the sandbox in settings. Rejects with the same preflight errors as a run. */
+	async rebuildSandbox(onProgress: ProgressListener, signal: AbortSignal): Promise<SandboxSetupResult>
 	{
-		const context = this.requireContext();
+		const context = await this.dependencies.preflight.check();
 
 		return this.dependencies.sandboxService.rebuild(context.engineRoot, context.sandboxFolder, onProgress, signal);
 	}
@@ -177,17 +181,6 @@ export class QuestRunService
 		const packs = await this.dependencies.quests.listPacks();
 
 		return packs.flatMap((pack) => pack.worlds.flatMap((world) => world.quests.map((outline) => outline.id)));
-	}
-
-	/** The engine and sandbox from settings. Throws `sandbox-not-ready` before setup. */
-	private requireContext(): RunnerContext
-	{
-		const engineRoot = this.dependencies.settings.getEnginePath();
-		const sandboxFolder = this.dependencies.settings.getSandboxPath();
-
-		if (engineRoot === null || sandboxFolder === null) throw new AppErrorException("sandbox-not-ready", "The sandbox project has not been set up yet.", "Finish first-run setup (pick the engine and create the sandbox), then run again.");
-
-		return { engineRoot, sandboxFolder };
 	}
 
 	/** The build or refactor quest with this id. Throws `quest-not-found` for an unknown id or a quest without code. */

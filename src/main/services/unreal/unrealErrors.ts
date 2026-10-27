@@ -1,4 +1,4 @@
-// Every plain-English error the engine locator, the toolchain checks, and the build failure explainer can raise, in one place so the wording stays consistent.
+// Every plain-English error the engine locator, the toolchain checks, the build failure explainer, and the run preflight can raise, in one place so the wording stays consistent.
 import type { AppError } from "@shared/types/errors";
 
 /** No engine was found in the launcher list, the registry, or the default folders. */
@@ -307,4 +307,18 @@ export function sandboxBuildFailed(detail: string): AppError
 		suggestedAction: "Open the details to read the first error. A full disk, a missing Visual Studio or Xcode part, or an open Unreal editor are the usual causes. Fix that, then use Rebuild sandbox in Settings.",
 		detail,
 	};
+}
+
+/** The engine folder saved in Settings no longer holds an Unreal Engine: it was moved, renamed, or uninstalled. */
+export function engineMovedOrUninstalled(enginePath: string, detail?: string): AppError
+{
+	const error: AppError = {
+		code: "engine-not-found",
+		message: `Unreal Engine is no longer at ${enginePath}. It was moved, renamed, or uninstalled.`,
+		suggestedAction: "Pick the engine folder again in Settings (Engine and sandbox), then run again.",
+	};
+
+	if (detail !== undefined) error.detail = detail;
+
+	return error;
 }

@@ -128,8 +128,11 @@ export interface SettingsHandlerService
 /** The part of SandboxProjectService the handlers use, so tests can pass a fake. */
 export interface SandboxSetupService
 {
-	/** Plain-English warnings about a picked folder (the Windows path length). */
+	/** Plain-English warnings about a picked folder (path length, non-ASCII letters, cloud sync, network, Program Files). */
 	folderWarnings(pickedFolder: string): string[];
+
+	/** Plain-English reasons a picked folder cannot be used (inside the engine folder). */
+	folderBlockers(pickedFolder: string): string[];
 
 	/** Copies the template into the picked folder and runs the first full build. */
 	create(enginePath: string, pickedFolder: string, onProgress: ProgressListener, signal: AbortSignal): Promise<SandboxSetupResult>;
@@ -241,7 +244,7 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 			handle: async () =>
 			{
 				const folder = await dependencies.pickFolder(PICK_SANDBOX_TITLE);
-				return folder === null ? null : { path: folder, warnings: dependencies.getSandboxService().folderWarnings(folder) };
+				return folder === null ? null : { path: folder, warnings: dependencies.getSandboxService().folderWarnings(folder), blockers: dependencies.getSandboxService().folderBlockers(folder) };
 			},
 		},
 		createSandbox: {

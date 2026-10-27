@@ -7,7 +7,8 @@ import type { PlatformPaths } from "./PlatformPaths";
 import type { ProgressListener } from "./ProgressUpdate";
 import type { SandboxFileSystem } from "./SandboxFileSystem";
 import type { SandboxPathStore } from "./SandboxPathStore";
-import { runCancelled, sandboxCopyFailed, sandboxFolderNotEmpty, sandboxNotReady } from "./sandboxErrors";
+import { SandboxFolderRules } from "./SandboxFolderRules";
+import { runCancelled, sandboxCopyFailed, sandboxFolderNotEmpty, sandboxNotReady, sandboxPathUnsupported } from "./sandboxErrors";
 import type { Timer } from "./SupervisedProcess";
 import type { BuildOutcome, UnrealBuilder } from "./UnrealBuilder";
 
@@ -48,6 +49,9 @@ export interface SandboxProjectDependencies
 
 	/** Explains a failed full build in plain English (M5.1d). Without it a failed setup carries no `failure`. */
 	failureExplainer?: BuildFailureExplainer;
+
+	/** The engine folder saved in settings, so a folder picked before setup can be checked against it (M5.1e). Without it a pick is checked only when `create` gets the engine. */
+	savedEnginePath?: () => string | null;
 }
 
 /** Called before and after the full build of create and rebuild. */
@@ -64,11 +68,13 @@ export interface SandboxBuildHooks
 export class SandboxProjectService
 {
 	private readonly dependencies: SandboxProjectDependencies;
+	private readonly rules: SandboxFolderRules;
 
 	/** Takes everything it touches, so tests can pass fakes. */
 	constructor(dependencies: SandboxProjectDependencies)
 	{
 		this.dependencies = dependencies;
+		this.rules = new SandboxFolderRules(dependencies.paths);
 	}
 
 	/** The sandbox project folder created inside the folder the learner picked. */
@@ -77,22 +83,26 @@ export class SandboxProjectService
 		return this.dependencies.paths.join(pickedFolder, SANDBOX_FOLDER_NAME);
 	}
 
-	/** Plain-English warnings about a picked folder; today only the Windows path length (spec: over 100 characters). */
+	/** Plain-English warnings about a picked folder: a long Windows path, non-ASCII letters, a cloud-synced or network folder, or Program Files (A1204). The folder can still be used. */
 	folderWarnings(pickedFolder: string): string[]
 	{
-		const limit = this.dependencies.paths.maximumSandboxPathLength;
-		const sandboxFolder = this.sandboxFolderFor(pickedFolder);
-
-		if (limit === null || sandboxFolder.length <= limit) return [];
-
-		return [`The sandbox path is ${sandboxFolder.length} characters long. Unreal's build can fail on Windows when it is over ${limit}; a short folder such as C:\\Dojo is safer.`];
+		return this.rules.warnings(pickedFolder, this.sandboxFolderFor(pickedFolder));
 	}
 
-	/** Creates the sandbox and runs its first full build. Throws an AppError exception for a bad folder or engine, or `run-cancelled`. A failed build resolves with `ok: false`. */
+	/** Plain-English reasons a picked folder cannot be used at all: today, being inside the engine folder. Uses `enginePath`, or the engine saved in settings when none is given. */
+	folderBlockers(pickedFolder: string, enginePath: string | null = this.dependencies.savedEnginePath?.() ?? null): string[]
+	{
+		return this.rules.blockers(pickedFolder, enginePath);
+	}
+
+	/** Creates the sandbox and runs its first full build. Throws an AppError exception for a bad folder (`sandbox-path-unsupported` inside the engine folder) or engine, or `run-cancelled`. A failed build resolves with `ok: false`. */
 	async create(enginePath: string, pickedFolder: string, onProgress: ProgressListener, signal: AbortSignal): Promise<SandboxSetupResult>
 	{
 		const { paths, fileSystem, timer } = this.dependencies;
 		const startedAt = timer.now();
+
+		const [blocker] = this.folderBlockers(pickedFolder, enginePath);
+		if (blocker !== undefined) throw sandboxPathUnsupported(pickedFolder, blocker);
 
 		onProgress({ phase: "preparing", lastLine: "Checking the engine" });
 		for (const warning of this.folderWarnings(pickedFolder)) onProgress({ phase: "preparing", lastLine: warning });
