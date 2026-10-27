@@ -14,3 +14,25 @@ export function hasPointerMoved(previous: PointerPosition | null, current: Point
 
 	return previous.x !== current.x || previous.y !== current.y;
 }
+
+/** Remembers the last two pointer positions so a handler can ask whether the event it is handling was a real move. */
+export class PointerTrail
+{
+	private previous: PointerPosition | null = null;
+	private current: PointerPosition | null = null;
+
+	/** Records the position of the newest pointer event. */
+	record(position: PointerPosition): void
+	{
+		this.previous = this.current;
+		this.current = position;
+	}
+
+	/** True when the newest recorded event moved the pointer, false for the first event and for events sent while content moves under a still pointer. */
+	lastEventMoved(): boolean
+	{
+		if (!this.current) return false;
+
+		return hasPointerMoved(this.previous, this.current);
+	}
+}

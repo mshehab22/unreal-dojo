@@ -5,6 +5,7 @@
 import type { Page } from "@playwright/test";
 
 import { expect, test } from "./support/dojoTest";
+import { scrollIntoViewNow } from "./support/hoverAtCentre";
 import type { ProofCamera } from "./support/ProofCamera";
 
 /** The two sizes every screen must work at (docs/systems/ui-core.md). */
@@ -184,7 +185,7 @@ test("a locked stage explains why on hover", async ({ dojo, camera }) =>
 	await expect(async () =>
 	{
 		await window.mouse.move(0, 0);
-		await locked.evaluate("(node) => node.scrollIntoView({ block: 'center', inline: 'center' })", undefined, { timeout: 3_000 });
+		await scrollIntoViewNow(locked);
 
 		const box = await locked.boundingBox({ timeout: 3_000 });
 

@@ -5,7 +5,7 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { IPC_CHANNELS, type IpcResponse } from "@shared/ipc";
 import type { SubmitOutcome } from "@shared/types/progress";
@@ -23,9 +23,10 @@ import { TestsOnlyProvider } from "../../src/main/services/review/providers/Test
 import { ProviderSelector } from "../../src/main/services/review/ProviderSelector";
 import { ReviewService } from "../../src/main/services/review/ReviewService";
 import { createEngineLocator } from "../../src/main/services/unreal/createEngineLocator";
-import { createUnrealServices } from "../../src/main/services/unreal/createUnrealServices";
 import { RunRegistry } from "../../src/main/services/unreal/RunRegistry";
 import { fixedSettings, ScriptedProvider } from "../review/reviewTestKit";
+import { assertNoForeignLiveCodingSession } from "../support/liveCodingSessions";
+import { createIntegrationServices } from "../support/createIntegrationServices";
 import { createTestProgressService } from "../support/progressFixtures";
 import { MemoryUnrealSettings } from "../unreal/MemoryUnrealSettings";
 
@@ -57,13 +58,16 @@ async function solutionFiles(questId: string): Promise<Record<string, string>>
 
 describe.skipIf(!HAS_ENGINE)(`submitQuest against ${ENGINE_ROOT || "no engine"}`, () =>
 {
+	// Stops at once, with the reason, when another editor's Live Coding would make every build fail (A1076).
+	beforeAll(() => assertNoForeignLiveCodingSession());
+
 	let pickedFolder = "";
 	const events: BuildProgressEvent[] = [];
 	const settings = new MemoryUnrealSettings();
 	const catalog = createContentCatalog(join(REPOSITORY, "content"));
 	const { service: progress } = createTestProgressService();
 	const services = HAS_ENGINE
-		? createUnrealServices({ templateFolder: join(REPOSITORY, "resources", "sandbox-template"), solutionsFolder: join(REPOSITORY, "tools", "solutions"), engineInspector: createEngineLocator(), settings, quests: catalog, learner: { isPassed: () => false, savedFiles: () => ({}) } })
+		? createIntegrationServices({ templateFolder: join(REPOSITORY, "resources", "sandbox-template"), solutionsFolder: join(REPOSITORY, "tools", "solutions"), engineInspector: createEngineLocator(), settings, quests: catalog, learner: { isPassed: () => false, savedFiles: () => ({}) } }).services
 		: null;
 	const handlersByChannel = new Map<string, WrappedHandler>();
 

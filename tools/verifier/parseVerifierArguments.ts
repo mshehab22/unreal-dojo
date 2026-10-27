@@ -33,7 +33,7 @@ export const USAGE = [
 	"  --pack <id>        only report packs/<id> (every pack is still read for cross-pack checks)",
 	"  --quest <id>       only report the file that defines this quest",
 	"  --content <folder> content folder to check (default: content/ in the repo)",
-	"  --solutions <folder> reference solutions (default: tools/solutions/ in the repo)",
+	"  --solutions <folder> reference solutions, must exist (default: tools/solutions/ in the repo)",
 	"  --engine <path>    build every reference solution and starter with this engine and run their tests",
 	"  --release          coverage warnings become errors",
 ].join("\n");
