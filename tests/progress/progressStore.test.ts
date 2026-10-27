@@ -115,6 +115,26 @@ describe("ProgressStore", () =>
 		expect(JSON.parse(fileSystem.files.get(`${savePath}.bak`) ?? "").playerName).toBe("Second");
 	});
 
+	it("leaves no main file and loads as a first start when the very first save crashes, and the next save overwrites the stale .tmp", async () =>
+	{
+		const { store, fileSystem } = memoryStore();
+
+		fileSystem.crashAt = "mid-temp-write";
+		await expect(store.save(namedSave("Lost", 1))).rejects.toBeInstanceOf(AppErrorException);
+
+		expect(fileSystem.files.has(savePath)).toBe(false);
+		expect(fileSystem.files.has(`${savePath}.tmp`)).toBe(true);
+
+		const loaded = await store.load(now);
+		expect(loaded.recovery).toBe("none");
+		expect(loaded.progress).toEqual(createNewProgress(now));
+
+		await store.save(namedSave("Kept", 2));
+
+		expect([...fileSystem.files.keys()]).toEqual([savePath]);
+		expect((await store.load(now)).progress.playerName).toBe("Kept");
+	});
+
 	it("removes a stale .bak.tmp on the next save even when there is no main file to back up", async () =>
 	{
 		const { store, fileSystem } = memoryStore();

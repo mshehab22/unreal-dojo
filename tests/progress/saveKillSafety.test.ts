@@ -19,7 +19,11 @@ import { REAL_DISK_TIMEOUT_MS } from "../support/realDiskBudget";
 /** How many times the child is killed. */
 const KILL_COUNT = 20;
 
-/** Every this-many kills (starting with the first), the kill comes before the first save was acknowledged, so a kill during the very first write is covered. The others wait for progress. */
+/**
+ * Every this-many kills (starting with the first), the kill is timed from "ready" instead of from the first acknowledged save, so it comes sooner.
+ * The child usually acknowledges a save or more even in that short wait, so this does not reliably hit the very first write; the in-memory test
+ * "leaves no main file ... when the very first save crashes" in progressStore.test.ts covers that case. The others wait for progress.
+ */
 const EARLY_KILL_EVERY = 10;
 
 /** The longest wait after the first acknowledged save before the kill, in milliseconds. Short enough to keep the disk traffic small, long enough to land inside several writes. */
@@ -28,11 +32,9 @@ const LONGEST_WAIT_AFTER_FIRST_SAVE_MS = 600;
 /** The longest wait after "ready" for an early kill, in milliseconds. */
 const LONGEST_EARLY_WAIT_MS = 100;
 
-/** How long the child gets to say "ready", and then to acknowledge its first save, before the run is failed with a clear message, in milliseconds. */
+/** How long the child gets from its start to reach the point the kill waits for ("ready" for an early kill, else the first acknowledged save), before the run is failed with a clear message, in milliseconds. Well under the 30 s test budget. */
 const CHILD_DEADLINE_MS = 15_000;
 
-/** The least number of the 20 runs that must have acknowledged at least one save, or the test has tested nothing. */
-const LEAST_RUNS_WITH_A_SAVE = 15;
 
 /** The repository root, where `tsx` is installed. */
 const REPOSITORY_ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -138,8 +140,8 @@ function runUntilKilled(folder: string, templatePath: string, moment: KillMoment
 			killNow();
 		};
 
-		/** Gives the child `CHILD_DEADLINE_MS` to reach its next step, then fails the run. */
-		let deadlineTimer = setTimeout(() => fail("the child did not say ready in time"), CHILD_DEADLINE_MS);
+		/** One deadline from the start to the point the kill waits for: it is cleared when the kill is scheduled, so a slow start fails clearly before the test budget runs out. */
+		const deadlineTimer = setTimeout(() => fail(`the child did not reach ${moment.kind === "after-ready" ? "ready" : "its first acknowledged save"} within ${CHILD_DEADLINE_MS} ms`), CHILD_DEADLINE_MS);
 
 		/** Starts the kill timer for the chosen moment. */
 		const scheduleKill = (delayMs: number): void =>
@@ -160,10 +162,7 @@ function runUntilKilled(folder: string, templatePath: string, moment: KillMoment
 			{
 				if (line === "ready")
 				{
-					clearTimeout(deadlineTimer);
-
 					if (moment.kind === "after-ready") scheduleKill(moment.delayMs);
-					else deadlineTimer = setTimeout(() => fail("the child did not acknowledge a first save in time"), CHILD_DEADLINE_MS);
 				}
 				else
 				{
@@ -238,17 +237,20 @@ describe("the save survives a kill mid-write", { timeout: REAL_DISK_TIMEOUT_MS }
 		root = "";
 	});
 
-	// Across all 20 runs: most acknowledged a save, and at least one kill left a temp file, which proves a kill really landed mid-write.
+	// Guards against a test that passes while testing nothing. It only runs when all 20 kills ran (not when the tests are filtered).
 	afterAll(() =>
 	{
 		if (summaries.length < KILL_COUNT) return;
 
-		const runsWithASave = summaries.filter((summary) => summary.acknowledgedCount > 0).length;
+		const runsWithABackupToMake = summaries.filter((summary) => summary.acknowledgedCount >= 2).length;
 		const runsWithLeftovers = summaries.filter((summary) => summary.foundLeftoverTemporaryFile).length;
-		console.info(`saveKillSafety: seed ${baseSeed}: ${runsWithASave} of ${KILL_COUNT} runs acknowledged a save, ${runsWithLeftovers} left a temp file, acknowledged per run: ${summaries.map((summary) => summary.acknowledgedCount).join(" ")}`);
+		console.info(`saveKillSafety: seed ${baseSeed}: ${runsWithABackupToMake} of ${KILL_COUNT} runs acknowledged 2 or more saves, ${runsWithLeftovers} left a temp file, acknowledged per run: ${summaries.map((summary) => summary.acknowledgedCount).join(" ")}`);
 
-		expect(runsWithASave, `seed ${baseSeed}: too few runs acknowledged a save, so the kills tested nothing`).toBeGreaterThanOrEqual(LEAST_RUNS_WITH_A_SAVE);
-		expect(runsWithLeftovers, `seed ${baseSeed}: no kill landed mid-write, so the kills tested nothing`).toBeGreaterThanOrEqual(1);
+		// Two or more acknowledged saves means the child wrote a save over an earlier one, so the kill window held real backup copies and renames, not only first writes.
+		expect(runsWithABackupToMake, `seed ${baseSeed}: no run got past one save, so no kill could land while a backup was being made`).toBeGreaterThanOrEqual(1);
+
+		// A .tmp or .bak.tmp can only be left by a kill that landed during a write, so this proves a kill really landed mid-write.
+		expect(runsWithLeftovers, `seed ${baseSeed}: no kill left a temp file, so none landed mid-write`).toBeGreaterThanOrEqual(1);
 	});
 
 	console.info(`saveKillSafety: seed ${baseSeed} (set DOJO_KILL_SEED=${baseSeed} to replay the same kill moments)`);

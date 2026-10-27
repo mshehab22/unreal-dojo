@@ -48,7 +48,7 @@ export class AtomicJsonFile
 		return this.readAt(this.backupPath);
 	}
 
-	/** Writes `value` crash-safely. A crash at any step leaves either the old file or the new one in place, never a half-written one. */
+	/** Writes `value` crash-safely. A process kill at any step leaves either the old file or the new one in place, never a half-written one. */
 	write(value: unknown): Promise<void>
 	{
 		const text = `${JSON.stringify(value, null, "\t")}\n`;
