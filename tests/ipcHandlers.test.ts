@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DOJO_METHODS, IPC_CHANNELS, type IpcResponse } from "@shared/ipc";
+import type { ToolchainCheck } from "@shared/types/engine";
 import { isAppError } from "@shared/types/errors";
 
 import { AppErrorException } from "../src/main/errors/AppErrorException";
@@ -113,10 +114,10 @@ function createFakeRegistrar(): { registrar: IpcHandleRegistrar; handlersByChann
 }
 
 /** Registers the real handler table on a fake registrar and returns a function that calls one channel like the preload does. */
-function createInvoker(): (channel: string, ...methodArguments: unknown[]) => Promise<IpcResponse<unknown>>
+function createInvoker(overrides: Partial<HandlerDependencies> = {}): (channel: string, ...methodArguments: unknown[]) => Promise<IpcResponse<unknown>>
 {
 	const { registrar, handlersByChannel } = createFakeRegistrar();
-	registerHandlers(registrar, createHandlers(FAKE_DEPENDENCIES));
+	registerHandlers(registrar, createHandlers({ ...FAKE_DEPENDENCIES, ...overrides }));
 
 	return (channel, ...methodArguments) =>
 	{
@@ -175,6 +176,26 @@ describe("registerHandlers", () =>
 
 		expect(await invoke(IPC_CHANNELS.detectEngines)).toEqual({ ok: true, value: [{ path: "/Engines/UE_5.8", version: "5.8.3", source: "launcher", supportsFastLoop: true }] });
 		expect(await invoke(IPC_CHANNELS.checkToolchain)).toEqual({ ok: true, value: FAKE_TOOLCHAIN });
+	});
+
+	it("sends checkToolchain to the injected check, not the locator, and falls back to the locator without it", async () =>
+	{
+		const injected: ToolchainCheck = { ok: true, tool: "vswhere", message: "From the injected check.", problems: [] };
+		let locatorCalls = 0;
+		// An engine locator source that counts how often the handler asks for it.
+		const countingLocator =(): ReturnType<HandlerDependencies["getEngineLocator"]> =>
+		{
+			locatorCalls++;
+			return FAKE_DEPENDENCIES.getEngineLocator();
+		};
+
+		const withInjected = createInvoker({ getEngineLocator: countingLocator, checkToolchain: async () => injected });
+		expect(await withInjected(IPC_CHANNELS.checkToolchain)).toEqual({ ok: true, value: injected });
+		expect(locatorCalls).toBe(0);
+
+		const withoutInjected = createInvoker({ getEngineLocator: countingLocator });
+		expect(await withoutInjected(IPC_CHANNELS.checkToolchain)).toEqual({ ok: true, value: FAKE_TOOLCHAIN });
+		expect(locatorCalls).toBe(1);
 	});
 
 	it("passes an engine locator AppError through unchanged", async () =>
