@@ -1,5 +1,5 @@
 // Checks the IPC boundary: every channel has a handler, bad payloads and thrown errors come back as AppErrors, and main never throws.
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DOJO_METHODS, IPC_CHANNELS, type IpcResponse } from "@shared/ipc";
 import { isAppError } from "@shared/types/errors";
@@ -8,7 +8,7 @@ import { AppErrorException } from "../src/main/errors/AppErrorException";
 import { createHandlers, type ContentCatalogService, type HandlerDependencies } from "../src/main/ipc/createHandlers";
 import type { HandlerDefinition } from "../src/main/ipc/HandlerDefinition";
 import { idSchema, playerNameSchema } from "../src/main/ipc/requestSchemas";
-import { registerHandlers, wrapHandler, type IpcHandleRegistrar, type WrappedHandler } from "../src/main/ipc/registerHandlers";
+import { registerHandlers, SLOW_CALL_NOTICE_MS, wrapHandler, type IpcHandleRegistrar, type WrappedHandler } from "../src/main/ipc/registerHandlers";
 import { createTestProgressContent } from "./support/contentFixture";
 import { createTestProgressService } from "./support/progressFixtures";
 import { SettingsService } from "../src/main/services/settings/SettingsService";
@@ -423,6 +423,44 @@ describe("payload validation", () =>
 describe("wrapHandler", () =>
 {
 	const fakeEvent = {} as Parameters<WrappedHandler>[0];
+
+	afterEach(() =>
+	{
+		vi.useRealTimers();
+	});
+
+	it("names a call still running after the notice time, then names it again with its time when it answers (A1251)", async () =>
+	{
+		vi.useFakeTimers();
+		const lines: string[] = [];
+		let answer: (value: void) => void = () => undefined;
+		const definition: HandlerDefinition<"getDailyQuest"> = {
+			argumentSchemas: [],
+			handle: () => new Promise((resolve) => (answer = () => resolve({ dayKey: "2026-10-27", offers: [], chosenIndex: null, completed: false, chestOpened: false } as never))),
+		};
+
+		const response = wrapHandler("getDailyQuest", definition, (line) => lines.push(line))(fakeEvent);
+		await vi.advanceTimersByTimeAsync(SLOW_CALL_NOTICE_MS - 1);
+		expect(lines).toEqual([]);
+
+		await vi.advanceTimersByTimeAsync(1);
+		expect(lines).toEqual(["[ipc] getDailyQuest has not answered after 10 s"]);
+
+		await vi.advanceTimersByTimeAsync(2_500);
+		answer();
+		expect((await response).ok).toBe(true);
+		expect(lines[1]).toBe("[ipc] getDailyQuest answered after 12.5 s");
+	});
+
+	it("logs nothing for a call that answers quickly", async () =>
+	{
+		const lines: string[] = [];
+		const definition: HandlerDefinition<"getRules"> = { argumentSchemas: [], handle: () => ({}) as never };
+
+		await wrapHandler("getRules", definition, (line) => lines.push(line))(fakeEvent);
+
+		expect(lines).toEqual([]);
+	});
 
 	it("turns a plain thrown Error into an unexpected AppError", async () =>
 	{

@@ -44,7 +44,7 @@ content/, resources/, research/, docs/
 
 ## Architecture (keep current)
 
-Last updated by M0.2c (settings service).
+Last updated by W12 (slow IPC call log, the no-answer code, A1251); before that M0.2c (settings service).
 
 ### Processes and files
 - `src/main/index.ts`: composition root. Waits for `app.whenReady()`, opens the `ProgressService` on `<userData>/progress.json` (M1.6), calls `registerHandlers()`, opens the window, reopens it from the macOS dock, quits when all windows close on Windows.
@@ -68,8 +68,9 @@ Last updated by M0.2c (settings service).
 How a call travels (A80):
 1. The renderer calls `window.dojo.<method>(...)`. The preload sends it with `ipcRenderer.invoke` on `dojo:<method>`.
 2. In main, the wrapper parses every argument with its zod schema (unknown fields, wrong types, too many arguments, unsafe file names are all rejected). A bad payload answers `{ ok: false, error }` with code `invalid-payload` and never reaches the handler; a good one reaches it as zod's parsed copy.
-3. The handler runs. Whatever it throws (an `AppErrorException`, a plain `Error`, a rejected promise, anything) becomes `{ ok: false, error }`; an unknown throw is code `unexpected` and is logged in main. Main never crashes on a renderer call.
+3. The handler runs. Whatever it throws (an `AppErrorException`, a plain `Error`, a rejected promise, anything) becomes `{ ok: false, error }`; an unknown throw is code `unexpected` and is logged in main. Main never crashes on a renderer call. A call still running after 10 s is named in main's console (`[ipc] <method> has not answered after 10 s`), and named again with its time when it answers, so a screen stuck on one call can be traced to it (W12, A1251).
 4. The preload unwraps: `ok` resolves the promise with the value, otherwise the promise rejects with the plain `AppError` object. Renderer code uses `try` and `isAppError(error)` and shows it in the one `AppError` component.
+5. A read that main never answers cannot leave a screen loading forever: the renderer's query cache gives up after the key's wait limit with the renderer-made `no-answer` AppError and a retry, and still shows the answer if it comes later (ui-core data layer, A1250). The preload itself puts no limit on calls, because runs and reviews take minutes.
 
 Long operations (`createSandbox`, `rebuildSandbox`, `runQuest`, `submitQuest`) take a `runId` the renderer makes with `crypto.randomUUID()` (A82). Progress arrives as `BuildProgressEvent { runId, phase, elapsedMs, lastLine, percent?, loop?, loopReason? }` on `dojo:event:buildProgress`; `window.dojo.onBuildProgress(listener)` returns the unsubscribe function. `cancelRun(runId)` stops it, and the cancelled call rejects with `run-cancelled`. The final result comes back on the call's own promise. `getRunStatus(runId)` answers how a run stands for a window that stopped hearing from it: `running` with its last progress event and event count, `finished` with its answer (kept for the newest 20 runs), or `unknown` (A820). `trackRun` records both in the `RunRegistry`.
 
