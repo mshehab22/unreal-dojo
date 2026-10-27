@@ -85,7 +85,7 @@ describe("a Submit that failed outside the quest", () =>
 	it("rejects with the run's error and the end of its output, and records, reviews, and changes nothing", async () =>
 	{
 		const compilerOutput = outputOfLines(100);
-		const { service, progress, calls } = submitHarness(sampleRun({ compiled: false, compilerOutput, unrelatedFailure: UNRELATED_FAILURE }));
+		const { service, progress, calls } = submitHarness(sampleRun({ compiled: true, compilerOutput, unrelatedFailure: UNRELATED_FAILURE }));
 		const before = structuredClone(progress.getProgress());
 
 		const exception = await expectAppError(service.submit(REQUEST, () => undefined, new AbortController().signal), "build-environment-failed");

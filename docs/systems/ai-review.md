@@ -42,7 +42,7 @@ Alternative after a pass (A850): `getQuestAlternative(questId)` answers the ques
 
 ## Architecture (keep current)
 
-Last updated by M3.4 (alternative after a pass, kept explanations, reflection answer flow).
+Last updated by M5.1f (a Submit that failed outside the quest rejects and records nothing), after M3.4 (alternative after a pass, kept explanations, reflection answer flow).
 
 ### Folder `src/main/services/review/`
 - `ReviewService.ts`: the one entry point. `reviewCode` (skips when the build failed), `gradeBreakdown`, `gradeExplain` (explain items and reflection answers), `explainFinding`, `getProviderStatuses` (cached checks), `testClaudeCode` (rechecks and sends a tiny real round trip, so "not signed in" shows in Settings; a not-installed or not-signed-in failure marks Claude Code in the selector, a timeout does not, a pass clears it). `createReviewService(settings)` builds the real parts. Each call asks the selector and runs the grader; what a failure does depends on its code:
