@@ -17,6 +17,29 @@ export interface DojoSession
 
 	/** The throwaway folder Electron uses as `userData` for this launch. */
 	userDataFolder: string;
+
+	/** Everything main wrote to stdout and stderr since the launch, so a failing test can attach it (W12). */
+	mainLog: string[];
+}
+
+/** Collects main's stdout and stderr lines from the launched process, each prefixed with the time it arrived. */
+function collectMainLog(electronApp: ElectronApplication): string[]
+{
+	const lines: string[] = [];
+
+	// Returns the listener for one stream; a chunk can hold several lines or part of one.
+	const collect = (stream: string) => (chunk: Buffer | string) =>
+	{
+		for (const line of chunk.toString().split(/\r?\n/))
+		{
+			if (line.trim().length > 0) lines.push(`${new Date().toISOString()} ${stream} ${line}`);
+		}
+	};
+
+	electronApp.process().stdout?.on("data", collect("out"));
+	electronApp.process().stderr?.on("data", collect("err"));
+
+	return lines;
 }
 
 /**
@@ -42,11 +65,12 @@ export async function launchDojo(existingUserDataFolder?: string): Promise<DojoS
 			env: { ...process.env, DOJO_TEST_HIDDEN_WINDOW: "1" },
 			...(executablePath === undefined ? {} : { executablePath }),
 		});
+		const mainLog = collectMainLog(electronApp);
 		const window = await electronApp.firstWindow();
 
 		await window.waitForLoadState("domcontentloaded");
 
-		return { electronApp, window, userDataFolder };
+		return { electronApp, window, userDataFolder, mainLog };
 	}
 	catch (error)
 	{

@@ -6,6 +6,7 @@ export type AppErrorCode =
 	| "invalid-payload"
 	| "unexpected"
 	| "ipc-failed"
+	| "no-answer"
 	| "settings-invalid"
 	| "secure-storage-unavailable"
 	| "engine-not-found"
