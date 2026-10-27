@@ -9,7 +9,7 @@ export const MEMORY_USER_DATA_FOLDER = "/user-data";
 export const MEMORY_SAVE_PATH = join(MEMORY_USER_DATA_FOLDER, "progress.json");
 
 /** The write steps a test can make fail. */
-export type CrashPoint = "none" | "mid-temp-write" | "before-rename";
+export type CrashPoint = "none" | "mid-temp-write" | "mid-backup-copy" | "before-rename" | "after-rename";
 
 /** Keeps files in a map. `crashAt` makes the next write fail at that step, like a power cut. */
 export class MemoryFileSystem implements FileSystem
@@ -47,10 +47,12 @@ export class MemoryFileSystem implements FileSystem
 		this.files.set(path, text);
 	}
 
-	/** Moves a file. On a "before-rename" crash, the move never happens. */
+	/** Moves a file. The rename that puts the new save in place can crash "before-rename" (the move never happens) or "after-rename" (the move happens, then the write throws). */
 	async rename(fromPath: string, toPath: string): Promise<void>
 	{
-		if (this.crashAt === "before-rename")
+		const replacesSave = !toPath.endsWith(".bak");
+
+		if (replacesSave && this.crashAt === "before-rename")
 		{
 			this.crashAt = "none";
 			throw new Error("simulated crash before rename");
@@ -59,12 +61,27 @@ export class MemoryFileSystem implements FileSystem
 		const text = await this.readText(fromPath);
 		this.files.set(toPath, text);
 		this.files.delete(fromPath);
+
+		if (replacesSave && this.crashAt === "after-rename")
+		{
+			this.crashAt = "none";
+			throw new Error("simulated crash after rename");
+		}
 	}
 
-	/** Copies a file. */
+	/** Copies a file. On a "mid-backup-copy" crash, half the text lands at the destination and the copy throws. */
 	async copy(fromPath: string, toPath: string): Promise<void>
 	{
-		this.files.set(toPath, await this.readText(fromPath));
+		const text = await this.readText(fromPath);
+
+		if (this.crashAt === "mid-backup-copy")
+		{
+			this.crashAt = "none";
+			this.files.set(toPath, text.slice(0, Math.floor(text.length / 2)));
+			throw new Error("simulated crash while copying the backup");
+		}
+
+		this.files.set(toPath, text);
 	}
 
 	/** Deletes a file if present. */

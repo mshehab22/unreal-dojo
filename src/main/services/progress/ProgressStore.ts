@@ -14,14 +14,27 @@ import { SAVE_VERSION } from "./rules";
 /** The save file name inside the user data folder. */
 export const SAVE_FILE_NAME = "progress.json";
 
+/** How the load recovered: "none" for a clean load or a first start; "backup" when the main file was bad and the backup was used; "fresh" when both were bad. */
+export type LoadRecoveryKind = "none" | "backup" | "fresh";
+
+/** What the load found, kept by the service so the app can tell the learner a recovery happened. */
+export interface LoadRecoveryReport
+{
+	/** How the load recovered. */
+	kind: LoadRecoveryKind;
+
+	/** Where the bad main file was moved, when it was. */
+	quarantinedPath?: string;
+}
+
 /** How a load went. */
 export interface LoadedProgress
 {
 	/** The progress to use. */
 	progress: PlayerProgress;
 
-	/** "none" for a clean load or a first start; "backup" when the main file was bad and the backup was used; "fresh" when both were bad. */
-	recovery: "none" | "backup" | "fresh";
+	/** How the load recovered. */
+	recovery: LoadRecoveryKind;
 
 	/** Where the bad main file was moved, when it was. */
 	quarantinedPath?: string;

@@ -11,6 +11,7 @@ import { NodeFileSystem } from "../../src/main/services/progress/NodeFileSystem"
 import { ProgressStore } from "../../src/main/services/progress/ProgressStore";
 import { MEMORY_SAVE_PATH, MEMORY_USER_DATA_FOLDER, MemoryFileSystem } from "../support/MemoryFileSystem";
 import { localMoment } from "../support/progressFixtures";
+import { REAL_DISK_TIMEOUT_MS } from "../support/realDiskBudget";
 
 const now = localMoment(2026, 10, 21);
 const savePath = MEMORY_SAVE_PATH;
@@ -74,6 +75,80 @@ describe("ProgressStore", () =>
 		expect(loaded.progress.playerName).toBe("Before");
 		expect(loaded.recovery).toBe("none");
 	});
+
+	it("keeps a whole save and a whole backup when the app crashes halfway through copying the backup", async () =>
+	{
+		const { store, fileSystem } = memoryStore();
+		await store.save(namedSave("First", 100));
+		await store.save(namedSave("Second", 200));
+
+		fileSystem.crashAt = "mid-backup-copy";
+		await expect(store.save(namedSave("Third", 300))).rejects.toMatchObject({ appError: { code: "save-failed" } });
+
+		// The torn copy sits in .bak.tmp; the real backup and the save are untouched and nothing is quarantined.
+		expect(fileSystem.files.get(`${savePath}.bak.tmp`)).toBeDefined();
+		expect(() => JSON.parse(fileSystem.files.get(`${savePath}.bak`) ?? "")).not.toThrow();
+		expect(() => JSON.parse(fileSystem.files.get(savePath) ?? "")).not.toThrow();
+
+		const loaded = await store.load(now);
+		expect(loaded.recovery).toBe("none");
+		expect(loaded.progress.playerName).toBe("Second");
+		expect(JSON.parse(fileSystem.files.get(`${savePath}.bak`) ?? "").playerName).toBe("First");
+	});
+
+	it("overwrites a stale .tmp and .bak.tmp on the next save and ignores them on load", async () =>
+	{
+		const { store, fileSystem } = memoryStore();
+		await store.save(namedSave("First", 100));
+		await store.save(namedSave("Second", 200));
+		fileSystem.crashAt = "mid-backup-copy";
+		await expect(store.save(namedSave("Lost", 300))).rejects.toBeInstanceOf(AppErrorException);
+
+		// A complete .tmp from a call that never answered is not promoted on load.
+		fileSystem.files.set(`${savePath}.tmp`, JSON.stringify(namedSave("Complete but unanswered", 999)));
+		expect((await store.load(now)).progress.playerName).toBe("Second");
+
+		await store.save(namedSave("Third", 300));
+
+		expect([...fileSystem.files.keys()].sort()).toEqual([savePath, `${savePath}.bak`]);
+		expect((await store.load(now)).progress.playerName).toBe("Third");
+		expect(JSON.parse(fileSystem.files.get(`${savePath}.bak`) ?? "").playerName).toBe("Second");
+	});
+
+	it("loads the new save when the app crashes right after the rename", async () =>
+	{
+		const { store, fileSystem } = memoryStore();
+		await store.save(namedSave("Before", 100));
+
+		fileSystem.crashAt = "after-rename";
+		await expect(store.save(namedSave("After", 200))).rejects.toBeInstanceOf(AppErrorException);
+
+		const loaded = await store.load(now);
+		expect(loaded.recovery).toBe("none");
+		expect(loaded.progress.playerName).toBe("After");
+	});
+
+	for (const crashPoint of ["mid-temp-write", "mid-backup-copy", "before-rename", "after-rename"] as const)
+	{
+		it(`always leaves a loadable save and no torn backup, whatever the crash point (${crashPoint})`, async () =>
+		{
+			const { store, fileSystem } = memoryStore();
+			await store.save(namedSave("First", 100));
+			await store.save(namedSave("Second", 200));
+
+			fileSystem.crashAt = crashPoint;
+			await expect(store.save(namedSave("Third", 300))).rejects.toBeInstanceOf(AppErrorException);
+
+			expect(() => JSON.parse(fileSystem.files.get(savePath) ?? "")).not.toThrow();
+
+			const backup = fileSystem.files.get(`${savePath}.bak`);
+			if (backup !== undefined) expect(() => JSON.parse(backup)).not.toThrow();
+
+			const loaded = await store.load(now);
+			expect(loaded.recovery).toBe("none");
+			expect(["Second", "Third"]).toContain(loaded.progress.playerName);
+		});
+	}
 
 	it("writes the next save normally after a crash", async () =>
 	{
@@ -160,9 +235,6 @@ describe("ProgressStore", () =>
 		expect(loaded.progress.xpPotionUntil).toBeNull();
 	});
 });
-
-// Each real save fsyncs the file and flushes the folder, which can take seconds on slow CI disks (macOS runners), so these tests get more than the default 5 s.
-const REAL_DISK_TIMEOUT_MS = 30_000;
 
 describe("ProgressStore on the real disk", { timeout: REAL_DISK_TIMEOUT_MS }, () =>
 {

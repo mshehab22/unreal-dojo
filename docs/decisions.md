@@ -4,6 +4,15 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1195 2026-10-27 `whenIdle` is bounded and never rejects (M5.1b, builder)
+The app should let queued saves finish before it quits, but a stuck disk must not freeze the quit. Options: `whenIdle()` with no limit; `whenIdle(timeoutMs)` that rejects on timeout; `whenIdle(timeoutMs)` that always resolves, with true when the queue drained and false when the time ran out. Chosen: the third. A failed save is already its own caller's error (the queue keeps going after one), so the wait does not repeat it, and a caller needs no try/catch on the way out. Reverse cost: one method on `ProgressService`.
+
+### A1194 2026-10-27 The kill test runs a TypeScript child through tsx so it tests the real code (M5.1b, builder)
+A save that survives a kill has to be shown with a real killed process, not only the in-memory crash points. Options: compile the app files first and run the output; run a small hand-written JavaScript copy of the write steps; run `tests/progress/support/killedSaveWriter.ts` with `node --import tsx`, importing only `AtomicJsonFile` and `NodeFileSystem` by relative path. Chosen: the third. It needs no build step, `tsx` is already a devDependency, and the child runs the very same classes the app does, so a change to the write steps changes what the test proves. The parent kills it with SIGKILL (TerminateProcess on Windows) at 20 seeded random moments (seed logged, `DOJO_KILL_SEED` replays it). Reverse cost: swap the spawn line.
+
+### A1193 2026-10-27 The backup is written to `.bak.tmp` then renamed; a complete `.tmp` is ignored on load (M5.1b, builder)
+Copying straight onto `progress.json.bak` could leave a torn backup when the process is killed mid-copy, which would remove the fallback exactly when the main file is also bad. Options: copy in place (the old way); copy to `progress.json.bak.tmp` and rename it over `.bak`; also promote a complete `.tmp` on load. Chosen: the second, and no promotion. A leftover `.tmp` or `.bak.tmp` is never read; the next save overwrites it. A complete `.tmp` belongs to a call that never answered, so loading the old file is consistent with what the app told the learner. Reverse cost: one rename in `AtomicJsonFile.writeNow`.
+
 ### A1192 2026-10-27 The save notice rides on the environment status, not a new IPC method (M5.1a, m5-1 lead)
 A restored-from-backup or refused save has to reach the learner once. Options: a new IPC method and channel; an optional `saveNotice` field on `EnvironmentStatus`, which the Title screen already reads. Chosen: the field. No new channel, the fake keeps compiling, and the Title and Settings screens show it through the existing `AppErrorView`. Reverse cost: move the field to its own method.
 
