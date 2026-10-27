@@ -89,8 +89,32 @@ function parseArguments(argumentSchemas: readonly z.ZodType[], methodArguments: 
 	return { parsed };
 }
 
+/** A call still running after this long is named in main's console, and named again with its time when it answers (A1251). */
+export const SLOW_CALL_NOTICE_MS = 10_000;
+
+/** Where the slow-call lines go; tests pass a collector. */
+export type SlowCallLog = (line: string) => void;
+
+/** Starts the slow-call watch for one call and returns the function that ends it. Runs, builds, and reviews are slow by design and are logged like any other call. */
+function watchSlowCall(method: DojoMethod, log: SlowCallLog): () => void
+{
+	const startedAt = Date.now();
+	const notice = setTimeout(() => log(`[ipc] ${method} has not answered after ${SLOW_CALL_NOTICE_MS / 1000} s`), SLOW_CALL_NOTICE_MS);
+
+	// The watch must never keep main alive on its own.
+	notice.unref?.();
+
+	return () =>
+	{
+		clearTimeout(notice);
+
+		const elapsedMs = Date.now() - startedAt;
+		if (elapsedMs >= SLOW_CALL_NOTICE_MS) log(`[ipc] ${method} answered after ${(elapsedMs / 1000).toFixed(1)} s`);
+	};
+}
+
 /** Wraps one handler: checks the payload, runs it, and always answers with an IpcResponse. It never throws, so main never crashes on a bad call. */
-export function wrapHandler<Method extends DojoMethod>(method: Method, definition: HandlerDefinition<Method>): WrappedHandler
+export function wrapHandler<Method extends DojoMethod>(method: Method, definition: HandlerDefinition<Method>, slowCallLog: SlowCallLog = (line) => console.warn(line)): WrappedHandler
 {
 	const argumentSchemas = definition.argumentSchemas as readonly z.ZodType[];
 	const handle = definition.handle as (...methodArguments: unknown[]) => unknown;
@@ -99,6 +123,8 @@ export function wrapHandler<Method extends DojoMethod>(method: Method, definitio
 	{
 		const parseResult = parseArguments(argumentSchemas, methodArguments);
 		if ("problem" in parseResult) return { ok: false, error: invalidPayload(method, parseResult.problem) };
+
+		const endWatch = watchSlowCall(method, slowCallLog);
 
 		try
 		{
@@ -112,6 +138,10 @@ export function wrapHandler<Method extends DojoMethod>(method: Method, definitio
 			if (error.code !== "not-implemented") console.error(`[ipc] ${method} failed`, thrown);
 
 			return { ok: false, error };
+		}
+		finally
+		{
+			endWatch();
 		}
 	};
 }
