@@ -49,6 +49,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Handoff")
 	TObjectPtr<UDojoM1PauseSwitch> Pause;
 
+	/** The context that holds the director's own keys; added when play begins and removed when it ends. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Handoff")
+	TObjectPtr<UInputMappingContext> DirectorContext;
+
 	/** Clears the old round, spawns the hero and both drones fresh, and gives the hero to the player. */
 	UFUNCTION(BlueprintCallable, Category = "Handoff")
 	void StartRound();
@@ -102,9 +106,6 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UInputAction> RestartAction;
-
-	UPROPERTY()
-	TObjectPtr<UInputMappingContext> DirectorContext;
 
 	bool bRoundDone = false;
 

@@ -40,7 +40,7 @@ What happens next is **input consumption**. Every input action has `bConsumeInpu
 Two details catch people out:
 
 - Changes are not instant. Unless the options say otherwise, the player's mappings are rebuilt shortly after the call, so keys behave the old way for the rest of that frame.
-- If the player is already holding a key when a context that maps it is added, that key is ignored until it is released and pressed again. This is `bIgnoreAllPressedKeysUntilRelease` in `FModifyContextOptions`, on by default. It stops a held attack key from firing the moment a menu closes.
+- If the player is already holding a key when a context that maps it is added, that key is ignored until it is released and pressed again (for yes or no actions). This is `bIgnoreAllPressedKeysUntilRelease` in `FModifyContextOptions`, on by default. It stops a held attack key from firing the moment a menu closes.
 
 Give contexts that share keys different priorities, and use numbers with room between them, for example gameplay at 0, vehicle at 5, menu at 10.
 

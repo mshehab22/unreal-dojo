@@ -113,7 +113,11 @@ bool FDojo_M1_DroneHandoff_PlaysTwoRounds::RunTest(const FString& Parameters)
 	const ADojoM1Walker* FirstHero = Director->Hero;
 	const ADojoM1Charger* FirstCannon = Director->Cannon;
 
+	Tap(TestWorld, Rig, EKeys::Tab);
+	TestTrue(TEXT("Tab still works after the drill, so the pause can be open when the next round starts"), Director->Pause->IsOpen());
+
 	Tap(TestWorld, Rig, EKeys::R);
+	TestFalse(TEXT("A new round starts with the pause closed"), Director->Pause->IsOpen());
 	TestFalse(TEXT("R after the drill starts a new round"), Director->IsRoundDone());
 	TestTrue(TEXT("The new round has a fresh hero"), Director->Hero != FirstHero);
 	TestTrue(TEXT("The new round has a fresh cannon"), Director->Cannon != FirstCannon);
@@ -126,10 +130,10 @@ bool FDojo_M1_DroneHandoff_PlaysTwoRounds::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M1_DroneHandoff_ReachAndTies, "Dojo.M1.DroneHandoff.ReachAndTies", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M1_DroneHandoff_ReachIs250, "Dojo.M1.DroneHandoff.ReachIs250", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Presses F out of reach, then with both drones equally near, and checks the scanner wins the tie. */
-bool FDojo_M1_DroneHandoff_ReachAndTies::RunTest(const FString& Parameters)
+/** Presses F at 500, about 350, and about 200 from the scanner and checks only the last is in reach. */
+bool FDojo_M1_DroneHandoff_ReachIs250::RunTest(const FString& Parameters)
 {
 	using namespace DojoM1BossTest;
 
@@ -142,6 +146,31 @@ bool FDojo_M1_DroneHandoff_ReachAndTies::RunTest(const FString& Parameters)
 
 	Tap(TestWorld, Rig, EKeys::F);
 	TestEqual(TEXT("Both drones are 500 away, out of reach, so F does nothing"), Director->GetModeLabel(), FString(TEXT("HERO")));
+
+	Hold(TestWorld, Rig, EKeys::W, 30);
+	Tap(TestWorld, Rig, EKeys::F);
+	TestEqual(TEXT("About 350 from the scanner is out of the 250 reach"), Director->GetModeLabel(), FString(TEXT("HERO")));
+
+	Hold(TestWorld, Rig, EKeys::W, 30);
+	Tap(TestWorld, Rig, EKeys::F);
+	TestEqual(TEXT("About 200 from the scanner is in reach"), Director->GetModeLabel(), FString(TEXT("SCANNER")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M1_DroneHandoff_TiesGoToTheScanner, "Dojo.M1.DroneHandoff.TiesGoToTheScanner", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Widens the reach so both drones are equally near and checks the scanner wins the tie. */
+bool FDojo_M1_DroneHandoff_TiesGoToTheScanner::RunTest(const FString& Parameters)
+{
+	using namespace DojoM1BossTest;
+
+	FDojoTestWorld TestWorld;
+	FDojoM1InputRig Rig(TestWorld);
+
+	ADojoM1DroneHandoff* Director = TestWorld.SpawnActor<ADojoM1DroneHandoff>();
+	if (!TestNotNull(TEXT("Director spawned"), Director)) return false;
+	Rig.Tick(2);
 
 	Director->ReachDistance = 600.f;
 	Tap(TestWorld, Rig, EKeys::F);
@@ -177,6 +206,55 @@ bool FDojo_M1_DroneHandoff_PauseSitsAboveEverything::RunTest(const FString& Para
 	Tap(TestWorld, Rig, EKeys::Tab);
 	TestFalse(TEXT("The pause layer is gone after the second Tab"), Rig.GetSubsystem()->HasMappingContext(Director->Pause->PauseContext));
 	TestTrue(TEXT("The hero's layer is still there"), Rig.GetSubsystem()->HasMappingContext(Director->Hero->MoveContext));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M1_DroneHandoff_NeedsBothDrones, "Dojo.M1.DroneHandoff.NeedsBothDrones", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Fires a heavy shot but never turns the scanner, and checks the drill is not done. */
+bool FDojo_M1_DroneHandoff_NeedsBothDrones::RunTest(const FString& Parameters)
+{
+	using namespace DojoM1BossTest;
+
+	FDojoTestWorld TestWorld;
+	FDojoM1InputRig Rig(TestWorld);
+
+	ADojoM1DroneHandoff* Director = TestWorld.SpawnActor<ADojoM1DroneHandoff>();
+	if (!TestNotNull(TEXT("Director spawned"), Director)) return false;
+	Rig.Tick(2);
+
+	Hold(TestWorld, Rig, EKeys::S, 60);
+	Tap(TestWorld, Rig, EKeys::F);
+	TestEqual(TEXT("The hero took over the cannon"), Director->GetModeLabel(), FString(TEXT("CANNON")));
+
+	Hold(TestWorld, Rig, EKeys::SpaceBar, 78);
+	Tap(TestWorld, Rig, EKeys::F);
+	TestTrue(TEXT("The cannon fired a heavy shot"), Director->Cannon->GetLastShot() == EDojoM1ShotTier::Heavy);
+	TestEqual(TEXT("Back with the hero"), Director->GetModeLabel(), FString(TEXT("HERO")));
+	TestFalse(TEXT("The scanner never turned, so the drill is not done"), Director->IsRoundDone());
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M1_DroneHandoff_LeavesNoLayerBehind, "Dojo.M1.DroneHandoff.LeavesNoLayerBehind", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Destroys the director and checks its context is taken off the player. */
+bool FDojo_M1_DroneHandoff_LeavesNoLayerBehind::RunTest(const FString& Parameters)
+{
+	FDojoTestWorld TestWorld;
+	FDojoM1InputRig Rig(TestWorld);
+
+	ADojoM1DroneHandoff* Director = TestWorld.SpawnActor<ADojoM1DroneHandoff>();
+	if (!TestNotNull(TEXT("Director spawned"), Director) || !TestNotNull(TEXT("Its context was built"), Director->DirectorContext.Get())) return false;
+	Rig.Tick(2);
+
+	const UInputMappingContext* DirectorContext = Director->DirectorContext;
+	TestTrue(TEXT("While the director plays its keys are on the player"), Rig.GetSubsystem()->HasMappingContext(DirectorContext));
+
+	Director->Destroy();
+	Rig.Tick(2);
+	TestFalse(TEXT("A destroyed director leaves no context behind"), Rig.GetSubsystem()->HasMappingContext(DirectorContext));
 
 	return true;
 }
