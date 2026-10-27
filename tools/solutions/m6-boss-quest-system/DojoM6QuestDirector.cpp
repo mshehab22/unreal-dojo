@@ -218,8 +218,8 @@ FString ADojoM6QuestDirector::LineFor(UDojoM6QuestData* Quest) const
 	if (!IsValid(Quest)) return FString();
 
 	const EDojoM6QuestState State = Tracker->GetState(Quest);
-	const bool bHidden = Quest->bSecret && (State == EDojoM6QuestState::EQS_Locked || State == EDojoM6QuestState::EQS_Available);
-	if (bHidden) return FString();
+	const bool bHiddenOnBoard = Quest->bSecret && (State == EDojoM6QuestState::EQS_Locked || State == EDojoM6QuestState::EQS_Available);
+	if (bHiddenOnBoard) return FString();
 
 	FString Status = TEXT("LOCKED");
 	if (State == EDojoM6QuestState::EQS_Available) Status = TEXT("NEW");

@@ -394,8 +394,13 @@ bool FDojo_M6_QuestTracker_ClocksPerQuest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("The retry has its own full time"), Tracker->GetState(Errand), EDojoM6QuestState::EQS_Active);
 
 	Tracker->ResetQuests();
+	TestEqual(TEXT("A reset offers the running quest again"), Tracker->GetState(Errand), EDojoM6QuestState::EQS_Available);
+
+	// Start it again with no time limit, so no new clock replaces the old one: only a clock the reset left running can still fail it.
+	Errand->TimeLimitSeconds = 0.f;
+	TestTrue(TEXT("The quest starts again after the reset"), Tracker->StartQuest(Errand));
 	TestWorld.Tick(60 * 2);
-	TestEqual(TEXT("A reset stops every clock"), Tracker->GetState(Errand), EDojoM6QuestState::EQS_Available);
+	TestEqual(TEXT("A reset stops every clock, so the old deadline cannot fail the new run"), Tracker->GetState(Errand), EDojoM6QuestState::EQS_Active);
 
 	return true;
 }
