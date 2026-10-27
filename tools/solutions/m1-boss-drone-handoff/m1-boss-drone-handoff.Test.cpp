@@ -2,7 +2,7 @@
 
 #if WITH_AUTOMATION_TESTS
 
-#include "DojoM1DroneHandoff.h"
+#include "Quests/m1-boss-drone-handoff/DojoM1DroneHandoff.h"
 #include "Quests/m1-charge-meter/DojoM1Charger.h"
 #include "Quests/m1-move-pad/DojoM1Walker.h"
 #include "Quests/m1-pause-context/DojoM1PauseSwitch.h"
@@ -73,7 +73,7 @@ namespace DojoM1BossTest
 		Test.TestEqual(TEXT("Within reach of the cannon, F hands it over"), Director->GetModeLabel(), FString(TEXT("CANNON")));
 
 		Hold(TestWorld, Rig, EKeys::SpaceBar, 18);
-		Test.TestTrue(TEXT("A short hold fires a light shot"), Director->Cannon->GetLastShot() == EDojoM1ShotTier::Light);
+		Test.TestTrue(TEXT("A short hold fires a light shot"), Director->Cannon->GetLastShot() == EDojoM1ShotTier::EST_Light);
 
 		Tap(TestWorld, Rig, EKeys::F);
 		Test.TestEqual(TEXT("Back to the hero after a light shot"), Director->GetModeLabel(), FString(TEXT("HERO")));
@@ -82,11 +82,15 @@ namespace DojoM1BossTest
 		Tap(TestWorld, Rig, EKeys::F);
 		Test.TestEqual(TEXT("The cannon can be taken over again"), Director->GetModeLabel(), FString(TEXT("CANNON")));
 		Hold(TestWorld, Rig, EKeys::SpaceBar, 78);
-		Test.TestTrue(TEXT("A full hold fires a heavy shot"), Director->Cannon->GetLastShot() == EDojoM1ShotTier::Heavy);
+		Test.TestTrue(TEXT("A full hold fires a heavy shot"), Director->Cannon->GetLastShot() == EDojoM1ShotTier::EST_Heavy);
 
 		Tap(TestWorld, Rig, EKeys::F);
 		Test.TestTrue(TEXT("Both drones did their job and the hero is back, so the drill is done"), Director->IsRoundDone());
 		Test.TestTrue(TEXT("The status line gives the round time"), Director->GetStatusLine().StartsWith(TEXT("DRILL DONE in ")));
+
+		Tap(TestWorld, Rig, EKeys::F);
+		Test.TestEqual(TEXT("After the drill F does nothing, even with a drone in reach"), Director->GetModeLabel(), FString(TEXT("HERO")));
+		Test.TestTrue(TEXT("The drill stays done"), Director->IsRoundDone());
 	}
 }
 
@@ -110,7 +114,7 @@ bool FDojo_M1_DroneHandoff_PlaysTwoRounds::RunTest(const FString& Parameters)
 
 	PlayDrill(*this, TestWorld, Rig, Director);
 
-	const ADojoM1Walker* FirstHero = Director->Hero;
+	const TWeakObjectPtr<ADojoM1Walker> FirstHero = Director->Hero;
 	const ADojoM1Charger* FirstCannon = Director->Cannon;
 
 	Tap(TestWorld, Rig, EKeys::Tab);
@@ -119,7 +123,8 @@ bool FDojo_M1_DroneHandoff_PlaysTwoRounds::RunTest(const FString& Parameters)
 	Tap(TestWorld, Rig, EKeys::R);
 	TestFalse(TEXT("A new round starts with the pause closed"), Director->Pause->IsOpen());
 	TestFalse(TEXT("R after the drill starts a new round"), Director->IsRoundDone());
-	TestTrue(TEXT("The new round has a fresh hero"), Director->Hero != FirstHero);
+	TestTrue(TEXT("The new round has a fresh hero"), Director->Hero != FirstHero.Get());
+	TestFalse(TEXT("The old hero is gone"), FirstHero.IsValid());
 	TestTrue(TEXT("The new round has a fresh cannon"), Director->Cannon != FirstCannon);
 	TestEqual(TEXT("The fresh cannon has fired nothing"), Director->Cannon->GetShotsFired(), 0);
 	TestNearlyEqual(TEXT("The fresh scanner has not turned"), Director->Scanner->GetActorRotation().Yaw, 0.0, 0.01);
@@ -230,7 +235,7 @@ bool FDojo_M1_DroneHandoff_NeedsBothDrones::RunTest(const FString& Parameters)
 
 	Hold(TestWorld, Rig, EKeys::SpaceBar, 78);
 	Tap(TestWorld, Rig, EKeys::F);
-	TestTrue(TEXT("The cannon fired a heavy shot"), Director->Cannon->GetLastShot() == EDojoM1ShotTier::Heavy);
+	TestTrue(TEXT("The cannon fired a heavy shot"), Director->Cannon->GetLastShot() == EDojoM1ShotTier::EST_Heavy);
 	TestEqual(TEXT("Back with the hero"), Director->GetModeLabel(), FString(TEXT("HERO")));
 	TestFalse(TEXT("The scanner never turned, so the drill is not done"), Director->IsRoundDone());
 
@@ -242,6 +247,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M1_DroneHandoff_LeavesNoLayerBehind, "Doj
 /** Destroys the director and checks its context is taken off the player. */
 bool FDojo_M1_DroneHandoff_LeavesNoLayerBehind::RunTest(const FString& Parameters)
 {
+	using namespace DojoM1BossTest;
+
 	FDojoTestWorld TestWorld;
 	FDojoM1InputRig Rig(TestWorld);
 
@@ -249,12 +256,17 @@ bool FDojo_M1_DroneHandoff_LeavesNoLayerBehind::RunTest(const FString& Parameter
 	if (!TestNotNull(TEXT("Director spawned"), Director) || !TestNotNull(TEXT("Its context was built"), Director->DirectorContext.Get())) return false;
 	Rig.Tick(2);
 
+	Tap(TestWorld, Rig, EKeys::Tab);
+
 	const UInputMappingContext* DirectorContext = Director->DirectorContext;
+	const UInputMappingContext* PauseContext = Director->Pause->PauseContext;
 	TestTrue(TEXT("While the director plays its keys are on the player"), Rig.GetSubsystem()->HasMappingContext(DirectorContext));
+	TestTrue(TEXT("The pause is open and its layer is on the player"), PauseContext != nullptr && Rig.GetSubsystem()->HasMappingContext(PauseContext));
 
 	Director->Destroy();
 	Rig.Tick(2);
 	TestFalse(TEXT("A destroyed director leaves no context behind"), Rig.GetSubsystem()->HasMappingContext(DirectorContext));
+	TestFalse(TEXT("A destroyed director leaves no pause layer behind"), Rig.GetSubsystem()->HasMappingContext(PauseContext));
 
 	return true;
 }

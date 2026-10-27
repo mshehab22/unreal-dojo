@@ -1,9 +1,9 @@
 #include "DojoM1DroneHandoff.h"
 
-#include "DojoM1Charger.h"
-#include "DojoM1PauseSwitch.h"
-#include "DojoM1Turntable.h"
-#include "DojoM1Walker.h"
+#include "Quests/m1-charge-meter/DojoM1Charger.h"
+#include "Quests/m1-pause-context/DojoM1PauseSwitch.h"
+#include "Quests/m1-turntable/DojoM1Turntable.h"
+#include "Quests/m1-move-pad/DojoM1Walker.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
@@ -56,12 +56,16 @@ void ADojoM1DroneHandoff::BeginPlay()
 
 void ADojoM1DroneHandoff::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (const APlayerController* Player = FindPlayer())
+	Pause->Close();
+
+	if (APlayerController* Player = FindPlayer())
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(Player->GetLocalPlayer()))
 		{
 			Subsystem->RemoveMappingContext(DirectorContext);
 		}
+
+		DisableInput(Player);
 	}
 
 	Super::EndPlay(EndPlayReason);
@@ -158,9 +162,10 @@ void ADojoM1DroneHandoff::GiveControlTo(APawn* Target)
 void ADojoM1DroneHandoff::ReturnToHero()
 {
 	GiveControlTo(Hero);
+	if (!IsValid(Scanner) || !IsValid(Cannon)) return;
 
 	const bool bScannerTurned = FMath::Abs(Scanner->GetActorRotation().Yaw) >= TurnGoalDegrees;
-	const bool bCannonFiredHeavy = Cannon->GetLastShot() == EDojoM1ShotTier::Heavy;
+	const bool bCannonFiredHeavy = Cannon->GetLastShot() == EDojoM1ShotTier::EST_Heavy;
 	if (!bScannerTurned || !bCannonFiredHeavy) return;
 
 	bRoundDone = true;

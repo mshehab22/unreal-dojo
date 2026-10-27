@@ -22,14 +22,14 @@ When you possess the walker and hold W for one second it is 300 units ahead of w
 
 Most of `ADojoM1Walker` is written for you. Fill the two gaps:
 
-1. `ADojoM1Walker::PostInitializeComponents`: three of the four keys need modifiers on their mappings so that all four arrive at the one Move action as the right pair of numbers. D is done for you.
+1. `ADojoM1Walker::PreInitializeComponents`: three of the four keys need modifiers on their mappings so that all four arrive at the one Move action as the right pair of numbers. D is done for you.
 2. `ADojoM1Walker::Move`: read the pair of numbers and move the pawn by it, scaled by `Speed` and by the time the frame took. In Unreal the world's X axis points forward and Y points right.
 
 Dependency direction: the walker holds its own action and context, exactly like the turntable, and reaches the local player's subsystem only when a controller arrives or leaves.
 
 Compiles against earlier quests: m1-turntable (`Quests/m1-turntable/DojoM1InputRig.h`, the test rig, which is not repeated here).
 
-This walker is the second piece of the Yard Handoff boss.
+This walker is the second piece of the drone handoff boss.
 
 ## See it in the editor
 
@@ -73,8 +73,8 @@ public:
 	TObjectPtr<UInputMappingContext> MoveContext;
 
 protected:
-	/** Builds the default action and context when none were assigned. */
-	virtual void PostInitializeComponents() override;
+	/** Builds the default action and context when none were assigned, before the pawn can be possessed. */
+	virtual void PreInitializeComponents() override;
 
 	/** Takes this pawn's context off the old player and puts it on the new one. */
 	virtual void NotifyControllerChanged() override;
@@ -109,10 +109,8 @@ ADojoM1Walker::ADojoM1Walker()
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
-void ADojoM1Walker::PostInitializeComponents()
+void ADojoM1Walker::PreInitializeComponents()
 {
-	Super::PostInitializeComponents();
-
 	if (!MoveAction)
 	{
 		MoveAction = NewObject<UInputAction>(this, TEXT("MoveAction"));
@@ -128,6 +126,8 @@ void ADojoM1Walker::PostInitializeComponents()
 		// Your code: map A so it pushes the opposite way to D.
 		// Your code: map S so it pushes the opposite way to W.
 	}
+
+	Super::PreInitializeComponents();
 }
 
 void ADojoM1Walker::NotifyControllerChanged()

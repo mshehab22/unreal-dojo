@@ -2383,7 +2383,7 @@
       "finputactionvalue",
       "enhanced-input-component"
     ],
-    "firstQuestId": "m1-actions-and-values"
+    "firstQuestId": "p5-actions-as-values"
   },
   {
     "id": "input-mapping-context",

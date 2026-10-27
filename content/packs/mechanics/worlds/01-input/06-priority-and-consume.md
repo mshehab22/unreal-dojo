@@ -35,7 +35,7 @@ explanation: The higher priority context is offered the key first, and by defaul
 
 A player can have many mapping contexts switched on at once, added with **`AddMappingContext(Context, Priority)`** on the Enhanced Input local player subsystem and taken away with **`RemoveMappingContext(Context)`**. `HasMappingContext` asks whether one is active. Think of them as layers. When two layers map the same key, the one with the **higher priority number** is offered the key first.
 
-What happens next is **input consumption**. Every input action has `bConsumeInput`, on by default. If the action in the higher layer takes the key, the lower layers never see it: their mappings of that key are dropped when the player's mappings are rebuilt. Set `bConsumeInput` to false on the higher action and the key reaches both layers. This is how a pause or menu context works: map the gameplay keys to a do-nothing action in a high layer and the game stops hearing them. Consumption is a property of the mapping, so the action does not need any function bound to it. Removing the context hands the keys back.
+What happens next is **input consumption**. Every input action has `bConsumeInput`, on by default. If the action in the higher layer takes the key, the lower layers never see it: their mappings of that key are dropped when the player's mappings are rebuilt. Set `bConsumeInput` to false on the higher action and the key reaches both layers. This is how a pause or menu context works: map the gameplay keys to a do-nothing action in a high layer and the game stops hearing them. Consumption is decided when the player's mappings are rebuilt, so the action does not need any function bound to it. Removing the context hands the keys back.
 
 Two details catch people out:
 
@@ -90,7 +90,7 @@ void ADojoMenuHost::CloseMenu(UEnhancedInputLocalPlayerSubsystem* Subsystem)
   explanation: The layer with the higher number is offered keys first; the menu was placed below gameplay.
 - id: held-key
   type: multiple-choice
-  prompt: "The player is already holding E when a context that maps E is added with the default options. When does the new E mapping first fire?"
+  prompt: "The player is already holding E when a context that maps E to a yes or no action is added with the default options. When does the new E mapping first fire?"
   choices:
     - At once, on the same frame
     - After the player releases E and presses it again
@@ -105,7 +105,7 @@ void ADojoMenuHost::CloseMenu(UEnhancedInputLocalPlayerSubsystem* Subsystem)
     - Yes, because consumption is decided by the mapping, not by what is bound
     - Only if the action is also a trigger
   answerIndex: 1
-  explanation: Consumption happens when the player's mappings are rebuilt, so the lower layer's W mapping is dropped whether or not anything listens to the high layer's action.
+  explanation: Consumption is decided when the player's mappings are rebuilt, so the lower layer's W mapping is dropped whether or not anything listens to the high layer's action.
 - id: explain-layers
   type: explain-in-one-sentence
   prompt: In one sentence, say how a pause menu can stop the gameplay keys without touching any gameplay code.

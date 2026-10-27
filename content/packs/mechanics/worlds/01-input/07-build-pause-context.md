@@ -30,7 +30,7 @@ Dependency direction: the switch knows the local player's subsystem and nothing 
 
 Compiles against earlier quests: m1-move-pad (`Quests/m1-move-pad/DojoM1Walker.h`) and m1-turntable (`Quests/m1-turntable/DojoM1InputRig.h`, the test rig). Tests give the player one frame after every change so the new mappings are in effect.
 
-This switch is the third piece of the Yard Handoff boss.
+This switch is the third piece of the drone handoff boss.
 
 ## See it in the editor
 
@@ -172,6 +172,7 @@ void UDojoM1PauseSwitch::BuildContext()
 #include "Support/DojoTestActor.h"
 #include "Support/DojoTestWorld.h"
 #include "InputAction.h"
+#include "InputMappingContext.h"
 
 namespace DojoM1PauseTest
 {
@@ -292,8 +293,10 @@ bool FDojo_M1_PauseContext_LayerSitsAtItsPriority::RunTest(const FString& Parame
 	Rig.Possess(Walker);
 
 	Pause->Open();
+	const UInputMappingContext* FirstContext = Pause->PauseContext;
 	Pause->Open();
 	Rig.Tick(1);
+	TestTrue(TEXT("Opening twice keeps the first context and builds no second one"), FirstContext != nullptr && Pause->PauseContext == FirstContext);
 
 	int32 FoundPriority = -1;
 	TestTrue(TEXT("The pause context is active"), Pause->PauseContext != nullptr && Rig.GetSubsystem()->HasMappingContext(Pause->PauseContext, FoundPriority));

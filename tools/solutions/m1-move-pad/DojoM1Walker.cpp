@@ -16,10 +16,8 @@ ADojoM1Walker::ADojoM1Walker()
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
-void ADojoM1Walker::PostInitializeComponents()
+void ADojoM1Walker::PreInitializeComponents()
 {
-	Super::PostInitializeComponents();
-
 	if (!MoveAction)
 	{
 		MoveAction = NewObject<UInputAction>(this, TEXT("MoveAction"));
@@ -41,6 +39,8 @@ void ADojoM1Walker::PostInitializeComponents()
 		BackMapping.Modifiers.Add(NewObject<UInputModifierSwizzleAxis>(MoveContext));
 		BackMapping.Modifiers.Add(NewObject<UInputModifierNegate>(MoveContext));
 	}
+
+	Super::PreInitializeComponents();
 }
 
 void ADojoM1Walker::NotifyControllerChanged()

@@ -29,7 +29,7 @@ Dependency direction: the pawn holds its own action and its own context and reac
 
 `DojoM1InputRig.h` is provided for the tests. It builds a pretend local player so a test can possess a pawn and press keys; do not change it.
 
-This turntable is the first piece of the Yard Handoff boss.
+This turntable is the first piece of the drone handoff boss.
 
 ## See it in the editor
 
@@ -73,8 +73,8 @@ public:
 	TObjectPtr<UInputMappingContext> TurnContext;
 
 protected:
-	/** Builds the default action and context when none were assigned. */
-	virtual void PostInitializeComponents() override;
+	/** Builds the default action and context when none were assigned, before the pawn can be possessed. */
+	virtual void PreInitializeComponents() override;
 
 	/** Takes this pawn's context off the old player and puts it on the new one. */
 	virtual void NotifyControllerChanged() override;
@@ -109,10 +109,8 @@ ADojoM1Turntable::ADojoM1Turntable()
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
-void ADojoM1Turntable::PostInitializeComponents()
+void ADojoM1Turntable::PreInitializeComponents()
 {
-	Super::PostInitializeComponents();
-
 	if (!TurnAction)
 	{
 		TurnAction = NewObject<UInputAction>(this, TEXT("TurnAction"));
@@ -127,6 +125,8 @@ void ADojoM1Turntable::PostInitializeComponents()
 		FEnhancedActionKeyMapping& LeftMapping = TurnContext->MapKey(TurnAction, EKeys::A);
 		LeftMapping.Modifiers.Add(NewObject<UInputModifierNegate>(TurnContext));
 	}
+
+	Super::PreInitializeComponents();
 }
 
 void ADojoM1Turntable::NotifyControllerChanged()
@@ -391,7 +391,7 @@ bool FDojo_M1_Turntable_ControlsFollowTheController::RunTest(const FString& Para
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M1_Turntable_DesignersCanAssignAssets, "Dojo.M1.Turntable.DesignersCanAssignAssets", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Checks through reflection that the action, the context, and the speed are editable and that Turn is not exposed. */
+/** Checks through reflection that the action, the context, and the speed are editable in Details. */
 bool FDojo_M1_Turntable_DesignersCanAssignAssets::RunTest(const FString& Parameters)
 {
 	const UClass* TurntableClass = ADojoM1Turntable::StaticClass();

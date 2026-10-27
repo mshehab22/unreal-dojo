@@ -31,8 +31,8 @@ public:
 	TObjectPtr<UInputMappingContext> TurnContext;
 
 protected:
-	/** Builds the default action and context when none were assigned. */
-	virtual void PostInitializeComponents() override;
+	/** Builds the default action and context when none were assigned, before the pawn can be possessed. */
+	virtual void PreInitializeComponents() override;
 
 	/** Takes this pawn's context off the old player and puts it on the new one. */
 	virtual void NotifyControllerChanged() override;

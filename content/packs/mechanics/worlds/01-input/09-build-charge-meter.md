@@ -23,7 +23,7 @@ When you possess the charger and hold Space, the meter climbs from 0 to 1 over o
 
 `ADojoM1Charger` has its header written for you, including the shot tiers and the private functions to fill. Everything in the `.cpp` except the constructor is yours:
 
-1. `PostInitializeComponents`: build the yes or no Charge action and a context that maps Space to it through a Hold trigger whose threshold is `FullChargeSeconds`.
+1. `PreInitializeComponents`: build the yes or no Charge action and a context that maps Space to it through a Hold trigger whose threshold is `FullChargeSeconds`.
 2. `NotifyControllerChanged` and `SetupPlayerInputComponent`: put the context on the player's subsystem as a controller arrives, take it off the one that left, and bind the five trigger events to the five private functions.
 3. The five stage functions, `Fire`, `TierForMeter`, and the four getters.
 
@@ -31,7 +31,7 @@ Dependency direction: the charger holds its own action and context and reaches t
 
 Compiles against earlier quests: m1-turntable (`Quests/m1-turntable/DojoM1InputRig.h`, the test rig).
 
-This charger is the fourth piece of the Yard Handoff boss.
+This charger is the fourth piece of the drone handoff boss.
 
 ## See it in the editor
 
@@ -56,10 +56,10 @@ struct FInputActionInstance;
 UENUM(BlueprintType)
 enum class EDojoM1ShotTier : uint8
 {
-	None,
-	Light,
-	Medium,
-	Heavy
+	EST_None UMETA(DisplayName = "None"),
+	EST_Light UMETA(DisplayName = "Light"),
+	EST_Medium UMETA(DisplayName = "Medium"),
+	EST_Heavy UMETA(DisplayName = "Heavy")
 };
 
 /** A pawn that charges while Space is held and fires when it is let go: a short hold is a light shot, half a charge is medium, a full charge is heavy. */
@@ -73,7 +73,7 @@ public:
 	ADojoM1Charger();
 
 	/** How long Space must be held for a full charge, in seconds. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Charger")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Charger", meta = (ClampMin = "0.01"))
 	float FullChargeSeconds = 1.f;
 
 	/** The yes or no Charge action; filled in with a default if a designer has not assigned one. */
@@ -104,8 +104,8 @@ public:
 	static EDojoM1ShotTier TierForMeter(float MeterValue);
 
 protected:
-	/** Builds the default action and context, with the Hold trigger, when none were assigned. */
-	virtual void PostInitializeComponents() override;
+	/** Builds the default action and context, with the Hold trigger, when none were assigned, before the pawn can be possessed. */
+	virtual void PreInitializeComponents() override;
 
 	/** Takes this pawn's context off the old player and puts it on the new one. */
 	virtual void NotifyControllerChanged() override;
@@ -136,7 +136,7 @@ private:
 
 	bool bCharging = false;
 
-	EDojoM1ShotTier LastShot = EDojoM1ShotTier::None;
+	EDojoM1ShotTier LastShot = EDojoM1ShotTier::EST_None;
 
 	int32 ShotsFired = 0;
 };
@@ -163,12 +163,12 @@ ADojoM1Charger::ADojoM1Charger()
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
-void ADojoM1Charger::PostInitializeComponents()
+void ADojoM1Charger::PreInitializeComponents()
 {
-	Super::PostInitializeComponents();
-
 	// Your code: if no action was assigned, make one as a yes or no action.
 	// Your code: if no context was assigned, make one that maps Space to the action through a Hold trigger set to FullChargeSeconds.
+
+	Super::PreInitializeComponents();
 }
 
 void ADojoM1Charger::NotifyControllerChanged()
@@ -195,7 +195,7 @@ bool ADojoM1Charger::IsCharging() const
 
 EDojoM1ShotTier ADojoM1Charger::GetLastShot() const
 {
-	return EDojoM1ShotTier::None;
+	return EDojoM1ShotTier::EST_None;
 }
 
 int32 ADojoM1Charger::GetShotsFired() const
@@ -205,7 +205,7 @@ int32 ADojoM1Charger::GetShotsFired() const
 
 EDojoM1ShotTier ADojoM1Charger::TierForMeter(float MeterValue)
 {
-	return EDojoM1ShotTier::None;
+	return EDojoM1ShotTier::EST_None;
 }
 
 void ADojoM1Charger::BeginCharge()
@@ -285,20 +285,20 @@ bool FDojo_M1_ChargeMeter_ThreeTiers::RunTest(const FString& Parameters)
 	if (!TestNotNull(TEXT("Charger spawned"), Charger)) return false;
 
 	Rig.Possess(Charger);
-	TestTrue(TEXT("Nothing is fired yet"), Charger->GetLastShot() == EDojoM1ShotTier::None);
+	TestTrue(TEXT("Nothing is fired yet"), Charger->GetLastShot() == EDojoM1ShotTier::EST_None);
 
 	HoldSpace(TestWorld, Rig, 18);
-	TestTrue(TEXT("0.3 seconds is a light shot"), Charger->GetLastShot() == EDojoM1ShotTier::Light);
+	TestTrue(TEXT("0.3 seconds is a light shot"), Charger->GetLastShot() == EDojoM1ShotTier::EST_Light);
 	TestEqual(TEXT("One shot fired"), Charger->GetShotsFired(), 1);
 	TestEqual(TEXT("The meter is empty after a shot"), Charger->GetMeter(), 0.f);
 	TestFalse(TEXT("It is no longer charging"), Charger->IsCharging());
 
 	HoldSpace(TestWorld, Rig, 42);
-	TestTrue(TEXT("0.7 seconds is a medium shot"), Charger->GetLastShot() == EDojoM1ShotTier::Medium);
+	TestTrue(TEXT("0.7 seconds is a medium shot"), Charger->GetLastShot() == EDojoM1ShotTier::EST_Medium);
 	TestEqual(TEXT("Two shots fired"), Charger->GetShotsFired(), 2);
 
 	HoldSpace(TestWorld, Rig, 78);
-	TestTrue(TEXT("1.3 seconds is a heavy shot"), Charger->GetLastShot() == EDojoM1ShotTier::Heavy);
+	TestTrue(TEXT("1.3 seconds is a heavy shot"), Charger->GetLastShot() == EDojoM1ShotTier::EST_Heavy);
 	TestEqual(TEXT("Three shots fired"), Charger->GetShotsFired(), 3);
 	TestEqual(TEXT("The meter is empty again"), Charger->GetMeter(), 0.f);
 
@@ -353,10 +353,10 @@ bool FDojo_M1_ChargeMeter_ThresholdIsADesignerSetting::RunTest(const FString& Pa
 	Rig.Possess(Charger);
 
 	HoldSpace(TestWorld, Rig, 78);
-	TestTrue(TEXT("1.3 seconds of a two second charge is medium"), Charger->GetLastShot() == EDojoM1ShotTier::Medium);
+	TestTrue(TEXT("1.3 seconds of a two second charge is medium"), Charger->GetLastShot() == EDojoM1ShotTier::EST_Medium);
 
 	HoldSpace(TestWorld, Rig, 138);
-	TestTrue(TEXT("2.3 seconds of a two second charge is heavy"), Charger->GetLastShot() == EDojoM1ShotTier::Heavy);
+	TestTrue(TEXT("2.3 seconds of a two second charge is heavy"), Charger->GetLastShot() == EDojoM1ShotTier::EST_Heavy);
 
 	return true;
 }
@@ -366,11 +366,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M1_ChargeMeter_TiersFromTheMeter, "Dojo.M
 /** Checks the tier boundaries directly. */
 bool FDojo_M1_ChargeMeter_TiersFromTheMeter::RunTest(const FString& Parameters)
 {
-	TestTrue(TEXT("0 is light"), ADojoM1Charger::TierForMeter(0.f) == EDojoM1ShotTier::Light);
-	TestTrue(TEXT("Just under a half is light"), ADojoM1Charger::TierForMeter(0.49f) == EDojoM1ShotTier::Light);
-	TestTrue(TEXT("A half is medium"), ADojoM1Charger::TierForMeter(0.5f) == EDojoM1ShotTier::Medium);
-	TestTrue(TEXT("Just under full is medium"), ADojoM1Charger::TierForMeter(0.99f) == EDojoM1ShotTier::Medium);
-	TestTrue(TEXT("Full is heavy"), ADojoM1Charger::TierForMeter(1.f) == EDojoM1ShotTier::Heavy);
+	TestTrue(TEXT("0 is light"), ADojoM1Charger::TierForMeter(0.f) == EDojoM1ShotTier::EST_Light);
+	TestTrue(TEXT("Just under a half is light"), ADojoM1Charger::TierForMeter(0.49f) == EDojoM1ShotTier::EST_Light);
+	TestTrue(TEXT("A half is medium"), ADojoM1Charger::TierForMeter(0.5f) == EDojoM1ShotTier::EST_Medium);
+	TestTrue(TEXT("Just under full is medium"), ADojoM1Charger::TierForMeter(0.99f) == EDojoM1ShotTier::EST_Medium);
+	TestTrue(TEXT("Full is heavy"), ADojoM1Charger::TierForMeter(1.f) == EDojoM1ShotTier::EST_Heavy);
 
 	return true;
 }
@@ -412,7 +412,7 @@ bool FDojo_M1_ChargeMeter_ControlsFollowTheController::RunTest(const FString& Pa
 
 - Think of the key's life as five moments and give each its own small function: it goes down, it is still going, the time is up, it is let go early, it is let go after the time is up. The Hold trigger is added to the mapping that `MapKey` returns, and the function that reads time takes the action instance.
 - The trigger is `UInputTriggerHold` with a `HoldTimeThreshold`, created with `NewObject` and the context as outer, then added to the mapping's `Triggers`. The five moments are `Started`, `Ongoing`, `Triggered`, `Canceled`, and `Completed`. The instance's `GetElapsedTime()` is how long the action has been going. `NotifyControllerChanged` is built like the walker's.
-- `BindAction(ChargeAction, ETriggerEvent::Ongoing, this, &ADojoM1Charger::ContinueCharge)` has the same shape as the other four binds; only the function with the instance parameter differs. The meter is the elapsed time divided by `FullChargeSeconds`, kept between 0 and 1. A heavy shot is the only one that follows `Completed`.
+- The Ongoing bind has the same shape as the other four: the action, the event, the object, and the address of the function; only the function that takes the instance differs. The meter is the elapsed time divided by `FullChargeSeconds`, kept between 0 and 1. A heavy shot is the only one that follows `Completed`.
 
 # Rubric
 
@@ -440,7 +440,7 @@ The charger could skip the Hold trigger and count time itself: start a counter o
     - "}"
   distractors:
     - line: "	Meter = Instance.GetValue().Get<float>();"
-      mistake: The value of a key is 0 or 1; the time the key has been held is read from the instance's elapsed time.
+      mistake: A key's value is only ever 0 or 1; how long it has been held comes from GetElapsedTime on the instance.
 - id: charger-bind
   prompt: Put the five bindings in order.
   lines:

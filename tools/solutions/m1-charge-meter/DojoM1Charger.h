@@ -12,10 +12,10 @@ struct FInputActionInstance;
 UENUM(BlueprintType)
 enum class EDojoM1ShotTier : uint8
 {
-	None,
-	Light,
-	Medium,
-	Heavy
+	EST_None UMETA(DisplayName = "None"),
+	EST_Light UMETA(DisplayName = "Light"),
+	EST_Medium UMETA(DisplayName = "Medium"),
+	EST_Heavy UMETA(DisplayName = "Heavy")
 };
 
 /** A pawn that charges while Space is held and fires when it is let go: a short hold is a light shot, half a charge is medium, a full charge is heavy. */
@@ -29,7 +29,7 @@ public:
 	ADojoM1Charger();
 
 	/** How long Space must be held for a full charge, in seconds. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Charger")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Charger", meta = (ClampMin = "0.01"))
 	float FullChargeSeconds = 1.f;
 
 	/** The yes or no Charge action; filled in with a default if a designer has not assigned one. */
@@ -60,8 +60,8 @@ public:
 	static EDojoM1ShotTier TierForMeter(float MeterValue);
 
 protected:
-	/** Builds the default action and context, with the Hold trigger, when none were assigned. */
-	virtual void PostInitializeComponents() override;
+	/** Builds the default action and context, with the Hold trigger, when none were assigned, before the pawn can be possessed. */
+	virtual void PreInitializeComponents() override;
 
 	/** Takes this pawn's context off the old player and puts it on the new one. */
 	virtual void NotifyControllerChanged() override;
@@ -92,7 +92,7 @@ private:
 
 	bool bCharging = false;
 
-	EDojoM1ShotTier LastShot = EDojoM1ShotTier::None;
+	EDojoM1ShotTier LastShot = EDojoM1ShotTier::EST_None;
 
 	int32 ShotsFired = 0;
 };

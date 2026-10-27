@@ -16,10 +16,8 @@ ADojoM1Charger::ADojoM1Charger()
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
-void ADojoM1Charger::PostInitializeComponents()
+void ADojoM1Charger::PreInitializeComponents()
 {
-	Super::PostInitializeComponents();
-
 	if (!ChargeAction)
 	{
 		ChargeAction = NewObject<UInputAction>(this, TEXT("ChargeAction"));
@@ -36,6 +34,8 @@ void ADojoM1Charger::PostInitializeComponents()
 		FEnhancedActionKeyMapping& SpaceMapping = ChargeContext->MapKey(ChargeAction, EKeys::SpaceBar);
 		SpaceMapping.Triggers.Add(Hold);
 	}
+
+	Super::PreInitializeComponents();
 }
 
 void ADojoM1Charger::NotifyControllerChanged()
@@ -95,9 +95,9 @@ int32 ADojoM1Charger::GetShotsFired() const
 
 EDojoM1ShotTier ADojoM1Charger::TierForMeter(float MeterValue)
 {
-	if (MeterValue >= 1.f) return EDojoM1ShotTier::Heavy;
-	if (MeterValue >= 0.5f) return EDojoM1ShotTier::Medium;
-	return EDojoM1ShotTier::Light;
+	if (MeterValue >= 1.f) return EDojoM1ShotTier::EST_Heavy;
+	if (MeterValue >= 0.5f) return EDojoM1ShotTier::EST_Medium;
+	return EDojoM1ShotTier::EST_Light;
 }
 
 void ADojoM1Charger::BeginCharge()
@@ -123,7 +123,7 @@ void ADojoM1Charger::ReleaseEarly()
 
 void ADojoM1Charger::ReleaseFull()
 {
-	Fire(EDojoM1ShotTier::Heavy);
+	Fire(EDojoM1ShotTier::EST_Heavy);
 }
 
 void ADojoM1Charger::Fire(EDojoM1ShotTier Tier)

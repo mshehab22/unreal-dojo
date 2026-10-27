@@ -16,10 +16,8 @@ ADojoM1Turntable::ADojoM1Turntable()
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
-void ADojoM1Turntable::PostInitializeComponents()
+void ADojoM1Turntable::PreInitializeComponents()
 {
-	Super::PostInitializeComponents();
-
 	if (!TurnAction)
 	{
 		TurnAction = NewObject<UInputAction>(this, TEXT("TurnAction"));
@@ -34,6 +32,8 @@ void ADojoM1Turntable::PostInitializeComponents()
 		FEnhancedActionKeyMapping& LeftMapping = TurnContext->MapKey(TurnAction, EKeys::A);
 		LeftMapping.Modifiers.Add(NewObject<UInputModifierNegate>(TurnContext));
 	}
+
+	Super::PreInitializeComponents();
 }
 
 void ADojoM1Turntable::NotifyControllerChanged()

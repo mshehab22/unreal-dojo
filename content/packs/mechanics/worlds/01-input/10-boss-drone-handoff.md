@@ -39,8 +39,8 @@ Layers: the pawns' own controls sit at priority 0, the director's keys (F, Tab, 
 Extensions, in order of importance:
 
 1. Taking over the cannon only while Shift is held, using a Chorded Action trigger on the handoff mapping.
-2. Letting the player press a key to rebind the handoff key at runtime, by writing a new mapping into a runtime copy of the director's context.
-3. A prompt string that shows F or the gamepad button depending on which device the last input came from.
+2. A rebinding step for the handoff key: the player picks a new key while playing and the director swaps the old key for it in a duplicate of its context made at play time.
+3. A prompt that reads F or the pad's button, following whichever kind of device the player touched most recently.
 
 Feel: tune the reach and the full charge time until taking over a drone feels like walking up to it, not like hunting for a spot.
 
