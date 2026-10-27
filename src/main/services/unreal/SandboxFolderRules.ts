@@ -107,8 +107,10 @@ export class SandboxFolderRules
 		// iCloud Drive on a Mac lives in Library/Mobile Documents; every cloud client that uses Apple's file provider mounts under Library/CloudStorage.
 		const libraryIndex = lowerCaseParts.indexOf("library");
 
-		if (libraryIndex >= 0 && lowerCaseParts[libraryIndex + 1] === "mobile documents") return "iCloud Drive";
-		if (libraryIndex >= 0 && lowerCaseParts[libraryIndex + 1] === "cloudstorage" && lowerCaseParts.length > libraryIndex + 2) return "a cloud storage service";
+		const onMac = this.paths.buildPlatform !== "Win64";
+
+		if (onMac && libraryIndex >= 0 && lowerCaseParts[libraryIndex + 1] === "mobile documents") return "iCloud Drive";
+		if (onMac && libraryIndex >= 0 && lowerCaseParts[libraryIndex + 1] === "cloudstorage" && lowerCaseParts.length > libraryIndex + 2) return "a cloud storage service";
 
 		// Google Drive for desktop on Windows mounts a drive letter whose top folders are "My Drive" and "Shared drives".
 		if (this.paths.buildPlatform === "Win64" && /^[a-z]:$/.test(lowerCaseParts[0] ?? "") && GOOGLE_DRIVE_TOP_FOLDER_NAMES.includes(lowerCaseParts[1] ?? "")) return "Google Drive";
