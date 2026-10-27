@@ -19,11 +19,11 @@ public:
 	UDojoP9LootComponent();
 
 	/** The item this part drops. */
-	UPROPERTY(EditAnywhere, Category = "Loot")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot", meta = (ExposeOnSpawn = "true"))
 	FName LootItem = TEXT("Bandage");
 
 	/** How many of LootItem drop. */
-	UPROPERTY(EditAnywhere, Category = "Loot", meta = (ClampMin = "1"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot", meta = (ClampMin = "1", ExposeOnSpawn = "true"))
 	int32 LootCount = 1;
 
 	/** Broadcast once, when the loot drops. */

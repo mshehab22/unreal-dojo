@@ -22,13 +22,13 @@ concepts:
 
 When you press Play with the Level Blueprint below, the crate's Print String says it dropped a Bandage after its second hit, and the statue takes every hit and drops nothing.
 
-The arena's props are now plain actors carrying parts. `UDojoP9HealthComponent` takes damage and broadcasts `OnDepleted` once when it reaches zero. `UDojoP9LootComponent` drops its item once, and `ListenTo` makes it drop when a given health part runs out. `UDojoP9PropKit` is a function library with one function per kind of prop: `MakeStatue` gives an actor a 250 health part and nothing else. Neither part includes the other's header except where loot listens to health, and neither knows what kind of actor it is on.
+The arena's props are now plain actors carrying parts. `UDojoP9HealthComponent` takes damage and broadcasts `OnDepleted` once when it reaches zero. `UDojoP9LootComponent` drops its item once, and `ListenTo` makes it drop when a given health part runs out. `UDojoP9PropKit` is a function library with one function per kind of prop: `MakeStatue` gives an actor a 250 health part and nothing else. Neither part includes the other's header except where loot listens to health, and neither knows what kind of actor it is on. Their settings (`MaxHealth`, `LootItem`, `LootCount`) are marked `ExposeOnSpawn`, so a Blueprint can fill them in when it adds a part.
 
 Most of the code is written. First read the marked lines and say in a sentence why each one is there. Then fill the one gap: `MakeCrate`. A crate is a 40 health part plus a loot part that drops one Bandage, and the loot listens to that health. Build it from the kit's two helpers, the way `MakeStatue` is built, with the numbers in the kit's `DojoP9PropNumbers`.
 
 ## See it in the editor
 
-Place two empty actors (Place Actors, Basic, Empty Actor) and name them Crate and Statue. In the Level Blueprint, on Begin Play, call Make Crate on the first and Make Statue on the second. From the crate, Get Component by Class with the loot component class, bind its On Loot Dropped to a custom event that prints the item, then get its health component and call Apply Damage with 25 twice. Press Play: one Bandage prints after the second hit. Select the crate in the Outliner while playing: its Details panel lists both parts. Then add a Dojo P9 Health Component to a third actor by hand with Add Component: the same part, assembled by a designer instead of by code.
+Place two empty actors (Place Actors, Basic, Empty Actor) and name them Crate and Statue. In the Level Blueprint, on Begin Play, call Make Crate on the first and Make Statue on the second. From the crate, Get Component by Class with the loot component class, bind its On Loot Dropped to a custom event that prints the item, then get its health component and call Apply Damage with 25 twice. Press Play: one Bandage prints after the second hit. Select the crate in the Outliner while playing: its Details panel lists both parts. Then add a Dojo P9 Health Component to a third actor by hand with Add Component: the same part, assembled by a designer instead of by code. In the Level Blueprint, an Add Component by Class node with the health part chosen shows a Max Health pin, which is set before the part registers.
 
 # Files
 
@@ -56,7 +56,7 @@ public:
 	UDojoP9HealthComponent();
 
 	/** Health at the start of play. */
-	UPROPERTY(EditAnywhere, Category = "Health", meta = (ClampMin = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health", meta = (ClampMin = "1.0", ExposeOnSpawn = "true")) // @explain: ExposeOnSpawn, together with BlueprintReadWrite, makes an Add Component by Class node in a Blueprint show this setting as a pin, filled in before the part registers.
 	float MaxHealth = 100.f;
 
 	/** Broadcast once, when health reaches zero. */
@@ -144,11 +144,11 @@ public:
 	UDojoP9LootComponent();
 
 	/** The item this part drops. */
-	UPROPERTY(EditAnywhere, Category = "Loot")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot", meta = (ExposeOnSpawn = "true"))
 	FName LootItem = TEXT("Bandage");
 
 	/** How many of LootItem drop. */
-	UPROPERTY(EditAnywhere, Category = "Loot", meta = (ClampMin = "1"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot", meta = (ClampMin = "1", ExposeOnSpawn = "true"))
 	int32 LootCount = 1;
 
 	/** Broadcast once, when the loot drops. */

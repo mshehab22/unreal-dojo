@@ -19,7 +19,7 @@ public:
 	UDojoP9HealthComponent();
 
 	/** Health at the start of play. */
-	UPROPERTY(EditAnywhere, Category = "Health", meta = (ClampMin = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health", meta = (ClampMin = "1.0", ExposeOnSpawn = "true"))
 	float MaxHealth = 100.f;
 
 	/** Broadcast once, when health reaches zero. */
