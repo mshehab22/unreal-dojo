@@ -4,6 +4,12 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1209 2026-10-27 The detail tail is capped at 40 lines and comes from the build output only (M5.1f, builder)
+A rejected Submit shows the learner why the run failed, so the end of the build output goes into `detail`. Options: the whole output; the last 40 lines; the last 40 lines plus the test messages. Chosen: the last 40 lines of `compilerOutput`, after the failure's own detail and a blank line (named constant `UNRELATED_FAILURE_DETAIL_LINES`). The cause of a crash is at the end of the log, a full build log can be megabytes, and test messages belong to the learner's code, not to a failure outside it. When the failure has no detail and the output is empty, `detail` stays undefined. Reverse cost: change one constant.
+
+### A1208 2026-10-27 A Submit that failed outside the quest rejects with the AppError and records nothing (M5.1f, builder)
+A UBT crash, timeout, missing engine, Live Coding being active, a full disk or a broken earlier quest is not the learner's code, so it must not break the spree or count toward the two-failed-submit offers. Options: record it as today; reject and record nothing; resolve with `recorded: false`. Chosen: reject with the run's `unrelatedFailure` after the cancel check, with no review and no `recordCodeAttempt` call. It matches the cancel rule, needs no `SubmitOutcome` change, and the renderer already has an error path. A cancel still wins. A normal failed compile or failed test is recorded as before. `progressSchema.ts` drops unknown keys on load, which is harmless because such attempts are never recorded. Reverse cost: record the attempt again by removing one call in `QuestSubmitService.submit`.
+
 ### A1192 2026-10-27 The save notice rides on the environment status, not a new IPC method (M5.1a, m5-1 lead)
 A restored-from-backup or refused save has to reach the learner once. Options: a new IPC method and channel; an optional `saveNotice` field on `EnvironmentStatus`, which the Title screen already reads. Chosen: the field. No new channel, the fake keeps compiling, and the Title and Settings screens show it through the existing `AppErrorView`. Reverse cost: move the field to its own method.
 
