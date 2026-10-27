@@ -35,7 +35,7 @@ Keys, all on the hero:
 - U uses one of the selected item if it heals and the hero is hurt: health rises by its heal amount, up to the maximum. At full health nothing is used and the potion is kept.
 - Q equips the selected item if it can be worn; whatever was worn there goes back to the bag.
 
-The board shows `Health 50/100` and `Selected: Potion x3` (or `Selected: none`) and, after the finale, the ready line. A bag view beside it shows the bag and what is worn, the way the panel piece writes it. Reference game: Resident Evil 4's attaché case, where fitting things into a small case is the whole puzzle.
+The board shows `Health 50/100` and `Selected: Potion x3` (or `Selected: none`) and, after the finale, the ready line. A bag view beside it shows the bag and what is worn, the way the panel piece writes it. Reference game: Resident Evil 4's attaché case, where fitting things into a small case is the whole puzzle. The system combines three Pack 2 patterns: Component ("Actors built from parts"), for the bag and the equipment that any actor can carry; Observer ("The lens, then the first payoff"), for the board, the view, and the finale, which listen instead of asking; and Type Object ("Kinds as data"), for the item kinds that live in assets.
 
 How rounds start: round 1 starts when play begins, and R starts the next round, only after the finale; the keys do nothing outside a round, except that selecting a slot always works. Starting a round empties the bag and the body, puts health back at 50, removes every pile, including dropped ones, and lays out the six piles again. A C++ director receives keys only after `EnableInput` with the player controller.
 

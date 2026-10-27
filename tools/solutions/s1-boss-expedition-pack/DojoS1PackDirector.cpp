@@ -1,7 +1,10 @@
 #include "DojoS1PackDirector.h"
 
+#include "Components/InputComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
+#include "InputCoreTypes.h"
 #include "Quests/s1-bag-view/DojoS1BagView.h"
 #include "Quests/s1-bag/DojoS1InventoryComponent.h"
 #include "Quests/s1-equipment/DojoS1EquipmentComponent.h"
@@ -41,6 +44,16 @@ void ADojoS1PackDirector::BeginPlay()
 	if (BagView != nullptr)
 	{
 		BagView->Show(HeroBag, HeroEquipment);
+	}
+
+	if (APlayerController* Player = GetWorld()->GetFirstPlayerController())
+	{
+		EnableInput(Player);
+
+		for (const FKey& Key : { EKeys::E, EKeys::G, EKeys::U, EKeys::Q, EKeys::R, EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four })
+		{
+			InputComponent->BindKey(Key, IE_Pressed, this, &ADojoS1PackDirector::HandleKey);
+		}
 	}
 
 	StartRound();
@@ -112,7 +125,7 @@ void ADojoS1PackDirector::PressDrop()
 {
 	UDojoS1ItemData* Selected = GetSelectedItem();
 
-	if (!bRunning || Selected == nullptr || HeroBag->Remove(Selected, 1) == 0)
+	if (!bRunning || !IsValid(Hero) || Selected == nullptr || HeroBag->Remove(Selected, 1) == 0)
 	{
 		return;
 	}
@@ -152,7 +165,7 @@ void ADojoS1PackDirector::PressEquip()
 
 void ADojoS1PackDirector::RestartRound()
 {
-	if (bRunning || HeroBag == nullptr)
+	if (bRunning || HeroBag == nullptr || HeroEquipment == nullptr)
 	{
 		return;
 	}
@@ -214,6 +227,19 @@ void ADojoS1PackDirector::HandleInventoryChanged(UDojoS1InventoryComponent* Inve
 void ADojoS1PackDirector::HandleEquipmentChanged(UDojoS1EquipmentComponent* Equipment)
 {
 	RefreshBoard();
+}
+
+void ADojoS1PackDirector::HandleKey(FKey Key)
+{
+	if (Key == EKeys::E) PressPickUp();
+	if (Key == EKeys::G) PressDrop();
+	if (Key == EKeys::U) PressUse();
+	if (Key == EKeys::Q) PressEquip();
+	if (Key == EKeys::R) RestartRound();
+	if (Key == EKeys::One) SelectSlot(0);
+	if (Key == EKeys::Two) SelectSlot(1);
+	if (Key == EKeys::Three) SelectSlot(2);
+	if (Key == EKeys::Four) SelectSlot(3);
 }
 
 void ADojoS1PackDirector::StartRound()

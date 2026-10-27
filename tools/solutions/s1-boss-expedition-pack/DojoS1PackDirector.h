@@ -134,6 +134,9 @@ private:
 	UFUNCTION()
 	void HandleEquipmentChanged(UDojoS1EquipmentComponent* Equipment);
 
+	/** Routes one pressed key to its action. */
+	void HandleKey(FKey Key);
+
 	/** Resets the hero and the world to the first state of a round and starts the clock. */
 	void StartRound();
 

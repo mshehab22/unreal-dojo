@@ -43,7 +43,7 @@ This is the last piece of the Expedition Pack boss.
 
 ## See it in the editor
 
-Place a `DojoS1BagView` in the level, and a Blueprint actor with a bag and equipment. In the level Blueprint, on BeginPlay, call Show on the view with that actor's bag and equipment. Add Add and Equip calls on keys. Press Play: the view shows an empty bag; press a key to add a potion and the text changes in the same frame; press another to equip the sword and the sword moves from its slot line to `Hand: Sword`. Then call Destroy Actor on the view from a key press and check that the other keys still work.
+Place a `DojoS1BagView` in the level, and a Blueprint actor `BP_Carrier` with a bag and equipment. In the level Blueprint, get the carrier's components with Get Component by Class, and on BeginPlay call Use Bag on the equipment and Show on the view with the bag and the equipment. On the 1 key call Add on the bag with `DA_Sword` and then with `DA_Potion`, and on the 2 key call Equip with `DA_Sword`. Press Play: the view shows an empty bag; press a key to add a potion and the text changes in the same frame; press another to equip the sword and the sword moves from its slot line to `Hand: Sword`. Then call Destroy Actor on the view from the 3 key and check that the other keys still work.
 
 # Files
 
@@ -227,7 +227,7 @@ bool FDojo_S1_BagView_UnbindsWhenItLeaves::RunTest(const FString& Parameters)
 # Hints
 
 - The panel needs two handlers, one for each event, and both do the same thing: rebuild the text from the bag and equipment as they are now. Write one function that builds the text from scratch and let the handlers call it.
-- `AddUniqueDynamic` ignores a second identical binding, and `RemoveDynamic` takes the same object and function. Remember what you were showing, so a later `Show` can unbind from it, and unbind in `EndPlay` too.
+- `AddUniqueDynamic` ignores a second identical binding, and `RemoveDynamic` takes the same object and function. Remember what you were showing, so a later `Show` can unbind from it, and unbind in `EndPlay` too. Keep the stored pointers in members with other names than the parameters, such as `ShownBag`: on Windows a member and a parameter sharing a name is compiler error C4458.
 - `UTextRenderComponent::SetText` takes an `FText`; `FString::Printf` and `FString::Join` build the lines, and `FText::FromString` wraps the result.
 
 # Rubric

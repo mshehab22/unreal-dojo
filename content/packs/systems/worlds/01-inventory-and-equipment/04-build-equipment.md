@@ -39,7 +39,7 @@ This is the third piece of the Expedition Pack boss.
 
 ## See it in the editor
 
-On a Blueprint actor add a `DojoS1InventoryComponent` and a `DojoS1EquipmentComponent`. On BeginPlay call Use Bag on the equipment with the bag, then Add `DA_Sword` and `DA_Dagger` to the bag. On the 1 key call Equip with `DA_Sword` and print Get Total Power; on the 2 key do the same with `DA_Dagger`. Press Play: 1 prints 7, 2 prints 3, and Get Slots on the bag shows the sword back in it.
+Make a Blueprint actor `BP_Carrier` with a `DojoS1InventoryComponent` and a `DojoS1EquipmentComponent`, and place one in the level. In the level Blueprint, with it selected, get its two components with Get Component by Class. On BeginPlay call Use Bag on the equipment with the bag, then Add `DA_Sword` and `DA_Dagger` to the bag. On the 1 key call Equip with `DA_Sword` and print Get Total Power; on the 2 key do the same with `DA_Dagger`. Press Play: 1 prints 7, 2 prints 3, and Get Slots on the bag shows the sword back in it.
 
 # Files
 
@@ -400,6 +400,29 @@ bool FDojo_S1_Equipment_TightBags::RunTest(const FString& Parameters)
 	BySlots.Bag->Remove(Stone, 1);
 	TestTrue(TEXT("With a free slot it comes off"), BySlots.Equipment->Unequip(EDojoS1EquipSlot::EES_Head));
 
+	// Swaps that only fit because the new item leaves the bag as the old one comes back.
+	FWearer Exact = MakeWearer(TestWorld, 4, 20);
+	Exact.Bag->Add(Sword, 1);
+	Exact.Equipment->Equip(Sword);
+	Exact.Bag->Add(Stone, 7);
+	Exact.Bag->Add(Dagger, 1);
+	TestEqual(TEXT("Setup: the bag weighs 16"), Exact.Bag->GetTotalWeight(), 16);
+	TestTrue(TEXT("Swapping a 2 for a 6 lands exactly on the limit of 20, so it works"), Exact.Equipment->Equip(Dagger));
+	TestTrue(TEXT("The dagger is in the hand"), Exact.Equipment->GetEquipped(EDojoS1EquipSlot::EES_Hand) == Dagger);
+	TestEqual(TEXT("The sword is in the bag"), Exact.Bag->CountOf(Sword), 1);
+	TestEqual(TEXT("The bag weighs exactly 20"), Exact.Bag->GetTotalWeight(), 20);
+
+	FWearer Crowded = MakeWearer(TestWorld, 2, 100);
+	Crowded.Bag->Add(Sword, 1);
+	Crowded.Equipment->Equip(Sword);
+	Crowded.Bag->Add(Dagger, 1);
+	Crowded.Bag->Add(Stone, 1);
+	TestEqual(TEXT("Setup: both slots are taken"), Crowded.Bag->GetSlots().Num(), 2);
+	TestTrue(TEXT("The dagger's slot is freed for the sword, so the swap works"), Crowded.Equipment->Equip(Dagger));
+	TestTrue(TEXT("The dagger is in the hand"), Crowded.Equipment->GetEquipped(EDojoS1EquipSlot::EES_Hand) == Dagger);
+	TestEqual(TEXT("The sword is in the bag"), Crowded.Bag->CountOf(Sword), 1);
+	TestEqual(TEXT("The stone is still in the bag"), Crowded.Bag->CountOf(Stone), 1);
+
 	return true;
 }
 
@@ -410,7 +433,7 @@ bool FDojo_S1_Equipment_TightBags::RunTest(const FString& Parameters)
 
 - Run the first failing test and read its message: it names an item that should be in one place and is somewhere else, or nowhere.
 - Equip changes two places, the bag and the slot. Ask what has to be true of the world if the second change cannot happen after the first one has, and what a failed call should leave behind.
-- `TMap::Add` replaces the value for a key that already exists, `TMap::Find` returns a pointer or null, and `UDojoS1InventoryComponent::GetRoomFor` tells you whether an item would fit without changing the bag.
+- `TMap::Add` replaces the value for a key that already exists, `TMap::Find` returns a pointer or null, and `UDojoS1InventoryComponent::GetRoomFor` tells you whether an item would fit, but only for the bag as it is at the moment you ask.
 
 # Rubric
 

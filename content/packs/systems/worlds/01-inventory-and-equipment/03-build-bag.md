@@ -34,7 +34,7 @@ This is the second piece of the Expedition Pack boss.
 
 ## See it in the editor
 
-Add a `DojoS1InventoryComponent` to a Blueprint actor and set Slot Count 4 and Max Weight 20 in Details. In its event graph, call Add with `DA_Potion` and 3 on a key press, and bind a custom event to the component's On Inventory Changed that prints Get Total Weight. Press Play and press the key seven times: the weight rises by 3 per press up to 18, the seventh press adds only 2 to reach the limit of 20, and further presses add nothing. Print the Get Slots array to see the piles.
+Make a Blueprint actor `BP_Carrier` with a `DojoS1InventoryComponent`, set Slot Count 4 and Max Weight 20 in Details, and place one in the level. In the level Blueprint, with it selected, get the component with Get Component by Class. On BeginPlay bind a custom event to the component's On Inventory Changed that prints Get Total Weight, and on the 1 key call Add with `DA_Potion` and 3. Press Play and press the key seven times: the weight rises by 3 per press up to 18, the seventh press adds only 2 to reach the limit of 20, and further presses add nothing. Print the Get Slots array to see the piles.
 
 # Files
 
