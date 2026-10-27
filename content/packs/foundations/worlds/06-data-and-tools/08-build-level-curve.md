@@ -25,7 +25,7 @@ The declarations are given; every body is yours:
 
 - `AddXP` adds XP and reads the XP each level needs from the curve. Afterwards `Level` and `XP` match the curve for all the XP gained so far, with the leftover kept toward the next level, and it returns how many levels were gained. At `MaxLevel` it stops: no more levels and no XP kept.
 - `GetXPToNext` reads the curve at the current level; it is 0 at the top level or with no curve.
-- With no curve, AddXP reports it with `ensureMsgf` (the message names the component and says it has no XP curve) and returns 0. How you write the condition is your choice. The test checks that the missing curve is survived; whether it is reported is a rubric line, because a plain ensure reports only once per editor session. A curve value of 0 or less is nonsense for a level, so that is reported with an ensure too, and AddXP stops there instead of hanging.
+- With no curve, AddXP reports it with `ensureMsgf` (the message names the component and says it has no XP curve) and returns 0. How you write the condition is your choice. The test checks that the missing curve is survived; whether it is reported is a rubric line, because a plain ensure reports only once per editor session. A curve value of 0 or less is nonsense for a level, so that is reported with an ensure too, and AddXP gains no level from it.
 - `ResetProgress` goes back to level 1 with no XP.
 
 Write it the obvious way first and run the tests. This one fails on purpose the first time for most people: read which assertion failed and why before you open the hints.
@@ -65,7 +65,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Level", meta = (ClampMin = "1"))
 	int32 MaxLevel = 5;
 
-	/** Adds XP, levels up as many times as it pays for, and returns how many levels were gained. */
+	/** Adds XP, levels up when the XP covers the next level, and returns how many levels were gained. */
 	UFUNCTION(BlueprintCallable, Category = "Level")
 	int32 AddXP(float Amount);
 
@@ -224,7 +224,7 @@ bool FDojo_F6_LevelCurve_MissingCurveIsReported::RunTest(const FString& Paramete
 - The XP each level needs is read from the curve at the current level, never computed in code.
 - AddXP stops at MaxLevel and keeps no XP there.
 - A missing curve is reported with ensureMsgf naming the component, and AddXP returns 0 instead of crashing.
-- A curve value of 0 or less is reported with an ensure, and AddXP stops instead of hanging.
+- A curve value of 0 or less is reported with an ensure, and AddXP gains no level from it.
 - ResetProgress returns to level 1 with no XP.
 
 # Alternative
@@ -236,19 +236,15 @@ The XP per level could be a formula, such as 100 times the level, written in cod
 # Parsons
 
 ```yaml
-- id: level-loop
-  prompt: Put the level-up loop in order.
+- id: xp-to-next
+  prompt: Put GetXPToNext in order.
   lines:
-    - "while (Level < MaxLevel)"
+    - "float UDojoF6LevelComponent::GetXPToNext() const"
     - "{"
-    - "	const float Needed = GetXPToNext();"
-    - "	if (!ensureMsgf(Needed > 0.f, TEXT(\"%s: the XP curve asks for %f XP at level %d\"), *GetName(), Needed, Level)) break;"
-    - "	if (XP < Needed) break;"
-    - "	XP -= Needed;"
-    - "	Level++;"
-    - "	Gained++;"
+    - "	if (!IsValid(XPCurve) || Level >= MaxLevel) return 0.f;"
+    - "	return XPCurve->GetFloatValue(Level);"
     - "}"
   distractors:
-    - line: "if (XP >= Needed)"
-      mistake: An if levels up at most once per call, so one big reward loses the levels it paid for.
+    - line: "	return XPCurve->GetFloatValue(Level + 1);"
+      mistake: The curve is read at the current level, so reading one level ahead asks for the wrong amount.
 ```
