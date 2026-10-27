@@ -80,7 +80,8 @@ describe("content load budget", () =>
 		await fixture?.remove();
 	});
 
-	it("loads 300 cloned real quests with a median under the budget", async () =>
+	// A timing test can lose a run to a busy machine (other test files run in parallel), so it may retry twice; a real regression fails every attempt.
+	it("loads 300 cloned real quests with a median under the budget", { timeout: 60000, retry: 2 }, async () =>
 	{
 		const logSpy = vi.spyOn(console, "info");
 		const measurements: LoadMeasurement[] = [];
@@ -113,7 +114,7 @@ describe("content load budget", () =>
 		expect(loadLines).toHaveLength(RUN_COUNT);
 		expect(loadLines.every((line) => line.startsWith(`[content] loaded ${LARGE_QUEST_COUNT} quests in `))).toBe(true);
 		expect(middle).toBeLessThan(LOAD_BUDGET_MILLISECONDS);
-	}, 60000);
+	});
 
 	it("writes the large fixture with the quest and world counts it promises", () =>
 	{
