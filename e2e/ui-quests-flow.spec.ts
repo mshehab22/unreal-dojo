@@ -802,12 +802,15 @@ test("a glossary hover card opens on a real move onto the term, never when conte
 	}).toPass({ timeout: 10_000 });
 
 	// Escape closes it and keeps it closed: a small move inside the term does not reopen it (one open per entry), so the hover is not counted again.
+	// "Closed" is the card's own state, not its absence from the page: on macOS CI the hidden window can keep a closed card in the page for a while.
+	const openCard = window.locator('[data-testid="term-card"][data-state="open"]');
+
 	await window.keyboard.press("Escape");
-	await expect(window.getByTestId("term-card")).toHaveCount(0);
+	await expect(openCard).toHaveCount(0);
 	await window.mouse.move(78, 63);
 	await window.mouse.move(80, 63);
 	await window.evaluate("new Promise((resolve) => setTimeout(resolve, 1_000))");
-	await expect(window.getByTestId("term-card")).toHaveCount(0);
+	await expect(openCard).toHaveCount(0);
 
 	// Leaving and coming back is a new entry and opens it again.
 	await expect(async () =>
@@ -815,7 +818,7 @@ test("a glossary hover card opens on a real move onto the term, never when conte
 		await window.mouse.move(5, 5);
 		await window.mouse.move(70, 61);
 		await window.mouse.move(75, 62);
-		await expect(window.getByTestId("term-card")).toBeVisible({ timeout: 2_000 });
+		await expect(openCard).toBeVisible({ timeout: 2_000 });
 	}).toPass({ timeout: 10_000 });
 });
 

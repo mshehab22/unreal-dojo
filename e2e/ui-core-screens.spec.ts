@@ -14,6 +14,9 @@ const SIZES = [
 	{ width: 1440, height: 900 },
 ] as const;
 
+/** How long the real bridge's Studio gets to show its panels or the error view. It loads content and progress in the main process, and a slow CI runner once took more than the 5 s default (Windows run 40452256211); a normal run needs well under a second. */
+const REAL_BRIDGE_STUDIO_TIMEOUT_MS = 20_000;
+
 /** Each screen's route hash, test id, screenshot name, and the element that proves its slowest data arrived, for a returning learner. */
 const SCREENS = [
 	{ hash: "#/", testId: "screen-title", file: "title", ready: "environment-chips" },
@@ -441,6 +444,6 @@ test("against the real bridge, the title works and the Studio shows real data or
 	// error view for whatever is still missing, never a blank or crashed screen.
 	await window.evaluate(`location.hash = "#/studio"`);
 	await expect(window.getByTestId("screen-studio")).toBeVisible();
-	await expect(window.getByTestId("app-error").or(window.getByTestId("studio-lead")).first()).toBeVisible();
+	await expect(window.getByTestId("app-error").or(window.getByTestId("studio-lead")).first()).toBeVisible({ timeout: REAL_BRIDGE_STUDIO_TIMEOUT_MS });
 	await saveScreenshot(camera, window, "studio-bridge-1100x700");
 });

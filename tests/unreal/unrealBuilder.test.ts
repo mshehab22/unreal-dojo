@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
-import { BUILD_TIMEOUT_MS, crashedWhileStarting, STARTUP_CRASH_ATTEMPTS, STARTUP_CRASH_GIVE_UP_MESSAGE, STARTUP_CRASH_RETRY_DELAY_MS, UnrealBuilder } from "../../src/main/services/unreal/UnrealBuilder";
+import { BUILD_TIMEOUT_MS, crashedWhileStarting, LIVE_CODING_GUARD_MESSAGE, NO_HOT_RELOAD_FROM_IDE_ARGUMENT, STARTUP_CRASH_ATTEMPTS, STARTUP_CRASH_GIVE_UP_MESSAGE, STARTUP_CRASH_RETRY_DELAY_MS, UnrealBuilder } from "../../src/main/services/unreal/UnrealBuilder";
 import { WindowsPlatformPaths } from "../../src/main/services/unreal/WindowsPlatformPaths";
 import { FakeProcessLauncher, type ScriptedProcess } from "./FakeProcessLauncher";
 import { FakeTimer } from "./FakeTimer";
@@ -27,7 +27,7 @@ describe("UnrealBuilder", () =>
 
 		expect(launcher.specs[0]).toEqual({
 			command: "/Engines/UE_5.8/Engine/Build/BatchFiles/Mac/Build.sh",
-			commandArguments: ["DojoEditor", "Mac", "Development", "-Project=/Sandbox/Dojo.uproject", "-WaitMutex", "-Progress"],
+			commandArguments: ["DojoEditor", "Mac", "Development", "-Project=/Sandbox/Dojo.uproject", "-WaitMutex", "-Progress", "-NoHotReloadFromIDE"],
 			verbatimArguments: false,
 		});
 	});
@@ -41,9 +41,41 @@ describe("UnrealBuilder", () =>
 
 		expect(launcher.specs[0]).toEqual({
 			command: "C:\\Program Files\\Epic Games\\UE_5.8\\Engine\\Binaries\\DotNET\\UnrealBuildTool\\UnrealBuildTool.exe",
-			commandArguments: ["DojoEditor", "Win64", "Development", "-Project=\"C:\\Dojo Sandbox\\Dojo.uproject\"", "-WaitMutex", "-Progress"],
+			commandArguments: ["DojoEditor", "Win64", "Development", "-Project=\"C:\\Dojo Sandbox\\Dojo.uproject\"", "-WaitMutex", "-Progress", "-NoHotReloadFromIDE"],
 			verbatimArguments: true,
 		});
+	});
+
+	it("keeps UBT's Live Coding guard when the app's own sandbox editor is open (A1220)", async () =>
+	{
+		const launcher = new FakeProcessLauncher([{ exitCode: 0 }]);
+		const builder = new UnrealBuilder(new WindowsPlatformPaths({}), launcher, new FakeTimer(), () => true);
+
+		await builder.build({ engineRoot: "C:\UE_5.8", projectFile: "C:\Dojo\Dojo.uproject", signal: new AbortController().signal, onLine: () => undefined });
+
+		expect(launcher.specs[0]?.commandArguments).not.toContain(NO_HOT_RELOAD_FROM_IDE_ARGUMENT);
+		expect(launcher.specs[0]?.commandArguments).toContain("-WaitMutex");
+	});
+
+	it("turns the guard off when no sandbox editor of the app is open, so another project's editor cannot block the build (A1220)", async () =>
+	{
+		const launcher = new FakeProcessLauncher([{ exitCode: 0 }]);
+		const builder = new UnrealBuilder(new WindowsPlatformPaths({}), launcher, new FakeTimer(), () => false);
+
+		await builder.build({ engineRoot: "C:\UE_5.8", projectFile: "C:\Dojo\Dojo.uproject", signal: new AbortController().signal, onLine: () => undefined });
+
+		expect(launcher.specs[0]?.commandArguments).toContain(NO_HOT_RELOAD_FROM_IDE_ARGUMENT);
+	});
+
+	it("names another editor with Live Coding as the cause when UBT's guard still fires, not a compile error (A1223)", async () =>
+	{
+		const guardLine = "Unable to build while Live Coding is active. Exit the editor and game, or press Ctrl+Alt+F11 if iterating on code in the editor or game";
+		const { outcome } = await buildOnMac({ exitCode: 6, lines: [guardLine, "Result: Failed (OtherCompilationError)"] });
+
+		expect(outcome.succeeded).toBe(false);
+		expect(outcome.pipelineError).toBe(LIVE_CODING_GUARD_MESSAGE);
+		expect(LIVE_CODING_GUARD_MESSAGE).toMatch(/editor with Live Coding is open/);
+		expect(outcome.filteredOutput).toContain("Unable to build while Live Coding is active");
 	});
 
 	it("succeeds on exit code 0, streams lines with percents, and keeps only filtered output", async () =>
