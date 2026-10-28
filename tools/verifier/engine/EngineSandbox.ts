@@ -11,7 +11,7 @@ import type { UnrealBuilder } from "../../../src/main/services/unreal/UnrealBuil
 import { pruneRunLogs } from "./pruneRunLogs";
 import { syncWorkspace } from "./syncWorkspace";
 import { WorkspaceLock, type HeldWorkspaceLock, type WorkspaceLockTuning } from "./WorkspaceLock";
-import { resolveWorkspaceRoot } from "./workspaceLocation";
+import { resolveWorkspaceRoot, WORKSPACE_ENVIRONMENT_VARIABLE } from "./workspaceLocation";
 
 /**
  * Gap kept between a build finishing and the next write. UBT rebuilds a file only when it is newer than its output,
@@ -28,7 +28,7 @@ const BUILD_OUTPUT_FOLDERS = new Set(["Binaries", "Intermediate", "Saved", "Deri
 /** Run folders kept under `Saved/VerifierLogs`, the current run included (A1283). */
 const KEPT_RUN_LOGS = 5;
 
-/** Windows builds start failing on long paths; the default workspace is about 65 characters. */
+/** On Windows a workspace path this long or longer makes builds fail on the 260 character limit; the default is about 50 characters. */
 const LONG_WORKSPACE_PATH = 100;
 
 /** Where a build's end time is kept in the workspace, so the gap above also holds between two runs (the next run may start within a second). */
@@ -164,7 +164,12 @@ export class EngineSandbox
 		// path is about 20 characters longer than the one the build needs to stay under.
 		const folder = process.platform === "win32" ? resolve(root, `${major}.${minor}`) : await realpath(join(root, `${major}.${minor}`));
 
-		if (process.platform === "win32" && folder.length > LONG_WORKSPACE_PATH) log(`engine: warning: the workspace path is ${folder.length} characters long; Windows builds can fail past about ${LONG_WORKSPACE_PATH}`);
+		log(`engine: verify workspace path ${folder} (${folder.length} characters)`);
+
+		if (process.platform === "win32" && folder.length >= LONG_WORKSPACE_PATH)
+		{
+			throw new Error(`the workspace path ${folder} is ${folder.length} characters long, and Windows builds fail from ${LONG_WORKSPACE_PATH}; use a shorter folder with --workspace or ${WORKSPACE_ENVIRONMENT_VARIABLE} (not under AppData: the Claude desktop app redirects it into a long package path)`);
+		}
 
 		const lock = await new WorkspaceLock({ folder: `${folder}.lock`, log, signal, ...options.lock }).acquire();
 

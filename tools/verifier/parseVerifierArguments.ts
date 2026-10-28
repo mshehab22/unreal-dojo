@@ -38,7 +38,7 @@ export const USAGE = [
 	"  --content <folder> content folder to check (default: content/ in the repo)",
 	"  --solutions <folder> reference solutions, must exist (default: tools/solutions/ in the repo)",
 	"  --engine <path>    build every reference solution and starter with this engine and run their tests",
-	"  --workspace <folder> where --engine keeps its build workspace, one sub-folder per engine version (default: $DOJO_VERIFY_WORKSPACE, else %LOCALAPPDATA%\\UnrealDojo\\verify-workspace or ~/Library/Caches/UnrealDojo/verify-workspace)",
+	"  --workspace <folder> where --engine keeps its build workspace, one sub-folder per engine version (default: $DOJO_VERIFY_WORKSPACE, else ~\\.unreal-dojo\\verify on Windows or ~/Library/Caches/UnrealDojo/verify-workspace on macOS; under 100 characters on Windows)",
 	"  --release          coverage warnings become errors",
 ].join("\n");
 

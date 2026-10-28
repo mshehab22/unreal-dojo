@@ -18,8 +18,11 @@ export interface WorkspaceLocationInputs
 
 /**
  * The folder that holds one verify workspace per engine version: the flag, else the environment variable, else a per-user
- * cache folder (`%LOCALAPPDATA%\UnrealDojo\verify-workspace` on Windows, `~/Library/Caches/UnrealDojo/verify-workspace` on macOS).
- * Kept short on Windows, where the build's paths go past the 260 character limit quickly.
+ * folder (`~\.unreal-dojo\verify` on Windows, `~/Library/Caches/UnrealDojo/verify-workspace` on macOS).
+ * Windows is not under AppData on purpose: the Claude desktop app is an MSIX package, and Windows redirects the writes of a
+ * packaged app to AppData\Local into the package's own storage (`...\AppData\Local\Packages\Claude_...\LocalCache\Local\...`), a
+ * path about 70 characters longer that is also hidden from the user and lost when the app is reset. The home folder is not
+ * redirected, and `C:\Users\<name>\.unreal-dojo\verify\5.8` stays well under the 100 characters the build wants.
  */
 export function resolveWorkspaceRoot(inputs: WorkspaceLocationInputs): string
 {
@@ -28,7 +31,7 @@ export function resolveWorkspaceRoot(inputs: WorkspaceLocationInputs): string
 
 	if (configured !== undefined && configured.trim() !== "") return path.resolve(configured);
 
-	if (inputs.platform === "win32") return path.join(inputs.environment["LOCALAPPDATA"] ?? path.join(inputs.homeFolder, "AppData", "Local"), "UnrealDojo", "verify-workspace");
+	if (inputs.platform === "win32") return path.join(inputs.homeFolder, ".unreal-dojo", "verify");
 
 	if (inputs.platform === "darwin") return path.join(inputs.homeFolder, "Library", "Caches", "UnrealDojo", "verify-workspace");
 

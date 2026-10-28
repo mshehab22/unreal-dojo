@@ -56,17 +56,18 @@ describe("resolveWorkspaceRoot", () =>
 {
 	const home = "/home/dojo";
 
-	it("keeps the Windows default short and outside Temp", () =>
+	it("keeps the Windows default short, outside Temp, and outside AppData where the desktop app's package redirects writes", () =>
 	{
-		const root = resolveWorkspaceRoot({ platform: "win32", homeFolder: "C:\\Users\\Dojo", environment: { LOCALAPPDATA: "C:\\Users\\Dojo\\AppData\\Local" } });
+		const root = resolveWorkspaceRoot({ platform: "win32", homeFolder: "C:\\Users\\Mohammad Shehab", environment: { LOCALAPPDATA: "C:\\Users\\Mohammad Shehab\\AppData\\Local" } });
 
-		expect(root).toBe("C:\\Users\\Dojo\\AppData\\Local\\UnrealDojo\\verify-workspace");
+		expect(root).toBe("C:\\Users\\Mohammad Shehab\\.unreal-dojo\\verify");
 		expect(root.toLowerCase()).not.toContain("temp");
+		expect(root.toLowerCase()).not.toContain("appdata");
+		expect(`${root}\\5.8`.length).toBeLessThan(100);
 	});
 
-	it("falls back to AppData\\Local without LOCALAPPDATA, and uses Library/Caches on macOS", () =>
+	it("uses Library/Caches on macOS", () =>
 	{
-		expect(resolveWorkspaceRoot({ platform: "win32", homeFolder: "C:\\Users\\Dojo", environment: {} })).toBe("C:\\Users\\Dojo\\AppData\\Local\\UnrealDojo\\verify-workspace");
 		expect(resolveWorkspaceRoot({ platform: "darwin", homeFolder: home, environment: {} })).toBe("/home/dojo/Library/Caches/UnrealDojo/verify-workspace");
 	});
 
@@ -600,6 +601,22 @@ describe("EngineVerifier with the real persistent workspace", () =>
 		expect(await readFile(join(second.folder, "Source", "Dojo", "Dojo.cpp"), "utf8")).toBe("version 2");
 		expect(rewritten - buildEnded).toBeGreaterThan(1_000);
 	}, 30_000);
+
+	it.runIf(process.platform === "win32")("logs the full workspace path, and refuses one of 100 characters or more on Windows", async () =>
+	{
+		const lines: string[] = [];
+		const target = fakeTooling().target;
+		const ok = await EngineSandbox.create(resolve("resources/sandbox-template"), target, { workspaceRoot, log: (line) => lines.push(line) });
+
+		await ok.release();
+
+		expect(lines.some((line) => line.startsWith(`engine: verify workspace path ${ok.folder} (${ok.folder.length} characters)`))).toBe(true);
+
+		const tooLong = join(scratch, "x".repeat(100));
+
+		await expect(EngineSandbox.create(resolve("resources/sandbox-template"), target, { workspaceRoot: tooLong })).rejects.toThrow("characters long");
+		expect(await readdir(scratch)).not.toContain(`${"x".repeat(100)}.lock`);
+	});
 
 	it("makes a second verifier wait for the first and then reuse the same workspace", async () =>
 	{
