@@ -69,8 +69,9 @@ function quest(id: string): BuildQuest
 class FakeSandbox implements VerifierSandbox
 {
 	readonly folder = "/fake/sandbox";
+	readonly logsFolder = "/fake/sandbox/Saved/VerifierLogs/run";
 	readonly written = new Map<string, SandboxFile[]>();
-	removed = false;
+	released = false;
 	starterPasses = new Set<string>();
 
 	/** Starter quest id to the quest whose files the build error points at while that starter is in place. */
@@ -138,10 +139,10 @@ class FakeSandbox implements VerifierSandbox
 		return this.written.get(questId)?.some((file) => file.text === "STARTER") ?? false;
 	}
 
-	/** Marks the sandbox removed. */
-	async remove(): Promise<void>
+	/** Marks the workspace released. */
+	async release(): Promise<void>
 	{
-		this.removed = true;
+		this.released = true;
 	}
 }
 
@@ -201,7 +202,7 @@ describe("EngineSandbox", () =>
 {
 	it("copies the template to a real (not linked) temp path and writes the engine association", async () =>
 	{
-		const sandbox = await EngineSandbox.create(resolve("resources/sandbox-template"), macTarget("5.8.3"));
+		const sandbox = await EngineSandbox.create(resolve("resources/sandbox-template"), macTarget("5.8.3"), { workspaceRoot: join(scratch, "workspaces") });
 		const project = JSON.parse(await readFile(join(sandbox.folder, "Dojo.uproject"), "utf8")) as { EngineAssociation: string; Plugins: unknown[] };
 
 		await sandbox.writeQuest({ id: "q1", title: "Q1", tests: "// tests" }, [{ name: "A.cpp", text: "int A = 1;" }]);
@@ -212,17 +213,17 @@ describe("EngineSandbox", () =>
 		expect(await readFile(join(sandbox.folder, "Source", "Dojo", "Quests", "q1", "A.cpp"), "utf8")).toBe("int A = 1;");
 		expect(await readFile(join(sandbox.folder, "Source", "Dojo", "Tests", "q1.Test.cpp"), "utf8")).toContain("// tests");
 
-		await sandbox.remove();
+		await sandbox.release();
 	});
 
 	it("drops the 5.8-only plugins for an older engine", async () =>
 	{
-		const sandbox = await EngineSandbox.create(resolve("resources/sandbox-template"), macTarget("5.6.1"));
+		const sandbox = await EngineSandbox.create(resolve("resources/sandbox-template"), macTarget("5.6.1"), { workspaceRoot: join(scratch, "workspaces") });
 		const project = JSON.parse(await readFile(join(sandbox.folder, "Dojo.uproject"), "utf8")) as { Plugins: unknown[] };
 
 		expect(project.Plugins).toEqual([]);
 
-		await sandbox.remove();
+		await sandbox.release();
 	});
 });
 
@@ -235,7 +236,7 @@ describe("EngineVerifier", () =>
 
 		expect(report.problems).toEqual([]);
 		expect(report.questsChecked).toBe(2);
-		expect(sandbox.removed).toBe(true);
+		expect(sandbox.released).toBe(true);
 		expect(sandbox.operations).toEqual([
 			"write a: a.cpp=SOLUTION",
 			"write b: b.cpp=SOLUTION",
@@ -258,7 +259,7 @@ describe("EngineVerifier", () =>
 		const report = await verifyWith(sandbox, [quest("a"), quest("b")], await writeSolutions({ a: "SOLUTION", b: "SOLUTION" }));
 
 		expect(report.problems.map((problem) => `${problem.file}: ${problem.message}`)).toEqual(["examples/b.md: the starter already passes its tests; the learner would have nothing to do"]);
-		expect(report.keptSandbox).toBe("/fake/sandbox");
+		expect(report.logsFolder).toBe("/fake/sandbox/Saved/VerifierLogs/run");
 	});
 
 	it("quotes the build errors that point into each quest when a solution does not build", async () =>
@@ -312,7 +313,7 @@ describe("EngineVerifier", () =>
 		expect(report.problems.map((problem) => `${problem.severity ?? "error"} ${problem.file}: ${problem.message}`)).toEqual([
 			"warning examples/a.md: starter check inconclusive: the starter broke other quests' code (no build error points into its own files):\n/x/Source/Dojo/Quests/b/a.cpp:3:1: error: expected ';'\nResult: Failed (OtherCompilationError)",
 		]);
-		expect(report.keptSandbox).toBe("/fake/sandbox");
+		expect(report.logsFolder).toBe("/fake/sandbox/Saved/VerifierLogs/run");
 	});
 
 	it("warns when a starter builds but its tests do not run", async () =>
@@ -376,8 +377,8 @@ describe("EngineVerifier", () =>
 		const report = await verifyWith(sandbox, [quest("a")], await writeSolutions({ a: "SOLUTION" }), undefined, controller.signal);
 
 		expect(report.cancelled).toBe(true);
-		expect(report.keptSandbox).toBe("/fake/sandbox");
-		expect(report.problems.map((problem) => `${problem.file}: ${problem.message}`)).toEqual(["(engine): cancelled during the first build; the sandbox copy is kept at /fake/sandbox"]);
+		expect(report.logsFolder).toBe("/fake/sandbox/Saved/VerifierLogs/run");
+		expect(report.problems.map((problem) => `${problem.file}: ${problem.message}`)).toEqual(["(engine): cancelled during the first build; this run's logs are in /fake/sandbox/Saved/VerifierLogs/run"]);
 		expect(sandbox.operations).toEqual(["write a: a.cpp=SOLUTION", "build"]);
 	});
 });
@@ -444,11 +445,11 @@ describe("EngineSandbox wiring", () =>
 			builder: { build: async (request: { signal: AbortSignal }) => { seen.push(request.signal); return { succeeded: true, filteredOutput: "", exitCode: 0, timedOut: false, cancelled: false, durationMs: 1 }; } },
 			testRunner: { run: async (request: { signal: AbortSignal }) => { seen.push(request.signal); return { tests: [], cancelled: false, exitCode: 0, durationMs: 1 }; } },
 		} as unknown as EngineTarget["tools"];
-		const sandbox = await EngineSandbox.create(resolve("resources/sandbox-template"), { ...target, tools: fakeTools }, controller.signal);
+		const sandbox = await EngineSandbox.create(resolve("resources/sandbox-template"), { ...target, tools: fakeTools }, { signal: controller.signal, workspaceRoot: join(scratch, "workspaces") });
 
 		await sandbox.build();
 		await sandbox.runTests(["Dojo.A"]);
-		await sandbox.remove();
+		await sandbox.release();
 
 		expect(seen).toEqual([controller.signal, controller.signal]);
 	});
@@ -461,11 +462,14 @@ describe("EngineSandbox wiring", () =>
 		for (const file of ["Binaries/old.dylib", "Intermediate/old.o", "Saved/old.log", "DerivedDataCache/old.ddc", "Source/Dojo/Dojo.cpp"]) await writeFile(join(template, file), "x");
 		await writeFile(join(template, "Dojo.uproject"), JSON.stringify({ FileVersion: 3, EngineAssociation: "", Plugins: [] }));
 
-		const sandbox = await EngineSandbox.create(template, macTarget("5.8.3"));
+		const sandbox = await EngineSandbox.create(template, macTarget("5.8.3"), { workspaceRoot: join(scratch, "workspaces") });
 		const copied = await readdir(sandbox.folder);
+		const savedEntries = await readdir(join(sandbox.folder, "Saved"));
 
-		await sandbox.remove();
+		await sandbox.release();
 
-		expect(copied.sort()).toEqual(["Dojo.uproject", "Source"]);
+		// Saved holds only this run's log folder; nothing of the template's own Saved or Binaries came along.
+		expect(copied.sort()).toEqual(["Dojo.uproject", "Saved", "Source"]);
+		expect(savedEntries).toEqual(["VerifierLogs"]);
 	});
 });

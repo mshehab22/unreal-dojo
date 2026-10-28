@@ -89,7 +89,7 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 
 	afterAll(async () =>
 	{
-		if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true });
+		if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
 	});
 
 	it("creates the sandbox through createSandbox, which saves the engine and sandbox folders", async () =>
