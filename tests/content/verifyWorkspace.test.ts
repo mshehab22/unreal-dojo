@@ -1,6 +1,6 @@
 // Checks the verifier's persistent workspace (W14): where it lives, the lock, the template sync, and that no run leaves anything in Temp.
-import { mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, utimes, writeFile } from "node:fs/promises";
-import { hostname, tmpdir } from "node:os";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
+import { hostname, tmpdir, uptime } from "node:os";
 import { join, resolve } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -171,6 +171,46 @@ describe("WorkspaceLock", () =>
 		await utimes(folder, longAgo, longAgo);
 
 		const held = await new WorkspaceLock({ folder, log: () => undefined, ...fast }).acquire();
+
+		await held.release();
+	});
+
+	it("never lets two runs hold the lock at once, however many wait", async () =>
+	{
+		const folder = join(scratch, "ws.lock");
+		let holders = 0;
+		let mostAtOnce = 0;
+
+		/** Takes the lock, holds it for a moment, and records how many runs held it together. */
+		async function run(): Promise<void>
+		{
+			const held = await new WorkspaceLock({ folder, log: () => undefined, ...fast }).acquire();
+
+			holders++;
+			mostAtOnce = Math.max(mostAtOnce, holders);
+			await new Promise((resolveWait) => setTimeout(resolveWait, 15));
+			holders--;
+			await held.release();
+		}
+
+		await Promise.all(Array.from({ length: 6 }, run));
+
+		expect(mostAtOnce).toBe(1);
+		expect(await readdir(scratch)).toEqual([]);
+	}, 30_000);
+
+	it("breaks a lock made before the machine last started, even when a program now has its process id", async () =>
+	{
+		const folder = join(scratch, "ws.lock");
+		const lines: string[] = [];
+		const beforeBoot = new Date(Date.now() - uptime() * 1000 - 5 * 60_000).toISOString();
+
+		await mkdir(folder);
+		await writeFile(join(folder, "owner.json"), JSON.stringify({ token: "old", processId: process.pid, hostName: hostname(), startedAt: beforeBoot, workingFolder: "/elsewhere" }));
+
+		const held = await new WorkspaceLock({ folder, log: (line) => lines.push(line), staleAfterMilliseconds: 1e12, ...fast }).acquire();
+
+		expect(lines.join("\n")).toContain("made before the last restart");
 
 		await held.release();
 	});
@@ -438,7 +478,7 @@ describe("EngineVerifier with the real persistent workspace", () =>
 		const failed = await verify(tooling, ["a", "b"]);
 
 		expect(failed.problems.length).toBeGreaterThan(0);
-		expect(failed.logsFolder?.startsWith(await realpath(workspaceRoot))).toBe(true);
+		expect(failed.logsFolder?.startsWith(resolve(workspaceRoot))).toBe(true);
 		expect(await readdir(tempRoot)).toEqual([]);
 
 		tooling.behaviour.failTests = false;
@@ -491,7 +531,7 @@ describe("EngineVerifier with the real persistent workspace", () =>
 	{
 		const tooling = fakeTooling();
 
-		// Failing tests mean one build per run and no starter checks, which keeps seven runs quick.
+		// Failing tests mean one build per run and no starter checks, which keeps seven runs quick (each still waits out the 1.1 s gap).
 		tooling.behaviour.failTests = true;
 
 		await writeSolutions(["a"]);
@@ -503,7 +543,7 @@ describe("EngineVerifier with the real persistent workspace", () =>
 		expect(logs).toHaveLength(5);
 		expect(await readdir(join(workspaceRoot, "5.8", "Saved", "VerifierLogs", logs[4] ?? ""))).toContain("build-1.log");
 		expect(await readdir(tempRoot)).toEqual([]);
-	});
+	}, 60_000);
 
 	it("reports a workspace it cannot prepare as a problem instead of throwing", async () =>
 	{
@@ -518,6 +558,33 @@ describe("EngineVerifier with the real persistent workspace", () =>
 		expect(report.problems.map((problem) => problem.message).join("\n")).toContain("could not prepare the verify workspace");
 		expect(await readdir(tempRoot)).toEqual([]);
 	});
+
+	it("keeps the timestamp gap after a build across runs: a file the next run writes is newer than the last build's end by more than a second", async () =>
+	{
+		const tooling = fakeTooling();
+		const template = join(scratch, "template");
+
+		await mkdir(join(template, "Source", "Dojo", "Quests"), { recursive: true });
+		await writeFile(join(template, "Dojo.uproject"), JSON.stringify({ FileVersion: 3, EngineAssociation: "", Plugins: [] }));
+		await writeFile(join(template, "Source", "Dojo", "Dojo.cpp"), "version 1");
+
+		const first = await EngineSandbox.create(template, tooling.target, { workspaceRoot });
+
+		await first.build();
+
+		const buildEnded = Date.now();
+
+		await first.release();
+		await writeFile(join(template, "Source", "Dojo", "Dojo.cpp"), "version 2");
+
+		const second = await EngineSandbox.create(template, tooling.target, { workspaceRoot });
+		const rewritten = (await stat(join(second.folder, "Source", "Dojo", "Dojo.cpp"))).mtimeMs;
+
+		await second.release();
+
+		expect(await readFile(join(second.folder, "Source", "Dojo", "Dojo.cpp"), "utf8")).toBe("version 2");
+		expect(rewritten - buildEnded).toBeGreaterThan(1_000);
+	}, 30_000);
 
 	it("makes a second verifier wait for the first and then reuse the same workspace", async () =>
 	{

@@ -1,7 +1,7 @@
 // The persistent sandbox project the verifier writes quest code into, then builds and tests through M1.3's runners (A211, A1280).
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import type { AutomationTestRunner } from "../../../src/main/services/unreal/AutomationTestRunner";
 import type { PlatformPaths } from "../../../src/main/services/unreal/PlatformPaths";
@@ -30,6 +30,17 @@ const KEPT_RUN_LOGS = 5;
 
 /** Windows builds start failing on long paths; the default workspace is about 65 characters. */
 const LONG_WORKSPACE_PATH = 100;
+
+/** Where a build's end time is kept in the workspace, so the gap above also holds between two runs (the next run may start within a second). */
+const LAST_BUILD_ENDED_FILE = join("Saved", "LastBuildEnded.txt");
+
+/** Waits until the clock is more than the timestamp gap past `moment` (milliseconds since the epoch). */
+async function waitPast(moment: number): Promise<void>
+{
+	const remaining = moment + TIMESTAMP_GAP_MILLISECONDS - Date.now();
+
+	if (remaining > 0) await new Promise((done) => setTimeout(done, remaining));
+}
 
 /** A sortable, file-name-safe stamp for the run's log folder. */
 function runStamp(): string
@@ -149,7 +160,9 @@ export class EngineSandbox
 		await mkdir(join(root, `${major}.${minor}`), { recursive: true });
 
 		// The real path matters on macOS: Unreal's build accelerator refuses to write outputs when two spellings of one folder disagree.
-		const folder = await realpath(join(root, `${major}.${minor}`));
+		// On Windows it is left as given: the Claude desktop app redirects AppData\Local into its package folder, and the resolved
+		// path is about 20 characters longer than the one the build needs to stay under.
+		const folder = process.platform === "win32" ? resolve(root, `${major}.${minor}`) : await realpath(join(root, `${major}.${minor}`));
 
 		if (process.platform === "win32" && folder.length > LONG_WORKSPACE_PATH) log(`engine: warning: the workspace path is ${folder.length} characters long; Windows builds can fail past about ${LONG_WORKSPACE_PATH}`);
 
@@ -157,6 +170,11 @@ export class EngineSandbox
 
 		try
 		{
+			// The previous run may have released the lock right after a build; files written now must still be newer than its outputs.
+			const lastBuildEnded = Number(await readFile(join(folder, LAST_BUILD_ENDED_FILE), "utf8").catch(() => "0")) || 0;
+
+			await waitPast(lastBuildEnded);
+
 			const project = JSON.parse(await readFile(join(templateFolder, "Dojo.uproject"), "utf8")) as { EngineAssociation?: string; Plugins?: { Name: string }[] };
 
 			project.EngineAssociation = `${major}.${minor}`;
@@ -178,7 +196,8 @@ export class EngineSandbox
 		}
 		catch (error)
 		{
-			await lock.release();
+			// A failed release must not hide the error that made the run stop.
+			await lock.release().catch(() => undefined);
 
 			throw error;
 		}
@@ -207,9 +226,14 @@ export class EngineSandbox
 			projectFile: this.projectFile(),
 			signal: this.signal,
 			onLine: (line) => allLines.push(line),
+		}).finally(async () =>
+		{
+			this.lastBuildEnded = Date.now();
+
+			// Best effort: a lost time only costs the next run its safety gap.
+			await mkdir(join(this.folder, "Saved"), { recursive: true }).then(() => writeFile(join(this.folder, LAST_BUILD_ENDED_FILE), String(this.lastBuildEnded), "utf8")).catch(() => undefined);
 		});
 
-		this.lastBuildEnded = Date.now();
 		await this.saveLog(`build-${++this.runNumber}.log`, allLines, `exit code: ${String(outcome.exitCode)}${outcome.timedOut ? " (timed out)" : ""}`);
 
 		const build: SandboxBuild = { succeeded: outcome.succeeded, lines: outcome.filteredOutput.split("\n").filter((line) => line.trim() !== "") };
@@ -259,9 +283,7 @@ export class EngineSandbox
 	/** Waits until the clock is past the last build by more than a second, so files written now are newer than every output. */
 	private async waitPastLastBuild(): Promise<void>
 	{
-		const remaining = this.lastBuildEnded + TIMESTAMP_GAP_MILLISECONDS - Date.now();
-
-		if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
+		await waitPast(this.lastBuildEnded);
 	}
 
 	/** Writes a run's full output to this run's logs folder for anyone inspecting a failure. */

@@ -69,14 +69,16 @@ export async function syncWorkspace(templateFolder: string, workspaceFolder: str
 		summary.written.push(path);
 	}
 
-	const wantedFiles = new Set(template.files);
-	const wantedFolders = new Set(template.folders);
+	// Windows and macOS file systems ignore case, so a template file renamed only by case is the file just written, not a stale one.
+	const fold = (path: string): string => (process.platform === "win32" || process.platform === "darwin" ? path.toLowerCase() : path);
+	const wantedFiles = new Set(template.files.map(fold));
+	const wantedFolders = new Set(template.folders.map(fold));
 	const present = await listTree(workspaceFolder, skipped);
 
 	// Folders first: a folder the template lacks goes with everything in it.
 	for (const path of present.folders)
 	{
-		if (wantedFolders.has(path) || summary.removed.some((removed) => path.startsWith(`${removed}/`))) continue;
+		if (wantedFolders.has(fold(path)) || summary.removed.some((removed) => path.startsWith(`${removed}/`))) continue;
 
 		await rm(join(workspaceFolder, path), REMOVE_OPTIONS);
 		summary.removed.push(path);
@@ -84,7 +86,7 @@ export async function syncWorkspace(templateFolder: string, workspaceFolder: str
 
 	for (const path of present.files)
 	{
-		if (wantedFiles.has(path) || summary.removed.some((removed) => path.startsWith(`${removed}/`))) continue;
+		if (wantedFiles.has(fold(path)) || summary.removed.some((removed) => path.startsWith(`${removed}/`))) continue;
 
 		await rm(join(workspaceFolder, path), REMOVE_OPTIONS);
 		summary.removed.push(path);

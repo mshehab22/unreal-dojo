@@ -325,7 +325,7 @@ export class EngineVerifier
 		{
 			const reason = error instanceof Error ? error.message : String(error);
 
-			return { problems: [...problems, errorAt("(engine)", signal.aborted ? `cancelled while waiting for the verify workspace: ${reason}` : `could not prepare the verify workspace: ${reason}`)], questsChecked: judged.length, timings, ...(signal.aborted ? { cancelled: true } : {}) };
+			return { problems: [...problems, errorAt("(engine)", signal.aborted ? reason : `could not prepare the verify workspace: ${reason}`)], questsChecked: judged.length, timings, ...(signal.aborted ? { cancelled: true } : {}) };
 		}
 
 		// The workspace is shared, so its lock is released on every way out: a pass, a failure, a cancel, and a thrown error.

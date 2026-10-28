@@ -200,7 +200,7 @@ async function verifyWith(sandbox: FakeSandbox, quests: (BuildQuest | BossQuest)
 
 describe("EngineSandbox", () =>
 {
-	it("copies the template to a real (not linked) temp path and writes the engine association", async () =>
+	it("syncs the template into a real (not linked) workspace path and writes the engine association", async () =>
 	{
 		const sandbox = await EngineSandbox.create(resolve("resources/sandbox-template"), macTarget("5.8.3"), { workspaceRoot: join(scratch, "workspaces") });
 		const project = JSON.parse(await readFile(join(sandbox.folder, "Dojo.uproject"), "utf8")) as { EngineAssociation: string; Plugins: unknown[] };

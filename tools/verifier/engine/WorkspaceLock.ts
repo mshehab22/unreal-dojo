@@ -1,8 +1,8 @@
-// A lock between verifier runs on one workspace: taken with an atomic `mkdir`, with an owner file so a dead run's lock can be broken (W14, A1282).
+// A lock between verifier runs on one workspace: a folder that appears already holding its owner file, so a dead run's lock can be told from a live one (W14, A1282).
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { hostname } from "node:os";
-import { dirname, join } from "node:path";
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { hostname, uptime } from "node:os";
+import { basename, dirname, join } from "node:path";
 
 /** Who holds a lock, written inside the lock folder. */
 interface LockOwner
@@ -26,7 +26,7 @@ export interface WorkspaceLockTuning
 	/** A lock held longer than this is broken even when its process still exists (a recycled process id): longer than any run. */
 	staleAfterMilliseconds: number;
 
-	/** How long a lock folder may exist without an owner file before it counts as abandoned (the holder is between `mkdir` and writing it). */
+	/** How long a lock folder may exist without an owner file before it counts as abandoned (only a lock made by something else can lack one). */
 	ownerGraceMilliseconds: number;
 
 	/** Whether a process exists on this machine. */
@@ -55,6 +55,18 @@ const DEFAULT_STALE_AFTER_MILLISECONDS = 12 * 60 * 60 * 1000;
 
 /** The retry settings for removing a folder an editor or a virus scanner may still hold on Windows. */
 const REMOVE_OPTIONS = { recursive: true, force: true, maxRetries: 5, retryDelay: 200 } as const;
+
+/** Errors that mean the lock folder exists, so another run holds it. */
+const HELD_ERROR_CODES = new Set(["EEXIST", "ENOTEMPTY"]);
+
+/** Errors Windows gives for a folder that is being deleted or is held open; waiting a moment is right, but not forever. */
+const TRANSIENT_ERROR_CODES = new Set(["EPERM", "EACCES", "EBUSY"]);
+
+/** Polls in a row that may fail with a transient error before it is reported as a real problem. */
+const MAXIMUM_TRANSIENT_POLLS = 20;
+
+/** A half-made or half-removed lock folder older than this is garbage from a killed run. */
+const LEFTOVER_MILLISECONDS = 10 * 60 * 1000;
 
 /** Whether a process with this id exists; a process we may not signal still exists. */
 function processExists(processId: number): boolean
@@ -93,10 +105,13 @@ async function pause(milliseconds: number, signal: AbortSignal | undefined): Pro
 /**
  * Keeps two verifier runs, possibly from different worktrees, out of one workspace at the same time. This is separate from
  * the agents' engine lock convention, which keeps runs from sharing the machine's engine.
- * A waiting run logs who holds the lock. It breaks the lock when the holder's process is gone (same machine), when the lock has
- * no owner file after a short grace, or when it is older than `staleAfterMilliseconds`; otherwise it waits for as long as it takes,
- * because a build can legitimately run for an hour. Two runs breaking the same dead lock at once is possible in theory; the
- * rename that breaks it fails for the loser, which then simply tries again.
+ * A lock is made as `<lock>.pending-<token>` with its owner file inside and then renamed to `<lock>`, which fails while the lock
+ * exists (it is never empty), so a lock folder is never visible without an owner.
+ * A waiting run logs who holds the lock. It breaks the lock when the holder's process is gone (same machine), when the machine
+ * restarted since the lock was made, when the lock has no owner file after a short grace, or when it is older than
+ * `staleAfterMilliseconds`; otherwise it waits for as long as it takes, because a build can legitimately run for an hour.
+ * Breaking renames the lock aside and checks the owner it took; if that is not the one judged dead (someone broke and retook the lock
+ * in between), it puts the folder back and carries on waiting.
  */
 export class WorkspaceLock
 {
@@ -122,32 +137,58 @@ export class WorkspaceLock
 		const { folder, log, signal } = this.options;
 		let waitedSince: number | undefined;
 		let lastReminder = 0;
+		let transientPolls = 0;
 
 		await mkdir(dirname(folder), { recursive: true });
+		await this.removeLeftovers();
 
 		for (;;)
 		{
 			if (signal?.aborted === true) throw new Error("cancelled while waiting for the verify workspace lock");
 
 			const owner: LockOwner = { token: randomUUID(), processId: process.pid, hostName: hostname(), startedAt: new Date().toISOString(), workingFolder: process.cwd() };
+			const pending = `${folder}.pending-${owner.token}`;
+
+			await mkdir(pending);
+			await writeFile(join(pending, "owner.json"), `${JSON.stringify(owner, null, "\t")}\n`, "utf8");
 
 			try
 			{
-				await mkdir(folder);
-				await writeFile(join(folder, "owner.json"), `${JSON.stringify(owner, null, "\t")}\n`, "utf8");
+				await rename(pending, folder);
 
 				return { release: () => this.release(owner.token) };
 			}
 			catch (error)
 			{
-				if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+				await rm(pending, REMOVE_OPTIONS);
+
+				const code = (error as NodeJS.ErrnoException).code ?? "";
+
+				// Windows says EPERM, not EEXIST, when the target folder exists; that is an ordinary wait. With no lock folder to explain it, it may be a real problem.
+				if (TRANSIENT_ERROR_CODES.has(code))
+				{
+					const held = await stat(folder).then(() => true, () => false);
+
+					if (!held && ++transientPolls > MAXIMUM_TRANSIENT_POLLS) throw error;
+				}
+				else if (!HELD_ERROR_CODES.has(code))
+				{
+					throw error;
+				}
 			}
 
 			const stale = await this.staleReason();
 
+			if (stale === "vanished")
+			{
+				await pause(Math.min(this.tuning.pollMilliseconds, 200), signal);
+
+				continue;
+			}
+
 			if (stale !== undefined)
 			{
-				log(`engine: breaking the verify workspace lock (${stale.reason})`);
+				log(`engine: breaking the verify workspace lock ${folder} (${stale.reason})`);
 				await this.breakLock(stale.owner);
 
 				continue;
@@ -158,19 +199,19 @@ export class WorkspaceLock
 			if (Date.now() - lastReminder >= this.tuning.reminderMilliseconds)
 			{
 				lastReminder = Date.now();
-				log(`engine: waiting for the verify workspace, in use by ${await this.describeHolder()} (waited ${Math.round((Date.now() - waitedSince) / 1000)} s)`);
+				log(`engine: waiting for the verify workspace lock ${folder}, held by ${await this.describeHolder()} (waited ${Math.round((Date.now() - waitedSince) / 1000)} s)`);
 			}
 
 			await pause(this.tuning.pollMilliseconds, signal);
 		}
 	}
 
-	/** The owner recorded in the lock folder, or undefined when the file is missing or unreadable. */
-	private async readOwner(): Promise<LockOwner | undefined>
+	/** The owner recorded in a lock folder (this lock's by default), or undefined when the file is missing or unreadable. */
+	private async readOwner(folder: string = this.options.folder): Promise<LockOwner | undefined>
 	{
 		try
 		{
-			return JSON.parse(await readFile(join(this.options.folder, "owner.json"), "utf8")) as LockOwner;
+			return JSON.parse(await readFile(join(folder, "owner.json"), "utf8")) as LockOwner;
 		}
 		catch
 		{
@@ -178,41 +219,69 @@ export class WorkspaceLock
 		}
 	}
 
-	/** Why the current lock may be broken, with the owner it was judged on; undefined when its holder is still working. */
-	private async staleReason(): Promise<{ reason: string; owner: LockOwner | undefined } | undefined>
+	/** Why the current lock may be broken, with the owner it was judged on; "vanished" when it is gone already; undefined when its holder is still working. */
+	private async staleReason(): Promise<{ reason: string; owner: LockOwner | undefined } | "vanished" | undefined>
 	{
 		const owner = await this.readOwner();
 
 		if (owner === undefined)
 		{
-			const info = await stat(this.options.folder).catch(() => undefined);
+			const lockStatus = await stat(this.options.folder).catch(() => undefined);
 
-			// A lock folder that vanished between `mkdir` and now is free; the next attempt takes it.
-			if (info === undefined) return { reason: "it was released a moment ago", owner };
+			if (lockStatus === undefined) return "vanished";
 
-			return Date.now() - info.mtimeMs > this.tuning.ownerGraceMilliseconds ? { reason: "its owner file is missing", owner } : undefined;
+			return Date.now() - lockStatus.mtimeMs > this.tuning.ownerGraceMilliseconds ? { reason: "its owner file is missing", owner } : undefined;
 		}
 
-		const age = Date.now() - Date.parse(owner.startedAt);
+		const startedAt = Date.parse(owner.startedAt);
+		const age = Date.now() - startedAt;
 
 		if (age > this.tuning.staleAfterMilliseconds) return { reason: `held for ${Math.round(age / 3_600_000)} hours by process ${owner.processId}, longer than any run`, owner };
+
+		// Process ids are reused after a restart, so a lock made before the machine started cannot belong to a live run.
+		if (owner.hostName === hostname() && startedAt < Date.now() - uptime() * 1000 - 60_000) return { reason: `made before the last restart of this machine by process ${owner.processId}`, owner };
 
 		if (owner.hostName === hostname() && !this.tuning.isProcessAlive(owner.processId)) return { reason: `process ${owner.processId} that held it is no longer running`, owner };
 
 		return undefined;
 	}
 
-	/** Removes a lock judged stale, unless somebody else took it over since it was judged. */
+	/** Removes a lock judged stale, unless somebody else took it over since it was judged (then it is put back). */
 	private async breakLock(judged: LockOwner | undefined): Promise<void>
 	{
-		const current = await this.readOwner();
-
-		if (current?.token !== judged?.token) return;
-
 		const aside = `${this.options.folder}.broken-${process.pid}-${Date.now()}`;
 
-		// Rename is atomic, so only one run breaks a given lock; the loser's rename fails and it loops.
-		if (await rename(this.options.folder, aside).then(() => true, () => false)) await rm(aside, REMOVE_OPTIONS);
+		// Rename is atomic, so only one run takes a given lock folder away; the loser's rename fails and it loops.
+		if (!(await rename(this.options.folder, aside).then(() => true, () => false))) return;
+
+		const taken = await this.readOwner(aside);
+
+		if (taken?.token === judged?.token)
+		{
+			await rm(aside, REMOVE_OPTIONS);
+
+			return;
+		}
+
+		// A different, live lock: restore it, and if that fails (a third run already made one) its holder is ending anyway.
+		this.options.log(`engine: the verify workspace lock ${this.options.folder} changed hands while it was being broken; leaving it alone`);
+
+		if (!(await rename(aside, this.options.folder).then(() => true, () => false))) await rm(aside, REMOVE_OPTIONS);
+	}
+
+	/** Removes pending and broken-aside folders that a killed run left beside the lock. */
+	private async removeLeftovers(): Promise<void>
+	{
+		const prefix = `${basename(this.options.folder)}.`;
+
+		for (const entry of await readdir(dirname(this.options.folder)).catch(() => []))
+		{
+			if (!entry.startsWith(prefix) || !/^(?:pending|broken)-/.test(entry.slice(prefix.length))) continue;
+
+			const status = await stat(join(dirname(this.options.folder), entry)).catch(() => undefined);
+
+			if (status !== undefined && Date.now() - status.mtimeMs > LEFTOVER_MILLISECONDS) await rm(join(dirname(this.options.folder), entry), REMOVE_OPTIONS);
+		}
 	}
 
 	/** A few words on who holds the lock now, for the waiting message. */
