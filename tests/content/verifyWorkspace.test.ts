@@ -231,6 +231,25 @@ describe("WorkspaceLock", () =>
 		await held.release();
 	});
 
+	it("removes pending, broken and released folders a killed run left beside the lock, once they are old", async () =>
+	{
+		const folder = join(scratch, "ws.lock");
+		const longAgo = new Date(Date.now() - 3_600_000);
+
+		for (const name of ["ws.lock.pending-a", "ws.lock.broken-1-2", "ws.lock.released-c"]) await mkdir(join(scratch, name));
+
+		await mkdir(join(scratch, "ws.lock.pending-recent"));
+		await mkdir(join(scratch, "unrelated"));
+
+		for (const name of ["ws.lock.pending-a", "ws.lock.broken-1-2", "ws.lock.released-c"]) await utimes(join(scratch, name), longAgo, longAgo);
+
+		const held = await new WorkspaceLock({ folder, log: () => undefined, ...fast }).acquire();
+
+		expect(await entriesOf(scratch)).toEqual(["unrelated", "ws.lock", "ws.lock.pending-recent"]);
+
+		await held.release();
+	});
+
 	it("does not remove a lock somebody else took after this run's was broken", async () =>
 	{
 		const folder = join(scratch, "ws.lock");
@@ -429,7 +448,7 @@ describe("EngineVerifier with the real persistent workspace", () =>
 	beforeEach(async () =>
 	{
 		tempRoot = join(scratch, "temp");
-		workspaceRoot = join(scratch, "cache", "verify-workspace");
+		workspaceRoot = join(scratch, "w");
 		solutionsFolder = join(scratch, "solutions");
 
 		await mkdir(tempRoot, { recursive: true });
@@ -566,8 +585,7 @@ describe("EngineVerifier with the real persistent workspace", () =>
 		const tooling = fakeTooling();
 
 		await writeSolutions(["a"]);
-		await mkdir(join(scratch, "cache"), { recursive: true });
-		await writeFile(join(scratch, "cache", "verify-workspace"), "a file where the folder should be");
+		await writeFile(workspaceRoot, "a file where the folder should be");
 
 		const report = await verify(tooling, ["a"]);
 
@@ -615,7 +633,7 @@ describe("EngineVerifier with the real persistent workspace", () =>
 		const tooLong = join(scratch, "x".repeat(100));
 
 		await expect(EngineSandbox.create(resolve("resources/sandbox-template"), target, { workspaceRoot: tooLong })).rejects.toThrow("characters long");
-		expect(await readdir(scratch)).not.toContain(`${"x".repeat(100)}.lock`);
+		await expect(stat(tooLong)).rejects.toThrow();
 	});
 
 	it("makes a second verifier wait for the first and then reuse the same workspace", async () =>

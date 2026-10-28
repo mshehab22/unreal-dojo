@@ -21,7 +21,7 @@ export interface WorkspaceLocationInputs
  * folder (`~\.unreal-dojo\verify` on Windows, `~/Library/Caches/UnrealDojo/verify-workspace` on macOS).
  * Windows is not under AppData on purpose: the Claude desktop app is an MSIX package, and Windows redirects the writes of a
  * packaged app to AppData\Local into the package's own storage (`...\AppData\Local\Packages\Claude_...\LocalCache\Local\...`), a
- * path about 70 characters longer that is also hidden from the user and lost when the app is reset. The home folder is not
+ * path about 47 characters longer that is also hidden from the user and lost when the app is reset. The home folder is not
  * redirected, and `C:\Users\<name>\.unreal-dojo\verify\5.8` stays well under the 100 characters the build wants.
  */
 export function resolveWorkspaceRoot(inputs: WorkspaceLocationInputs): string

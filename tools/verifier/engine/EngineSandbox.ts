@@ -34,10 +34,10 @@ const LONG_WORKSPACE_PATH = 100;
 /** Where a build's end time is kept in the workspace, so the gap above also holds between two runs (the next run may start within a second). */
 const LAST_BUILD_ENDED_FILE = join("Saved", "LastBuildEnded.txt");
 
-/** Waits until the clock is more than the timestamp gap past `moment` (milliseconds since the epoch). */
+/** Waits until the clock is more than the timestamp gap past `moment` (milliseconds since the epoch); never longer than the gap, whatever `moment` says. */
 async function waitPast(moment: number): Promise<void>
 {
-	const remaining = moment + TIMESTAMP_GAP_MILLISECONDS - Date.now();
+	const remaining = Math.min(TIMESTAMP_GAP_MILLISECONDS, moment + TIMESTAMP_GAP_MILLISECONDS - Date.now());
 
 	if (remaining > 0) await new Promise((done) => setTimeout(done, remaining));
 }
@@ -157,19 +157,21 @@ export class EngineSandbox
 		const [major = 0, minor = 0] = target.version.split(".").map(Number);
 		const root = options.workspaceRoot ?? resolveWorkspaceRoot({ platform: process.platform, homeFolder: homedir(), environment: process.env });
 
-		await mkdir(join(root, `${major}.${minor}`), { recursive: true });
+		const wanted = resolve(root, `${major}.${minor}`);
+
+		log(`engine: verify workspace path ${wanted} (${wanted.length} characters)`);
+
+		// Checked before anything is created, so a refused path leaves no folders behind.
+		if (process.platform === "win32" && wanted.length >= LONG_WORKSPACE_PATH)
+		{
+			throw new Error(`the workspace path ${wanted} is ${wanted.length} characters long, and Windows builds fail from ${LONG_WORKSPACE_PATH}; use a shorter folder with --workspace or ${WORKSPACE_ENVIRONMENT_VARIABLE} (not under AppData: the Claude desktop app redirects it into a package path of about 118 characters)`);
+		}
+
+		await mkdir(wanted, { recursive: true });
 
 		// The real path matters on macOS: Unreal's build accelerator refuses to write outputs when two spellings of one folder disagree.
-		// On Windows it is left as given: the Claude desktop app redirects AppData\Local into its package folder, and the resolved
-		// path is about 20 characters longer than the one the build needs to stay under.
-		const folder = process.platform === "win32" ? resolve(root, `${major}.${minor}`) : await realpath(join(root, `${major}.${minor}`));
-
-		log(`engine: verify workspace path ${folder} (${folder.length} characters)`);
-
-		if (process.platform === "win32" && folder.length >= LONG_WORKSPACE_PATH)
-		{
-			throw new Error(`the workspace path ${folder} is ${folder.length} characters long, and Windows builds fail from ${LONG_WORKSPACE_PATH}; use a shorter folder with --workspace or ${WORKSPACE_ENVIRONMENT_VARIABLE} (not under AppData: the Claude desktop app redirects it into a long package path)`);
-		}
+		// On Windows it is left as given: under the Claude desktop app the resolved path of an AppData folder is the redirected package path, over the limit.
+		const folder = process.platform === "win32" ? wanted : await realpath(wanted);
 
 		const lock = await new WorkspaceLock({ folder: `${folder}.lock`, log, signal, ...options.lock }).acquire();
 

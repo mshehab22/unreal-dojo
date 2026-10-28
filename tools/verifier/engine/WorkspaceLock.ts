@@ -65,6 +65,13 @@ const TRANSIENT_ERROR_CODES = new Set(["EPERM", "EACCES", "EBUSY"]);
 /** Polls in a row that may fail with a transient error before it is reported as a real problem. */
 const MAXIMUM_TRANSIENT_POLLS = 20;
 
+/** Tries, and the pause between them, to move the lock folder aside when releasing it. */
+const RELEASE_ATTEMPTS = 40;
+const RELEASE_RETRY_MILLISECONDS = 50;
+
+/** Breaks of a stale lock in a row that may fail (something holds it open) before the run gives up and names the folder. */
+const MAXIMUM_FAILED_BREAKS = 20;
+
 /** A half-made or half-removed lock folder older than this is garbage from a killed run. */
 const LEFTOVER_MILLISECONDS = 10 * 60 * 1000;
 
@@ -138,6 +145,7 @@ export class WorkspaceLock
 		let waitedSince: number | undefined;
 		let lastReminder = 0;
 		let transientPolls = 0;
+		let failedBreaks = 0;
 
 		await mkdir(dirname(folder), { recursive: true });
 		await this.removeLeftovers();
@@ -169,9 +177,15 @@ export class WorkspaceLock
 				{
 					const held = await stat(folder).then(() => true, () => false);
 
-					if (!held && ++transientPolls > MAXIMUM_TRANSIENT_POLLS) throw error;
+					transientPolls = held ? 0 : transientPolls + 1;
+
+					if (transientPolls > MAXIMUM_TRANSIENT_POLLS) throw error;
 				}
-				else if (!HELD_ERROR_CODES.has(code))
+				else if (HELD_ERROR_CODES.has(code))
+				{
+					transientPolls = 0;
+				}
+				else
 				{
 					throw error;
 				}
@@ -189,7 +203,18 @@ export class WorkspaceLock
 			if (stale !== undefined)
 			{
 				log(`engine: breaking the verify workspace lock ${folder} (${stale.reason})`);
-				await this.breakLock(stale.owner);
+
+				if (await this.breakLock(stale.owner))
+				{
+					failedBreaks = 0;
+
+					continue;
+				}
+
+				// Another run may have broken it first, or something holds a file in it open; look again after a pause instead of spinning.
+				if (++failedBreaks > MAXIMUM_FAILED_BREAKS) throw new Error(`the verify workspace lock ${folder} is stale (${stale.reason}) but cannot be removed; close whatever has it open, or delete the folder by hand`);
+
+				await pause(this.tuning.pollMilliseconds, signal);
 
 				continue;
 			}
@@ -246,13 +271,16 @@ export class WorkspaceLock
 		return undefined;
 	}
 
-	/** Removes a lock judged stale, unless somebody else took it over since it was judged (then it is put back). */
-	private async breakLock(judged: LockOwner | undefined): Promise<void>
+	/**
+	 * Removes a lock judged stale, unless somebody else took it over since it was judged (then it is put back). Returns whether the
+	 * stale lock was taken away.
+	 */
+	private async breakLock(judged: LockOwner | undefined): Promise<boolean>
 	{
 		const aside = `${this.options.folder}.broken-${process.pid}-${Date.now()}`;
 
-		// Rename is atomic, so only one run takes a given lock folder away; the loser's rename fails and it loops.
-		if (!(await rename(this.options.folder, aside).then(() => true, () => false))) return;
+		// Rename is atomic, so only one run takes a given lock folder away; the loser's rename fails.
+		if (!(await rename(this.options.folder, aside).then(() => true, () => false))) return false;
 
 		const taken = await this.readOwner(aside);
 
@@ -260,23 +288,26 @@ export class WorkspaceLock
 		{
 			await rm(aside, REMOVE_OPTIONS);
 
-			return;
+			return true;
 		}
 
-		// A different, live lock: restore it, and if that fails (a third run already made one) its holder is ending anyway.
+		// A different, live lock was taken in the meantime: restore it. If that fails, a third run has already made a lock at the path
+		// (three runs racing within milliseconds); the lock set aside is then dropped, which is the known gap in A1282.
 		this.options.log(`engine: the verify workspace lock ${this.options.folder} changed hands while it was being broken; leaving it alone`);
 
 		if (!(await rename(aside, this.options.folder).then(() => true, () => false))) await rm(aside, REMOVE_OPTIONS);
+
+		return false;
 	}
 
-	/** Removes pending and broken-aside folders that a killed run left beside the lock. */
+	/** Removes pending, broken-aside and released-aside folders that a killed run left beside the lock. */
 	private async removeLeftovers(): Promise<void>
 	{
 		const prefix = `${basename(this.options.folder)}.`;
 
 		for (const entry of await readdir(dirname(this.options.folder)).catch(() => []))
 		{
-			if (!entry.startsWith(prefix) || !/^(?:pending|broken)-/.test(entry.slice(prefix.length))) continue;
+			if (!entry.startsWith(prefix) || !/^(?:pending|broken|released)-/.test(entry.slice(prefix.length))) continue;
 
 			const status = await stat(join(dirname(this.options.folder), entry)).catch(() => undefined);
 
@@ -292,9 +323,32 @@ export class WorkspaceLock
 		return owner === undefined ? "another run" : `process ${owner.processId} (since ${owner.startedAt}, working in ${owner.workingFolder})`;
 	}
 
-	/** Removes the lock folder, but only when this run still owns it. */
+	/**
+	 * Removes the lock folder, but only when this run still owns it. The folder is renamed away first, so a waiting run never sees a
+	 * half-emptied lock folder it could rename a new lock over.
+	 */
 	private async release(token: string): Promise<void>
 	{
-		if ((await this.readOwner())?.token === token) await rm(this.options.folder, REMOVE_OPTIONS);
+		if ((await this.readOwner())?.token !== token) return;
+
+		const aside = `${this.options.folder}.released-${token}`;
+
+		// On Windows a waiting run reading `owner.json` can make the rename fail for a moment, so it is retried while this run still owns the lock.
+		for (let attempt = 0; attempt < RELEASE_ATTEMPTS; attempt++)
+		{
+			if (await rename(this.options.folder, aside).then(() => true, () => false))
+			{
+				await rm(aside, REMOVE_OPTIONS);
+
+				return;
+			}
+
+			// A lock already taken away from under this run (a break) leaves nothing to remove.
+			if ((await this.readOwner())?.token !== token) return;
+
+			await pause(RELEASE_RETRY_MILLISECONDS, undefined);
+		}
+
+		await rm(this.options.folder, REMOVE_OPTIONS);
 	}
 }
