@@ -21,6 +21,17 @@ import { NodeSandboxFileSystem } from "../../src/main/services/unreal/NodeSandbo
 
 let scratch: string;
 
+/** Verifier work a test started; a test that fails or times out leaves it running, and it must end before the scratch folder goes. */
+const inFlight: Promise<unknown>[] = [];
+
+/** Remembers `work` so `afterEach` waits for it, and returns it unchanged. */
+function track<T>(work: Promise<T>): Promise<T>
+{
+	inFlight.push(work);
+
+	return work;
+}
+
 beforeEach(async () =>
 {
 	scratch = await mkdtemp(join(tmpdir(), "dojo-workspace-test-"));
@@ -28,7 +39,11 @@ beforeEach(async () =>
 
 afterEach(async () =>
 {
-	await rm(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+	await Promise.allSettled(inFlight.splice(0));
+	await rm(scratch, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+
+	// A suite that leaves a dojo-* folder in Temp is the bug W14 fixes, so this fails the test instead of leaking quietly.
+	await expect(stat(scratch)).rejects.toThrow();
 });
 
 /** The entries of a folder, sorted. */
@@ -456,7 +471,7 @@ describe("EngineVerifier with the real persistent workspace", () =>
 		});
 		const records: QuestRecord[] = ids.map((id) => ({ quest: quest(id), file: `examples/${id}.md` }));
 
-		return verifier.verify(records);
+		return track(verifier.verify(records));
 	}
 
 	it("leaves Temp exactly as it was after a pass, a failure, a crash mid-build and a cancel, and reuses one workspace", async () =>
@@ -591,12 +606,12 @@ describe("EngineVerifier with the real persistent workspace", () =>
 		const target = fakeTooling().target;
 		const first = await EngineSandbox.create(resolve("resources/sandbox-template"), target, { workspaceRoot, lock: { pollMilliseconds: 10 } });
 		let secondFolder = "";
-		const second = EngineSandbox.create(resolve("resources/sandbox-template"), target, { workspaceRoot, lock: { pollMilliseconds: 10 } }).then((sandbox) =>
+		const second = track(EngineSandbox.create(resolve("resources/sandbox-template"), target, { workspaceRoot, lock: { pollMilliseconds: 10 } }).then((sandbox) =>
 		{
 			secondFolder = sandbox.folder;
 
 			return sandbox;
-		});
+		}));
 
 		await new Promise((resolveWait) => setTimeout(resolveWait, 80));
 
