@@ -193,6 +193,9 @@ export class WorkspaceLock
 
 			const stale = await this.staleReason();
 
+			// Failed breaks only count while the same stale lock is in the way.
+			if (stale === undefined || stale === "vanished") failedBreaks = 0;
+
 			if (stale === "vanished")
 			{
 				await pause(Math.min(this.tuning.pollMilliseconds, 200), signal);
@@ -286,7 +289,8 @@ export class WorkspaceLock
 
 		if (taken?.token === judged?.token)
 		{
-			await rm(aside, REMOVE_OPTIONS);
+			// The lock path is free already; a leftover the removal cannot delete now is cleaned up later by `removeLeftovers`.
+			await rm(aside, REMOVE_OPTIONS).catch(() => undefined);
 
 			return true;
 		}

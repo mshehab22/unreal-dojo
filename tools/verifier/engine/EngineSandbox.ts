@@ -164,7 +164,7 @@ export class EngineSandbox
 		// Checked before anything is created, so a refused path leaves no folders behind.
 		if (process.platform === "win32" && wanted.length >= LONG_WORKSPACE_PATH)
 		{
-			throw new Error(`the workspace path ${wanted} is ${wanted.length} characters long, and Windows builds fail from ${LONG_WORKSPACE_PATH}; use a shorter folder with --workspace or ${WORKSPACE_ENVIRONMENT_VARIABLE} (not under AppData: the Claude desktop app redirects it into a package path of about 118 characters)`);
+			throw new Error(`the workspace path ${wanted} is ${wanted.length} characters long, and Windows builds fail from ${LONG_WORKSPACE_PATH}; use a shorter folder with --workspace or ${WORKSPACE_ENVIRONMENT_VARIABLE} (not under AppData: the Claude desktop app redirects it into a package path about 47 characters longer)`);
 		}
 
 		await mkdir(wanted, { recursive: true });
