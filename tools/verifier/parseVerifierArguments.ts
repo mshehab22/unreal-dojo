@@ -15,6 +15,9 @@ export interface VerifierOptions
 	/** Engine root (or its `Engine` folder): compile and test every reference solution and starter. */
 	enginePath?: string;
 
+	/** Folder that holds the persistent `--engine` workspaces, one per engine version (W14). Without it: `DOJO_VERIFY_WORKSPACE`, else a per-user cache folder. */
+	workspaceFolder?: string;
+
 	/** Folder of reference solutions, one sub-folder per quest id. */
 	solutionsFolder: string;
 
@@ -29,12 +32,13 @@ export type ParsedArguments = { ok: true; options: VerifierOptions } | { ok: fal
 
 /** Usage text printed by `--help` and after an argument error. */
 export const USAGE = [
-	"Usage: npx tsx tools/verify-content.ts [--pack <id>] [--quest <id>] [--content <folder>] [--solutions <folder>] [--engine <path>] [--release]",
+	"Usage: npx tsx tools/verify-content.ts [--pack <id>] [--quest <id>] [--content <folder>] [--solutions <folder>] [--engine <path>] [--workspace <folder>] [--release]",
 	"  --pack <id>        only report packs/<id> (every pack is still read for cross-pack checks)",
 	"  --quest <id>       only report the file that defines this quest",
 	"  --content <folder> content folder to check (default: content/ in the repo)",
 	"  --solutions <folder> reference solutions, must exist (default: tools/solutions/ in the repo)",
 	"  --engine <path>    build every reference solution and starter with this engine and run their tests",
+	"  --workspace <folder> where --engine keeps its build workspace, one sub-folder per engine version (default: $DOJO_VERIFY_WORKSPACE, else ~\\.unreal-dojo\\verify on Windows or ~/Library/Caches/UnrealDojo/verify-workspace on macOS; under 100 characters on Windows)",
 	"  --release          coverage warnings become errors",
 ].join("\n");
 
@@ -48,6 +52,7 @@ export function parseVerifierArguments(argv: readonly string[], defaultContentFo
 		["--content", (value) => (options.contentFolder = value)],
 		["--engine", (value) => (options.enginePath = value)],
 		["--solutions", (value) => (options.solutionsFolder = value)],
+		["--workspace", (value) => (options.workspaceFolder = value)],
 	]);
 
 	for (let index = 0; index < argv.length; index++)

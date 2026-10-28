@@ -179,11 +179,17 @@ describe.skipIf(!HAS_ENGINE)(`fast loop against ${ENGINE_ROOT || "no engine"}`, 
 
 	afterAll(async () =>
 	{
-		await rig?.editorLauncher.dispose();
-		console.log(`Editor launches: ${JSON.stringify(rig?.guard.editorLaunchLines() ?? [])}`);
-		console.log(`Timings (ms): ${JSON.stringify(timings)}`);
-
-		if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true });
+		try
+		{
+			await rig?.editorLauncher.dispose();
+			console.log(`Editor launches: ${JSON.stringify(rig?.guard.editorLaunchLines() ?? [])}`);
+			console.log(`Timings (ms): ${JSON.stringify(timings)}`);
+		}
+		finally
+		{
+			// An editor that is slow to let go of its files must not leave 2.6 GB in Temp, so the removal retries (W14).
+			if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+		}
 	}, STEP_TIMEOUT_MS);
 
 	it("creates the sandbox and its first full build passes", async () =>

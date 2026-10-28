@@ -112,11 +112,17 @@ describe.skipIf(!HAS_ENGINE)(`fast loop wiring against ${ENGINE_ROOT || "no engi
 
 	afterAll(async () =>
 	{
-		await services?.editorLauncher.dispose();
-		console.log(`Timings (ms): ${JSON.stringify(timings)}`);
-		console.log(`Editor launches: ${JSON.stringify(guard?.editorLaunchLines() ?? [])}`);
-
-		if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true });
+		try
+		{
+			await services?.editorLauncher.dispose();
+			console.log(`Timings (ms): ${JSON.stringify(timings)}`);
+			console.log(`Editor launches: ${JSON.stringify(guard?.editorLaunchLines() ?? [])}`);
+		}
+		finally
+		{
+			// The removal retries, and runs even when the dispose throws, so no sandbox is left in Temp (W14).
+			if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+		}
 	}, STEP_TIMEOUT_MS);
 
 	it("creates the sandbox through createSandbox", async () =>
