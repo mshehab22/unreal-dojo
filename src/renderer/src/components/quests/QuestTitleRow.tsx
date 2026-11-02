@@ -19,14 +19,17 @@ interface QuestTitleRowProps
 	readonly detail?: string;
 }
 
-/** Back button, eyebrow, the title as the page's h1, and optional actions on the right. */
+/**
+ * Back button, eyebrow, the title as the page's h1, and optional actions on the right. The row does not wrap (only the eyebrow inside it can): the title truncates instead, so the save
+ * status changing from "Saved" to "Unsaved changes" cannot make the row taller and move the buttons under it mid-click (A1264).
+ */
 export function QuestTitleRow({ quest, actions, detail }: QuestTitleRowProps)
 {
 	const navigate = useNavigate();
 	const Icon = QUEST_KIND_DISPLAY[quest.kind].icon;
 
 	return (
-		<header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+		<header className="flex items-center justify-between gap-x-6">
 			<div className="flex min-w-0 items-center gap-3">
 				<Button variant="ghost" size="icon" aria-label="Back to the World Map" onClick={() => navigate("worldMap")}>
 					<ArrowLeftIcon />
