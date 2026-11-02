@@ -1,4 +1,4 @@
-// The `--engine` stage: builds every reference solution (bosses included) in a sandbox copy, runs its tests, and checks starters fail.
+// The `--engine` stage: builds every reference solution (bosses included) in a persistent sandbox workspace, runs its tests, and checks starters fail.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -83,8 +83,8 @@ export interface EngineReport
 	questsChecked: number;
 	timings: EngineTimings;
 
-	/** The sandbox copy, kept when anything failed so it can be inspected; undefined when it was removed. */
-	keptSandbox?: string;
+	/** This run's build and test logs, inside the persistent workspace (the last few runs are kept); undefined when no workspace was used. */
+	logsFolder?: string;
 
 	/** True when the run was interrupted (Ctrl+C or SIGTERM) before it finished. */
 	cancelled?: boolean;
@@ -94,11 +94,16 @@ export interface EngineReport
 export interface VerifierSandbox
 {
 	readonly folder: string;
+
+	/** Where this run's logs are written. */
+	readonly logsFolder: string;
 	writeQuest(quest: { id: string; title: string; tests: string }, files: readonly SandboxFile[]): Promise<void>;
 	removeQuest(questId: string): Promise<void>;
 	build(): Promise<SandboxBuild>;
 	runTests(testNames: readonly string[]): Promise<SandboxTestRun>;
-	remove(): Promise<void>;
+
+	/** Ends the run's use of the workspace (releases its lock); build outputs stay. Called on every exit path. */
+	release(): Promise<void>;
 }
 
 /** Where the verifier reads from and how it talks. */
@@ -111,8 +116,11 @@ export interface EngineVerifierOptions
 	/** Progress lines (the CLI prints them to stderr). */
 	log: (line: string) => void;
 
-	/** Makes the sandbox; defaults to a real copy of the template. */
+	/** Makes the sandbox; defaults to the persistent workspace for the engine version. */
 	createSandbox?: (templateFolder: string, target: EngineTarget, signal: AbortSignal) => Promise<VerifierSandbox>;
+
+	/** The folder that holds the persistent workspaces (see `resolveWorkspaceRoot`); only the default `createSandbox` uses it. */
+	workspaceRoot?: string;
 
 	/** Aborting stops the run: the builder and test runner kill their process trees, and no further step starts. */
 	signal?: AbortSignal;
@@ -286,7 +294,9 @@ export class EngineVerifier
 	}
 
 	/**
-	 * 1. Copy the sandbox template and write every reference solution and its tests.
+	 * 0. Take the persistent workspace for the engine version (waiting if another run holds it) and bring it to the template's state.
+	 *    Whatever way the run ends, the lock is released and nothing is left in the temp folder.
+	 * 1. Write every reference solution and its tests.
 	 * 2. Build once and run every quest's tests headless; each declared test must run and pass.
 	 * 3. For each quest in turn, swap in its starter files, build, and run its tests: they must not all pass
 	 *    (a starter that does not compile is fine). Then put the solution back.
@@ -304,19 +314,46 @@ export class EngineVerifier
 		if (judged.length === 0) return { problems: problems.length > 0 ? problems : [errorAt("(engine)", nothingJudgedMessage(scope, this.options.solutionsFolder))], questsChecked: 0, timings };
 
 		const signal = this.options.signal ?? new AbortController().signal;
-		const createSandbox = this.options.createSandbox ?? ((templateFolder, target, abortSignal) => EngineSandbox.create(templateFolder, target, abortSignal));
-		const sandbox = await createSandbox(this.options.templateFolder, this.options.target, signal);
+		const createSandbox = this.options.createSandbox ?? ((templateFolder, target, abortSignal) => EngineSandbox.create(templateFolder, target, { signal: abortSignal, log, ...(this.options.workspaceRoot === undefined ? {} : { workspaceRoot: this.options.workspaceRoot }) }));
+		let sandbox: VerifierSandbox;
+
+		try
+		{
+			sandbox = await createSandbox(this.options.templateFolder, this.options.target, signal);
+		}
+		catch (error)
+		{
+			const reason = error instanceof Error ? error.message : String(error);
+
+			return { problems: [...problems, errorAt("(engine)", signal.aborted ? reason : `could not prepare the verify workspace: ${reason}`)], questsChecked: judged.length, timings, ...(signal.aborted ? { cancelled: true } : {}) };
+		}
+
+		// The workspace is shared, so its lock is released on every way out: a pass, a failure, a cancel, and a thrown error.
+		try
+		{
+			return await this.verifyInWorkspace(sandbox, records, quests, judged, problems, timings, signal);
+		}
+		finally
+		{
+			await sandbox.release().catch((error: unknown) => log(`engine: could not release the verify workspace: ${error instanceof Error ? error.message : String(error)}`));
+		}
+	}
+
+	/** Steps 1 to 3 of `verify` inside a workspace this run holds. */
+	private async verifyInWorkspace(sandbox: VerifierSandbox, records: readonly QuestRecord[], quests: readonly EngineQuest[], judged: readonly EngineQuest[], problems: ContentProblem[], timings: EngineTimings, signal: AbortSignal): Promise<EngineReport>
+	{
+		const { log } = this.options;
 
 		/** The report for a run interrupted at `step`: what was found so far, plus one problem saying it stopped. */
 		const stopped = (step: string): EngineReport => ({
-			problems: [...problems, errorAt("(engine)", `cancelled during ${step}; the sandbox copy is kept at ${sandbox.folder}`)],
+			problems: [...problems, errorAt("(engine)", `cancelled during ${step}; this run's logs are in ${sandbox.logsFolder}`)],
 			questsChecked: judged.length,
 			timings,
-			keptSandbox: sandbox.folder,
+			logsFolder: sandbox.logsFolder,
 			cancelled: true,
 		});
 
-		log(`engine: sandbox copy at ${sandbox.folder}`);
+		log(`engine: verify workspace at ${sandbox.folder}`);
 
 		// Every solution goes in, with every boss's piece overrides over its pieces' solutions (A215).
 		const installed = new Map<string, string>();
@@ -345,7 +382,7 @@ export class EngineVerifier
 				problems.push(errorAt(entry.file, `the reference solution did not build${quoted.length > 0 ? `:\n${quoted.join("\n")}` : ""}`, "engine"));
 			}
 
-			return { problems, questsChecked: judged.length, timings, keptSandbox: sandbox.folder };
+			return { problems, questsChecked: judged.length, timings, logsFolder: sandbox.logsFolder };
 		}
 
 		log(`engine: running the tests of ${judged.length} quests headless`);
@@ -393,14 +430,7 @@ export class EngineVerifier
 
 		if (signal.aborted) return stopped("the last starter check");
 
-		// An inconclusive starter check also keeps the sandbox, so its build log in Saved/VerifierLogs can be read.
-		const failed = problems.some((problem) => problem.severity !== "warning" || problem.message.startsWith("starter check inconclusive"));
-
-		if (failed) return { problems, questsChecked: judged.length, timings, keptSandbox: sandbox.folder };
-
-		await sandbox.remove();
-
-		return { problems, questsChecked: judged.length, timings };
+		return { problems, questsChecked: judged.length, timings, logsFolder: sandbox.logsFolder };
 	}
 
 	/** Every declared test of a quest must appear in the report and pass. */
