@@ -20,7 +20,7 @@ interface QuestTitleRowProps
 }
 
 /**
- * Back button, eyebrow, the title as the page's h1, and optional actions on the right. The row never wraps: the title truncates instead, so the save
+ * Back button, eyebrow, the title as the page's h1, and optional actions on the right. The row does not wrap (only the eyebrow inside it can): the title truncates instead, so the save
  * status changing from "Saved" to "Unsaved changes" cannot make the row taller and move the buttons under it mid-click (A1264).
  */
 export function QuestTitleRow({ quest, actions, detail }: QuestTitleRowProps)

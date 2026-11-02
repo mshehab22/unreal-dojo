@@ -73,7 +73,7 @@ async function readFirstEditorLine(): Promise<string>
 
 /**
  * Puts a line at the very top of the open file as one input and checks it landed on the first line. At the file start the next character is `#`,
- * which stops Monaco auto-closing a typed bracket. Keep the line short: the editor wraps, and a wrapped line would show only its first part.
+ * which stops Monaco auto-closing a typed bracket. Keep the line short so it never needs to wrap.
  */
 async function insertAtTop(line: string): Promise<void>
 {
