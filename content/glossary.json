@@ -327,7 +327,8 @@
       "sweep",
       "tick",
       "object-pool"
-    ]
+    ],
+    "firstQuestId": "m2-movement-components"
   },
   {
     "id": "game-mode-base",
@@ -2115,7 +2116,8 @@
       "sweep",
       "hit-event",
       "overlap-event"
-    ]
+    ],
+    "firstQuestId": "m2-space-and-sweeps"
   },
   {
     "id": "collision-channel",
@@ -2283,7 +2285,8 @@
       "fhitresult",
       "hit-event",
       "collision-channel"
-    ]
+    ],
+    "firstQuestId": "m2-space-and-sweeps"
   },
   {
     "id": "collision-query-params",
@@ -4111,6 +4114,95 @@
       "profiling"
     ],
     "firstQuestId": "p11-thousands-of-the-same"
+  },
+  {
+    "id": "world-and-local-space",
+    "term": "World and Local Space",
+    "aliases": [
+      "world space",
+      "local space",
+      "relative location",
+      "relative rotation",
+      "SetRelativeLocation",
+      "GetRelativeLocation",
+      "SetRelativeRotation"
+    ],
+    "category": "math",
+    "short": "World space measures from the level origin; local space measures from an actor or component, along its own forward, right, and up.",
+    "long": "The same numbers mean different things in the two spaces. An offset of 100 forward in world space always heads along the level's X axis; in local space it heads along wherever the actor is facing, so turning the actor turns the move. A component attached to a parent keeps a relative location and rotation, measured in its parent's space, and the engine combines the chain into the world transform. Pick the space that matches the sentence you would say aloud: \"slide east\" is world, \"slide forward\" is local.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/USceneComponent?application_version=5.8",
+    "related": [
+      "ftransform",
+      "scene-component",
+      "root-component",
+      "add-actor-offset"
+    ],
+    "firstQuestId": "m2-space-and-sweeps"
+  },
+  {
+    "id": "add-actor-offset",
+    "term": "AddActorWorldOffset",
+    "aliases": [
+      "AddActorLocalOffset",
+      "AddActorWorldRotation",
+      "AddActorLocalRotation"
+    ],
+    "category": "math",
+    "short": "Functions that move or turn an actor by a change instead of to a place, in world or local space, optionally sweeping so a blocker stops the move.",
+    "long": "AddActorWorldOffset(Delta) moves the actor by Delta measured in the world; AddActorLocalOffset(Delta) measures Delta in the actor's own frame. Both take a sweep flag and an optional FHitResult: with the flag on, the move stops at the first blocking hit and the hit result says what stopped it, where, and which way the surface faces. Without it the actor is placed even inside a wall. The rotation versions turn the actor by a change the same way; they combine rotations as quaternions, so adding a small turn to an already tilted actor does what you expect. SetActorLocation and SetActorRotation instead say where the actor should end up.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/AActor?application_version=5.8",
+    "related": [
+      "world-and-local-space",
+      "sweep",
+      "fhitresult",
+      "deltatime",
+      "fquat"
+    ],
+    "firstQuestId": "m2-space-and-sweeps"
+  },
+  {
+    "id": "interpolation",
+    "term": "Interpolation",
+    "aliases": [
+      "VInterpTo",
+      "RInterpTo",
+      "VInterpConstantTo",
+      "RInterpConstantTo",
+      "FInterpConstantTo"
+    ],
+    "category": "math",
+    "short": "Moving a value toward a target a little each frame, either easing out as it nears or at a constant rate.",
+    "long": "The interp functions in FMath take the current value, the target, the frame's DeltaTime, and a speed, and return the value for this frame. The ease-out family (FInterpTo, VInterpTo, RInterpTo) closes a fraction of the remaining gap each frame, so it starts fast and slows as it nears, and it passes DeltaTime in so the result barely depends on the frame rate. The constant family (FInterpConstantTo, VInterpConstantTo, RInterpConstantTo) moves by a fixed amount per second and never overshoots, which makes a speed limit or a turn-rate limit. The rotator versions take the short way round. Lerp is different: it blends by an alpha you choose, with no notion of time.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/FMath?application_version=5.8",
+    "related": [
+      "fmath",
+      "deltatime",
+      "frotator",
+      "fvector",
+      "tick"
+    ],
+    "firstQuestId": "m2-interpolation"
+  },
+  {
+    "id": "movement-component",
+    "term": "UMovementComponent",
+    "aliases": [
+      "movement component",
+      "UFloatingPawnMovement",
+      "MoveUpdatedComponent",
+      "SafeMoveUpdatedComponent"
+    ],
+    "category": "components",
+    "short": "The base class of components that move their owner, such as projectile, floating-pawn, and character movement.",
+    "long": "A movement component updates one scene component, usually the owner's root, each tick, and handles the sweeping, sliding, and hit reporting that hand-written movement has to repeat. UProjectileMovementComponent flies things; UFloatingPawnMovement drifts a pawn that has no walking; UCharacterMovementComponent walks, jumps, and falls. Reach for one when the motion is a standard kind, and write your own Tick when the motion is the mechanic, such as a patrol with a rule at each end or a dart with its own turn limit.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UMovementComponent?application_version=5.8",
+    "related": [
+      "character-movement-component",
+      "projectile-movement-component",
+      "scene-component",
+      "tick"
+    ],
+    "firstQuestId": "m2-movement-components"
   },
   {
     "id": "spawn-template",

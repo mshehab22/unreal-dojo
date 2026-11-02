@@ -1,0 +1,5 @@
+{
+	"id": "transforms",
+	"title": "Moving things on purpose",
+	"summary": "The training hall needs hazards that move. Learn to move actors by code in their own frame or the world's, scale every step by the frame's duration, stop at walls with a sweep, ease into a stop, and turn no faster than a limit, then build a gauntlet of crushers, boulders, bouncing balls, and darts that a hero has to cross."
+}
