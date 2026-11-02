@@ -1,0 +1,6 @@
+{
+	"id": "systems",
+	"title": "Systems Lab",
+	"summary": "Whole game systems planned and built from parts: an inventory, quests, abilities, saving, and more, each world a breakdown, a handful of pieces, and a boss that wires them into one working system.",
+	"order": 4
+}
