@@ -3,17 +3,21 @@ import { describe, expect, it } from "vitest";
 
 import type { PackOutline } from "@shared/types/catalog";
 import type { AuthoredQuest } from "@shared/types/content";
+import type { EngineInstall } from "@shared/types/engine";
 import type { RunResult } from "@shared/types/run";
 
+import { BuildFailureExplainer } from "../../src/main/services/unreal/BuildFailureExplainer";
 import { FullBuildLedger } from "../../src/main/services/unreal/FullBuildLedger";
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
 import { PrerequisiteFiller } from "../../src/main/services/unreal/PrerequisiteFiller";
 import type { ProgressUpdate } from "../../src/main/services/unreal/ProgressUpdate";
 import { prerequisiteQuestIds } from "../../src/main/services/unreal/QuestDependencies";
 import { QuestFileWriter } from "../../src/main/services/unreal/QuestFileWriter";
-import { QuestRunService } from "../../src/main/services/unreal/QuestRunService";
+import { earlierQuestCode, QuestRunService } from "../../src/main/services/unreal/QuestRunService";
 import { ReferenceSolutions } from "../../src/main/services/unreal/ReferenceSolutions";
+import { AppErrorException } from "../../src/main/errors/AppErrorException";
 import { RunnerFactory } from "../../src/main/services/unreal/RunnerFactory";
+import { RunPreflight } from "../../src/main/services/unreal/RunPreflight";
 import type { SandboxProjectService } from "../../src/main/services/unreal/SandboxProjectService";
 import { FakeSandboxFileSystem } from "./FakeSandboxFileSystem";
 import { MemoryUnrealSettings } from "./MemoryUnrealSettings";
@@ -80,16 +84,32 @@ interface ServiceOptions
 	files?: Record<string, string>;
 	settings?: MemoryUnrealSettings;
 	ledger?: FullBuildLedger;
+
+	/** Fields of the run result the fake runner answers with, over a passing result. */
+	result?: Partial<RunResult>;
+
+	/** The failure explainer the service is given, if any. */
+	failureExplainer?: BuildFailureExplainer;
+
+	/** How the fake engine locator answers; by default the engine is fine. */
+	inspectEngine?: (folder: string) => Promise<EngineInstall>;
+}
+
+/** An engine the locator accepts. */
+async function healthyEngine(folder: string): Promise<EngineInstall>
+{
+	return { path: folder, version: "5.8.3", source: "launcher", supportsFastLoop: true };
 }
 
 /** The service over fakes. */
 function createService(options: ServiceOptions = {})
 {
 	const paths = new MacPlatformPaths("/Users/learner");
-	const fileSystem = new FakeSandboxFileSystem({ ...SOLUTIONS, ...(options.files ?? {}) });
+	const fileSystem = new FakeSandboxFileSystem({ ...SOLUTIONS, "/S/Dojo.uproject": "{}", ...(options.files ?? {}) });
+	const settings = options.settings ?? new MemoryUnrealSettings("/Engines/UE", "/S");
 	const writer = new QuestFileWriter(paths, fileSystem);
 	const runs: { questId: string; files: Record<string, string>; sandboxFolder: string }[] = [];
-	const result: RunResult = { ok: true, compiled: true, compilerOutput: "", tests: [], testsPassed: 0, testsTotal: 0, durationMs: 1, loop: "headless" };
+	const result: RunResult = { ok: true, compiled: true, compilerOutput: "", tests: [], testsPassed: 0, testsTotal: 0, durationMs: 1, loop: "headless", ...(options.result ?? {}) };
 	const runnerFactory = new RunnerFactory((context) => ({
 		run: async (runQuest, files) =>
 		{
@@ -102,7 +122,8 @@ function createService(options: ServiceOptions = {})
 	const rebuilds: string[] = [];
 
 	const service = new QuestRunService({
-		settings: options.settings ?? new MemoryUnrealSettings("/Engines/UE", "/S"),
+		settings,
+		preflight: new RunPreflight({ settings, paths, fileSystem, engineInspector: { inspectFolder: options.inspectEngine ?? healthyEngine } }),
 		quests: { getAuthoredQuest: async (questId) => QUESTS.find((entry) => entry.id === questId), listPacks: async () => packs },
 		runnerFactory,
 		prerequisiteFiller: new PrerequisiteFiller(writer, new ReferenceSolutions(paths, fileSystem, SOLUTIONS_ROOT)),
@@ -119,6 +140,7 @@ function createService(options: ServiceOptions = {})
 		},
 		questFileWriter: writer,
 		buildLedger: options.ledger ?? new FullBuildLedger(),
+		...(options.failureExplainer ? { failureExplainer: options.failureExplainer } : {}),
 	});
 
 	return { service, fileSystem, runs, rebuilds };
@@ -372,5 +394,204 @@ describe("PrerequisiteFiller through runQuest", () =>
 
 		await service.rebuildSandbox(() => undefined, new AbortController().signal);
 		expect(rebuilds).toEqual(["/Engines/UE /S"]);
+	});
+
+	describe("preflight (M5.1e)", () =>
+	{
+		const signal = new AbortController().signal;
+
+		/** The three calls that need the engine and sandbox, each as a function of the service. */
+		const calls: [string, (service: QuestRunService) => Promise<unknown>][] = [
+			["runQuest", (service) => service.runQuest("f1-training-dummy", { "Mine.h": "mine" }, () => undefined, signal)],
+			["checkSnippetSyntax", (service) => service.checkSnippetSyntax("int x;")],
+			["rebuildSandbox", (service) => service.rebuildSandbox(() => undefined, signal)],
+		];
+
+		/** The engine folder was renamed or uninstalled: the locator cannot read it any more. */
+		function engineGone(): Promise<EngineInstall>
+		{
+			return Promise.reject(new AppErrorException("engine-not-found", "That folder does not look like an Unreal Engine install.", "Pick the folder that contains the Engine folder.", "No Engine/Build/Build.version under /Engines/UE"));
+		}
+
+		it.each(calls)("%s rejects with the friendly engine-moved error, naming the path, when the engine folder is gone", async (_name, call) =>
+		{
+			const { service, runs, rebuilds } = createService({ inspectEngine: engineGone });
+
+			const outcome = call(service);
+
+			await expect(outcome).rejects.toBeInstanceOf(AppErrorException);
+			await expect(outcome).rejects.toMatchObject({ appError: { code: "engine-not-found", message: expect.stringMatching(/could not be found at \/Engines\/UE.*drive is not connected/), suggestedAction: expect.stringContaining("Pick the engine folder again in Settings") } });
+			expect(runs).toEqual([]);
+			expect(rebuilds).toEqual([]);
+		});
+
+		it.each(calls)("%s turns a raw ENOENT from the locator into the same friendly error and keeps the raw text only as detail", async (_name, call) =>
+		{
+			const { service } = createService({ inspectEngine: () => Promise.reject(new Error("ENOENT: no such file or directory, open '/Engines/UE/Engine/Build/Build.version'")) });
+
+			const outcome = call(service);
+
+			await expect(outcome).rejects.toMatchObject({ appError: { code: "engine-not-found", message: expect.not.stringContaining("ENOENT"), detail: expect.stringContaining("ENOENT") } });
+		});
+
+		it.each(calls)("%s keeps the unsupported-version error of an engine that is too old", async (_name, call) =>
+		{
+			const tooOld = new AppErrorException("engine-version-unsupported", "Unreal Engine 5.3 is too old.", "Install a newer one.");
+			const { service } = createService({ inspectEngine: () => Promise.reject(tooOld) });
+
+			await expect(call(service)).rejects.toMatchObject({ appError: { code: "engine-version-unsupported" } });
+		});
+
+		it.each(calls)("%s rejects with sandbox-not-ready, saying the project could not be found (moved, deleted, or its drive gone) and to put the folder back, when Dojo.uproject is gone", async (_name, call) =>
+		{
+			const { service, fileSystem, runs, rebuilds } = createService();
+			fileSystem.files.delete("/S/Dojo.uproject");
+
+			const outcome = call(service);
+
+			await expect(outcome).rejects.toMatchObject({ appError: { code: "sandbox-not-ready", message: expect.stringMatching(/could not be found.*moved, renamed or deleted.*drive is not connected/), suggestedAction: expect.stringContaining("Put the folder back where it was") } });
+			await expect(outcome).rejects.toMatchObject({ appError: { message: expect.stringContaining("/S") } });
+			expect(runs).toEqual([]);
+			expect(rebuilds).toEqual([]);
+		});
+
+		it("checks the engine before the sandbox, so a learner with both gone is told about the engine", async () =>
+		{
+			const { service, fileSystem } = createService({ inspectEngine: engineGone });
+			fileSystem.files.delete("/S/Dojo.uproject");
+
+			await expect(service.runQuest("f1-training-dummy", {}, () => undefined, signal)).rejects.toMatchObject({ appError: { code: "engine-not-found" } });
+		});
+
+		it("checks setup first: no saved engine or sandbox still says the sandbox is not set up", async () =>
+		{
+			const { service } = createService({ settings: new MemoryUnrealSettings("/Engines/UE", null) });
+
+			await expect(service.checkSnippetSyntax("int x;")).rejects.toMatchObject({ appError: { code: "sandbox-not-ready", message: expect.stringContaining("not been set up") } });
+		});
+
+		it("lets a healthy engine and sandbox through to the run", async () =>
+		{
+			const { service, runs } = createService();
+
+			await expect(service.runQuest("f1-training-dummy", { "Mine.h": "mine" }, () => undefined, signal)).resolves.toMatchObject({ ok: true });
+			expect(runs).toHaveLength(1);
+		});
+	});
+});
+
+/** A compile error line in a quest folder of the fake sandbox, in the clang shape. */
+function errorIn(questId: string): string
+{
+	return `/S/Source/Dojo/Quests/${questId}/Broken.h:9:3: error: expected ';' at end of declaration list`;
+}
+
+/** An explainer over a toolchain that is fine and an engine that inspects fine. */
+function healthyExplainer(): { explainer: BuildFailureExplainer; toolchainChecks: () => number }
+{
+	let checks = 0;
+	const explainer = new BuildFailureExplainer({
+		checkToolchain: async () =>
+		{
+			checks++;
+
+			return { ok: true, tool: "xcode-select", message: "Xcode is ready.", problems: [] };
+		},
+		inspectEngine: async () => ({ path: "/Engines/UE", version: "5.8.3", source: "launcher", supportsFastLoop: true }),
+	});
+
+	return { explainer, toolchainChecks: () => checks };
+}
+
+describe("unrelated failures on a run (M5.1d)", () =>
+{
+	const failedCompile = { ok: false, compiled: false };
+
+	it("attaches a lesson-bug failure when an earlier quest filled from a reference solution breaks the build", async () =>
+	{
+		const { explainer } = healthyExplainer();
+		const { service } = createService({ failureExplainer: explainer, result: { ...failedCompile, compilerOutput: errorIn("f1-training-dummy") } });
+
+		const result = await service.runQuest("f1-score-keeper", { "Mine.h": "mine" }, () => undefined, new AbortController().signal);
+
+		expect(result.unrelatedFailure?.message).toContain("bug in the lesson");
+		expect(result.unrelatedFailure?.detail).toContain("f1-training-dummy");
+		expect(result.ok).toBe(false);
+	});
+
+	it("attaches an open-or-reset failure when an earlier quest the learner passed and saved breaks the build", async () =>
+	{
+		const { explainer } = healthyExplainer();
+		const { service } = createService({
+			failureExplainer: explainer,
+			passed: ["f1-training-dummy", "f1-popup-target"],
+			files: {
+				[`${questFolder("f1-training-dummy")}/DojoF1TrainingDummy.h`]: "learner h",
+				[`${questFolder("f1-training-dummy")}/DojoF1TrainingDummy.cpp`]: "learner cpp",
+				[`${questFolder("f1-popup-target")}/DojoF1PopupTarget.h`]: "learner target h",
+				[`${questFolder("f1-popup-target")}/DojoF1PopupTarget.cpp`]: "learner target cpp",
+			},
+			result: { ...failedCompile, compilerOutput: errorIn("f1-training-dummy") },
+		});
+
+		const result = await service.runQuest("f1-score-keeper", {}, () => undefined, new AbortController().signal);
+
+		expect(result.unrelatedFailure?.suggestedAction).toContain("Open f1-training-dummy");
+	});
+
+	it("leaves the result alone for an error in the quest itself, a passing run, a failed test, and no explainer", async () =>
+	{
+		const { explainer, toolchainChecks } = healthyExplainer();
+		const own = { ...failedCompile, compilerOutput: errorIn("f1-score-keeper") };
+
+		const cases = [
+			createService({ failureExplainer: explainer, result: own }),
+			createService({ failureExplainer: explainer }),
+			createService({ failureExplainer: explainer, result: { ok: false, compiled: true, testsTotal: 1 } }),
+			createService({ result: { ...failedCompile, compilerOutput: errorIn("f1-training-dummy") } }),
+		];
+
+		for (const { service } of cases)
+		{
+			const result = await service.runQuest("f1-score-keeper", {}, () => undefined, new AbortController().signal);
+
+			expect(result.unrelatedFailure).toBeUndefined();
+		}
+
+		expect(toolchainChecks()).toBe(0);
+	});
+
+	it("passes a pipeline error through the explainer and survives an explainer that throws", async () =>
+	{
+		const { explainer } = healthyExplainer();
+		const timedOut = { ...failedCompile, error: "The build took longer than 15 minutes and was stopped." };
+
+		const ran = await createService({ failureExplainer: explainer, result: timedOut }).service.runQuest("f1-training-dummy", {}, () => undefined, new AbortController().signal);
+		expect(ran.unrelatedFailure?.message).toContain("longer than its time limit");
+
+		const throwing = { explainRun: () => Promise.reject(new Error("explainer bug")) } as unknown as BuildFailureExplainer;
+		const survived = await createService({ failureExplainer: throwing, result: timedOut }).service.runQuest("f1-training-dummy", {}, () => undefined, new AbortController().signal);
+
+		expect(survived.error).toBe(timedOut.error);
+		expect(survived.unrelatedFailure).toBeUndefined();
+	});
+});
+
+describe("earlierQuestCode", () =>
+{
+	it("marks a prerequisite as a reference solution only when every file the filler wrote came from one", () =>
+	{
+		const filled = [
+			{ questId: "a", reason: "r", files: [{ name: "A.h", source: "the reference solution" as const }] },
+			{ questId: "b", reason: "r", files: [{ name: "B.h", source: "your saved code" as const }, { name: "B.cpp", source: "the reference solution" as const }] },
+			{ questId: "c", reason: "r", files: [{ name: "C.h", source: "the boss's reference solution" as const }] },
+		];
+
+		expect(earlierQuestCode(["a", "b", "c", "d"], filled)).toEqual([
+			{ questId: "a", origin: "reference-solution" },
+			{ questId: "b", origin: "saved-code" },
+			{ questId: "c", origin: "reference-solution" },
+			{ questId: "d", origin: "saved-code" },
+		]);
 	});
 });

@@ -1,8 +1,9 @@
-// Builds the real ContentCatalog: the content-engine's ContentLoader on a folder, with the file system check.
+// Builds the real ContentCatalog: the content-engine's ContentLoader on a folder, with the file system check and the slow-load warning.
 import { stat } from "node:fs/promises";
 
 import { ContentLoader } from "../services/content";
 import { ContentCatalog } from "./ContentCatalog";
+import { loadContentWithDiagnostics } from "./loadContentWithDiagnostics";
 
 /** Tells whether a path is an existing folder. */
 async function isFolder(path: string): Promise<boolean>
@@ -22,5 +23,5 @@ export function createContentCatalog(root: string): ContentCatalog
 {
 	const loader = new ContentLoader(root);
 
-	return new ContentCatalog({ root, folderExists: isFolder, loadContent: () => loader.load() });
+	return new ContentCatalog({ root, folderExists: isFolder, loadContent: () => loadContentWithDiagnostics(loader) });
 }

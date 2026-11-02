@@ -65,7 +65,7 @@ Errors name the file (relative to `content/`), and the section and line when kno
 
 ## Parser structure
 
-- `ContentLoader` (`load({ packId? })`, `loadExamples()`) walks the folder and returns `LoadedContent` with every problem; it never throws on bad content.
+- `ContentLoader` (`load({ packId? })`, `loadExamples()`) walks the folder and returns `LoadedContent` with every problem; it never throws on bad content. `load` also takes an optional `onTimings` callback that receives the quest file count and the summed read and parse times (M5.1l, A1260); the app's slow-load warning uses it.
 - `parseQuestFile` parses one quest file: `splitQuestFile` cuts front matter and sections (fence aware through `FenceTracker`), gray-matter parses the front matter and every ` ```yaml ` block (`parseYaml`), `checkSectionLayout` checks the order, and zod schemas in `schemas/` validate the data. `validateWith` turns zod issues into problems with a field path and plain words (`Questions[3].modelAnswer: missing (expected text)`, `kind: "essay" is not allowed (expected one of: ...)`, `dificulty: unknown field`). Cross references (plan edges and `covers`, ids repeated inside a quest, the hint count) are checked after the schemas pass.
 - `ProblemList` collects problems for one file so one run reports all of them.
 
@@ -85,7 +85,7 @@ Inline code (A200): normal terms link inside inline code too, but only when the 
 
 ## Verifier (`tools/verify-content.ts`)
 
-Usage: `npx tsx tools/verify-content.ts [--pack <id>] [--quest <id>] [--content <folder>] [--solutions <folder>] [--engine <path>] [--release]`. It prints `ok`, `warn`, or `FAIL` per file with each problem under it (warnings marked), then a summary. Exit 0 when there are no errors (warnings allowed), 1 on any error, 2 on a bad command line or a `--solutions` folder that does not exist (V1, A1172).
+Usage: `npx tsx tools/verify-content.ts [--pack <id>] [--quest <id>] [--content <folder>] [--solutions <folder>] [--engine <path>] [--workspace <folder>] [--release]`. It prints `ok`, `warn`, or `FAIL` per file with each problem under it (warnings marked), then a summary. Exit 0 when there are no errors (warnings allowed), 1 on any error, 2 on a bad command line or a `--solutions` folder that does not exist (V1, A1172).
 
 Every pack is always read, so cross-pack references and duplicate ids are checked; `--pack` and `--quest` only narrow what is reported, and for `--engine` which quests are judged (A206). A run that judges nothing fails (A1172): `--pack` on a pack with no quests, or `--pack` / `--quest` naming nothing, reports `<scope> judged no quests`; `--solutions` pointing at a missing folder stops before anything is read; and `--engine` with no reference solution to build reports it under `(engine)` with the scope and the solutions folder. Code: `tools/verifier/runVerifier.ts` runs `CONTENT_CHECKS` (one `ContentCheck` per file in `tools/verifier/checks/`), then `--engine` runs `tools/verifier/engine/`.
 
@@ -110,12 +110,12 @@ Checks, all with file names in the output. Errors unless marked as warnings:
 
 `<path>` is an engine root or its `Engine` folder (`~/Applications/UE_5.8` on the Mac), checked with the EngineLocator. Steps:
 
-1. Copy `resources/sandbox-template/` to a temp folder (its real path; on macOS the `/var` link confuses Unreal's build accelerator), set `EngineAssociation`, and drop the 5.8-only plugins for older engines (A41).
+1. Take the persistent workspace for the engine's major.minor and bring it to the template's state (W14, A1280 to A1284). The workspace is `%USERPROFILE%\.unreal-dojo\verify\<major.minor>` on Windows (not under AppData: the desktop app's MSIX package redirects that into a path about 47 characters longer, A1286) and `~/Library/Caches/UnrealDojo/verify-workspace/<major.minor>` on macOS (its real path; on macOS the `/var` link confuses Unreal's build accelerator); `--workspace <folder>` or the environment variable `DOJO_VERIFY_WORKSPACE` moves the root that holds the per-version folders, and the flag wins. Every run logs the full workspace path first, and on Windows a path of 100 characters or more is an `(engine)` problem. It is kept between runs, so builds are incremental, and nothing the verifier makes is left in the system temp folder. First `<workspace>.lock` is taken (`WorkspaceLock`): a run makes `<workspace>.lock.pending-<token>` with its `owner.json` inside and renames it to `<workspace>.lock`, which fails while a lock exists, so a lock is never seen without its owner; a lock is released by renaming it aside and then removing it, a stale lock that cannot be removed ends the run after 20 polls with the folder named, and pending, broken-aside and released-aside folders a killed run left are removed after 10 minutes. A second run, from any worktree, logs who holds it and waits; a lock is broken only when its process is gone, the machine restarted since it was made, it has no owner file after 60 s, or it is over 12 hours old (A1282). The run then waits until the last build of the previous run (its end time is in `Saved/LastBuildEnded.txt`) is more than 1.1 s old, so a rewritten file is always newer than the outputs (A1286). Then `syncWorkspace` writes the template files that differ (a file that already matches keeps its timestamp), writes `Dojo.uproject` with the engine association and, for older engines, without the 5.8-only plugins (A41), and removes every file and folder the template does not have, so quests and tests of the last run (or of a killed run) never reach the build. `Binaries`, `Intermediate`, `Saved` and `DerivedDataCache` are never touched. Code: `EngineSandbox.create`, `WorkspaceLock`, `syncWorkspace`, `workspaceLocation`.
 2. Write every build and refactor quest's reference solution, and every boss's integration code (its `*.Test.cpp` files become its tests), then each boss's piece overrides over those pieces' solutions (the piece's own tests then run against the extended files, which checks the additions changed no rules), to `Source/Dojo/Quests/<quest-id>/` and its tests to `Source/Dojo/Tests/<quest-id>.Test.cpp` with M1.3's `QuestFileWriter`. Every solution is always written, because quests may use each other's classes; tests include quest headers as `Quests/<quest-id>/<File>.h`.
 3. Build once with M1.3's `UnrealBuilder` (the exact command, process tree kill, and 15 minute limit in `docs/systems/unreal-pipeline.md`). A failed build is reported on every judged quest, quoting the error lines that point into that quest's files. If no quest in scope has a readable reference solution, nothing is built and the run fails (A1172).
 4. Run every judged quest's tests in one headless run with M1.3's `AutomationTestRunner` (anchored test names, `ReportParser`). Each test named in a quest's `IMPLEMENT_*_AUTOMATION_TEST` macros (`declaredTestNames`) must run and pass.
 5. Starter check (build and refactor quests only; a boss has none), one quest at a time, only for quests whose solution passed (A443). Before each check the sandbox is set to what a learner has at that quest: its starter, the solutions of every quest it needs (its prerequisites followed through every kind of quest, the quests on its "Compiles against earlier quests:" line, and a boss's pieces), and the piece overrides of every boss among those. Later quests and unneeded bosses are taken out, and quests whose files did not change are not rewritten. A starter that does not compile is fine when a build error points into its own files; a build failure anywhere else, a starter that builds but whose tests do not run, and a skipped check (the solution failed) are "inconclusive" warnings (A212); a starter whose tests all pass is an error. The next file write waits more than a second after the last build so UBT sees it.
-6. Remove the sandbox when everything passed. Otherwise, or when any starter check was inconclusive, keep it and print its path; build and test logs are in `Saved/VerifierLogs/`, and an inconclusive check also quotes its first three build errors in the report.
+6. Release the workspace lock in a `finally`, on every exit path: pass, failure, inconclusive starter, cancel (also while waiting for the lock) and a thrown error. Nothing is deleted; the workspace stays for the next run. Each run's build and test logs are in `<workspace>/Saved/VerifierLogs/<UTC stamp>/` (`build-N.log`, `tests-N.log`, `reports-N/`), the five newest runs are kept, `EngineReport.logsFolder` and the last log line give the path, and an inconclusive check also quotes its first three build errors in the report. A workspace that cannot be prepared is an `(engine)` problem, not a crash (A1284).
 
 Measured on the MacBook Air, UE 5.8.3, 5 example quests: see "Measured timings" below. Status on 2026-10-21 (round 2, through M1.3's runners): all 5 code examples and all 4 Pack 1 World 1 build quests pass; every reference solution builds and passes its tests, and every starter fails. Neither boss has a reference integration yet (warnings, A215).
 
@@ -130,6 +130,22 @@ MacBook Air M5 (10 cores, 24 GB), UE 5.8.3, 2026-10-21 (M1.8):
 | `--engine`, 5 code examples | 195 to 258 s in all | first build 25 to 30 s, one headless run of all tests 23 to 35 s, starter checks 143 to 193 s (about 30 to 40 s per quest: an incremental build plus one headless run) |
 
 | `--engine`, 5 examples plus Pack 1 World 1's 4 build quests, through M1.3's runners (round 2) | 472 s in all | first build 48 s, one headless run of all 9 quests' tests 30 s, nine starter checks 393 s (about 44 s each); nothing else was using the engine |
+
+Windows desktop, 2026-10-27 (M5.1c), other builders using the machine:
+
+| Run | Time | Notes |
+| --- | --- | --- |
+| App content load (`tests/contentLoadBudget.test.ts`): fresh `ContentCatalog` on real disk, 300 real quests cloned over 25-quest worlds with the real glossary and patterns, until `listPacks`, `getGlossaryAliases`, and `getQuestAvailability` have answered | median of three: 122 ms quietest, 130 to 190 ms typical; first (cold) run: 186 ms quietest, 200 to 235 ms typical, 337 ms worst seen; the budget gates the median at 300 ms | 11 runs; the budget held without any loader change, so no follow-up was needed (A1196 to A1198) |
+
+Windows desktop, 2026-10-28 (W14, A1285), persistent workspace `%USERPROFILE%\.unreal-dojo\verify\5.8`, `--pack patterns --engine` (37 quests judged, 77 solutions installed):
+
+| Run | Time | Notes |
+| --- | --- | --- |
+| Run 1 (workspace created) | 1193 s | first build 110.2 s, solution tests 23.2 s, starter checks 1057.7 s |
+| Run 2 (same pack again) | 1192 s | first build 95.8 s, solution tests 19.1 s, starter checks 1075.5 s |
+| Only World 1's solutions (3 quests judged, the rest reported missing) | 113 s, exit 1 | first build 13.5 s |
+
+`%TEMP%` held no `dojo-*` entry before, during or after any of them. Quest files are rewritten every run, so the Dojo module's quests recompile each time.
 
 Starter checks dominate. For a full pack, M2 or later can cut this with one batched starter build, falling back to one quest at a time only when that build fails (see A208).
 

@@ -1,4 +1,4 @@
-// Setup step 2: choose the folder the practice project is created in, with the short path warning when it applies.
+// Setup step 2: choose the folder the practice project is created in, with warnings, and the reasons a folder cannot be used when it cannot.
 import { FolderOpenIcon, TriangleAlertIcon } from "lucide-react";
 
 import type { SandboxFolderChoice } from "@shared/types/engine";
@@ -22,6 +22,7 @@ interface SandboxStepProps
 export function SandboxStep({ folder, onChoose, onBack, onNext }: SandboxStepProps)
 {
 	const pick = useDojoAction((client) => client.pickSandboxFolder());
+	const blockers = folder?.blockers ?? [];
 
 	/** Opens the picker and keeps the answer unless the learner cancelled. */
 	const choose = async (): Promise<void> =>
@@ -41,7 +42,7 @@ export function SandboxStep({ folder, onChoose, onBack, onNext }: SandboxStepPro
 					<Button variant="ghost" onClick={onBack}>
 						Back
 					</Button>
-					<Button variant="pack" onClick={onNext} disabled={!folder}>
+					<Button variant="pack" onClick={onNext} disabled={!folder || blockers.length > 0}>
 						Use this folder
 					</Button>
 				</>
@@ -59,6 +60,11 @@ export function SandboxStep({ folder, onChoose, onBack, onNext }: SandboxStepPro
 					<span className="font-mono text-sm break-all text-paper select-text">{folder.path}</span>
 				</div>
 			)}
+			{blockers.map((blocker) => (
+				<div key={blocker} data-testid="sandbox-blocker">
+					<AppErrorView error={{ code: "sandbox-path-unsupported", message: blocker, suggestedAction: "Choose a different folder." }} compact />
+				</div>
+			))}
 			{folder?.warnings.map((warning) => (
 				<p key={warning} data-testid="sandbox-warning" className="flex gap-2 rounded-lg border border-warn/30 bg-warn/[0.06] p-3 text-sm text-paper">
 					<TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-warn" />

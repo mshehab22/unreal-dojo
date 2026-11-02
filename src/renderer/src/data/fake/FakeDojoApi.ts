@@ -38,7 +38,19 @@ import type { FakeScenario } from "../dataSourceChoice";
 import type { DojoClient } from "../DojoClient";
 import { toAppError } from "../toAppError";
 import { daysFromNow } from "./fixtures/fakeClock";
-import { enginesFixture, manualEngineFixture, reviewProvidersFixture, sandboxFolderFixture, sandboxPathIn, toolchainFixture } from "./fixtures/machineFixture";
+import {
+	blockedSandboxFolderFixture,
+	enginesFixture,
+	manualEngineFixture,
+	missingEngineFixture,
+	missingToolchainFixture,
+	saveNoticeFixture,
+	reviewProvidersFixture,
+	sandboxFolderFixture,
+	sandboxPathIn,
+	sandboxSetupFailureFixture,
+	toolchainFixture,
+} from "./fixtures/machineFixture";
 import { FakeQuestFlow } from "./FakeQuestFlow";
 import { MAP_FIXTURE, type PackFixture } from "./fixtures/mapFixture";
 import { freshProgressFixture, returningProgressFixture } from "./fixtures/progressFixture";
@@ -95,6 +107,12 @@ interface FakeState
 	/** True when the next sandbox build should go quiet: progress stops after setup and the call never answers, though the build finishes (A821). */
 	quietNextBuild: boolean;
 
+	/** True when the next failed sandbox build carries the AppError from the main process (M5.1a) instead of leaving the screen to guess from the compiler output. */
+	explainNextBuildFailure: boolean;
+
+	/** True when the next sandbox folder pick answers with a blocker: the folder sits inside the engine folder. */
+	blockNextFolder: boolean;
+
 	/** The packs, worlds, and stages this scenario's map shows. */
 	map: PackFixture[];
 }
@@ -102,7 +120,7 @@ interface FakeState
 /** Builds the starting state for a scenario. */
 function initialState(scenario: FakeScenario): FakeState
 {
-	const isFresh = scenario === "fresh" || scenario === "first-build-fails" || scenario === "first-build-goes-quiet";
+	const isFresh = scenario === "fresh" || scenario === "first-build-fails" || scenario === "first-build-goes-quiet" || scenario === "sandbox-setup-fails" || scenario === "folder-blocked";
 	const engine = enginesFixture()[0] as EngineInstall;
 
 	return {
@@ -119,8 +137,10 @@ function initialState(scenario: FakeScenario): FakeState
 		},
 		progress: isFresh ? freshProgressFixture() : scenario === "quests" ? questFlowProgressFixture() : returningProgressFixture(),
 		editorConnected: false,
-		failNextBuild: scenario === "first-build-fails",
+		failNextBuild: scenario === "first-build-fails" || scenario === "sandbox-setup-fails",
 		quietNextBuild: scenario === "first-build-goes-quiet",
+		explainNextBuildFailure: scenario === "sandbox-setup-fails",
+		blockNextFolder: scenario === "folder-blocked",
 		map: scenario === "quests" ? questFlowMapFixture() : MAP_FIXTURE,
 	};
 }
@@ -134,8 +154,11 @@ export class FakeDojoApi implements DojoClient
 	private readonly runStatuses = new Map<string, RunStatus>();
 	private readonly quests: FakeQuestFlow;
 
+	/** True once checkToolchain ran in the toolchain-recovers scenario; the environment then reports a working toolchain. */
+	private toolchainRechecked = false;
+
 	/** Starts the fake in one scenario's state; the state lives until the page reloads. */
-	constructor(scenario: FakeScenario)
+	constructor(private readonly scenario: FakeScenario)
 	{
 		this.state = initialState(scenario);
 		this.quests = new FakeQuestFlow({
@@ -197,10 +220,10 @@ export class FakeDojoApi implements DojoClient
 
 	// Engine and first run
 
-	/** The detected installs. */
+	/** The detected installs. In the engine-missing scenario the install in settings is not among them while it is gone. */
 	detectEngines(): Promise<EngineInstall[]>
 	{
-		return answer(enginesFixture());
+		return answer(enginesFixture().filter((engine) => !(this.isEngineGone() && engine.path === this.state.settings.enginePath)));
 	}
 
 	/** A manual pick of a 5.7 install. */
@@ -209,10 +232,12 @@ export class FakeDojoApi implements DojoClient
 		return answer(manualEngineFixture());
 	}
 
-	/** A working toolchain. */
+	/** A working toolchain; in the toolchain-missing scenario one whose C++ pieces stay missing; in toolchain-recovers the first check finds them fixed, as for a learner who installed them. */
 	checkToolchain(): Promise<ToolchainCheck>
 	{
-		return answer(toolchainFixture());
+		if (this.scenario === "toolchain-recovers") this.toolchainRechecked = true;
+
+		return answer(this.scenario === "toolchain-missing" ? missingToolchainFixture() : toolchainFixture());
 	}
 
 	/** Environment chips derived from the current settings. */
@@ -231,9 +256,16 @@ export class FakeDojoApi implements DojoClient
 
 	// Sandbox
 
-	/** The sandbox folder picker's answer. */
+	/** The sandbox folder picker's answer. In the folder-blocked scenario the first pick sits inside the engine folder and carries a blocker; the next pick is fine. */
 	pickSandboxFolder(): Promise<SandboxFolderChoice | null>
 	{
+		if (this.state.blockNextFolder)
+		{
+			this.state.blockNextFolder = false;
+
+			return answer(blockedSandboxFolderFixture((enginesFixture()[0] as EngineInstall).path));
+		}
+
 		return answer(sandboxFolderFixture());
 	}
 
@@ -244,9 +276,11 @@ export class FakeDojoApi implements DojoClient
 		const sandboxPath = sandboxPathIn(request.folder);
 		const shouldFail = this.state.failNextBuild;
 		const goesQuiet = this.state.quietNextBuild;
+		const failure = shouldFail && this.state.explainNextBuildFailure ? sandboxSetupFailureFixture() : undefined;
 
 		this.state.failNextBuild = false;
 		this.state.quietNextBuild = false;
+		this.state.explainNextBuildFailure = false;
 
 		const result = await this.rememberAnswer(request.runId, async () =>
 		{
@@ -254,7 +288,9 @@ export class FakeDojoApi implements DojoClient
 
 			if (end.ok) this.state.settings = { ...this.state.settings, sandboxPath };
 
-			return { ok: end.ok, sandboxPath, durationMs: end.durationMs, compilerOutput: end.ok ? "" : FAILED_BUILD_OUTPUT };
+			if (end.ok) return { ok: true, sandboxPath, durationMs: end.durationMs, compilerOutput: "" };
+
+			return { ok: false, sandboxPath, durationMs: end.durationMs, compilerOutput: failure?.detail ?? FAILED_BUILD_OUTPUT, ...(failure ? { failure } : {}) };
 		});
 
 		// The hang the tester saw once: the build finished, but its answer never reached the window. Only getRunStatus can tell.
@@ -587,6 +623,9 @@ export class FakeDojoApi implements DojoClient
 	/** The real pattern cards from `content/patterns.json`. */
 	getPatternCards(): Promise<PatternCard[]>
 	{
+		// The screen-crash scenario hands every screen that reads the cards a broken list (Character, Drill, Loot, concept quests), so rendering it throws and the screen error view shows (M5.1i). Title, Studio and Settings do not read the cards.
+		if (this.scenario === "screen-crash") return answer([null] as unknown as PatternCard[]);
+
 		return answer(PATTERN_CARDS);
 	}
 
@@ -637,7 +676,9 @@ export class FakeDojoApi implements DojoClient
 	/** Environment status from the current settings. */
 	private environment(): EnvironmentStatus
 	{
-		const engine = [...enginesFixture(), manualEngineFixture()].find((candidate) => candidate.path === this.state.settings.enginePath) ?? null;
+		const isGone = this.isEngineGone();
+		const toolchain = this.reportedToolchain();
+		const engine = isGone ? null : [...enginesFixture(), manualEngineFixture()].find((candidate) => candidate.path === this.state.settings.enginePath) ?? null;
 		const providers = reviewProvidersFixture(this.state.settings.hasApiKey);
 		const reviewProvider = this.state.settings.reviewProvider === "auto"
 			? providers.find((provider) => provider.available && provider.id !== "tests-only") ?? null
@@ -649,7 +690,26 @@ export class FakeDojoApi implements DojoClient
 			reviewProvider,
 			loopMode: this.state.settings.loopMode,
 			editorConnected: this.state.editorConnected,
+			...(isGone && this.state.settings.enginePath ? { engineProblem: missingEngineFixture(this.state.settings.enginePath) } : {}),
+			...(toolchain ? { toolchain } : {}),
+			...(this.scenario === "save-notice" ? { saveNotice: saveNoticeFixture() } : {}),
 		};
+	}
+
+	/** The toolchain the environment reports: none in most scenarios, the broken one in toolchain-missing, and in toolchain-recovers the broken one until the first re-check. */
+	private reportedToolchain(): ToolchainCheck | null
+	{
+		if (this.scenario === "toolchain-missing") return missingToolchainFixture();
+
+		if (this.scenario === "toolchain-recovers") return this.toolchainRechecked ? toolchainFixture() : missingToolchainFixture();
+
+		return null;
+	}
+
+	/** True in the engine-missing scenario while settings still point at the install that is gone; picking another engine fixes it. */
+	private isEngineGone(): boolean
+	{
+		return this.scenario === "engine-missing" && this.state.settings.enginePath === (enginesFixture()[0] as EngineInstall).path;
 	}
 
 	/** Availability for every quest. A quest the learner passed or started here shows that, over the fixture's state; the boss of a world opens once the rest is passed. */

@@ -2,15 +2,18 @@
 import { MonitorPlayIcon, PlayIcon, SendIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
+import type { AppError } from "@shared/types/errors";
 import type { SubmitOutcome } from "@shared/types/progress";
 import type { RunResult } from "@shared/types/run";
 
+import { AppErrorView } from "@/components/AppErrorView";
 import type { BuildOutcome } from "@/components/BuildProgressView";
 import { Button } from "@/components/ui/button";
 import type { QuestRun } from "@/data/useQuestRun";
 import { modifierKeyLabel } from "@/lib/platform";
 
 import { BuildLog } from "./BuildLog";
+import { isOutsideFailureCode, NOT_YOUR_CODE_HEADLINE } from "./outsideFailureCodes";
 import { RUN_STEPS, SUBMIT_STEPS } from "./questRunSteps";
 import { RunProgress } from "./RunProgress";
 import { TestList } from "./TestList";
@@ -46,12 +49,29 @@ function outcomeOf(status: QuestRun<unknown>["status"], result: RunResult | null
 	return result?.ok ? "succeeded" : "failed";
 }
 
+/** What the label beside a result says: the tests, a build that never reached the learner's code, or a compile failure. */
+function resultSummary(result: RunResult): string
+{
+	if (result.unrelatedFailure) return "could not build (not your code)";
+
+	return result.compiled ? `tests ${result.testsPassed} of ${result.testsTotal}` : "did not compile";
+}
+
+/** True when a rejected call already shows this very failure, so the result below it does not repeat the same box. */
+function isShownAsCallError(failure: AppError, callError: AppError | null): boolean
+{
+	return callError !== null && callError.code === failure.code && callError.message === failure.message;
+}
+
 /** The controls stack; whichever of Run or Submit ran last owns the progress view. */
 export function RunColumn({ run, submit, lastResult, lastResultSource, canSubmit, submitBlockedReason, onRun, onSubmit, onOpenEditor, isOpeningEditor, lastSubmit, hints, offers }: RunColumnProps)
 {
 	const busy = run.status === "running" || submit.status === "running";
 	const showing = submit.status === "running" ? submit : run.status !== "idle" ? run : null;
 	const modifier = modifierKeyLabel();
+
+	// A Submit rejected for an outside failure (A1208) or a failed call: shown in place, with its action and details, instead of loot.
+	const failedCall = submit.status === "errored" ? submit : run.status === "errored" ? run : null;
 
 	return (
 		<div data-testid="run-column" className="flex flex-col gap-4">
@@ -82,7 +102,15 @@ export function RunColumn({ run, submit, lastResult, lastResultSource, canSubmit
 					label={showing === submit ? "Submit" : "Run"}
 				/>
 			)}
-			{(run.error ?? submit.error) && (run.status === "errored" || submit.status === "errored") && <p className="text-sm text-fail">{(run.error ?? submit.error)?.message}</p>}
+			{failedCall?.error && (
+				<AppErrorView
+					error={failedCall.error}
+					{...(isOutsideFailureCode(failedCall.error.code) ? { headline: NOT_YOUR_CODE_HEADLINE } : {})}
+					onRetry={busy ? undefined : failedCall === submit ? onSubmit : onRun}
+					retryLabel={failedCall === submit ? "Submit again" : "Run again"}
+					compact
+				/>
+			)}
 
 			{lastSubmit}
 
@@ -90,11 +118,20 @@ export function RunColumn({ run, submit, lastResult, lastResultSource, canSubmit
 				<div data-testid="run-result" data-ok={lastResult.ok} data-source={lastResultSource} className="flex flex-col gap-3 border-t border-line pt-3">
 					<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">
 						{lastResultSource === "submit" ? "Last submit: " : "Last run: "}
-						{lastResult.compiled ? `tests ${lastResult.testsPassed} of ${lastResult.testsTotal}` : "did not compile"}
+						{resultSummary(lastResult)}
 					</span>
-					{lastResult.error && <p className="text-sm text-warn">{lastResult.error}</p>}
+					{lastResult.unrelatedFailure && !isShownAsCallError(lastResult.unrelatedFailure, failedCall?.error ?? null) && (
+						<AppErrorView
+							error={lastResult.unrelatedFailure}
+							headline={NOT_YOUR_CODE_HEADLINE}
+							onRetry={busy ? undefined : lastResultSource === "submit" ? onSubmit : onRun}
+							retryLabel={lastResultSource === "submit" ? "Submit again" : "Run again"}
+							compact
+						/>
+					)}
+					{lastResult.error && !lastResult.unrelatedFailure && <p className="text-sm text-warn">{lastResult.error}</p>}
 					{lastResult.tests.length > 0 && <TestList tests={lastResult.tests} />}
-					<BuildLog key={`${lastResult.durationMs}-${lastResult.compiled}`} output={lastResult.compilerOutput} startOpen={!lastResult.compiled} />
+					<BuildLog key={`${lastResult.durationMs}-${lastResult.compiled}`} output={lastResult.compilerOutput} startOpen={!lastResult.compiled && !lastResult.unrelatedFailure} />
 				</div>
 			)}
 

@@ -67,7 +67,7 @@ enum class EDojoM6QuestState : uint8
 };
 
 /** One quest's definition, kept in an asset so designers add quests without code. */
-UCLASS(BlueprintType) // @explain: The Type Object idea from data assets: one class, and each quest is an asset made from it.
+UCLASS(BlueprintType)
 class UDojoM6QuestData : public UDataAsset
 {
 	GENERATED_BODY()
@@ -95,7 +95,7 @@ public:
 
 	/** A quest that must be completed before this one is offered; empty for none. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Quest")
-	TObjectPtr<UDojoM6QuestData> Requires; // @explain: A quest asset can point at another quest asset, which is all a chain needs.
+	TObjectPtr<UDojoM6QuestData> Requires;
 
 	/** A secret quest is never offered; it starts itself when its first item is found. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Quest")
@@ -114,14 +114,14 @@ public:
 #include "DojoM6QuestTracker.generated.h"
 
 /** Broadcast whenever a quest changes state, including when it is first added. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDojoM6OnQuestStateChanged, UDojoM6QuestData*, Quest, EDojoM6QuestState, NewState);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDojoM6OnQuestStateChanged, UDojoM6QuestData*, ChangedQuest, EDojoM6QuestState, NewState);
 
 /** Broadcast whenever a collect quest counts an item. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDojoM6OnQuestProgress, UDojoM6QuestData*, Quest, int32, Current, int32, Target);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDojoM6OnQuestProgress, UDojoM6QuestData*, ChangedQuest, int32, Current, int32, Target);
 
 /** Owns every quest's state for one world and announces each change, so givers, boards, and finales only listen. */
 UCLASS()
-class UDojoM6QuestTracker : public UWorldSubsystem // @explain: One tracker per world, made and destroyed with the world, found by type instead of by reference.
+class UDojoM6QuestTracker : public UWorldSubsystem
 {
 	GENERATED_BODY()
 
@@ -195,7 +195,7 @@ private:
 	UPROPERTY()
 	TMap<TObjectPtr<UDojoM6QuestData>, int32> Progress;
 
-	TMap<TObjectPtr<UDojoM6QuestData>, FTimerHandle> TimeLimits; // @explain: One clock per quest, so timed quests running together do not replace each other.
+	TMap<TObjectPtr<UDojoM6QuestData>, FTimerHandle> TimeLimits;
 };
 ```
 
@@ -416,16 +416,18 @@ bool FDojo_M6_QuestTracker_ClocksPerQuest::RunTest(const FString& Parameters)
 
 # Rubric
 
-- Every state change goes through one function that stores it and broadcasts OnQuestStateChanged; nothing else broadcasts it.
+- The state changes a player sees go through one function that stores the new state and broadcasts OnQuestStateChanged; nothing else broadcasts it.
 - Each timed quest has its own handle in a map, set with a timer delegate whose payload is the quest.
-- A timed quest finished in time is never failed by its clock, and a late clock changes nothing.
+- A timed quest finished before its time limit stays Completed.
 - Completing a quest makes every Locked quest that requires it Available.
 - A secret quest is never offered and starts itself on its first reported item.
 - ResetQuests and Deinitialize leave no clock running.
 
 # Alternative
 
-Each quest could be its own actor or object with its own state, clock, and event, and the tracker a list of them. That is the State pattern taken further and suits quests with very different rules, such as escort or defend. With two kinds of quest, one tracker holding states in maps is simpler to test and to reset, and every listener binds to one event instead of one per quest. The Gameplay Message Router plugin from Epic's Lyra sample, a message subsystem keyed by gameplay tags, is the other common shape in larger projects: senders post a message and listeners filter by tag, so even the tracker need not be known by name.
+Why the first run failed: a timer fires whatever became of the thing it was set for, so finishing a quest early does not stop its clock. The tracker must clear that quest's clock on completion, and a clock that still fires late must be ignored, because only a quest that is still active may be failed by time.
+
+Each quest could be its own actor or object with its own state, clock, and event, and the tracker a list of them. That takes the tracker's split between quest state and listeners further, with the rules living inside each quest, and it suits quests that behave very differently, such as escort or defend. With two kinds of quest, one tracker holding states in maps is simpler to test and to reset, and every listener binds to one event instead of one per quest. The Gameplay Message Router plugin from Epic's Lyra sample, a message subsystem keyed by gameplay tags, is the other common shape in larger projects: senders post a message and listeners filter by tag, so even the tracker need not be known by name.
 
 # Parsons
 

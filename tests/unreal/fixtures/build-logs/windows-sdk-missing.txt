@@ -1,0 +1,1 @@
+ERROR: Unable to find requested Windows SDK; '10.0.99999.0' is an invalid version

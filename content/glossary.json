@@ -503,7 +503,8 @@
       "enhanced-input",
       "input-mapping-context",
       "player-controller"
-    ]
+    ],
+    "firstQuestId": "m1-binding-input"
   },
   {
     "id": "engine-subsystem",
@@ -1045,7 +1046,8 @@
       "CDO",
       "GetDefault",
       "class defaults",
-      "archetype"
+      "archetype",
+      "GetMutableDefault"
     ],
     "category": "object model",
     "short": "A hidden template instance of each class, built by running its constructor once, that new instances copy their defaults from.",
@@ -2364,7 +2366,8 @@
       "input-modifier",
       "enhanced-input-component",
       "legacy-input"
-    ]
+    ],
+    "firstQuestId": "m1-actions-and-values"
   },
   {
     "id": "input-action",
@@ -2383,7 +2386,8 @@
       "input-mapping-context",
       "finputactionvalue",
       "enhanced-input-component"
-    ]
+    ],
+    "firstQuestId": "p5-actions-as-values"
   },
   {
     "id": "input-mapping-context",
@@ -2404,7 +2408,8 @@
       "local-player-subsystem",
       "input-trigger",
       "input-modifier"
-    ]
+    ],
+    "firstQuestId": "m1-actions-and-values"
   },
   {
     "id": "input-trigger",
@@ -2425,7 +2430,8 @@
       "input-modifier",
       "input-mapping-context",
       "input-action"
-    ]
+    ],
+    "firstQuestId": "m1-triggers-and-events"
   },
   {
     "id": "input-modifier",
@@ -2445,7 +2451,8 @@
       "input-trigger",
       "input-mapping-context",
       "finputactionvalue"
-    ]
+    ],
+    "firstQuestId": "m1-actions-and-values"
   },
   {
     "id": "etriggerevent",
@@ -2463,7 +2470,8 @@
       "input-trigger",
       "enhanced-input-component",
       "input-action"
-    ]
+    ],
+    "firstQuestId": "m1-binding-input"
   },
   {
     "id": "finputactionvalue",
@@ -2481,7 +2489,8 @@
       "enhanced-input-component",
       "input-modifier",
       "fvector"
-    ]
+    ],
+    "firstQuestId": "m1-actions-and-values"
   },
   {
     "id": "enhanced-input-component",
@@ -2499,7 +2508,8 @@
       "etriggerevent",
       "input-action",
       "enhanced-input"
-    ]
+    ],
+    "firstQuestId": "m1-binding-input"
   },
   {
     "id": "legacy-input",
@@ -2519,7 +2529,8 @@
       "enhanced-input",
       "setup-player-input-component",
       "player-controller"
-    ]
+    ],
+    "firstQuestId": "m1-actions-and-values"
   },
   {
     "id": "setup-player-input-component",
@@ -2538,7 +2549,8 @@
       "pawn",
       "player-controller",
       "super"
-    ]
+    ],
+    "firstQuestId": "m1-binding-input"
   },
   {
     "id": "data-asset",
@@ -2549,7 +2561,7 @@
     ],
     "category": "framework",
     "short": "An asset made from a C++ class whose only job is to hold configuration data designers can edit.",
-    "long": "Make a class like UDojoWeaponData : public UDataAsset with UPROPERTY fields for damage, fire rate, and mesh, and designers can create as many weapon data assets in the Content Browser as they like. Gameplay code then reads from whichever asset it is given. This separates numbers from logic, so balancing a weapon never means editing a Blueprint graph. It is the type object pattern in Unreal form.",
+    "long": "Make a class like UDojoWeaponData : public UDataAsset with UPROPERTY fields for damage, fire rate, and mesh, and designers can create as many weapon data assets in the Content Browser as they like. Gameplay code then reads from whichever asset it is given. This separates numbers from logic, so balancing a weapon never means editing a Blueprint graph.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/data-assets-in-unreal-engine?application_version=5.8",
     "related": [
       "primary-data-asset",
@@ -3804,7 +3816,8 @@
       "build-configurations",
       "tick",
       "object-pool"
-    ]
+    ],
+    "firstQuestId": "p11-flyweight-when-not"
   },
   {
     "id": "packaging",
@@ -4093,7 +4106,7 @@
     ],
     "category": "components",
     "short": "A component that draws one mesh many times, storing only a transform and a few optional floats per copy.",
-    "long": "Instead of one static mesh component per rock, seat, or torch, one instanced component holds the shared mesh and material and a list of instances, each added with AddInstance as a transform. The renderer can draw them together, which saves components, memory, and draw calls. Each instance can carry a few custom data floats that the material reads. The hierarchical version clusters instances so large sets cull and change detail in groups, which is what foliage uses. Instances have no tick, events, or logic of their own.",
+    "long": "Instead of one static mesh component per rock, seat, or torch, one instanced component holds the shared mesh and material and a list of instances, each added with AddInstance as a transform. One component then stands for every copy, which saves the per-component upkeep (registration, render data, visibility checks, updates) and the memory of many separate components. Each instance can carry a few custom data floats that the material reads. The hierarchical version clusters instances so large sets cull and change detail in groups, which is what foliage uses. Instances have no tick, events, or logic of their own.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UInstancedStaticMeshComponent?application_version=5.8",
     "related": [
       "static-mesh-component",
@@ -4190,5 +4203,84 @@
       "tick"
     ],
     "firstQuestId": "m2-movement-components"
+  },
+  {
+    "id": "spawn-template",
+    "term": "Spawn Template",
+    "aliases": [
+      "FActorSpawnParameters::Template",
+      "template actor",
+      "spawn template"
+    ],
+    "category": "framework",
+    "short": "A spawn parameter that starts a new actor from an existing actor's property values instead of from the class defaults.",
+    "long": "FActorSpawnParameters has a Template field. Set it to an existing actor of exactly the same class and the world builds the new actor from that actor's property values, so a tuned instance becomes the starting point for any number of copies. The template is still a real actor in the world and plays like one unless you hide it and turn its collision off, and a copy takes those values too. The root component's own place is one of the values a copy takes, so a copy may not land where you asked until you set its location. A template of a different class makes the spawn fail.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/FActorSpawnParameters?application_version=5.8",
+    "related": [
+      "spawnactor",
+      "cdo",
+      "blueprint-class",
+      "actor",
+      "world"
+    ],
+    "firstQuestId": "p12-copy-the-tuned-one"
+  },
+  {
+    "id": "duplicate-object",
+    "term": "DuplicateObject",
+    "aliases": [
+      "DuplicateObject<T>()",
+      "StaticDuplicateObject"
+    ],
+    "category": "object model",
+    "short": "The function that makes a separate copy of a UObject, including the objects it owns.",
+    "long": "DuplicateObject takes a source object and an outer and returns a new object of the same class with the same saved property values (Transient properties are skipped). Subobjects the source owns, such as components or helper objects created inside it, are duplicated too, so the copy does not share them. Objects the source only points at stay shared between the two. It is the engine's own deep copy for objects that are not actors; actors are copied by spawning with a template. Prefer it to a hand-written Clone function that lists every field, which falls behind as soon as someone adds a field.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/DuplicateObject?application_version=5.8",
+    "related": [
+      "newobject",
+      "uobject",
+      "cdo",
+      "garbage-collection",
+      "spawn-template"
+    ],
+    "firstQuestId": "p12-copy-the-tuned-one"
+  },
+  {
+    "id": "input-consumption",
+    "term": "Input Consumption",
+    "aliases": [
+      "bConsumeInput",
+      "input consumption",
+      "consume lower priority mappings"
+    ],
+    "category": "input",
+    "short": "The rule that an input action which takes a key hides that key from lower priority mapping contexts.",
+    "long": "Every input action has a Consume Input setting, on by default. When a higher priority mapping context maps a key to such an action, the lower priority contexts never see that key: their mappings of it are dropped when the player's mappings are rebuilt. This is how a pause or menu context stops gameplay keys without touching gameplay code, even if nothing is bound to its action. Turn the setting off on the higher action to let the key reach both layers.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/EnhancedInput/UInputAction?application_version=5.8",
+    "related": [
+      "input-mapping-context",
+      "input-action",
+      "local-player-subsystem"
+    ],
+    "firstQuestId": "m1-priority-and-consume"
+  },
+  {
+    "id": "finputactioninstance",
+    "term": "FInputActionInstance",
+    "aliases": [
+      "action instance",
+      "FInputActionInstance::GetElapsedTime"
+    ],
+    "category": "input",
+    "short": "The running state of an input action, which a handler can take to read its value and how long it has been going.",
+    "long": "A handler bound with BindAction may take a const FInputActionInstance& instead of the plain value. The instance gives GetValue, GetTriggerEvent, GetElapsedTime (seconds the action has been started, ongoing, or triggered) and GetTriggeredTime (seconds spent triggered). A charge bar reads the elapsed time of a Hold action and divides it by the full charge time.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/EnhancedInput/FInputActionInstance?application_version=5.8",
+    "related": [
+      "finputactionvalue",
+      "etriggerevent",
+      "input-trigger",
+      "enhanced-input-component"
+    ],
+    "firstQuestId": "m1-triggers-and-events"
   }
 ]

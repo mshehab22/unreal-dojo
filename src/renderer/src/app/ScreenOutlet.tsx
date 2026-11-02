@@ -1,6 +1,7 @@
-// Picks the screen component for the current route.
+// Picks the screen component for the current route and keeps a crashing screen from taking the frame down with it.
 import type { ComponentType } from "react";
 
+import { ScreenErrorBoundary } from "@/components/ScreenErrorBoundary";
 import { CharacterScreen } from "@/screens/CharacterScreen";
 import { CodexScreen } from "@/screens/CodexScreen";
 import { DrillScreen } from "@/screens/DrillScreen";
@@ -14,6 +15,7 @@ import { TitleScreen } from "@/screens/TitleScreen";
 import { WorldMapScreen } from "@/screens/WorldMapScreen";
 
 import type { RouteId } from "./router/routes";
+import { useNavigate } from "./router/useRoute";
 
 /** The component that renders each route. */
 const SCREENS: Readonly<Record<RouteId, ComponentType>> = {
@@ -36,10 +38,15 @@ interface ScreenOutletProps
 	readonly routeId: RouteId;
 }
 
-/** Renders the screen for a route. */
+/** Renders the screen for a route inside an error boundary that resets whenever the route changes. */
 export function ScreenOutlet({ routeId }: ScreenOutletProps)
 {
 	const Screen = SCREENS[routeId];
+	const navigate = useNavigate();
 
-	return <Screen />;
+	return (
+		<ScreenErrorBoundary key={routeId} onGoToStudio={() => navigate("studio")} isStudioScreen={routeId === "studio"}>
+			<Screen />
+		</ScreenErrorBoundary>
+	);
 }

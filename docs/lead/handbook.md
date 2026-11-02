@@ -65,6 +65,7 @@ On the Mac the GitHub CLI is installed at `~/.local/bin/gh` and signed in as msh
 
 ## Lessons learned
 
+- **Engine proofs no longer fill Temp (2026-10-28, W14, A1280):** `--engine` builds in one persistent workspace per engine version, `%USERPROFILE%\.unreal-dojo\verify\<major.minor>` on Windows (not AppData: the Claude app's MSIX package redirects AppData writes into a long hidden path, A1286; `--workspace <folder>` or `DOJO_VERIFY_WORKSPACE` moves it), and the logs of its last five runs are in `Saved/VerifierLogs/<stamp>/` there. It is a cache of a few GB that is safe to delete; the old `dojo-verify-*` folders in Temp were 2.6 GB each and can be deleted. Two runs on one engine version wait for each other on `<workspace>.lock`.
 - **Engine load:** too many sessions running Unreal at once got six of them killed by the system. Hence the lock.
 - **Unread rules:** an engine-gated test suite that nobody runs hides breaks. Name the flag and the command in every brief.
 - **Scratch folders:** the scratch folder can be wiped; keep anything the next Lead needs (proof recipes, scripts) in the repo.

@@ -62,7 +62,7 @@ describe.skipIf(!HAS_ENGINE)(`headless loop against ${ENGINE_ROOT || "no engine"
 	{
 		console.log(`Timings (ms): ${JSON.stringify(timings)}`);
 
-		if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true });
+		if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
 	});
 
 	it("creates the sandbox and its first full build passes", async () =>

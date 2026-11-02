@@ -1,11 +1,12 @@
 // ui-core M2.1: every core screen against the typed fake DojoApi (A240), at 1100x700 and 1440x900, plus the first-run flow,
-// a failing first build with retry, a first build whose progress and answer go missing (A822), Codex search, a locked stage's reason, Settings actions, and the real bridge's error view.
+// a failing first build with retry, a first build whose progress and answer go missing (A822), Codex search, a locked stage's reason, Settings actions, the real bridge's error view, and a Studio read main never answers (W12).
 // Page scripts are passed as strings because e2e is typechecked without the DOM library.
 // Saves screenshots to test-results/; with SAVE_PROOF=1 a passing test also writes them to docs/iterations/m2-1-*.jpg at one pixel per CSS pixel.
 import type { Page } from "@playwright/test";
 
 import { expect, test } from "./support/dojoTest";
 import { scrollIntoViewNow } from "./support/hoverAtCentre";
+import { stubFirstAnswerNeverComes } from "./support/ipcStubs";
 import type { ProofCamera } from "./support/ProofCamera";
 
 /** The two sizes every screen must work at (docs/systems/ui-core.md). */
@@ -445,5 +446,38 @@ test("against the real bridge, the title works and the Studio shows real data or
 	await window.evaluate(`location.hash = "#/studio"`);
 	await expect(window.getByTestId("screen-studio")).toBeVisible();
 	await expect(window.getByTestId("app-error").or(window.getByTestId("studio-lead")).first()).toBeVisible({ timeout: REAL_BRIDGE_STUDIO_TIMEOUT_MS });
+
+	// A read main never answered ends in the error view after its wait limit (A1250), and a read that outlasts this test's own timeout fails
+	// above. Both are the CI hang W12 could not explain; the failure attaches main's console, which names the call (A1252, A1253).
+	await expect(window.locator('[data-testid="app-error"][data-error-code="no-answer"]')).toHaveCount(0);
 	await saveScreenshot(camera, window, "studio-bridge-1100x700");
+});
+
+test("a Studio read that main never answers ends in the AppError view, and Try again loads the Studio (W12, A1250)", async ({ dojo, camera }) =>
+{
+	test.setTimeout(100_000);
+
+	const { window, electronApp } = dojo;
+
+	await useDataSource(window, "bridge");
+	await setViewport(window, 1100, 700);
+	await expect(window.getByRole("heading", { name: "Unreal Dojo" })).toBeVisible();
+
+	// Main's first answer to getDailyQuest never comes, as on the CI runs that hung (W12); later calls go to the real handler.
+	await stubFirstAnswerNeverComes(electronApp, "dojo:getDailyQuest");
+
+	await window.evaluate(`location.hash = "#/studio"`);
+	await expect(window.getByTestId("screen-studio")).toBeVisible();
+	await expect(window.getByTestId("studio-lead")).toHaveCount(0);
+
+	// The data wait limit is 45 s (A1262); the view must come soon after it, never an endless loading block.
+	const noAnswer = window.locator('[data-testid="app-error"][data-error-code="no-answer"]');
+	await expect(noAnswer).toBeVisible({ timeout: 60_000 });
+	await expect(noAnswer).toContainText("taking too long");
+	await expect(window.getByTestId("screen-studio").getByTestId("loading")).toHaveCount(0);
+	await saveScreenshot(camera, window, "studio-no-answer-1100x700");
+
+	await noAnswer.getByRole("button", { name: "Try again" }).click();
+	await expect(window.getByTestId("studio-lead")).toBeVisible({ timeout: 10_000 });
+	await expect(window.getByTestId("app-error")).toHaveCount(0);
 });

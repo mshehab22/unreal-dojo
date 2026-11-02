@@ -38,7 +38,7 @@ Extensions, in order of importance:
 
 1. A third quest kind, survive: stay inside an area for 15 seconds, added as a new kind in the tracker and a new piece that reports it.
 2. A quest chain that offers a reward quest only when both Lost tools and the secret are done.
-3. Lifetime stats on Pack 1 World 3's score board: quests done, quests failed, best day time.
+3. A rank on the finale line (S, A, or B) chosen from the day's time, with the cutoffs kept in a data asset a designer can tune.
 
 Feel: tune the courier time limit until the run feels like a dash you can make on the second try, not the first.
 
@@ -120,7 +120,7 @@ Feel: tune the courier time limit until the run feels like a dash you can make o
 - Items and gates only broadcast; the director subscribes to them, and the givers and the board subscribe to the tracker.
 - E reaches the nearest giver or wanted item within 200, givers winning ties and the earlier giver winning between givers, and unwanted items are skipped.
 - Gates count only in order, only while the courier run is active, and the course restarts on every start of the run.
-- The courier run fails at 20 seconds unless finished, and a run finished in time is never failed afterwards.
+- The courier run fails at 20 seconds unless finished, and a run finished before 20 seconds stays Completed.
 - The board updates only on tracker events, hides the secret until it starts, and the finale ignores the secret.
 - Every binding made in BeginPlay or StartRound is removed in EndPlay or dies with its sender, and the gate check is a timer, not Tick.
 - R starts a fresh day only after the finale, and a second day plays exactly like the first; the submission gives the tuned time limit with one sentence on why.

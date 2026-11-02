@@ -24,7 +24,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Level", meta = (ClampMin = "1"))
 	int32 MaxLevel = 5;
 
-	/** Adds XP, levels up as many times as it pays for, and returns how many levels were gained. */
+	/** Adds XP, levels up when the XP covers the next level, and returns how many levels were gained. */
 	UFUNCTION(BlueprintCallable, Category = "Level")
 	int32 AddXP(float Amount);
 
@@ -45,7 +45,11 @@ public:
 	float GetXPToNext() const;
 
 private:
+	/** The current level, shown read-only in Details so the editor step can check it. */
+	UPROPERTY(VisibleAnywhere, Category = "Level")
 	int32 Level = 1;
 
+	/** XP gathered toward the next level, shown read-only in Details. */
+	UPROPERTY(VisibleAnywhere, Category = "Level")
 	float XP = 0.f;
 };

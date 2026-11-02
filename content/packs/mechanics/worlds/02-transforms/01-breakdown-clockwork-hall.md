@@ -7,7 +7,7 @@ difficulty: 3
 patterns: []
 skills: [planning, movement]
 terms: [tick, deltatime, timer-manager, scene-component, ftransform]
-prerequisites: [f5-boss-beacon-drill]
+prerequisites: [m1-boss-drone-handoff]
 xp: 80
 estimatedMinutes: 20
 concepts:

@@ -45,6 +45,13 @@ bool UDojoP9SprintComponent::IsSprinting() const
 	return bSprinting;
 }
 
+void UDojoP9SprintComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Nothing to look up here: the stamina part may not be on the actor yet, so StartSprint finds it when needed.
+}
+
 void UDojoP9SprintComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (IsValid(Stamina)) Stamina->OnExhausted.RemoveDynamic(this, &UDojoP9SprintComponent::HandleExhausted);

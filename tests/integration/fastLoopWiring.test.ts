@@ -21,6 +21,7 @@ import { stopEngineWorkBeforeQuit } from "../../src/main/services/unreal/stopEng
 import { assertNoForeignLiveCodingSession } from "../support/liveCodingSessions";
 import { createIntegrationServices, LIVE_CODING_REQUESTED } from "../support/createIntegrationServices";
 import type { GuardedProcessLauncher } from "../support/GuardedProcessLauncher";
+import { keepEditorTimeoutEvidence } from "../support/keepEditorTimeoutEvidence";
 import { processesMentioning } from "../support/processesMentioning";
 import { MemoryUnrealSettings } from "../unreal/MemoryUnrealSettings";
 
@@ -111,11 +112,17 @@ describe.skipIf(!HAS_ENGINE)(`fast loop wiring against ${ENGINE_ROOT || "no engi
 
 	afterAll(async () =>
 	{
-		await services?.editorLauncher.dispose();
-		console.log(`Timings (ms): ${JSON.stringify(timings)}`);
-		console.log(`Editor launches: ${JSON.stringify(guard?.editorLaunchLines() ?? [])}`);
-
-		if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true });
+		try
+		{
+			await services?.editorLauncher.dispose();
+			console.log(`Timings (ms): ${JSON.stringify(timings)}`);
+			console.log(`Editor launches: ${JSON.stringify(guard?.editorLaunchLines() ?? [])}`);
+		}
+		finally
+		{
+			// The removal retries, and runs even when the dispose throws, so no sandbox is left in Temp (W14).
+			if (pickedFolder !== "") await rm(pickedFolder, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+		}
 	}, STEP_TIMEOUT_MS);
 
 	it("creates the sandbox through createSandbox", async () =>
@@ -204,7 +211,12 @@ describe.skipIf(!HAS_ENGINE)(`fast loop wiring against ${ENGINE_ROOT || "no engi
 
 		timings.editorReopenAfterFallback = Date.now() - startedAt;
 
-		expect(await services!.editorService.isConnected()).toBe(true);
+		const connected = await services!.editorService.isConnected();
+		const editor = services!.editorLauncher.current();
+		const sessionState = editor === null ? "no session" : editor.isRunning() ? "running" : "not running";
+		const evidence = connected ? "" : `The reopened editor did not answer MCP within ${EDITOR_REOPEN_TIMEOUT_MS} ms. ${await keepEditorTimeoutEvidence({ sandboxFolder: settings.getSandboxPath()!, label: "wiringReopenAfterFallback", sessionState })}`;
+
+		expect(connected, evidence).toBe(true);
 	}, STEP_TIMEOUT_MS);
 
 	it("quits through the app's quit sequence: the quit is held, the editor closes, and nothing is left on the sandbox", async () =>

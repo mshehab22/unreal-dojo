@@ -17,6 +17,7 @@ import type { VerifierResult } from "../runVerifier";
 
 import type { UnrealTools } from "./EngineSandbox";
 import { EngineVerifier, type EngineReport } from "./EngineVerifier";
+import { resolveWorkspaceRoot } from "./workspaceLocation";
 
 /** The sandbox template the app ships (unreal-pipeline spec). */
 const TEMPLATE_FOLDER = resolve(import.meta.dirname, "..", "..", "..", "resources", "sandbox-template");
@@ -65,7 +66,7 @@ export async function runEngineStage(enginePath: string, options: VerifierOption
 	const controller = new AbortController();
 	const stopOnSignal = (): void =>
 	{
-		if (!controller.signal.aborted) log("engine: stopping; killing the build or editor and keeping the sandbox copy");
+		if (!controller.signal.aborted) log("engine: stopping; killing the build or editor and releasing the verify workspace");
 		controller.abort();
 	};
 
@@ -73,7 +74,7 @@ export async function runEngineStage(enginePath: string, options: VerifierOption
 	process.on("SIGINT", stopOnSignal);
 	process.on("SIGTERM", stopOnSignal);
 
-	const verifier = new EngineVerifier({ target: { root: engine.path, version: engine.version, tools }, templateFolder: TEMPLATE_FOLDER, solutionsFolder: options.solutionsFolder, log, signal: controller.signal });
+	const verifier = new EngineVerifier({ target: { root: engine.path, version: engine.version, tools }, templateFolder: TEMPLATE_FOLDER, solutionsFolder: options.solutionsFolder, log, signal: controller.signal, workspaceRoot: resolveWorkspaceRoot({ ...(options.workspaceFolder === undefined ? {} : { flag: options.workspaceFolder }), platform: process.platform, homeFolder: homedir(), environment: process.env }) });
 	const report = await verifier.verify(result.input.quests, scopeOf(options, result)).finally(() =>
 	{
 		process.off("SIGINT", stopOnSignal);
@@ -82,7 +83,7 @@ export async function runEngineStage(enginePath: string, options: VerifierOption
 
 	log(`engine: ${report.questsChecked} quests; first build ${report.timings.firstBuildSeconds} s, solution tests ${report.timings.solutionTestsSeconds} s, starter checks ${report.timings.starterChecksSeconds} s`);
 
-	if (report.keptSandbox !== undefined) log(`engine: something failed or was inconclusive; the sandbox copy and its logs (Saved/VerifierLogs) are kept at ${report.keptSandbox}`);
+	if (report.logsFolder !== undefined) log(`engine: build and test logs of this run are in ${report.logsFolder} (the last few runs are kept)`);
 
 	return { problems: report.problems, report };
 }

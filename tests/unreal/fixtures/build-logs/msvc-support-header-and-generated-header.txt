@@ -1,0 +1,2 @@
+C:\Dojo\DojoSandbox\Source\Dojo\Support\DojoTestWorld.h(12): error C2143: syntax error: missing ';' before '*'
+C:\Dojo\DojoSandbox\Intermediate\Build\Win64\UnrealEditor\Inc\Dojo\UHT\DojoF1Target.generated.h(30): error C2065: 'UDojoF1Target': undeclared identifier

@@ -1,0 +1,3 @@
+In file included from /Users/learner/DojoSandbox/Source/Dojo/Quests/f1-score-keeper/DojoF1ScoreKeeper.cpp:3:
+/Users/Shared/Epic Games/UE_5.8/Engine/Source/Runtime/CoreUObject/Public/Templates/Casts.h:143:3: error: static_assert failed due to requirement 'sizeof(ADojoF1Target) > 0' "Cast cannot be used with an incomplete type"
+/Users/learner/DojoSandbox/Source/Dojo/Quests/f1-score-keeper/DojoF1ScoreKeeper.cpp:30:24: note: in instantiation of function template specialization 'Cast<ADojoF1Target, AActor>' requested here

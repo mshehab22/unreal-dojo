@@ -13,6 +13,7 @@ The system spec in `docs/systems/`, `docs/product.md`, `docs/decisions.md`, and 
 - **Checks:** `npm run typecheck`, `npm test`, `npx tsx tools/verify-content.ts`, `npm run build`, and `npm run test:e2e`. A known load flake fails about one run in twelve: if exactly one e2e test fails, rerun once before blaming the branch.
 - **Background only (A77).** e2e opens its windows hidden. Never set `DOJO_TEST_SHOW_WINDOW`, never run `npm run dev`, and never launch the app any other way: the person at the computer is using it.
 - **Engine runs.** Only one at a time on a machine. Take the lock the Lead names in your brief before any Unreal build, headless test, or `--engine` run, and release it as soon as the run ends, also on failure. Never launch the windowed editor.
+- **MSIX redirection (Windows).** Sessions run inside the packaged Claude app, so writes under `%LOCALAPPDATA%` land in `AppData\Local\Packages\Claude_*\LocalCache\Local\...`, a longer path that is invisible in Explorer. Anything that must stay under the 100 character sandbox path limit, or that the user must find, belongs under the home folder (A1286), as the verifier workspace does. If a path in a log looks far longer than the one in the code, this is why.
 - **Integration tests.** They are skipped unless `DOJO_ENGINE_ROOT` is set. If the branch touches `src/main/ipc`, `createHandlers`, or a service those tests use, run them under the lock with `DOJO_ENGINE_ROOT=<engine root> npx vitest run tests/integration --no-file-parallelism`. The flag is required (A612).
 - **No engine on the machine.** Do every other check and list each engine step you could not run under "Not verified: engine not installed", precisely enough to run later. Do not fail a review only for that.
 
@@ -23,7 +24,7 @@ The system spec in `docs/systems/`, `docs/product.md`, `docs/decisions.md`, and 
 - **Accuracy:** check every Unreal claim against UE 5.8.
 - **Windows compiler:** no local or parameter in a solution or starter may share a name with a member of the class it sits in or of `AActor`, `UActorComponent`, or `UObject` (`Instigator`, `bHidden`, `Owner`, `Tags`, and so on). MSVC rejects it as C4458 and clang on the Mac does not warn (A1050, A1060). The verifier now flags it as an error on any machine (A1170), so a clean `verify-content` run covers it; still read new C++ that the scanner cannot see (macro-declared members, brace initializer lists).
 - **Rules:** check A64 (and A373 for starter comments), A66, A72 and every `firstQuestId`, A73, and that rubrics match briefs.
-- **Deliberate failure:** confirm it is not given away anywhere the learner sees before failing, including glossary hover cards and the rubric shown beside the brief.
+- **Deliberate failure:** confirm it is not given away anywhere the learner sees before failing, including glossary hover cards, the rubric and the concepts shown beside the brief (they state outcomes only, never the failure or its fix; reasoning belongs in the after-pass text).
 
 ## Report
 

@@ -6,10 +6,10 @@
 #include "DojoM6QuestTracker.generated.h"
 
 /** Broadcast whenever a quest changes state, including when it is first added. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDojoM6OnQuestStateChanged, UDojoM6QuestData*, Quest, EDojoM6QuestState, NewState);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDojoM6OnQuestStateChanged, UDojoM6QuestData*, ChangedQuest, EDojoM6QuestState, NewState);
 
 /** Broadcast whenever a collect quest counts an item. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDojoM6OnQuestProgress, UDojoM6QuestData*, Quest, int32, Current, int32, Target);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDojoM6OnQuestProgress, UDojoM6QuestData*, ChangedQuest, int32, Current, int32, Target);
 
 /** Owns every quest's state for one world and announces each change, so givers, boards, and finales only listen. */
 UCLASS()
