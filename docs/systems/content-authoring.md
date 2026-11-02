@@ -63,6 +63,8 @@ Pack 2, Patterns in Unreal: follow `research/patterns-inventory.md` Part 3 order
 
 Pack 3, Mechanics Lab: the 8 modules with the 96 original exercise ideas and 16 bosses from the GameDev.tv research section 6, pruned to 4 to 6 build quests per world plus breakdowns of the 15 ready mechanics. World 6 boss is the Quest System (two reference breakdowns, pieces, integration rubric with 8 bullets, difficulty 5). Naming (A870): world folders keep their pack position (World 6 is `06-delegates` even while Worlds 1 to 5 are unwritten), quest ids are `m<world>-<slug>`, classes `ADojoM<world><Name>`, and tests `Dojo.M<world>.<Quest>.<Case>`.
 
+Pack 3 World 1 (`01-input`, world id `input`, A1110) is Enhanced Input: ten quests, ending in the boss `m1-boss-drone-handoff`. Any later quest that needs a pressed key uses the test rig `FDojoM1InputRig` (`Quests/m1-turntable/DojoM1InputRig.h`, A1113). It gives the test world a game instance, a local player, and a player controller; `Possess` runs the engine's own possession path; `Press` and `Release` send simulated key events; and `Rig.Tick` replaces `FDojoTestWorld::Tick`, because only the engine loop ticks the Enhanced Input module that applies changed mapping contexts. A quest that includes the rig lists `m1-turntable` under "Compiles against earlier quests:" and in its prerequisites. A pawn made in code needs a scene root (`RootComponent`) or it has no place in the world, and a pawn destroyed while possessed destroys a controller that has no player state, so release it first.
+
 Pack 4, Systems Lab: the 8 systems specced in the GameDev.tv research section 6, each a boss-shaped world (breakdown, pieces, integration) naming the patterns it combines.
 
 ## Done criteria per world
