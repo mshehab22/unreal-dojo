@@ -4282,5 +4282,108 @@
       "enhanced-input-component"
     ],
     "firstQuestId": "m1-triggers-and-events"
+  },
+  {
+    "id": "stack-machine",
+    "term": "Stack machine",
+    "aliases": [
+      "stack machines",
+      "value stack",
+      "stack-based machine",
+      "stack-based virtual machine"
+    ],
+    "category": "cpp idiom",
+    "short": "A small interpreter whose instructions take their inputs from the top of a stack of values and put their answer back on top.",
+    "long": "Each instruction of a stack machine names what to do, not where its inputs are: an add takes the two values on top of the stack and puts their sum back. Because the order of the instructions already says what is worked out first, a formula with brackets becomes a flat list, and each instruction stays tiny. In a game the stack has a fixed size, and an instruction that needs more values than the stack holds, or would overfill it, is refused rather than trusted. Unreal's own script interpreter keeps its place in a running Blueprint function in an FFrame.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/FFrame?application_version=5.8",
+    "related": [
+      "blueprint-vm",
+      "tarray",
+      "uenum",
+      "ustruct"
+    ],
+    "firstQuestId": "p13-behavior-as-data"
+  },
+  {
+    "id": "blueprint-vm",
+    "term": "Blueprint script interpreter",
+    "aliases": [
+      "Blueprint VM",
+      "Blueprint virtual machine",
+      "Kismet VM",
+      "EExprToken",
+      "FFrame",
+      "UStruct::Script"
+    ],
+    "category": "reflection",
+    "short": "The part of the engine that runs compiled Blueprint graphs by reading their script bytes one token at a time.",
+    "long": "When a Blueprint compiles, each graph becomes a byte array of script tokens (the EExprToken values, such as EX_Jump and EX_IntConst) stored in the Script array of its UFunction. While the game runs, the engine walks those bytes with an FFrame that remembers where it is, calling native functions and reading properties through reflection. Jumps check a runaway counter, so a loop that never ends is stopped with an error once it passes the engine's MaximumLoopIterationCount. It is why Blueprint changes need no C++ compile, and also why a tight Blueprint loop costs more than the same loop in C++.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/EExprToken?application_version=5.8",
+    "related": [
+      "blueprint-class",
+      "ufunction",
+      "reflection",
+      "stack-machine",
+      "blueprint-vs-cpp"
+    ],
+    "firstQuestId": "p13-behavior-as-data"
+  },
+  {
+    "id": "edit-condition",
+    "term": "EditCondition",
+    "aliases": [
+      "EditConditionHides",
+      "edit condition"
+    ],
+    "category": "reflection",
+    "short": "A meta specifier that lets a property be edited in the Details panel only while a condition on other properties holds.",
+    "long": "meta = (EditCondition = \"Op == EMyOp::PushNumber\") greys out the property unless the condition is true, and adding EditConditionHides hides it instead. The condition can name a bool, compare an enum property with one of its values, and combine tests with && and ||. On a struct shown as a row of an array, each row checks its own fields, so a list of steps shows a number only on the rows that push one. It changes only the editor: the property still exists and can still be set from code.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/metadata-specifiers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "meta-specifier",
+      "uproperty",
+      "editanywhere",
+      "uenum"
+    ],
+    "firstQuestId": "p13-behavior-as-data"
+  },
+  {
+    "id": "uparam-ref",
+    "term": "UPARAM(ref)",
+    "aliases": [
+      "UPARAM",
+      "by-reference pin"
+    ],
+    "category": "reflection",
+    "short": "A parameter specifier that makes a non-const reference parameter of a Blueprint function an input that comes back changed, instead of an output only.",
+    "long": "A BlueprintCallable function that takes a struct as a plain non-const reference shows it in Blueprint as an output pin only, because the engine assumes the function fills it in. Writing UPARAM(ref) before the parameter marks it as passed by reference (the CPF_ReferenceParm flag), so the node gets one pin that takes the caller's variable in, and the function's changes land in that variable. Use it when a function changes something the caller already has, such as a set of stats a potion adjusts.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/EPropertyFlags?application_version=5.8",
+    "related": [
+      "ufunction",
+      "blueprintcallable",
+      "ustruct"
+    ],
+    "firstQuestId": "p13-behavior-as-data"
+  },
+  {
+    "id": "instanced-specifier",
+    "term": "Instanced",
+    "aliases": [
+      "EditInlineNew",
+      "DefaultToInstanced",
+      "Instanced specifier"
+    ],
+    "category": "reflection",
+    "short": "Specifiers that let an object property hold its own object made inside the owner and edited inline in the Details panel.",
+    "long": "A class marked UCLASS(EditInlineNew) can be created right inside a property in the Details panel, and a UPROPERTY marked Instanced, or one whose class is DefaultToInstanced, gives each owner its own copy of that object, saved with the owner and duplicated with it. It is how designers build lists of small configured objects, such as steps or conditions, without making an asset for each. Each entry is still a full UObject, so a long list is many objects, and any state such an object keeps is shared by everything that uses that owner.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "uproperty",
+      "uclass",
+      "newobject",
+      "data-asset"
+    ],
+    "linkMode": "code-only",
+    "firstQuestId": "p13-bytecode-card"
   }
 ]
