@@ -355,7 +355,7 @@ bool FDojo_S2_SparringRing_EffectsComeFromTheAsset::RunTest(const FString& Param
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S2_SparringRing_UnbindsWhenItLeaves, "Dojo.S2.SparringRing.UnbindsWhenItLeaves", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** A director that leaves play stops listening to the hero's parts, which keep working without it. */
+/** The director never ticks, and once it leaves play it stops listening to the hero's parts, which keep working without it. */
 bool FDojo_S2_SparringRing_UnbindsWhenItLeaves::RunTest(const FString& Parameters)
 {
 	using namespace DojoS2RingTest;

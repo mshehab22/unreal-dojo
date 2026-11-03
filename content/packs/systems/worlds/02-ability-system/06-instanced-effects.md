@@ -56,6 +56,10 @@ UCLASS(Abstract, EditInlineNew)
 class UDojoExEffect : public UObject
 {
 	GENERATED_BODY()
+
+protected:
+	/** What the effect does when it runs; each child fills it in. */
+	virtual void OnApply(AActor* User) {}
 };
 
 /** One ability, with its effects created and tuned inside the asset. */
@@ -90,7 +94,7 @@ public:
   explanation: Abstract tells the engine and the editor the class is a parent only, so it is never offered as an object to create.
 - id: spot-shared-state
   type: spot-the-bug
-  prompt: Each hero may push three times per round. Two heroes use the same Shockwave asset, and after four pushes between them, neither hero's shockwave pushes anything. Which line is wrong?
+  prompt: Each hero may push three times per round. Two heroes use the same Shockwave asset, whose effect overrides the base's OnApply hook, and after three pushes between them, two by one hero and one by the other, neither hero's shockwave pushes anything. Which line is wrong?
   code: |
     UCLASS(EditInlineNew)
     class UDojoExPushEffect : public UDojoExEffect
