@@ -358,19 +358,20 @@ Filing the lanterns once and refiling each one as it drifts, as the swarm does, 
 
 ```yaml
 - id: weave-cells
-  prompt: Put the heart of the new Weave in order. The lanterns are already filed in Cells.
+  prompt: Put the neighbor part of the new Weave in order. It runs inside the loop over Cells, where Here is the current cell's indices and the cell's own pairs are already measured.
   lines:
-    - "	for (const TPair<FIntPoint, TArray<int32>>& Pair : Cells)"
-    - "	{"
-    - "		const TArray<int32>& Here = Pair.Value;"
-    - "		for (int32 Earlier = 0; Earlier < Here.Num(); ++Earlier) for (int32 Later = Earlier + 1; Later < Here.Num(); ++Later) Measure(Here[Earlier], Here[Later]);"
     - "		for (const FIntPoint& Offset : Ahead)"
     - "		{"
     - "			const TArray<int32>* There = Cells.Find(Pair.Key + Offset);"
     - "			if (!There) continue;"
-    - "			for (const int32 Mine : Here) for (const int32 Theirs : *There) Measure(Mine, Theirs);"
+    - "			for (const int32 Mine : Here)"
+    - "			{"
+    - "				for (const int32 Theirs : *There)"
+    - "				{"
+    - "					Measure(Mine, Theirs);"
+    - "				}"
+    - "			}"
     - "		}"
-    - "	}"
   distractors:
     - line: "		GetWorld()->OverlapMultiByChannel(Overlaps, FVector(Pair.Key, 0.0), FQuat::Identity, ECC_WorldDynamic, FCollisionShape::MakeSphere(LinkRange));"
       mistake: The floats are plain positions in an array, not collision shapes, so the physics scene cannot find them; the cells are the only place the lanterns are filed.

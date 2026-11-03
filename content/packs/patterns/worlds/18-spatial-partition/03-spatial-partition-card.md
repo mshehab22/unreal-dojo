@@ -37,7 +37,7 @@ explanation: FindNear visits every cell between the one under the circle's lowes
 
 What you built for the lanterns is the **Spatial Partition** pattern. Objects are kept in a structure organized by where they are, so a question about a place ("what is within 300 of here?") looks only at the part of the structure near that place, and the rest of the level costs it nothing.
 
-**The uniform grid.** Square cells of a fixed size, each with a list of what stands in it, keyed by an integer cell coordinate such as an `FIntPoint` in a `TMap`. Only cells that hold something take memory. A question visits the cells its circle can touch and measures what is in them. The cell size is the one dial: cells about as wide as the radius you usually ask about mean a question visits three cells each way or fewer; cells far smaller mean visiting many cells to collect a few objects; cells far larger mean measuring many objects that are not close.
+**The uniform grid.** Square cells of a fixed size, each with a list of what stands in it, keyed by an integer cell coordinate such as an `FIntPoint` in a `TMap`. Only cells that hold something take memory. A question visits the cells its circle can touch and measures what is in them. The cell size is the one dial: cells about as wide as the radius you usually ask about mean a question visits about three cells across on each axis; cells far smaller mean visiting many cells to collect a few objects; cells far larger mean measuring many objects that are not close.
 
 **The bookkeeping.** A grid is only right if it is kept right. An object that moves must be refiled when it crosses into a new cell, or questions about its new place will miss it. An object that is destroyed must leave, or a question will hand back something that no longer exists; for actors, filing a `TWeakObjectPtr` turns that mistake into an empty entry instead of a crash. The cost is memory for the cells and a little work on every move.
 
@@ -45,7 +45,7 @@ What you built for the lanterns is the **Spatial Partition** pattern. Objects ar
 
 **Trees instead of a grid.** A grid wastes nothing on empty cells but suffers when objects pile into a few cells. Trees adapt. A quadtree or octree splits a region into four or eight only where it is crowded, so dense clumps get small cells and empty space stays one big cell; `TOctree2` is Unreal's reusable template for one. A bounding volume tree groups the objects themselves into nested boxes, which balances well but costs more to update when things move. Pick the grid when objects are spread fairly evenly and move a lot; pick a tree when they clump or the space is mostly empty.
 
-**Where Unreal already does it.** The physics scene keeps every collision shape in a broadphase structure, a bounding box tree by default in UE 5.8 (the console variable `p.BroadphaseType` chooses), so overlap queries, sweeps, traces, and overlap events never loop over the level. The navigation system files nav-relevant geometry in `FNavigationOctree`. The renderer culls through an octree of primitives, and World Partition streams the level by the cells of a grid. Build your own only for what none of them track: plain structs, actors with no shape, or data such as influence on a map.
+**Where Unreal already does it.** The physics scene keeps every collision shape in a broadphase structure, a bounding box tree by default in UE 5.8 (the console variable `p.BroadphaseType` chooses), so overlap queries, sweeps, traces, and overlap events never loop over the level. The navigation system files nav-relevant geometry in `FNavigationOctree`. The renderer keeps an octree of primitives to find what each light and shadow touches, and World Partition streams the level by the cells of a grid. Build your own only for what none of them track: plain structs, actors with no shape, or data such as influence on a map.
 
 # Example
 
@@ -76,7 +76,7 @@ const FIntPoint High = CellOf(Center + FVector(Radius, Radius, 0.f));
   type: fill-blank
   prompt: "An object that moves into a new cell must be ___, or questions about its new place will not find it."
   acceptedAnswers: [refiled, moved to its new cell, re-filed, refiled in its new cell]
-  explanation: A grid is like a map whose keys change when objects move; moving the object does not move its entry.
+  explanation: A cell is worked out from where the object stood when it was filed, so moving the object leaves its entry behind until it is refiled.
 - id: half-neighbors
   type: multiple-choice
   prompt: "Every pair of lanterns within reach gets a thread. Why does each cell measure against only half of its eight neighbor cells?"

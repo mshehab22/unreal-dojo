@@ -18,7 +18,7 @@ public:
 	ADojoP18LanternKeeper();
 
 	/** The side of one grid cell. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lanterns", meta = (ClampMin = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lanterns", meta = (ClampMin = "1.0", ExposeOnSpawn = "true"))
 	float CellSize = 200.f;
 
 	/** Files Lantern in the grid. */

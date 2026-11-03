@@ -37,7 +37,7 @@ explanation: The switches and the player all have collision shapes, so the physi
 
 A spatial structure of your own is a second copy of where everything is. Every piece of code that moves, spawns, or destroys one of those objects has to keep that copy in step, and a copy that falls behind fails quietly: a question misses the moth that just crossed a line, or hands back a lantern that was destroyed. Leave it out in these cases.
 
-**There are only a few.** Measuring 40 lanterns against a spot is 40 subtractions, faster than visiting cells and far simpler to read. The square cost of every pair only hurts in the hundreds and thousands. Write the loop; reach for cells when a profile says the loop costs real time.
+**There are only a few.** Measuring 40 lanterns against a spot is 40 distance checks, faster than visiting cells and far simpler to read. The square cost of every pair only hurts in the hundreds and thousands. Write the loop; reach for cells when a profile says the loop costs real time.
 
 **They have collision shapes.** Actors with a collision component are already filed by the physics scene's broadphase. `OverlapMultiByChannel` or `OverlapMultiByObjectType` with an `FCollisionShape::MakeSphere` answers "what is within this radius" for them, and a trigger shape's `OnComponentBeginOverlap` tells you when something arrives without anyone asking at all. Adding a grid on top means two structures to keep in step for no gain.
 
@@ -63,7 +63,7 @@ GetWorld()->OverlapMultiByObjectType(Overlaps, KeeperSpot, FQuat::Identity, Lant
   type: multiple-choice
   prompt: "Which job is the poorest fit for a grid of your own?"
   choices:
-    - Finding the neighbors of each of 5,000 fish stored as structs, every frame
+    - Finding the neighbors of each of 3,000 starlings stored as structs, every frame
     - Finding which of 30 shrines is closest to the player when a key is pressed
     - Scoring 4,000 cover points against guard positions every second
     - Finding crowd members near each of 2,000 crowd members every frame
@@ -96,12 +96,12 @@ GetWorld()->OverlapMultiByObjectType(Overlaps, KeeperSpot, FQuat::Identity, Lant
     void ALanternKeeper::Carry(ALantern* Lantern, const FVector& To)
     {
     	if (!IsValid(Lantern)) return;
+    	Grid.Refile(Lantern);
     	Lantern->SetActorLocation(To);
-    	Lit.Add(Lantern);
     }
   bugLine: 4
-  fix: Refile the lantern in the grid right after moving it, so its entry moves to the cell under its new place.
-  explanation: Moving the actor does not move its entry. A question near the new place looks in the new cell and does not find it, while a question near the old place still does.
+  fix: Refile the lantern after moving it, not before, so the grid files it by the cell under its new place.
+  explanation: Refile looks at where the lantern stands when it is called. Called before the move, it files the lantern where it already was, and the move then leaves the entry behind.
 - id: explain-when-not
   type: explain-in-one-sentence
   prompt: In one sentence, say when building your own spatial structure is the wrong choice.

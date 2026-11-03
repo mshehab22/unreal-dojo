@@ -29,7 +29,7 @@ Most of the code is written. First read the marked lines and say in a sentence w
 
 ## See it in the editor
 
-Place a `DojoP18LanternKeeper` at the origin and ten `DojoP18Lantern` actors around it, three of them within 300 units of the keeper with Lit ticked in Details, one lit lantern 500 units away, and the rest unlit. In the Level Blueprint, on Begin Play, call Count Lit Near on the keeper with its own location and a radius of 300, and print the result: 3. Then print Get Last Measured: it is the lanterns in the cells around the keeper, fewer than ten once some stand far away. Move the far lit lantern to within 300 of the keeper with Move Lantern, call Count Lit Near again, and the print shows 4.
+Place a `DojoP18LanternKeeper` at the origin and ten `DojoP18Lantern` actors around it, three of them within 300 units of the keeper with Lit ticked in Details, one lit lantern 500 units away, and the rest unlit. In the Level Blueprint, on Begin Play, add a Delay of 0.2 seconds so the keeper has filed its lanterns, then call Count Lit Near on the keeper with its own location and a radius of 300, and print the result: 3. Then print Get Last Measured: it is the lanterns in the cells around the keeper, fewer than ten once some stand far away. Move the far lit lantern to within 300 of the keeper with Move Lantern, call Count Lit Near again, and the print shows 4.
 
 # Files
 
@@ -221,7 +221,7 @@ public:
 	ADojoP18LanternKeeper();
 
 	/** The side of one grid cell. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lanterns", meta = (ClampMin = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lanterns", meta = (ClampMin = "1.0", ExposeOnSpawn = "true"))
 	float CellSize = 200.f;
 
 	/** Files Lantern in the grid. */
@@ -549,16 +549,19 @@ Give every lantern a small sphere component that overlaps the Visibility channel
     - "	const FIntPoint Low = CellOf(Center - FVector(Radius, Radius, 0.f));"
     - "	const FIntPoint High = CellOf(Center + FVector(Radius, Radius, 0.f));"
     - "	int32 Measured = 0;"
-    - "	for (int32 X = Low.X; X <= High.X; ++X) for (int32 Y = Low.Y; Y <= High.Y; ++Y)"
+    - "	for (int32 X = Low.X; X <= High.X; ++X)"
     - "	{"
-    - "		const TArray<TWeakObjectPtr<AActor>>* Bucket = Cells.Find(FIntPoint(X, Y));"
-    - "		if (!Bucket) continue;"
-    - "		for (const TWeakObjectPtr<AActor>& Entry : *Bucket)"
+    - "		for (int32 Y = Low.Y; Y <= High.Y; ++Y)"
     - "		{"
-    - "			AActor* Candidate = Entry.Get();"
-    - "			if (!IsValid(Candidate)) continue;"
-    - "			++Measured;"
-    - "			if (FVector::Dist2D(Candidate->GetActorLocation(), Center) <= Radius) OutActors.Add(Candidate);"
+    - "			const TArray<TWeakObjectPtr<AActor>>* Bucket = Cells.Find(FIntPoint(X, Y));"
+    - "			if (!Bucket) continue;"
+    - "			for (const TWeakObjectPtr<AActor>& Entry : *Bucket)"
+    - "			{"
+    - "				AActor* Candidate = Entry.Get();"
+    - "				if (!IsValid(Candidate)) continue;"
+    - "				++Measured;"
+    - "				if (FVector::Dist2D(Candidate->GetActorLocation(), Center) <= Radius) OutActors.Add(Candidate);"
+    - "			}"
     - "		}"
     - "	}"
     - "	return Measured;"

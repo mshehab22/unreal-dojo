@@ -427,7 +427,6 @@ bool FDojo_P18_MothSwarm_AnyRangeAnyCell::RunTest(const FString& Parameters)
 - FindNear hands back exactly the moths within Radius of Center, each once, for any radius, smaller or larger than a cell.
 - FindNear answers for where the moths are at the moment it is asked, after any number of steps.
 - A question with a radius of one cell measures a few dozen of 2,000 moths, not all of them.
-- The work a step adds stays small for moths that did not leave their cell.
 - The swarm owns its moths and its grid; nothing outside it writes to either.
 
 # Alternative
