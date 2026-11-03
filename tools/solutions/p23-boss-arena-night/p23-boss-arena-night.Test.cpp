@@ -93,7 +93,7 @@ bool FDojo_P23_ArenaNight_TwoNightsOfBlowsAndKnockouts::RunTest(const FString& P
 	TestEqual(TEXT("Turn 2 took Cedar out of the arena"), Night->GetStandingCount(), 3);
 	TestTrue(TEXT("Cedar is gone"), Night->GetFighter(TEXT("Cedar")) == nullptr);
 	TestEqual(TEXT("Birch's blow took 25 from Dune"), HealthOf(Night, TEXT("Dune")), 25.f);
-	TestEqual(TEXT("One knockout was announced"), Night->GetAnnouncements().Num(), 1);
+	if (!TestEqual(TEXT("One knockout was announced"), Night->GetAnnouncements().Num(), 1)) return false;
 	TestEqual(TEXT("It names Cedar"), Night->GetAnnouncements()[0].Fallen, FName(TEXT("Cedar")));
 	TestEqual(TEXT("And Ash"), Night->GetAnnouncements()[0].Winner, FName(TEXT("Ash")));
 	TestEqual(TEXT("Cedar's three coins dropped once"), Night->GetPurse(TEXT("Coin")), 3);

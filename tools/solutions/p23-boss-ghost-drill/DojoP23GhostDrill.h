@@ -33,7 +33,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Drill", meta = (ClampMin = "1"))
 	int32 LiveSteps = 50;
 
-	/** The most fixed steps one frame may run, so a long frame cannot start a spiral of catching up. */
+	/** The most fixed steps one frame may run, so a long frame cannot start a spiral of catching up; at most one step of what it owed is kept. */
 	UPROPERTY(EditAnywhere, Category = "Drill", meta = (ClampMin = "1"))
 	int32 MaxStepsPerFrame = 8;
 

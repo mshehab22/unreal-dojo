@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "DojoP23Announcement.h"
-#include "DojoP23Announcement.h"
 #include "DojoP23FighterPlan.h"
 #include "DojoP23ScriptedStrike.h"
 #include "GameFramework/Actor.h"

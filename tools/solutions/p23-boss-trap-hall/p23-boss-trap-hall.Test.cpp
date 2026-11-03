@@ -100,7 +100,7 @@ bool FDojo_P23_TrapHall_TwoRoundsOfTrapsAndBolts::RunTest(const FString& Paramet
 	TestEqual(TEXT("The spike trap took 30 from Ava"), HealthOf(Hall, 0), 70.f);
 	TestEqual(TEXT("The frost vent took 10 from Bo"), HealthOf(Hall, 1), 90.f);
 	TestEqual(TEXT("The spike trap played its cue"), Hall->GetTrap(0)->GetCueLog().Num(), 1);
-	TestEqual(TEXT("The frost vent played its own"), Hall->GetTrap(1)->GetCueLog()[0], FName(TEXT("FrostBurst")));
+	if (TestEqual(TEXT("The frost vent played one cue"), Hall->GetTrap(1)->GetCueLog().Num(), 1)) TestEqual(TEXT("And it was its own"), Hall->GetTrap(1)->GetCueLog()[0], FName(TEXT("FrostBurst")));
 
 	TickUntil(TestWorld, Start + 1.2f);
 	TestTrue(TEXT("The first order to fire, at one second, came before the aim was done"), InMode(Hall, UDojoP7BallistaAiming::StaticClass()));
