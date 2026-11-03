@@ -30,7 +30,12 @@ fi
 
 git log --oneline -1
 
-npm ci >/dev/null 2>&1 || { echo "NPM CI FAILED"; exit 4; }
+# Worktrees share main's node_modules, so npm ci runs only when the merge changed the lock file (it wipes node_modules under running sessions).
+if ! git diff --quiet HEAD^1 HEAD -- package-lock.json || [ ! -d node_modules ]; then
+	npm ci >/dev/null 2>&1 || { echo "NPM CI FAILED"; exit 4; }
+else
+	echo "NPM CI SKIPPED (package-lock.json unchanged)"
+fi
 
 # npm ci sometimes skips the Electron download; e2e then fails at launch.
 node -e "require('fs').accessSync(require('electron'))" 2>/dev/null || node node_modules/electron/install.js >/dev/null 2>&1

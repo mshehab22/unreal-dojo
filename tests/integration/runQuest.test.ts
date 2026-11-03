@@ -201,8 +201,8 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 		await fixtureServices.questFileWriter.remove(sandboxFolder, "fx-boss-yard");
 	}, STEP_TIMEOUT_MS);
 
-	// The Windows snippet checker does not exist yet (A402), so the handler answers not-implemented there; this test runs where a checker exists.
-	it.skipIf(process.platform === "win32")("checks a scratch buffer with the compiler: a clean reflected class passes, a typo is reported on its line, a header error is mapped and fails", async () =>
+	// clang on the Mac (A403), cl.exe on Windows (A1310); the skip W8 added (A1073) is gone.
+	it("checks a scratch buffer with the compiler: a clean reflected class passes, a typo is reported on its line, a header error is mapped and fails", async () =>
 	{
 		const clean = ["#pragma once", "#include \"GameFramework/Actor.h\"", "#include \"Lantern.generated.h\"", "UCLASS()", "class ALantern : public AActor", "{", "\tGENERATED_BODY()", "public:", "\tUPROPERTY(EditAnywhere)", "\tfloat Brightness = 5.f;", "\tvirtual void BeginPlay() override { Super::BeginPlay(); }", "};", ""].join("\n");
 		const typo = clean.replace("float Brightness", "flot Brightness");
@@ -214,7 +214,8 @@ describe.skipIf(!HAS_ENGINE)(`runQuest against ${ENGINE_ROOT || "no engine"}`, (
 
 		expect(passing).toEqual({ ok: true, value: { ok: true, diagnostics: [] } });
 		expect(failing.ok && failing.value.ok).toBe(false);
-		expect(failing.ok && failing.value.diagnostics[0]).toMatchObject({ line: 10, severity: "error", message: expect.stringMatching(/flot/) });
+		// clang names the unknown type; cl names the member after it ("'Brightness': unknown override specifier [C3646]").
+		expect(failing.ok && failing.value.diagnostics[0]).toMatchObject({ line: 10, severity: "error", message: expect.stringMatching(process.platform === "win32" ? /Brightness/ : /flot/) });
 
 		const incomplete = ["#include \"CoreMinimal.h\"", "struct FThing;", "void Make()", "{", "\tTSharedRef<FThing> Thing = MakeShared<FThing>();", "}", ""].join("\n");
 		const headerError = await invoke<SyntaxCheckResult>(IPC_CHANNELS.checkSnippetSyntax, { questId: "f1-concept", code: incomplete });
