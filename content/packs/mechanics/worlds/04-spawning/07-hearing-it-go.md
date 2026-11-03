@@ -38,7 +38,7 @@ Every actor has an **`OnDestroyed`** event, a dynamic multicast delegate that pa
 Bomb->OnDestroyed.AddDynamic(this, &ADojoKeeper::HandleBombDestroyed);
 ```
 
-When `Destroy()` runs, the actor's own `EndPlay` runs first, so its timers and bindings are cleaned up, and then `OnDestroyed` is broadcast. In the handler the actor is still there to read, its location for instance, and `IsValid` still says yes, but it is already on its way out: `DestroyedActor->IsActorBeingDestroyed()` is true, its shapes are removed and it is marked for collection right after the listeners return, so it must not be kept or used afterwards. `SetLifeSpan(3.f)` is a timer that ends in the same `Destroy`, so it fires the same event.
+When `Destroy()` runs, the actor's own `EndPlay` runs first, so anything it clears there, such as the bomb's timers, is already stopped, and then `OnDestroyed` is broadcast. In the handler the actor is still there to read, its location for instance, and `IsValid` still says yes, but it is already on its way out: `DestroyedActor->IsActorBeingDestroyed()` is true, its shapes are removed and it is marked for collection right after the listeners return, so it must not be kept or used afterwards. `SetLifeSpan(3.f)` is a timer that ends in the same `Destroy`, so it fires the same event.
 
 Listening turns a list of spawned actors into one you can trust. A spawner that removes each actor from its array in `OnDestroyed` always knows how many are alive and which ones, without looking at them every frame. The other honest way is to keep weak pointers, `TArray<TWeakObjectPtr<AActor>>`, and skip the ones that read as invalid whenever you use the list; that needs no binding, but the count is only right at the moment you clean the list.
 
@@ -68,7 +68,7 @@ void ADojoHatchery::HandleChickDestroyed(AActor* DestroyedActor)
     - Its EndPlay, then its OnDestroyed listeners
     - Only one of the two runs
   answerIndex: 1
-  explanation: Destroying an actor ends its play first and then tells the listeners, so by the time they hear it, its own timers are already stopped.
+  explanation: Destroying an actor ends its play first and then tells the listeners, so by the time they hear it, whatever its EndPlay cleans up is already done.
 - id: fill-bind
   type: fill-blank
   prompt: "To hear when a spawned bomb leaves play, write Bomb->___.AddDynamic(this, &ADojoKeeper::HandleBombDestroyed)."

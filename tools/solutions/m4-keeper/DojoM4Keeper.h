@@ -50,7 +50,7 @@ public:
 	int32 GetMade() const;
 
 protected:
-	/** Makes the empty slots and starts the refills, the first one at once. */
+	/** Makes the empty slots and starts the refills, the first one on the next frame. */
 	virtual void BeginPlay() override;
 
 	/** Stops the refills and stops listening to the bombs still in play. */

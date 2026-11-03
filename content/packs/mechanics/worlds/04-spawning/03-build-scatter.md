@@ -33,7 +33,7 @@ Compiles against earlier quests: m3-scale-plate (`Quests/m3-scale-plate/DojoM3Cr
 
 ## See it in the editor
 
-Place a `DojoM4Scatter` at the origin, set Spawn Class to `DojoM3Crate` and Count to 20 in Details, and place a `DojoM2Wall` at the origin with its Box extent set to X 500, Y 250 and its location at Y 250, so it covers half of the scatter area. Type `show Collision` and press Play: the crates land only on the free half. In the level Blueprint, on the 1 key, print Get Skipped. Change Seed and press Play again for a new layout; change it back and the old layout returns. Then try one A/B change in the code: set the override to `AlwaysSpawn`, play, and see crates inside the wall.
+Place a `DojoM4Scatter` at the origin, set Spawn Class to `DojoM3Crate` and Count to 20 in Details, and place a `DojoM2Wall` with its Box extent set to X 500, Y 250 and its location at Y 250, so it covers half of the scatter area. Type `show Collision` and press Play: the crates land only on the free half. In the level Blueprint, on the 1 key, print Get Skipped. Change Seed and press Play again for a new layout; change it back and the old layout returns. Then try one A/B change in the code: set the override to `AlwaysSpawn`, play, and see crates inside the wall.
 
 # Files
 

@@ -20,14 +20,14 @@ concepts:
 ```yaml
 id: predict
 type: multiple-choice
-prompt: "Guess, no penalty: a looping timer is set to run every 0.1 seconds, and one frame takes 0.4 seconds. How many times does its function run during that frame?"
+prompt: "Guess, no penalty: a looping timer is set to run every 0.1 seconds, and one frame takes 0.45 seconds. How many times does its function run during that frame?"
 choices:
   - Once, because a timer runs at most once a frame
   - Four times, to catch up on the time that passed
   - Not at all, because the frame was too long
   - It depends on whether the actor ticks
 answerIndex: 1
-explanation: A looping timer counts how many of its periods fit in the time that passed and calls its function that many times in the frame, so the count over a second stays right on a slow machine.
+explanation: A looping timer counts how many of its periods fit in the time that passed and calls its function that many times in the frame, so the count over a second stays right on a slow machine. A timer set with bMaxOncePerFrame in FTimerManagerTimerParameters would run only once instead.
 ```
 
 # Card
@@ -43,7 +43,7 @@ A handle holds **one** timer. Calling `SetTimer` again with a handle that alread
 
 Timers run in game time. They stop while the game is paused, and they stretch under time dilation, so after `slomo 0.25` in the console a 2 second timer takes 8 real seconds. A **looping** timer whose period is shorter than a frame catches up: it runs as many times in that frame as periods have passed. A function that only redraws a label does not mind; a function that spawns something does, and should be written knowing it can run several times in one frame.
 
-`FirstDelay` lets a looping timer fire sooner, or later, the first time: `SetTimer(Handle, this, &AThing::Fire, 2.f, true, 0.f)` fires at once and then every 2 seconds. `SetTimerForNextTick(this, &AThing::Fire)` waits exactly one frame, which helps when something must happen after every actor has run its `BeginPlay`.
+`FirstDelay` lets a looping timer fire sooner, or later, the first time: `SetTimer(Handle, this, &AThing::Fire, 2.f, true, 0.f)` fires on the next frame and then every 2 seconds. `SetTimerForNextTick(this, &AThing::Fire)` waits exactly one frame, which helps when something must happen after every actor has run its `BeginPlay`.
 
 The timer manager does not call into an actor that has been destroyed, but an actor should still clear its own timers in `EndPlay`: it says plainly that the actor's jobs end with it, and it stops a timer that was meant to be cancelled for some other reason.
 
@@ -96,7 +96,7 @@ void ADojoSprinkler::StopWatering()
   explanation: PauseTimer keeps the remaining time; UnPauseTimer carries on from it, unlike ClearTimer, which throws it away.
 - id: first-delay
   type: multiple-choice
-  prompt: "Which call fires a function at once and then every 3 seconds?"
+  prompt: "Which call fires a function on the next frame and then every 3 seconds?"
   choices:
     - SetTimer(Handle, this, &AThing::Ping, 3.f, true)
     - SetTimer(Handle, this, &AThing::Ping, 3.f, true, 0.f)

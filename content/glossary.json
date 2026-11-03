@@ -1331,8 +1331,7 @@
     "term": "FRandomStream",
     "aliases": [
       "random stream",
-      "seeded random",
-      "RandPointInBox"
+      "seeded random"
     ],
     "category": "math",
     "short": "A random number generator built from a seed, which gives the same sequence every time for that seed.",

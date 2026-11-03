@@ -23,7 +23,7 @@ When you place a bomb and light it with 3 seconds, its label counts down 3.0, 2.
 Most of the bomb is written for you, including its two timer handles, the label, `Blow`, and a `BeginPlay` that lights the bomb when `StartFuse` is set. Write the bodies of `Light` and `Defuse` in `ADojoM4Bomb`:
 
 1. `Light` with no time left at all, zero or less, blows the bomb at once.
-2. Otherwise `Light` starts the fuse with that many seconds, or, on a lit bomb, makes it blow sooner when that is sooner; a lit bomb never waits longer than it already would. While lit, the label counts down every 0.1 seconds.
+2. Otherwise `Light` starts the fuse with that many seconds, and while the bomb is lit its label counts down every 0.1 seconds.
 3. `Defuse` stops the fuse and the countdown and shows SAFE.
 
 Dependency direction: the bomb holds no pointer to anything; whoever wants it to blow calls `Light`.
@@ -160,8 +160,7 @@ void ADojoM4Bomb::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ADojoM4Bomb::Light(float Seconds)
 {
 	// Your code: with zero seconds or less, blow at once.
-	// Your code: on a lit bomb, keep the fuse as it is unless Seconds is sooner than what is left.
-	// Your code: start or shorten the fuse on FuseTimer, keep the label counting down every 0.1 seconds on LabelTimer, and refresh the label now.
+	// Your code: start the fuse on FuseTimer, keep the label counting down every 0.1 seconds on LabelTimer, and refresh the label now.
 }
 
 void ADojoM4Bomb::Defuse()

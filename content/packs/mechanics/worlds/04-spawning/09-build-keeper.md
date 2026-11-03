@@ -12,7 +12,7 @@ prerequisites: [m4-chain, m4-fuse]
 xp: 120
 estimatedMinutes: 30
 concepts:
-  - A looping timer that fires at once refills slots, and the budget is checked at every refill
+  - A looping timer that starts on the next frame refills slots, and the budget is checked at every refill
   - Each slot is freed by its own bomb's OnDestroyed, so the count is always exact
 ---
 
@@ -20,7 +20,7 @@ concepts:
 
 When you place a keeper with three slots and press Play, a lit bomb appears in the first slot at once and another every half second until all three slots hold one; each bomb blows when its fuse runs out, its slot is free again, and the next refill puts a new bomb there, so there are never more than three in play and they keep coming until the keeper is stopped.
 
-Write `ADojoM4Keeper` from nothing. It has a scene root and never ticks. From `BeginPlay` it refills every `RefillSeconds`, the first time at once. A refill does nothing when there is no class or no free slot; otherwise it spawns one bomb in the lowest free slot, lit with `Fuse` from its first frame, and counts it as made. Slot `i` stands `Spacing` times `i` along the keeper's own right. A bomb leaving play, by any means, frees its slot. `Stop` ends the refills, and so does `EndPlay`, which also stops listening to the bombs.
+Write `ADojoM4Keeper` from nothing. It has a scene root and never ticks. From `BeginPlay` it refills every `RefillSeconds`, the first time on the next frame. A refill does nothing when there is no class or no free slot; otherwise it spawns one bomb in the lowest free slot, lit with `Fuse` from its first frame, and counts it as made. Slot `i` stands `Spacing` times `i` along the keeper's own right. A bomb leaving play, by any means, frees its slot. `Stop` ends the refills, and so does `EndPlay`, which also stops listening to the bombs.
 
 The tests use this public interface, so keep these names:
 
@@ -115,13 +115,13 @@ bool FDojo_M4_Keeper_KeepsTheBudget::RunTest(const FString& Parameters)
 	ADojoM4Keeper* Keeper = PlaceKeeper(TestWorld, FVector(0.0, 8000.0, 0.0), true);
 	if (!TestNotNull(TEXT("Keeper spawned"), Keeper)) return false;
 
-	TestWorld.Tick(1);
-	TestEqual(TEXT("The first bomb appears at once"), Keeper->GetMade(), 1);
+	TestWorld.Tick(2);
+	TestEqual(TEXT("The first bomb appears with the first refill, right after play begins"), Keeper->GetMade(), 1);
 	ADojoM4Bomb* First = BombAt(TestWorld, FVector(0.0, 8000.0, 0.0));
 	TestTrue(TEXT("in slot 0, lit from its first frame"), First != nullptr && First->WasLitAtStart());
 
 	bool bWithinBudget = true;
-	for (int32 Frame = 1; Frame < 63; ++Frame)
+	for (int32 Frame = 2; Frame < 63; ++Frame)
 	{
 		TestWorld.Tick(1);
 		if (Keeper->GetLive() > 3 || AllBombs(TestWorld).Num() > 3) bWithinBudget = false;
@@ -223,12 +223,12 @@ bool FDojo_M4_Keeper_StopAndNoClass::RunTest(const FString& Parameters)
 # Hints
 
 - Three pieces of state are enough: which bomb, if any, stands in each slot; how many have been made; and the handle of the refill timer. The live count follows from the slots.
-- The refill is a looping timer whose first call comes at once. Each refill spawns deferred so the bomb begins play lit, and listens for that bomb leaving so its slot can be emptied.
+- The refill is a looping timer whose first call comes on the next frame. Each refill spawns deferred so the bomb begins play lit, and listens for that bomb leaving so its slot can be emptied.
 - `SetTimer` with a first delay of 0, `SpawnActorDeferred` and `FinishSpawning`, `OnDestroyed.AddDynamic`, and `ClearTimer` cover it; `GetActorRightVector` gives the slots' direction.
 
 # Rubric
 
-- A looping timer refills every `RefillSeconds`, the first time at once; the keeper never ticks.
+- A looping timer refills every `RefillSeconds`, the first time on the next frame; the keeper never ticks.
 - A refill spawns only when a slot is free and a class is set, into the lowest free slot, deferred so the bomb is lit from its first frame.
 - Each bomb's `OnDestroyed` frees exactly its own slot, so the live count is exact at every moment and never above `MaxLive`.
 - `Stop` and `EndPlay` clear the refill timer, and `EndPlay` unbinds from the bombs still in play.
