@@ -197,6 +197,7 @@ bool FDojo_M5_Rangefinder_MeasuresTheFirstThingAhead::RunTest(const FString& Par
 	if (!TestNotNull(TEXT("Rangefinder spawned"), Finder)) return false;
 	if (!TestNotNull(TEXT("Walls spawned"), NearWall) || !TestNotNull(TEXT("Far wall spawned"), FarWall)) return false;
 
+	TestWorld.Tick(1);
 	Finder->Measure();
 
 	TestTrue(TEXT("It found something ahead"), Finder->HasTarget());
@@ -219,6 +220,7 @@ bool FDojo_M5_Rangefinder_SaysSoWhenNothingIsInReach::RunTest(const FString& Par
 	ADojoM5Rangefinder* Finder = SpawnFinder(TestWorld, FVector::ZeroVector, FRotator::ZeroRotator, 300.f);
 	if (!TestNotNull(TEXT("Rangefinder spawned"), Finder)) return false;
 
+	TestWorld.Tick(1);
 	Finder->Measure();
 	TestFalse(TEXT("An empty hall gives no target"), Finder->HasTarget());
 	TestEqual(TEXT("and the distance is the whole reach"), Finder->GetDistance(), 300.f, 0.01f);
@@ -227,6 +229,7 @@ bool FDojo_M5_Rangefinder_SaysSoWhenNothingIsInReach::RunTest(const FString& Par
 	ADojoTestActor* FarWall = SpawnBox(TestWorld, FVector(500.0, 0.0, 0.0), FVector(20.f, 200.f, 200.f), ECR_Block);
 	if (!TestNotNull(TEXT("Wall spawned"), FarWall)) return false;
 
+	TestWorld.Tick(1);
 	Finder->Measure();
 	TestFalse(TEXT("A wall beyond the reach is not found"), Finder->HasTarget());
 
@@ -236,6 +239,7 @@ bool FDojo_M5_Rangefinder_SaysSoWhenNothingIsInReach::RunTest(const FString& Par
 	TestEqual(TEXT("at the face of the wall"), Finder->GetDistance(), 480.f, 1.f);
 
 	FarWall->Destroy();
+	TestWorld.Tick(1);
 	Finder->Measure();
 	TestFalse(TEXT("After the wall is destroyed the next measurement finds nothing"), Finder->HasTarget());
 	TestNull(TEXT("and no stale actor is kept"), Finder->GetTargetActor());
@@ -258,6 +262,7 @@ bool FDojo_M5_Rangefinder_OnlyBlockersAnswer::RunTest(const FString& Parameters)
 	if (!TestNotNull(TEXT("Rangefinder spawned"), Finder)) return false;
 	if (!TestNotNull(TEXT("Glass spawned"), Glass) || !TestNotNull(TEXT("Wall spawned"), Wall)) return false;
 
+	TestWorld.Tick(1);
 	Finder->Measure();
 
 	TestTrue(TEXT("It found the wall"), Finder->GetTargetActor() == Wall);

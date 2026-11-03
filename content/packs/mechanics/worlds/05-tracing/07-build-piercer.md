@@ -196,6 +196,7 @@ bool FDojo_M5_Piercer_PassesThinThingsAndStopsAtTheWall::RunTest(const FString& 
 	if (!TestNotNull(TEXT("Wall spawned"), Wall) || !TestNotNull(TEXT("Hidden sheet spawned"), HiddenSheet)) return false;
 	if (!TestNotNull(TEXT("Piercer spawned"), Piercer)) return false;
 
+	TestWorld.Tick(1);
 	Piercer->Fire();
 
 	TestEqual(TEXT("The shot passed through the two sheets in front of the wall and nothing else"), Piercer->GetPiercedCount(), 2);
@@ -224,6 +225,7 @@ bool FDojo_M5_Piercer_FliesItsWholeReachWhenNothingStopsIt::RunTest(const FStrin
 	if (!TestNotNull(TEXT("Sheets spawned"), FirstSheet) || !TestNotNull(TEXT("Second sheet spawned"), SecondSheet)) return false;
 	if (!TestNotNull(TEXT("Piercer spawned"), Piercer)) return false;
 
+	TestWorld.Tick(1);
 	Piercer->Fire();
 	TestEqual(TEXT("Both sheets are passed through"), Piercer->GetPiercedCount(), 2);
 	TestNull(TEXT("Nothing stopped the shot"), Piercer->GetStoppedBy());
@@ -236,6 +238,7 @@ bool FDojo_M5_Piercer_FliesItsWholeReachWhenNothingStopsIt::RunTest(const FStrin
 
 	FirstSheet->Destroy();
 	SecondSheet->Destroy();
+	TestWorld.Tick(1);
 	Piercer->Fire();
 	TestEqual(TEXT("Into an empty hall nothing is passed through"), Piercer->GetPiercedCount(), 0);
 	TestNull(TEXT("and nothing is named"), Piercer->GetPiercedAt(0));
@@ -258,6 +261,7 @@ bool FDojo_M5_Piercer_ThingsThatIgnoreTheChannelAreNotCounted::RunTest(const FSt
 	if (!TestNotNull(TEXT("Ghost spawned"), Ghost) || !TestNotNull(TEXT("Sheet spawned"), Sheet)) return false;
 	if (!TestNotNull(TEXT("Piercer spawned"), Piercer)) return false;
 
+	TestWorld.Tick(1);
 	Piercer->Fire();
 
 	TestEqual(TEXT("Only the sheet that overlaps the channel is listed"), Piercer->GetPiercedCount(), 1);

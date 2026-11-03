@@ -210,6 +210,7 @@ bool FDojo_M5_Sightline_SeesAHeroInTheOpen::RunTest(const FString& Parameters)
 	ADojoTestActor* Hero = SpawnHero(TestWorld, FVector(600.0, 0.0, 0.0));
 	if (!TestNotNull(TEXT("Eye spawned"), Eye) || !TestNotNull(TEXT("Hero spawned"), Hero)) return false;
 
+	TestWorld.Tick(1);
 	TestTrue(TEXT("The eye sees a hero straight ahead in the open"), Eye->CanSee(Hero));
 	TestNull(TEXT("Nothing stood in the way"), Eye->GetBlocker());
 	TestFalse(TEXT("It does not see a missing candidate"), Eye->CanSee(nullptr));
@@ -231,16 +232,19 @@ bool FDojo_M5_Sightline_SolidThingsHideTheHero::RunTest(const FString& Parameter
 	ADojoTestActor* Pillar = SpawnPillar(TestWorld, FVector(400.0, 0.0, 0.0));
 	if (!TestNotNull(TEXT("Eye spawned"), Eye) || !TestNotNull(TEXT("Hero spawned"), Hero) || !TestNotNull(TEXT("Pillar spawned"), Pillar)) return false;
 
+	TestWorld.Tick(1);
 	TestFalse(TEXT("A pillar between them hides the hero"), Eye->CanSee(Hero));
 	TestTrue(TEXT("and the eye names the pillar as what stood in the way"), Eye->GetBlocker() == Pillar);
 
 	Pillar->Destroy();
+	TestWorld.Tick(1);
 	TestTrue(TEXT("With the pillar gone the hero is seen again"), Eye->CanSee(Hero));
 	TestNull(TEXT("and nothing is named"), Eye->GetBlocker());
 
 	ADojoTestActor* Decoy = SpawnHero(TestWorld, FVector(500.0, 0.0, 0.0));
 	if (!TestNotNull(TEXT("Decoy spawned"), Decoy)) return false;
 
+	TestWorld.Tick(1);
 	TestFalse(TEXT("Another character standing in the line also hides the hero"), Eye->CanSee(Hero));
 	TestTrue(TEXT("and it is the one named"), Eye->GetBlocker() == Decoy);
 
@@ -260,9 +264,11 @@ bool FDojo_M5_Sightline_TheConeAndRangeHaveEdges::RunTest(const FString& Paramet
 	ADojoTestActor* Hero = SpawnHero(TestWorld, PointAt(500.f, 30.f));
 	if (!TestNotNull(TEXT("Eye spawned"), Eye) || !TestNotNull(TEXT("Hero spawned"), Hero)) return false;
 
+	TestWorld.Tick(1);
 	TestTrue(TEXT("30 degrees off the nose is inside a 45 degree cone"), Eye->CanSee(Hero));
 
 	Hero->SetActorLocation(PointAt(500.f, 60.f));
+	TestWorld.Tick(1);
 	TestFalse(TEXT("60 degrees off the nose is outside it"), Eye->CanSee(Hero));
 
 	Eye->HalfAngleDegrees = 75.f;
@@ -270,12 +276,15 @@ bool FDojo_M5_Sightline_TheConeAndRangeHaveEdges::RunTest(const FString& Paramet
 
 	Eye->HalfAngleDegrees = 45.f;
 	Hero->SetActorLocation(PointAt(500.f, 180.f));
+	TestWorld.Tick(1);
 	TestFalse(TEXT("A hero directly behind is not seen even with nothing in the way"), Eye->CanSee(Hero));
 
 	Hero->SetActorLocation(PointAt(1400.f, 0.f));
+	TestWorld.Tick(1);
 	TestTrue(TEXT("1400 units ahead is within a range of 1500"), Eye->CanSee(Hero));
 
 	Hero->SetActorLocation(PointAt(1600.f, 0.f));
+	TestWorld.Tick(1);
 	TestFalse(TEXT("1600 units ahead is out of range"), Eye->CanSee(Hero));
 
 	Eye->Range = 2000.f;

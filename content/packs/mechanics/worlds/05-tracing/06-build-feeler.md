@@ -216,6 +216,7 @@ bool FDojo_M5_Feeler_OnlyANarrowBallFitsTheGap::RunTest(const FString& Parameter
 	if (!TestNotNull(TEXT("Posts spawned"), LeftPost) || !TestNotNull(TEXT("Right post spawned"), RightPost)) return false;
 	if (!TestNotNull(TEXT("Feeler spawned"), Feeler)) return false;
 
+	TestWorld.Tick(1);
 	TestTrue(TEXT("A ball of radius 40 fits through a gap 100 units wide"), Feeler->Probe());
 	TestEqual(TEXT("so the whole travel distance is clear"), Feeler->GetClearDistance(), 800.f, 0.5f);
 	TestNull(TEXT("and nothing is named"), Feeler->GetBlocker());
@@ -244,6 +245,7 @@ bool FDojo_M5_Feeler_StopsWhereTheBallCanGo::RunTest(const FString& Parameters)
 	ADojoM5Feeler* Feeler = SpawnFeeler(TestWorld, FVector(100.0, 0.0, 0.0), FRotator(0.0, 90.0, 0.0), 40.f, 1000.f);
 	if (!TestNotNull(TEXT("Wall spawned"), Wall) || !TestNotNull(TEXT("Feeler spawned"), Feeler)) return false;
 
+	TestWorld.Tick(1);
 	TestFalse(TEXT("A wall across the path blocks the ball"), Feeler->Probe());
 	TestTrue(TEXT("and it is named"), Feeler->GetBlocker() == Wall);
 	TestEqual(TEXT("The ball's centre stops one radius short of the wall's face at 680, so it has travelled 640"), Feeler->GetClearDistance(), 640.f, 1.f);
@@ -271,6 +273,7 @@ bool FDojo_M5_Feeler_ShortPathsAreClear::RunTest(const FString& Parameters)
 	ADojoM5Feeler* Feeler = SpawnFeeler(TestWorld, FVector::ZeroVector, FRotator::ZeroRotator, 40.f, 500.f);
 	if (!TestNotNull(TEXT("Wall spawned"), Wall) || !TestNotNull(TEXT("Feeler spawned"), Feeler)) return false;
 
+	TestWorld.Tick(1);
 	TestTrue(TEXT("A wall beyond the travel distance does not block the ball"), Feeler->Probe());
 	TestTrue(TEXT("and the stop location is the end of the path"), Feeler->GetStopLocation().Equals(FVector(500.0, 0.0, 0.0), 0.5));
 	TestEqual(TEXT("with the whole distance clear"), Feeler->GetClearDistance(), 500.f, 0.5f);

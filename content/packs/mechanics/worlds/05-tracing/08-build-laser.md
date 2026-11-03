@@ -116,6 +116,7 @@ bool FDojo_M5_Laser_FollowsTwoMirrorsToAWall::RunTest(const FString& Parameters)
 	ADojoM5Laser* Laser = SpawnLaser(TestWorld, 5, 2000.f);
 	if (!TestNotNull(TEXT("Laser spawned"), Laser)) return false;
 
+	TestWorld.Tick(1);
 	Laser->Fire();
 
 	if (!TestEqual(TEXT("The beam has four points: its start, two mirrors, and the wall"), Laser->GetPointCount(), 4)) return false;
@@ -146,6 +147,7 @@ bool FDojo_M5_Laser_StopsBouncingAtTheLimit::RunTest(const FString& Parameters)
 	ADojoM5Laser* Laser = SpawnLaser(TestWorld, 1, 2000.f);
 	if (!TestNotNull(TEXT("Laser spawned"), Laser)) return false;
 
+	TestWorld.Tick(1);
 	Laser->Fire();
 	TestEqual(TEXT("With one bounce allowed the beam has three points, ending on the second mirror"), Laser->GetPointCount(), 3);
 	TestEqual(TEXT("and it bounced once"), Laser->GetBounceCount(), 1);
@@ -174,6 +176,7 @@ bool FDojo_M5_Laser_FacingMirrorsKeepItBouncing::RunTest(const FString& Paramete
 	ADojoM5Laser* Zigzag = SpawnLaser(TestWorld, 5, 2000.f);
 	if (!TestNotNull(TEXT("Laser spawned"), Zigzag)) return false;
 
+	TestWorld.Tick(1);
 	Zigzag->Fire();
 	if (!TestEqual(TEXT("Between two facing mirrors the beam touches the start and six surfaces"), Zigzag->GetPointCount(), 7)) return false;
 	TestEqual(TEXT("and it bounced five times"), Zigzag->GetBounceCount(), 5);
@@ -196,6 +199,7 @@ bool FDojo_M5_Laser_OnlyTaggedSurfacesBounce::RunTest(const FString& Parameters)
 	ADojoM5Laser* Laser = SpawnLaser(TestWorld, 5, 700.f);
 	if (!TestNotNull(TEXT("Laser spawned"), Laser)) return false;
 
+	TestWorld.Tick(1);
 	Laser->Fire();
 	TestEqual(TEXT("In open air the beam has two points, its start and its end"), Laser->GetPointCount(), 2);
 	TestTrue(TEXT("and the end is one segment length ahead"), Laser->GetPoint(1).Equals(FVector(700.0, 0.0, 0.0), 0.5));
@@ -204,6 +208,7 @@ bool FDojo_M5_Laser_OnlyTaggedSurfacesBounce::RunTest(const FString& Parameters)
 	ADojoTestActor* Wall = SpawnPanel(TestWorld, FVector(400.0, 0.0, 0.0), 0.f, FVector(20.f, 400.f, 200.f), NAME_None);
 	if (!TestNotNull(TEXT("Wall spawned"), Wall)) return false;
 
+	TestWorld.Tick(1);
 	Laser->Fire();
 	TestEqual(TEXT("A wall without the tag ends the beam on its face"), Laser->GetPointCount(), 2);
 	TestTrue(TEXT("at 380 units"), Laser->GetPoint(1).Equals(FVector(380.0, 0.0, 0.0), 0.5));
