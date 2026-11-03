@@ -17,6 +17,7 @@ import type { VerifierResult } from "../runVerifier";
 
 import type { UnrealTools } from "./EngineSandbox";
 import { EngineVerifier, type EngineReport } from "./EngineVerifier";
+import { KeepUnchangedFileSystem } from "./KeepUnchangedFileSystem";
 import { resolveWorkspaceRoot } from "./workspaceLocation";
 
 /** The sandbox template the app ships (unreal-pipeline spec). */
@@ -61,7 +62,8 @@ export async function runEngineStage(enginePath: string, options: VerifierOption
 		paths: platform.paths,
 		builder: new UnrealBuilder(platform.paths, launcher, SYSTEM_TIMER),
 		testRunner: new AutomationTestRunner(platform.paths, launcher, SYSTEM_TIMER, fileSystem),
-		writer: new QuestFileWriter(platform.paths, fileSystem),
+		// The one difference from the app: a quest file whose bytes already match is not rewritten, so warm runs do not recompile it (A1320).
+		writer: new QuestFileWriter(platform.paths, new KeepUnchangedFileSystem(fileSystem)),
 	};
 	const controller = new AbortController();
 	const stopOnSignal = (): void =>
