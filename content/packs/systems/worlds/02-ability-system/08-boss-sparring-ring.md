@@ -6,7 +6,7 @@ kind: boss
 difficulty: 5
 patterns: [component, observer, type-object, subclass-sandbox]
 skills: [planning, components, delegates, data, timers, tags]
-terms: [actor-component, data-asset, gameplay-tags, instanced-specifier, dynamic-multicast-delegate, unbinding-delegates, findcomponentbyclass, timer-manager]
+terms: [actor-component, data-asset, gameplay-tags, instanced-subobjects, dynamic-multicast-delegate, unbinding-delegates, findcomponentbyclass, timer-manager]
 prerequisites: [s2-ability-data, s2-energy, s2-ability-component, s2-effects]
 xp: 400
 estimatedMinutes: 90

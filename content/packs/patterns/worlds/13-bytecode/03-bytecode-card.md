@@ -6,7 +6,7 @@ kind: concept
 difficulty: 3
 patterns: [bytecode]
 skills: [bytecode]
-terms: [stack-machine, blueprint-vm, instanced-specifier, data-asset, edit-condition]
+terms: [stack-machine, blueprint-vm, instanced-subobjects, data-asset, edit-condition]
 prerequisites: [p13-potion-recipes]
 xp: 25
 estimatedMinutes: 10

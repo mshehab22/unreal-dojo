@@ -4080,6 +4080,27 @@
     "firstQuestId": "p8-many-kinds-one-toolbox"
   },
   {
+    "id": "instanced-subobjects",
+    "term": "Instanced subobjects",
+    "aliases": [
+      "EditInlineNew",
+      "DefaultToInstanced",
+      "UPROPERTY(Instanced)",
+      "Instanced specifier"
+    ],
+    "category": "reflection",
+    "short": "Objects created and tuned right inside another object's Details panel, owned by it and saved with it.",
+    "long": "Mark a UObject class EditInlineNew and a pointer property to it Instanced, and the Details panel stops offering a picker for existing objects: it offers a dropdown of classes, creates a new object whose outer is the owner, and shows that object's settings inline. The new object is saved in the owner's file and copied when the owner is duplicated, which makes it a good home for small configurable pieces such as the effects listed in an ability asset. DefaultToInstanced on the class makes every property of its type instanced, the way components behave. Because an asset is shared by everyone who loads it, the objects inside it are shared as well, so they should hold settings and keep no state that changes while the game runs.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "uproperty",
+      "abstract-specifier",
+      "data-asset",
+      "tsubclassof"
+    ],
+    "firstQuestId": "p13-bytecode-card"
+  },
+  {
     "id": "blueprint-protected",
     "term": "BlueprintProtected",
     "aliases": [
@@ -4438,26 +4459,5 @@
       "ustruct"
     ],
     "firstQuestId": "p13-behavior-as-data"
-  },
-  {
-    "id": "instanced-specifier",
-    "term": "Instanced",
-    "aliases": [
-      "EditInlineNew",
-      "DefaultToInstanced",
-      "Instanced specifier"
-    ],
-    "category": "reflection",
-    "short": "Specifiers that let an object property hold its own object made inside the owner and edited inline in the Details panel.",
-    "long": "A class marked UCLASS(EditInlineNew) can be created right inside a property in the Details panel, and a UPROPERTY marked Instanced, or one whose class is DefaultToInstanced, gives each owner its own copy of that object, saved with the owner and duplicated with it. It is how designers build lists of small configured objects, such as steps or conditions, without making an asset for each. Each entry is still a full UObject, so a long list is many objects, and any state such an object keeps is shared by everything that uses that owner.",
-    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
-    "related": [
-      "uproperty",
-      "uclass",
-      "newobject",
-      "data-asset"
-    ],
-    "linkMode": "code-only",
-    "firstQuestId": "p13-bytecode-card"
   }
 ]

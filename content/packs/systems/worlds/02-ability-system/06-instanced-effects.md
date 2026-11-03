@@ -6,7 +6,7 @@ kind: concept
 difficulty: 3
 patterns: []
 skills: [reflection, data]
-terms: [instanced-specifier, abstract-specifier, uproperty, tsubclassof, data-asset]
+terms: [instanced-subobjects, abstract-specifier, uproperty, tsubclassof, data-asset]
 prerequisites: [s2-ability-component]
 xp: 30
 estimatedMinutes: 9
@@ -35,7 +35,7 @@ explanation: A plain object pointer is a reference to an object that lives somew
 
 An ability asset says what the ability does as a list of effects: move the user ahead, push targets away, refill energy. Each effect is a small `UObject` with a few settings. The question is where those objects live and how a designer makes one.
 
-A plain `UPROPERTY` pointer to a `UObject` is a reference: the Details panel offers a picker for objects that already exist, such as other assets. To let a designer create an object right inside the field, two specifiers work together, and the glossary files them under **Instanced**:
+A plain `UPROPERTY` pointer to a `UObject` is a reference: the Details panel offers a picker for objects that already exist, such as other assets. To let a designer create an object right inside the field, two specifiers work together, and the glossary calls them **instanced subobjects**:
 
 - `UCLASS(EditInlineNew)` on the effect class says objects of this class may be created from a property field.
 - `UPROPERTY(EditAnywhere, Instanced)` on the pointer, or on a `TArray` of them, says the object belongs to the owner: the field shows a dropdown of classes, creating one makes a new object whose outer is the asset, its settings appear inline to tune, and it is saved inside the asset's file. Duplicating the asset duplicates the effects with it.

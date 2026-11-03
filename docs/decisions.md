@@ -4,7 +4,10 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
-### A1429 2026-11-03 One glossary entry for Instanced (author-systems, M4.P4.2 and M4.P4.3)
+### A1449 2026-11-03 One glossary entry for instanced objects (author-patterns, Lead's go)
+World 13's `instanced-specifier` and Pack 4 World 2's `instanced-subobjects` both claimed the aliases `EditInlineNew` and `DefaultToInstanced`, so main failed the verifier after both merged. Kept `instanced-subobjects` (the fuller text), added the alias "Instanced specifier", set its `firstQuestId` to `p13-bytecode-card` because Pack 2 teaches it before Pack 4 (A72), deleted `instanced-specifier`, and pointed World 13's card and trap refactor at the kept entry; A1377 and the World 13 progress entry still name the old id as history. Options: drop the two aliases from one entry (two hover cards for one idea), or keep both entries apart by wording (the same thing twice). Reverse cost: low.
+### A1429 2026-11-03 One glossary entry for Instanced (author-systems, M4.P4.2 and M4.P4.3) (superseded by A1449)
+Superseded by A1449, which keeps `instanced-subobjects` and removes `instanced-specifier`; this branch took main's glossary and World 2 quests in the merge. The text below is the first proposal.
 World 2 added `instanced-subobjects` and Pack 2 World 13 added `instanced-specifier` on the same day; both reached main, and their shared aliases (`EditInlineNew`, `DefaultToInstanced`) fail the glossary check, so main's verifier reports two problems. Options: keep World 2's entry and move Pack 2's quests to it; keep Pack 2's entry, which comes first in course order (`p13-bytecode-card`), and move World 2's quests to it. Chosen: the second. `s2-instanced-effects`, `s2-effects`, and `s2-boss-sparring-ring` now list `instanced-specifier`, the World 2 card says the glossary files the idea under Instanced, and `instanced-subobjects` is removed (A1358's first part is reversed). Reverse cost: low.
 
 ### A1428 2026-11-03 Glossary, pattern cards, and reuse for the save world (author-systems, M4.P4.3)

@@ -7,7 +7,7 @@ scaffold: blank
 difficulty: 4
 patterns: [subclass-sandbox]
 skills: [inheritance, reflection]
-terms: [abstract-specifier, instanced-specifier, tactoriterator, add-actor-offset, uproperty]
+terms: [abstract-specifier, instanced-subobjects, tactoriterator, add-actor-offset, uproperty]
 prerequisites: [s2-instanced-effects, s2-ability-component]
 xp: 100
 estimatedMinutes: 35
