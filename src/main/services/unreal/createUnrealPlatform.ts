@@ -1,17 +1,25 @@
 // Picks the Windows or macOS objects from process.platform. The only place in the app that branches on the platform for Unreal (D16).
 import { spawn } from "node:child_process";
 
+import { ClangSnippetSyntaxChecker } from "./ClangSnippetSyntaxChecker";
 import type { CommandRunner } from "./CommandRunner";
 import type { EngineRegistry } from "./EngineRegistry";
+import type { FileSystemReader } from "./FileSystemReader";
 import { MacPlatformPaths } from "./MacPlatformPaths";
 import { MacToolchainChecker } from "./MacToolchainChecker";
+import { MsvcCompilerLocator } from "./MsvcCompilerLocator";
+import { MsvcSnippetSyntaxChecker } from "./MsvcSnippetSyntaxChecker";
+import { NodeFileSystemReader } from "./NodeFileSystemReader";
 import type { PlatformPaths } from "./PlatformPaths";
 import { PosixProcessTreeKiller } from "./PosixProcessTreeKiller";
 import type { ProcessTreeKiller } from "./ProcessTreeKiller";
+import type { SandboxFileSystem } from "./SandboxFileSystem";
+import type { SnippetSyntaxChecker } from "./SnippetSyntaxChecker";
 import type { ToolchainChecker } from "./ToolchainChecker";
 import { WindowsEngineRegistry } from "./WindowsEngineRegistry";
 import { WindowsPlatformPaths } from "./WindowsPlatformPaths";
 import { WindowsProcessTreeKiller } from "./WindowsProcessTreeKiller";
+import { WindowsSdkFinder } from "./WindowsSdkFinder";
 import { WindowsToolchainChecker } from "./WindowsToolchainChecker";
 
 /** The platform-specific pieces the Unreal services are built from. */
@@ -28,6 +36,9 @@ export interface UnrealPlatform
 
 	/** Runs short commands (toolchain queries, the snippet syntax check). */
 	commandRunner: CommandRunner;
+
+	/** Makes the scratch buffer syntax check over the sandbox's file system: clang on macOS (A403), cl.exe on Windows (A1310). */
+	createSnippetChecker(fileSystem: SandboxFileSystem): SnippetSyntaxChecker;
 }
 
 /** What the factory reads from the running process. Passed in so tests can ask for either platform. */
@@ -44,6 +55,9 @@ export interface UnrealPlatformInputs
 
 	/** Spawns registry and toolchain queries. */
 	commandRunner: CommandRunner;
+
+	/** Lists the Windows SDK folders for the toolchain check; the real disk when left out. */
+	fileSystemReader?: FileSystemReader;
 }
 
 /** Returns the Windows objects on `win32`, the Mac objects on `darwin`, and null anywhere else. */
@@ -54,24 +68,30 @@ export function createUnrealPlatform(inputs: UnrealPlatformInputs): UnrealPlatfo
 	if (platform === "win32")
 	{
 		const paths = new WindowsPlatformPaths({ programFiles: environment.ProgramFiles, programData: environment.ProgramData });
+		const programFilesX86 = environment["ProgramFiles(x86)"];
+		const fileSystemReader = inputs.fileSystemReader ?? new NodeFileSystemReader();
 
 		return {
 			paths,
-			toolchainChecker: new WindowsToolchainChecker(commandRunner, environment["ProgramFiles(x86)"]),
+			toolchainChecker: new WindowsToolchainChecker(commandRunner, programFilesX86, new WindowsSdkFinder(commandRunner, fileSystemReader, programFilesX86)),
 			engineRegistry: new WindowsEngineRegistry(commandRunner),
 			processTreeKiller: createProcessTreeKiller(platform),
 			commandRunner,
+			createSnippetChecker: (fileSystem) => new MsvcSnippetSyntaxChecker(paths, fileSystem, commandRunner, new MsvcCompilerLocator(commandRunner, fileSystem, programFilesX86)),
 		};
 	}
 
 	if (platform === "darwin")
 	{
+		const paths = new MacPlatformPaths(homeFolder);
+
 		return {
-			paths: new MacPlatformPaths(homeFolder),
+			paths,
 			toolchainChecker: new MacToolchainChecker(commandRunner),
 			engineRegistry: null,
 			processTreeKiller: createProcessTreeKiller(platform),
 			commandRunner,
+			createSnippetChecker: (fileSystem) => new ClangSnippetSyntaxChecker(paths, fileSystem, commandRunner),
 		};
 	}
 
