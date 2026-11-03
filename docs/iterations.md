@@ -2073,3 +2073,34 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Proof (Windows 11, hidden windows, branch merged with main a307c42): `npm run typecheck` passes; `npm test` 95 files, 1234 passed, 29 skipped; `npm run build` passes; the full `npx playwright test` run has 44 passed and 1 skipped (the real-engine learner flow). The new Run-button test fails on the old header (131 against 159 px) and passes on the new one. The build quest flow test in `ui-quests-flow.spec.ts` took 48.8 s of its 60 s limit on this busy desktop (52 s with the old header too, so not caused by this change); in an earlier full run on this desktop it hit the limit once and passed alone three times. The limit was not raised. A fresh reviewer re-checked the fixes: PASS. No screenshots: the check is a pixel position the test reads.
 - Not done: running it on a Mac. Logged in problems.md as unverified on macOS.
 - Decisions made: A1263, A1264.
+
+## M5.1k Set up the sandbox again from Settings (ui-core, builder-ui-core)
+- What changed: a learner whose sandbox folder was deleted or moved can now make a new one from Settings without reinstalling. The Sandbox row has a "Set up the sandbox again" button that opens first run's own folder step and first-build step right inside the row, with the same progress, cancel, and plain-English error views. The new sandbox is built with the engine already in Settings, and a line above the steps names the folder that held the old one, so choosing it puts the sandbox back where it was. Progress is kept. While the steps are open, Rebuild sandbox and Pick another engine wait.
+- Every message about a gone sandbox now names something that works: running a quest or rebuilding says to put the folder back or use Set up the sandbox again; a path too long for Windows says to use it with a short folder (or, on a setup build, to go back and pick one); a refused rebuild in Settings has no Try again that could only fail. Finishing first run with no sandbox points at the Title screen's Set up your studio, since first run cannot finish from Settings.
+- What went wrong and how it was solved: the first review found that after a failed or cancelled first build, "Build again" and "Start again" could never work, on first run as well as here. Main copies the template and remembers the folder before building, then refuses a folder that is not empty. The fake never refused, so the tests passed. The build step now rebuilds the copy it already made, and the fake now refuses a second copy just as main does (A1307). The second review found that picking another engine while the steps were open would be quietly undone by the build, so that button waits.
+- How to see it: `npm run build`, then `npx playwright test e2e/sandbox-setup-again.spec.ts` (fake scenario `sandbox-deleted`). In the app: delete or move the sandbox folder, open Settings, press Rebuild sandbox (refused, naming the new button), then Set up the sandbox again, choose a folder, and Start the build.
+- Proof: typecheck passes; unit tests 1251 passed, 32 skipped; verify-content 0 errors, 12 warnings; build passes; Playwright 47 passed, 1 skipped (the real-engine learner flow), plus the three new cases on the final build. Engine proof on the Windows desktop, UE 5.8.4 under the engine lock: `DOJO_ENGINE_ROOT=... npx vitest run tests/integration/sandboxSetupAgain.test.ts --no-file-parallelism`, 3 of 3 passed in 136 s (a sandbox set up in a temp folder, its folder deleted, Rebuild sandbox refused at once with the words that name Set up the sandbox again, then `createSandbox` into the same folder, the call the button makes, built and passed).
+- Screenshots (1440x900, fake data):
+
+![[m5-1k-rebuild-refused.jpg|800]]
+*Rebuild sandbox on a deleted sandbox: the folder could not be found, put it back or use Set up the sandbox again; no Try again.*
+
+![[m5-1k-folder-step.jpg|800]]
+*First run's folder step inside the Sandbox row, naming the folder that held the old sandbox; Rebuild and Pick another engine wait.*
+
+![[m5-1k-build-passed.jpg|800]]
+*First run's build step after a pass; the row already says Ready.*
+
+![[m5-1k-ready-again.jpg|800]]
+*After Continue: Ready, and a rebuild of the new sandbox passes.*
+
+- Decisions made: A1300 to A1308.
+- Not done or left for later: choosing a folder whose `DojoSandbox` still holds files gives main's "already has files" refusal, whose "use Rebuild sandbox" is off while the steps are open (the way out is Back, then Cancel; noted in A1303). The steps were not tried in the real app by hand (the e2e test drives the built app against the fake; the engine test drives the real main process). Not tried on macOS (A1290).
+
+### Fix round 1
+- What the reviewer asked for: (1) a failed or cancelled setup build could never be started again (it hit "already has files"), on first run too; (2) the path-too-long advice told a first-run learner to leave for Settings; (3) a refused rebuild in Settings said "open Settings"; (4) the steps could close mid-build if the environment lost the engine; (5) the POSIX root had no parent folder.
+- What changed: the build step rebuilds the copy after a failed or cancelled try (A1307), and the fake refuses a second copy as main does; screen-specific advice for a path too long and for Settings' refused rebuild (A1308); the engine is captured when the steps open; `parentFolderOf("/DojoSandbox")` is `/`. A new e2e case cancels a set up again build and starts it again to a pass.
+
+### Fix round 2
+- What the reviewer asked for: Pick another engine stayed on while the steps were open, and the build would save the old engine back; a path-too-long failure still offered Build again; two test strings lost their backslashes.
+- What changed: `EnginePanel` holds the captured engine and turns Pick another engine off with its reason; no Build again for a path too long; the strings are escaped. Re-review: PASS. Tester (fresh agent, 91830a5): typecheck, 1251 unit tests, verify-content, build, and e2e 47 passed with 1 skipped. Its one note, the build success line squeezed into a narrow column in Settings, was fixed after (6a4b2d4) and the three specs that show it pass.
