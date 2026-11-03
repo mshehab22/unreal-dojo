@@ -217,9 +217,9 @@ bool FDojo_S4_Villager_FoundAndBusy::RunTest(const FString& Parameters)
 
 # Hints
 
-- The villager implements the three functions of the interface the same way the door did: declare each with the `_Implementation` suffix and `override`, and define them. The class inherits from `AActor` and from the interface, in that order.
-- Use can be asked before it is done: `Interact_Implementation` can begin by calling `CanInteract_Implementation`, so the two always agree.
-- A parameter or local named like a member of the class or of `AActor` is error C4458 on Windows, so give the stored pointers their own names; the public ones are fixed by the list above, so name the parameters differently.
+- The villager implements the three functions of the interface the way the door did, with the `_Implementation` suffix and `override`, and it inherits from `AActor` first and the interface second.
+- `Interact_Implementation` can begin by calling `CanInteract_Implementation`, so the two always agree.
+- `CanInteract_Implementation` is the guard that needs all four things set and an idle runner, and a parameter named like `Dialogue`, `Runner`, `FlagStore` or `DisplayName` is error C4458 on Windows.
 
 # Rubric
 

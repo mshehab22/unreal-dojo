@@ -49,7 +49,7 @@ The check uses the new actor's own shapes and their responses: a crate that bloc
 
 Spawn points often come from chance. `FMath::FRandRange` uses the engine's shared random sequence, which changes from run to run. An **`FRandomStream`** built from a seed gives the same sequence every time for that seed: `FRandomStream Stream(Seed)` and then `Stream.FRandRange(Min, Max)` or `Stream.RandPointInBox(Box)`. A designer can replay a layout by its seed, and a test can rely on it.
 
-Spawning many actors every second has a cost, which is where an object pool from the patterns pack comes in. For a few dozen props per round, spawning and destroying is fine.
+Spawning many actors every second has a cost, which is where an object pool, a pattern the patterns pack covers later, comes in. For a few dozen props per round, spawning and destroying is fine.
 
 # Example
 
@@ -88,10 +88,10 @@ ADojoCannonball* ADojoCannon::Fire(float Speed)
   type: multiple-choice
   prompt: "A bomb reads its fuse length in BeginPlay. Code spawns it with SpawnActor and then sets FuseSeconds. What happens?"
   choices:
-    - BeginPlay sees the new FuseSeconds
-    - BeginPlay already ran with the old FuseSeconds before the line that sets it
-    - The spawn fails because a property changed
-  answerIndex: 1
+    - BeginPlay already ran, with the old FuseSeconds
+    - BeginPlay waits a moment and then sees the new FuseSeconds
+    - The spawn fails because a property changed afterwards
+  answerIndex: 0
   explanation: SpawnActor returns after BeginPlay. SpawnActorDeferred and FinishSpawning put your code in between.
 - id: fill-finish
   type: fill-blank
@@ -102,10 +102,10 @@ ADojoCannonball* ADojoCannon::Fire(float Speed)
   type: multiple-choice
   prompt: "Why would a scatterer take a seed and use FRandomStream instead of FMath::FRandRange?"
   choices:
-    - FRandomStream is faster
-    - The same seed gives the same points every time, so a layout can be replayed and tested
-    - FMath::FRandRange cannot return negative numbers
-  answerIndex: 1
+    - FRandomStream is faster than the shared generator is
+    - FMath::FRandRange cannot return negative numbers at all
+    - The same seed gives the same points, so a layout can replay
+  answerIndex: 2
   explanation: A stream's sequence depends only on its seed; the shared generator depends on everything else that used it first.
 - id: adjust
   type: multiple-choice

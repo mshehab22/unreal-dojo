@@ -102,15 +102,17 @@ Acceptance:
     - { id: trace, kind: component, label: A component on the camera that traces forward on a custom channel every time the hero looks somewhere new and keeps the usable component it hits as the focus, covers: [focus] }
     - { id: table, kind: data, label: A data table with one row per conversation node and a row name for the next node and required and set flag names, covers: [dialogue-data] }
     - { id: talker, kind: component, label: A conversation component on each villager that holds its own current row and Choose and End and its own events, covers: [runner, announcements] }
-    - { id: save, kind: data, label: A game instance subsystem that holds the flag set and announces each new flag, covers: [flags, flag-reactions] }
+    - { id: save, kind: data, label: A game instance subsystem that holds the flag set and announces each new flag, covers: [flags] }
+    - { id: gatereact, kind: step, label: A reaction on the gate that listens to the subsystem and unlocks the gate when the pass flag arrives, covers: [flag-reactions] }
     - { id: widget, kind: class, label: A widget that binds to the focus change and to the talking villager's events and shows the prompt or the lines, covers: [prompt] }
-    - { id: controller, kind: step, label: The player controller switches between game and UI input mode when a talker starts and ends, covers: [input-mode] }
+    - { id: controller, kind: step, label: The player controller switches between game and UI input mode and ignores move input through SetIgnoreMoveInput when a talker starts and ends, covers: [input-mode] }
   edges:
     - { from: usable, to: trace, label: found by trace }
     - { from: table, to: talker, label: one row per node }
     - { from: talker, to: widget, label: its events }
     - { from: trace, to: widget, label: focus change }
     - { from: talker, to: save, label: sets flags }
+    - { from: save, to: gatereact, label: a new flag is announced }
     - { from: talker, to: controller, label: started and ended }
 ```
 

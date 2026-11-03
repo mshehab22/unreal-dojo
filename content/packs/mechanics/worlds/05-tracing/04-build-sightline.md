@@ -1,6 +1,6 @@
 ---
 id: m5-sightline
-title: A sentry's eye that sees only what it can really see
+title: A lookout that sees only what it can really see
 order: 4
 kind: build
 scaffold: faded
@@ -12,13 +12,13 @@ prerequisites: [m5-rangefinder]
 xp: 70
 estimatedMinutes: 20
 concepts:
-  - Seeing is an angle test first and a trace second, and the trace has to ask the right question
+  - Seeing is an angle test first and a trace second
   - A line of sight is clear when the first thing the ray meets is the thing you were looking for
 ---
 
 # Brief
 
-When you place an eye facing along X, with a hero 600 units ahead, the eye sees the hero; slide a pillar between them and it no longer does, and it can name the pillar; move the hero 60 degrees off to the side, or directly behind, or out past the eye's range, and it does not see the hero even with nothing in the way. A line is drawn on every look, green when the hero is seen and red when not.
+When you place an eye facing along X, with a hero 600 units ahead, the eye sees the hero; slide a pillar between them and it no longer does, and it can name the pillar; move the hero 60 degrees off to the side, or directly behind, or out past the eye's range, and it does not see the hero even with nothing in the way. Each trace the eye makes is drawn as a line, green when the hero is seen and red when not; a look that stops at the range or the cone makes no trace and draws nothing.
 
 Most of the code is written for you, including the range check and the line. Write two gaps in `ADojoM5Eye::CanSee`:
 
@@ -31,7 +31,7 @@ This eye is the first piece of the Watchtower boss, where each of the two sentri
 
 ## See it in the editor
 
-Place a `DojoM5Eye` and, in the level Blueprint, on the 1 key, call Can See with Get Player Pawn as the candidate and print the result. Press Play and stand in front of the eye: a green line from the eye to you, and true. Walk behind it: a red line and false. Place a cube between you and the eye and press 1 again: the line stops at the cube. Select the eye and change Half Angle Degrees to 20 to narrow its cone, or Range to 300 to shorten it. Use `show Collision` to see the shapes the ray meets.
+Place a `DojoM5Eye` and, in the level Blueprint, on the 1 key, call Can See with Get Player Pawn as the candidate and print the result. Press Play and stand in front of the eye: a green line from the eye to you, and true. Walk behind it, or out past its range: false and no line, because the look stops before any trace. Place a cube between you and the eye and press 1 again: the line stops at the cube. Select the eye and change Half Angle Degrees to 20 to narrow its cone, or Range to 300 to shorten it. Use `show Collision` to see the shapes the ray meets.
 
 # Files
 
@@ -296,17 +296,17 @@ bool FDojo_M5_Sightline_TheConeAndRangeHaveEdges::RunTest(const FString& Paramet
 
 # Hints
 
-- If the hero is never seen even in the open, put the trace on screen and read what it returned: did it meet anything? Then look at how the hero's capsule answers the question the trace asked, in its collision settings.
-- A trace can ask by channel, how things answer one kind of look, or by object type, what things are. The second does not depend on how a shape answers a particular channel. The cone is the dot product of two unit vectors, which is the cosine of the angle between them.
-- `UWorld::LineTraceSingleByObjectType` takes an `FCollisionObjectQueryParams`, which you fill with `AddObjectTypesToQuery`; the object types are `ECC_WorldStatic`, `ECC_WorldDynamic`, and `ECC_Pawn`. `FVector::DotProduct`, `FVector::GetSafeNormal`, and `FMath::Cos` do the cone; the query types are in `CollisionQueryParams.h`.
+- If the hero is never seen even in the open, read what the trace returned and compare it with how the hero's capsule answers the question the trace asked.
+- A trace can ask by channel, how things answer one kind of look, or by object type, what things are, which does not depend on a shape's response to any channel.
+- `UWorld::LineTraceSingleByObjectType` takes an `FCollisionObjectQueryParams` filled with `AddObjectTypesToQuery` (the types are `ECC_WorldStatic`, `ECC_WorldDynamic` and `ECC_Pawn`), while `FVector::DotProduct` with `GetSafeNormal` does the cone.
 
 # Rubric
 
 - The cone is a dot product of the eye's forward and the unit direction toward the candidate, compared with the cosine of the half angle.
 - The trace runs from the eye to the candidate and leaves the eye itself out of the answer.
-- The candidate is seen only when the first thing the ray meets is the candidate; a pillar or another character in the line means not seen, and the blocker is named.
-- A pillar or another character standing in the line hides the hero, and a hero in the open is seen, whatever collision settings the hero's capsule has.
-- A debug line is drawn on every look, green when seen and red when not, and the eye holds no reference to whoever asked it.
+- The candidate is seen only when the first thing the ray meets is the candidate, and the thing that was met instead is named.
+- A pillar or another character in the line hides the hero, and a hero in the open is seen.
+- Each trace is drawn as a line, green when seen and red when not, and the eye holds no reference to whoever asked it.
 - Range and half angle are properties a designer can tune, and the eye looks when asked rather than every frame.
 
 # Alternative
@@ -317,14 +317,12 @@ Tracing by a custom channel is the other usual answer: add a channel in Project 
 
 ```yaml
 - id: eye-trace
-  prompt: Put the object-type look in order.
+  prompt: Put the object-type look in order. The object types come first, then the query params that leave the eye out, then the trace and its verdict; the hit result is already declared.
   lines:
-    - "FCollisionObjectQueryParams Objects;"
-    - "Objects.AddObjectTypesToQuery(ECC_WorldStatic);"
+    - "FCollisionObjectQueryParams Objects(ECC_WorldStatic);"
     - "Objects.AddObjectTypesToQuery(ECC_Pawn);"
     - "FCollisionQueryParams Params;"
     - "Params.AddIgnoredActor(this);"
-    - "FHitResult Hit;"
     - "const bool bBlocked = GetWorld()->LineTraceSingleByObjectType(Hit, Start, Goal, Objects, Params);"
     - "const bool bSeen = bBlocked && Hit.GetActor() == Candidate;"
   distractors:

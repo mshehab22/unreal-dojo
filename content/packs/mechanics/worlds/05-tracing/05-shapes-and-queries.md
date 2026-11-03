@@ -22,11 +22,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: two pillars stand with a gap of 30 units between them. A line trace and a sphere sweep of radius 50 both travel along the middle of the gap. What happens?"
 choices:
-  - Both pass through, because the gap is open
-  - The line passes through and the sphere is stopped by a pillar
-  - The line is stopped and the sphere passes through
-  - Both are stopped
-answerIndex: 1
+  - Both pass through, because the gap is open to them
+  - The line is stopped and the sphere passes through the gap
+  - The line passes through and a pillar stops the sphere
+  - Both are stopped, because the gap is too narrow
+answerIndex: 2
 explanation: A line has no width, so it slips through any gap. A sphere 100 units across cannot fit a 30 unit gap, so a pillar blocks it.
 ```
 
@@ -38,7 +38,7 @@ The shape is an `FCollisionShape`, built with `FCollisionShape::MakeSphere(Radiu
 
 A sweep's `FHitResult` has two places, and they are different. `Location` is where the shape's centre stopped. `ImpactPoint` is where the shape touched the surface. A sphere of radius 50 that runs head-on into a wall stops with its centre 50 units short of the wall, while the impact point sits on the wall itself. `Distance` is how far the shape travelled. Put a preview marker at `Location`, since that is where the shape fits; put a scorch mark at `ImpactPoint`, since that is the surface.
 
-A single trace answers only the first blocker. **Multi traces** such as `LineTraceMultiByChannel(Hits, Start, End, Channel, Params)` fill an array, ordered by distance. Objects that respond Overlap are listed too, as hits whose `bBlockingHit` is false. The first Block, if there is one, is the last element and ends the trace: nothing past it is tested. So a shot that passes through glass and ends at a wall returns the glass and then the wall, and a line that meets only overlaps returns them all and a `false` result. Walk the array and decide for each entry what it means.
+A single trace answers only the first blocker. **Multi traces** such as `LineTraceMultiByChannel(Hits, Start, End, Channel, Params)` fill an array, ordered by distance. Anything that responds Overlap is listed along the way, as a hit whose `bBlockingHit` is false, nearest first, and the line ends at the first Block, so the blocker closes the list and nothing behind it is tested. So a shot that passes through glass and ends at a wall returns the glass and then the wall, and a line that meets only overlaps returns them all and a `false` result. Walk the array and decide for each entry what it means.
 
 A channel trace asks how things answer a kind of question. A **by-object-type query**, such as `LineTraceSingleByObjectType`, asks what things are. You describe the kinds in an `FCollisionObjectQueryParams` with `AddObjectTypesToQuery(ECC_Pawn)`, and the query looks only for objects whose own object type is on that list, whatever their responses are. Use a channel when "what blocks my sight" is the question and an object type when "is there a pawn here" is.
 
@@ -104,21 +104,21 @@ int32 ADojoProbe::CountInside(const FVector& Centre, float Radius) const
   type: multiple-choice
   prompt: "A sphere of radius 50 sweeps head-on into a flat wall and is stopped. How do Hit.Location and Hit.ImpactPoint compare?"
   choices:
-    - They are the same point
-    - Location is the sphere's centre, about 50 units back from the wall, and ImpactPoint is on the wall
-    - Location is on the wall and ImpactPoint is the sphere's centre
-    - Location is where the sweep started
-  answerIndex: 1
+    - Location is the ball's centre, 50 short of the wall; ImpactPoint is on the wall
+    - They are the same point, on the wall's face, right where the ball is stopped
+    - Location is on the wall and ImpactPoint is the ball's centre, 50 short
+    - Location is where the sweep started and ImpactPoint is where it ended
+  answerIndex: 0
   explanation: For a sweep, Location is where the shape's centre came to rest and ImpactPoint is where the shape touched the surface, so a head-on sphere stops one radius short of the wall.
 - id: multi-order
   type: multiple-choice
   prompt: "A multi line trace passes through a glass pane that responds Overlap, then a bush that responds Overlap, then a wall that responds Block. What does the array hold?"
   choices:
-    - Only the wall
-    - The pane, the bush, and the wall in order of distance, with the wall last as the only blocking entry
-    - The wall first, then the bush, then the pane
-    - Nothing, because overlaps cancel a multi trace
-  answerIndex: 1
+    - Only the wall, because the overlaps are not hits
+    - The wall, the bush and the pane, from the farthest to the nearest
+    - Nothing at all, because the overlaps cancel the whole multi trace
+    - The pane, the bush and the wall by distance, only the wall blocking
+  answerIndex: 3
   explanation: A multi trace lists overlaps as non-blocking hits ordered by distance, and the first Block is the last element and ends the trace.
 - id: half-extent
   type: spot-the-bug
@@ -137,9 +137,9 @@ int32 ADojoProbe::CountInside(const FVector& Centre, float Radius) const
   type: multiple-choice
   prompt: "A fireball should react only to pawns, whatever channels the scenery uses. Which query fits?"
   choices:
-    - A by-channel trace on Visibility
-    - A by-object-type query with only the Pawn object type added
-    - An overlap query with a huge sphere
+    - A by-channel trace on Visibility, with the scenery set to ignore it
+    - A by-object-type query listing only the Pawn type
+    - An overlap query with a huge sphere around the fireball
   answerIndex: 1
   explanation: A by-object-type query asks what an object is, so listing only the Pawn type makes the query look at pawns and nothing else.
 - id: explain-sweep

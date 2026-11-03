@@ -32,7 +32,7 @@ explanation: A walking player changes the answer slowly, so a few looks per seco
 
 # Card
 
-A trace is cheap once and costly in bulk. Ten sentries each tracing every frame is six hundred queries a second to learn something that changes a few times a second. The habit: **ask only as often as the answer changes.** A sentry's eyes belong on a timer from the **timer manager**, set in `BeginPlay` and repeating a few times a second, not in `Tick`. A ground snap that places a prop on the floor asks once, at `BeginPlay`, because the floor does not move. Only an answer that must be fresh every frame, such as the crosshair target under a moving camera, earns a trace in `Tick`.
+A trace is cheap once and costly in bulk. Ten sentries each tracing every frame is six hundred queries a second to learn something that changes a few times a second. The habit: **ask only as often as the answer changes.** A sentry's eyes belong on a timer from the **timer manager**, set in `BeginPlay` and repeating a few times a second, not in `Tick`. Standing a prop on the floor asks once, at `BeginPlay`, because the floor does not move. Only an answer that must be fresh every frame, such as the crosshair target under a moving camera, earns a trace in `Tick`.
 
 Start the trace clear of yourself. Either ignore your own actor in the query params, or begin just outside your own shape. A trace that begins inside your collision may be answered by your own body first, as you saw with the rangefinder.
 
@@ -49,7 +49,7 @@ Then wrap each draw call in `if (bDrawDebug)`. That keeps the drawing one click 
 
 For the rare case of very many queries in one frame, the engine has **asynchronous traces**, such as `AsyncLineTraceByChannel`, which take a delegate and hand the answer back at a later point instead of stopping the frame to compute it. You do not need them yet; it is enough to know they exist and that the cost of a flood of traces is a real thing with a real remedy.
 
-The uses you will meet again and again: the crosshair target (a line from the camera), camera pull-in (a sweep from the character back to the camera spot, so a wall never hides the player), ground snap (a line down), line of sight (a line between two actors, as above), and aim assist (a sweep wider than the reticle). They are all the same question wearing different clothes.
+The uses you will meet again and again: the crosshair target (a line from the camera), a camera that keeps clear of walls (a sweep from the character back to the camera spot, so a wall never hides the player), standing a prop on the floor (a line down), line of sight (a line between two actors, as above), and aim assist (a sweep wider than the reticle). They are all the same question wearing different clothes.
 
 # Example
 
@@ -108,27 +108,27 @@ void ADojoSentry::Look()
   type: multiple-choice
   prompt: "A sentry's trace returns true. Why is that not enough to say it can see the player?"
   choices:
-    - True means only that something blocked the line, which might be a wall, so the hit actor must be checked
-    - True means the trace failed and must be run again
-    - True is only returned for pawns
-  answerIndex: 0
-  explanation: The return value reports a blocker of any kind. The hit result says which one, and only a hit on the player, or a clear line to the player, means it is seen.
+    - True means the trace itself failed, so it must be run a second time
+    - True is only ever returned when the thing it hit is a pawn
+    - True says something blocked the line, maybe a wall, so check the hit actor
+  answerIndex: 2
+  explanation: The return value reports a blocker of any kind. The hit result says which one, and only a hit whose actor is the player means it is seen.
 - id: toggle-why
   type: multiple-choice
   prompt: "Why make bDrawDebug an editable property instead of leaving the draw calls in unconditionally?"
   choices:
-    - Draw calls do not compile without it
-    - The drawing can be switched off from the editor once it is no longer needed, and back on when something breaks
-    - It makes the trace itself faster
+    - Draw calls do not compile unless a property controls them
+    - You can switch the drawing off in the editor, and back on when something breaks
+    - A property makes the trace itself run faster than a constant would
   answerIndex: 1
   explanation: A toggle keeps the debugging aid available without leaving it on screen all the time, and it needs no code change to flip.
 - id: many-queries
   type: multiple-choice
   prompt: "A level needs hundreds of traces in one frame. Which tool exists for that?"
   choices:
-    - Asynchronous traces such as AsyncLineTraceByChannel, which hand back results through a delegate later
-    - Setting bTraceComplex to true
-    - Drawing the traces with a longer lifetime
+    - Asynchronous traces such as AsyncLineTraceByChannel, answered by a delegate
+    - Setting bTraceComplex to true on every query in the level
+    - Drawing the traces with a longer debug lifetime
   answerIndex: 0
   explanation: Asynchronous traces spread the work out and report back through a delegate instead of stopping the frame for each query.
 - id: explain-rate
