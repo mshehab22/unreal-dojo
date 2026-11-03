@@ -3645,7 +3645,8 @@
       "fname",
       "savegame",
       "build-cs"
-    ]
+    ],
+    "firstQuestId": "s2-gameplay-tags"
   },
   {
     "id": "gas",
@@ -4056,6 +4057,26 @@
       "blueprintnativeevent"
     ],
     "firstQuestId": "p8-many-kinds-one-toolbox"
+  },
+  {
+    "id": "instanced-subobjects",
+    "term": "Instanced subobjects",
+    "aliases": [
+      "EditInlineNew",
+      "DefaultToInstanced",
+      "UPROPERTY(Instanced)"
+    ],
+    "category": "reflection",
+    "short": "Objects created and tuned right inside another object's Details panel, owned by it and saved with it.",
+    "long": "Mark a UObject class EditInlineNew and a pointer property to it Instanced, and the Details panel stops offering a picker for existing objects: it offers a dropdown of classes, creates a new object whose outer is the owner, and shows that object's settings inline. The new object is saved in the owner's file and copied when the owner is duplicated, which makes it a good home for small configurable pieces such as the effects listed in an ability asset. DefaultToInstanced on the class makes every property of its type instanced, the way components behave. Because an asset is shared by everyone who loads it, the objects inside it are shared as well, so they should hold settings and keep no state that changes while the game runs.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "uproperty",
+      "abstract-specifier",
+      "data-asset",
+      "tsubclassof"
+    ],
+    "firstQuestId": "s2-instanced-effects"
   },
   {
     "id": "blueprint-protected",

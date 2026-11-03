@@ -387,7 +387,9 @@
     "whenNot": "Inside one small feature where both ends live in the same class, a direct call is easier to read and debug. Avoid it when the sender needs an answer back, when the listener must run later (use Event Queue), or in tight loops where broadcasting to many listeners per element costs too much.",
     "useCaseQuestIds": [
       "p1-bounty-board",
-      "p1-tutorial-sign"
+      "p1-tutorial-sign",
+      "s2-energy",
+      "s2-ability-component"
     ],
     "recall": [
       {
@@ -904,7 +906,8 @@
     "whenNot": "When the variants differ only in numbers, use data (Type Object) instead of a class per variant. When the base class keeps growing tools for every new subclass, move single-use tools back into their subclass and group related tools into a helper object before the base becomes a dumping ground. When the capability must mix across unrelated actors, use components.",
     "useCaseQuestIds": [
       "p8-trap-family",
-      "p8-interactables"
+      "p8-interactables",
+      "s2-effects"
     ],
     "recall": [
       {
@@ -1021,6 +1024,33 @@
         ],
         "answerIndex": 1,
         "explanation": "A base for two members is a guess at what they share; with a third member the real shared tools become clear."
+      },
+      {
+        "id": "subclass-sandbox-scenario-4",
+        "type": "which-pattern",
+        "prompt": "An ability asset lists what a move does: move the user ahead, push nearby targets away, refill energy. Each kind has its own small piece of logic, and every kind needs the same helpers to find targets and to move an actor. Which pattern shapes the kinds?",
+        "choices": [
+          "type-object",
+          "subclass-sandbox",
+          "strategy",
+          "component"
+        ],
+        "answer": "subclass-sandbox",
+        "distractorNotes": [
+          {
+            "choice": "type-object",
+            "why": "The ability asset around the effects is a type object, but the effect kinds differ in logic, not only in numbers."
+          },
+          {
+            "choice": "strategy",
+            "why": "Strategy swaps one algorithm behind an interface; the point here is the protected toolbox every kind shares."
+          },
+          {
+            "choice": "component",
+            "why": "Components add capabilities to an actor; effects are behaviors run on an actor, not parts it carries."
+          }
+        ],
+        "explanation": "An abstract effect base with a public Apply, one protected hook, and protected tools; each kind overrides only the hook."
       }
     ]
   },
@@ -1033,7 +1063,9 @@
     "whenNot": "A small actor with one job does not need its job split into parts. If parts constantly reach into each other, the split is in the wrong place. Something that must outlive its owner or has its own place and lifetime in the level, such as a dropped pouch or a turret that can be knocked off a wall, is an actor, not a component.",
     "useCaseQuestIds": [
       "p9-arena-parts",
-      "p9-sprint-parts"
+      "p9-sprint-parts",
+      "s2-energy",
+      "s2-ability-component"
     ],
     "recall": [
       {
@@ -1178,7 +1210,8 @@
     "whenNot": "If kinds mostly differ in behavior rather than numbers, data cannot express it without growing into a scripting system. With a few kinds that never change and nobody tunes, plain code is simpler. If every object really needs its own numbers, there is no kind to share.",
     "useCaseQuestIds": [
       "p10-weapon-kinds",
-      "p10-quiver-kinds"
+      "p10-quiver-kinds",
+      "s2-ability-data"
     ],
     "recall": [
       {
@@ -1227,6 +1260,19 @@
         ],
         "answerIndex": 1,
         "explanation": "The row is shared by every quiver of that kind; what changes per quiver, arrows left, lives on the quiver."
+      },
+      {
+        "id": "type-object-recall-5",
+        "type": "multiple-choice",
+        "prompt": "A Dash ability is a data asset with a cost, a cooldown, and the tags that block it, and two heroes are granted the same asset. Where does each hero's time left on the cooldown live?",
+        "choices": [
+          "In the asset, as a field next to Cooldown",
+          "In each hero's ability component",
+          "In a static variable on the asset class",
+          "In the effect object listed inside the asset"
+        ],
+        "answerIndex": 1,
+        "explanation": "The asset is the shared type object and holds only what every user has in common; what changes for one user, such as the time left, lives with that user."
       }
     ],
     "scenarios": [
