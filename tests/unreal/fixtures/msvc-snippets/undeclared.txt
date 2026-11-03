@@ -1,0 +1,4 @@
+Snippet-one.cpp
+C:\Dojo\DojoSandbox\Intermediate\DojoSnippets\Snippet-one.cpp(5,16): error C2065: 'DeltaSecs': undeclared identifier
+	float Speed = DeltaSecs * 2.0f;
+	              ^

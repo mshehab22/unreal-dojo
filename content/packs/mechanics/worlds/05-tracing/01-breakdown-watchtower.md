@@ -7,7 +7,7 @@ difficulty: 3
 patterns: []
 skills: [planning, collision]
 terms: [timer-manager, tick]
-prerequisites: [m2-boss-clockwork-hall]
+prerequisites: [m4-boss-fuse-yard]
 xp: 80
 estimatedMinutes: 20
 concepts:

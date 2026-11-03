@@ -57,7 +57,10 @@ export class FakeSandboxFileSystem implements SandboxFileSystem
 	/** Names of files directly inside the folder. */
 	async listFiles(folderPath: string): Promise<string[]>
 	{
-		return [...this.files.keys()].filter((filePath) => filePath.startsWith(`${folderPath}/`) && !filePath.slice(folderPath.length + 1).includes("/")).map((filePath) => filePath.slice(folderPath.length + 1));
+		// Windows paths (the MSVC snippet check) list with their own separator.
+		const separator = folderPath.includes("\\") ? "\\" : "/";
+
+		return [...this.files.keys()].filter((filePath) => filePath.startsWith(`${folderPath}${separator}`) && !filePath.slice(folderPath.length + 1).includes(separator)).map((filePath) => filePath.slice(folderPath.length + 1));
 	}
 
 	/** Names of files and folders directly inside the folder. */
