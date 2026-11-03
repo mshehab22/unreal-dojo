@@ -21,7 +21,7 @@ interface ChestProps
 	readonly caption: string;
 	readonly className?: string;
 
-	/** True when the chest was just earned: it draws closed for one frame, then the lid opens with the reward motion (A1395). */
+	/** True when the chest was just earned: it draws closed for two frames, then the lid opens with the reward motion (A1395). */
 	readonly opensOnMount?: boolean;
 }
 

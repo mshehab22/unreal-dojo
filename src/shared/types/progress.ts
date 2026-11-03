@@ -517,7 +517,7 @@ export interface SolutionViewing
 	/** Seer Stones held after the view. */
 	seerStonesAfter: number;
 
-	/** True when the quest's first pass now pays no XP: the first view of an unpassed quest was paid with its XP instead of a stone. Also true on a repeat view of such a quest. */
+	/** True when the first view of this unpassed quest was paid with its XP instead of a stone: a pass before the rematch date pays no XP, and the rematch pays the rules' rematch share. Also true on a repeat view of such a quest. */
 	xpForfeited: boolean;
 
 	/** When the rematch this view scheduled is due (ISO 8601), or null when it scheduled none (a repeat view, or a passed quest). */

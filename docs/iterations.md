@@ -2073,3 +2073,45 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Proof (Windows 11, hidden windows, branch merged with main a307c42): `npm run typecheck` passes; `npm test` 95 files, 1234 passed, 29 skipped; `npm run build` passes; the full `npx playwright test` run has 44 passed and 1 skipped (the real-engine learner flow). The new Run-button test fails on the old header (131 against 159 px) and passes on the new one. The build quest flow test in `ui-quests-flow.spec.ts` took 48.8 s of its 60 s limit on this busy desktop (52 s with the old header too, so not caused by this change); in an earlier full run on this desktop it hit the limit once and passed alone three times. The limit was not raised. A fresh reviewer re-checked the fixes: PASS. No screenshots: the check is a pixel position the test reads.
 - Not done: running it on a Mac. Logged in problems.md as unverified on macOS.
 - Decisions made: A1263, A1264.
+
+## M3.3 The economy on screen: daily quest with chests, Seer Stone, spree and armor, streak celebrations, test-out (progress-and-rules and ui, m3-3-economy-ui)
+- What changed: the rules for the game's rewards already existed but most of them had no screen, and the Seer Stone could not be used at all. Now the Studio's daily quest has a Start button for the chosen offer, shows what today's chest held, and counts the days of the month. A chest you earn opens on the loot or drill screen, and 7, 30, and 100 day streaks get a short celebration. The Build screen says what your first try is worth to your spree and whether armor covers a miss, and the loot calls out when armor saved your spree. After two failed submits you can read the quest's reference solution, paying with a Seer Stone (you keep the XP) or with the quest's XP; seeing it again is free. A world's test-out drill names its world, and afterwards the map marks the build quests you may skip.
+- Audit at the start (what M3.3 already had):
+  - Daily quest with chests: partial. The rules, the chest roll, choosing an offer, and the chest on loot and drill (drawn already open) were there. There was no way to open the chosen offer and no record of today's chest, the month badge was never shown, and a drill was offered on days when a drill could not finish it.
+  - Seer Stone flow: missing. The rule existed in main, but there was no IPC method and the button was disabled (A358).
+  - Spree and armor display: partial. The Character meter and a loot text line were there; nothing on the Build screen or the Studio.
+  - Streak celebrations: partial. The loot had a text suffix; the drill finish had nothing.
+  - Test-out per world: partial. The button, the drill, and the rules were there; skippable stages were never shown.
+- Rule changes made on the way: viewing a solution again, or after a pass, is free and schedules no rematch, which closes a pass, view, rematch farm (A1391). Armor is only spent while the spree is above 0 (A1396). The drill offer is left out on a day with nothing due (A1393). Fix round 1: a first pass after a Seer Stone view pays in full even on or after the rematch date (it paid 50% before, so the stone bought nothing).
+- How to see it: `npm install`, then `VITE_DOJO_FAKE=economy npm run dev`, and follow "The economy with sample data" under Ready to playtest in `docs/plan.md`.
+- Proof (Windows 11, hidden windows): `npm run typecheck` passes; `npm test` passes (rule paths in `tests/progress/seerStoneAndDaily.test.ts`, `spreeRules.test.ts`, `dailyQuestAndChest.test.ts`, `progressContentHandlers.test.ts`; screen helpers and the fake in `tests/renderer/economyScreens.test.ts`); `npx tsx tools/verify-content.ts` has no problems (12 warnings, all existing); `npm run build` passes; `e2e/economy.spec.ts` 3 of 3 pass. The full `npx playwright test` run had 46 passed, 1 skipped (the real-engine learner flow), and 1 failed: the long build flow in `ui-quests-flow.spec.ts` ran out of its 60 s while other e2e ran on the machine. It passes alone (52 s) and fails the same way on main with `SAVE_PROOF=1`, logged in problems.md.
+
+![[m3-3-studio-daily-offers.jpg|800]]
+*The Studio: today's three offers, the closed chest, the month count, and the spree meter with one armor.*
+
+![[m3-3-loot-streak-and-chest.jpg|800]]
+*The daily concept quest passed: the 7 day streak celebration and the chest opened with a Seer Stone.*
+
+![[m3-3-studio-daily-done.jpg|800]]
+*Back in the Studio: the day is done and the chest stays open with its reward.*
+
+![[m3-3-build-spree-stake.jpg|800]]
+*The Build screen: the first try counts, a pass makes the spree 5 with the bonus, and armor covers a miss.*
+
+![[m3-3-loot-armor-absorbed.jpg|800]]
+*A missed first try: armor absorbed it and the spree of 4 stands.*
+
+![[m3-3-seer-stone-choice.jpg|800]]
+*After two failed submits: a Seer Stone or the quest's XP, both naming the rematch.*
+
+![[m3-3-seer-stone-solution.jpg|800]]
+*The reference solution in the same dialog, with what it cost and when the rematch is due.*
+
+![[m3-3-test-out-summary.jpg|800]]
+*A test-out drill passed: the world is tested out, and this drill reached the 7 day streak.*
+
+![[m3-3-world-map-skippable.jpg|800]]
+*The map after the test-out: the training dummy and the pop-up target carry the skip mark; the boss does not.*
+
+- Decisions made: A1390 to A1399. Cross-owner lines (IPC contract, handler, composition root, fake fixture builder) are logged in A1390.
+- Not done or left for later: studio cosmetics are listed, not drawn; the fake never pays rematch XP; integration tests and the packaged build's `solutions/` folder were not run (no engine needed for this task, and `viewSolution` touches no Unreal service); macOS not checked.

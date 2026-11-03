@@ -33,7 +33,7 @@ export function SeerStoneDialog({ open, onOpenChange, viewing, seerStones, quest
 {
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent data-testid="seer-stone-dialog" className="top-[6%] max-h-[88vh] max-w-[min(60rem,calc(100%-4rem))] overflow-y-auto">
+			<DialogContent data-testid="seer-stone-dialog" {...(viewing ? { "aria-describedby": undefined } : {})} className="top-[6%] max-h-[88vh] max-w-[min(60rem,calc(100%-4rem))] overflow-y-auto">
 				<DialogTitle>{viewing ? "Reference solution" : "View the reference solution?"}</DialogTitle>
 				{viewing ? (
 					<ReferenceSolutionView viewing={viewing} rematchShare={rematchShare} />
@@ -49,7 +49,7 @@ export function SeerStoneDialog({ open, onOpenChange, viewing, seerStones, quest
 									Spend a Seer Stone
 								</span>
 								<span className="text-xs text-paper-muted">
-									Keeps this quest's {questXp} XP for your pass. You hold {seerStones} {seerStones === 1 ? "stone" : "stones"}.
+									Keeps this quest's full first-pass XP (base {questXp}). You hold {seerStones} {seerStones === 1 ? "stone" : "stones"}.
 								</span>
 								{seerStones === 0 ? (
 									<DisabledWithReason testId="seer-stone-spend-reason" reason="You hold no Seer Stone. A daily chest can hold one.">
@@ -70,10 +70,10 @@ export function SeerStoneDialog({ open, onOpenChange, viewing, seerStones, quest
 									<CoinsIcon className="size-4 text-warn" />
 									Pay with this quest's XP
 								</span>
-								<span className="text-xs text-paper-muted">Your first pass here then pays 0 XP. Hints and the rematch still count.</span>
+								<span className="text-xs text-paper-muted">Nothing leaves your total, but a pass before the rematch pays no XP; the rematch pays {Math.round(rematchShare * 100)}%.</span>
 								<Button variant="outline" size="sm" className="self-start" data-testid="seer-stone-pay-xp" disabled={isPending} onClick={() => onChoose(false)}>
 									<CoinsIcon />
-									Pay {questXp} XP
+									Pay with XP
 								</Button>
 							</div>
 						</div>

@@ -1,7 +1,7 @@
 // Pure helpers for the Studio's daily quest (A1394): where a chosen offer opens, and how much of this month's daily quests are done.
 import type { DailyOffer, DailyQuestState } from "@shared/types/progress";
 
-import type { RouteId, RouteParameters } from "@/app/router/routes";
+import type { RouteId, RouteParameters } from "../app/router/routes";
 
 /** A route to open with its parameters. */
 export interface RouteTarget

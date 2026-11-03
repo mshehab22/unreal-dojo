@@ -52,6 +52,14 @@ async function expectNoSidewaysScroll(label: string): Promise<void>
 	expect(overflowing, label).toEqual([]);
 }
 
+/** Fails when the open dialog scrolls sideways or reaches past the window's edges. */
+async function expectDialogFits(label: string): Promise<void>
+{
+	const problems = await window.evaluate<string[]>("(() => { const dialog = document.querySelector('[role=dialog]'); if (!dialog) return ['no dialog']; const box = dialog.getBoundingClientRect(); const found = []; if (dialog.scrollWidth > dialog.clientWidth + 1) found.push('scrolls sideways ' + dialog.scrollWidth + '>' + dialog.clientWidth); if (box.left < 0 || box.right > window.innerWidth + 1) found.push('wider than the window ' + Math.round(box.left) + '..' + Math.round(box.right)); return found; })()");
+
+	expect(problems, label).toEqual([]);
+}
+
 /** Answers every item of the drill on screen right from the content's answer key, then finishes it. */
 async function answerWholeDrill(): Promise<void>
 {
@@ -178,6 +186,9 @@ test("a build: the spree at stake, armor absorbing a missed first try, and the S
 	await expect(dialog).toBeVisible();
 	await expect(dialog.getByTestId("seer-stone-pay-xp")).toBeEnabled();
 	await saveScreenshot("seer-stone-choice");
+	await setViewport(1100, 700);
+	await expectDialogFits("the Seer Stone choice at 1100x700");
+	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
 
 	// Spending the stone shows the solution's files and the rematch it scheduled.
 	await dialog.getByTestId("seer-stone-spend").click();
@@ -190,6 +201,7 @@ test("a build: the spree at stake, armor absorbing a missed first try, and the S
 	await saveScreenshot("seer-stone-solution");
 	await setViewport(1100, 700);
 	await expect(dialog.getByTestId("reference-solution")).toBeVisible();
+	await expectDialogFits("the reference solution at 1100x700");
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
 
 	// Closed and opened again, it is free and shows at once; no stone is left.

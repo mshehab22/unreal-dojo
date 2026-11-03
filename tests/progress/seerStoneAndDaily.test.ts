@@ -129,6 +129,38 @@ describe("ProgressService.viewSolution", () =>
 		expect(service.getProgress().quests["q1"]).toMatchObject({ solutionViewed: true, seerStoneSpent: false });
 	});
 
+	it("pays a Seer Stone view's first pass in full even on or after the rematch date (fix round 1)", async () =>
+	{
+		const { service, clock } = createTestProgressService(now, [0], (progress) => { progress.seerStones = 1; });
+		await service.recordAttempt(failedSubmit, quests);
+		await service.recordAttempt(failedSubmit, quests);
+		await service.viewSolution("q1", true);
+
+		clock.advanceDays(4);
+		const pass = await service.recordAttempt({ ...failedSubmit, score: 90, passed: true, compiled: true }, quests);
+
+		expect(pass.xp.firstPass).toBe(100);
+	});
+
+	it("pays an XP-paid view's first pass 50% once the rematch is due, and 0 before", async () =>
+	{
+		const early = createTestProgressService();
+		const late = createTestProgressService();
+
+		for (const { service } of [early, late])
+		{
+			await service.recordAttempt(failedSubmit, quests);
+			await service.recordAttempt(failedSubmit, quests);
+			await service.viewSolution("q1", false);
+		}
+
+		early.clock.advanceDays(1);
+		late.clock.advanceDays(4);
+
+		expect((await early.service.recordAttempt({ ...failedSubmit, score: 90, passed: true, compiled: true }, quests)).xp.firstPass).toBe(0);
+		expect((await late.service.recordAttempt({ ...failedSubmit, score: 90, passed: true, compiled: true }, quests)).xp.firstPass).toBe(50);
+	});
+
 	it("never schedules a rematch for a passed quest, closing pass, view, rematch farming", async () =>
 	{
 		const { service, clock } = createTestProgressService();
@@ -166,7 +198,7 @@ describe("ProgressContentService.viewSolution through the handler (A1390)", () =
 		expect(await stack.handlers.viewSolution.handle("w1-build", true)).toMatchObject({ stoneSpent: false, seerStonesAfter: 1, xpForfeited: true, alreadyViewed: true, rematchDueAt: null });
 	});
 
-	it("refuses before two failed submits, for a concept quest, for a locked quest, and for a quest with no solution, charging nothing", async () =>
+	it("refuses a locked quest, a concept quest, and a quest with no solution, charging nothing", async () =>
 	{
 		const stack = handlerStack({ filesOf: async () => null });
 
