@@ -91,9 +91,9 @@ GetWorld()->GetSubsystem<UDojoP22HitFeedback>()->PlayHitFeedback(Where, 50.f);
   type: multiple-choice
   prompt: "In UDojoP22HitFeedback::Initialize, what does Collection.InitializeDependency<UDojoP22SoundDesk>() do?"
   choices:
-    - It creates a second sound desk only for the facade
-    - It makes sure the world's sound desk exists and is initialized before the facade goes on, and returns it
-    - It deletes the sound desk when the facade is done
+    - It creates a second sound desk only for the front
+    - It makes sure the world's sound desk exists and is initialized before the front goes on, and returns it
+    - It deletes the sound desk when the front is done
     - It does nothing unless the sound desk ticks
   answerIndex: 1
   explanation: Subsystems of one kind start in no promised order; asking for a dependency puts that one first and hands it back.

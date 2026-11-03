@@ -6,7 +6,7 @@ Newest first inside each section. A decision names the options considered, the c
 
 ### A1782 2026-11-03 World 22 review round 1 (author-patterns, M4.P2.22)
 A fresh reviewer found no blockers and two should-fixes, both fixed:
-- The worked quest said "facade" in its brief, concepts, rubric, comments, and test messages before the card names the pattern; it now says "front" or "the hit feedback subsystem" until the Alternative, and the `subsystem-dependency` hover no longer says facade.
+- The worked quest said "facade" in its brief, concepts, rubric, comments, and test messages before the card names the pattern; it now says "front" or "the hit feedback subsystem" until the Alternative, the first quest's dependency question says "front" too (found in the re-review), and the `subsystem-dependency` hover no longer says facade.
 - Two Parsons blocks had more than one valid order; their prompts now pin the order (sound, sparks, line, flash; Gate, Where, Health, then the slots, then the count).
 
 Nits also fixed: the checkpoint editor step uses three saves so it never shows the wrap (A1775); `LoadLatest` and `LoadBack` are `BlueprintPure = false` so they keep exec pins; `LoadGameFromMemory`'s nullptr cases and the Niagara component's auto destroy are stated exactly; the god object recall accepts only "god"; the boss says the pit does not restore the saved health; the authoring paragraph says only the hit feedback facade has dependencies; the Get Lines step uses a For Each Loop; long class comments are wrapped. Reverse cost: none.
