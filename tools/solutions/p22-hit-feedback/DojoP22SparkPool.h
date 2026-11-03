@@ -23,7 +23,10 @@ struct FDojoP22SparkBurst
 	FVector Normal = FVector::UpVector;
 };
 
-/** Stands in for the game's visual effects: a fixed pool of sparks that are reserved, then fired or cancelled. A real pool would spawn a Niagara system with UNiagaraFunctionLibrary::SpawnSystemAtLocation; this one records its bursts, so tests can see them. */
+/**
+ * Stands in for the game's visual effects: a fixed pool of sparks that are reserved, then fired or cancelled.
+ * A real pool would spawn a Niagara system with UNiagaraFunctionLibrary::SpawnSystemAtLocation; this one records its bursts, so tests can see them.
+ */
 UCLASS()
 class UDojoP22SparkPool : public UWorldSubsystem
 {

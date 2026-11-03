@@ -4,7 +4,10 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "DojoP22HudTicker.generated.h"
 
-/** Stands in for the game's HUD: a ticker of short lines and a colored flash around the screen's edge. A real ticker would update a UUserWidget; this one records what it showed, so tests can read it. */
+/**
+ * Stands in for the game's HUD: a ticker of short lines and a colored flash around the screen's edge.
+ * A real ticker would update a UUserWidget; this one records what it showed, so tests can read it.
+ */
 UCLASS()
 class UDojoP22HudTicker : public UWorldSubsystem
 {

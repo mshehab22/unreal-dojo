@@ -4530,7 +4530,7 @@
     ],
     "category": "framework",
     "short": "A subsystem asking, in its Initialize, for another subsystem to be created first, so it can keep a pointer to it.",
-    "long": "Subsystems of one kind are created in no promised order. A subsystem that needs another calls Collection.InitializeDependency<UOtherSubsystem>() inside Initialize(FSubsystemCollectionBase& Collection); the collection creates and initializes that one first if it does not exist yet, and returns it. Keeping the returned pointer in a UPROPERTY lets a facade subsystem hold the systems behind it without looking them up on every call.",
+    "long": "Subsystems of one kind are created in no promised order. A subsystem that needs another calls Collection.InitializeDependency<UOtherSubsystem>() inside Initialize(FSubsystemCollectionBase& Collection); the collection creates and initializes that one first if it does not exist yet, and returns it. Keeping the returned pointer in a UPROPERTY lets a subsystem that fronts others hold the systems behind it without looking them up on every call.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
     "related": [
       "subsystem",
@@ -4548,7 +4548,7 @@
     ],
     "category": "framework",
     "short": "The Niagara plugin's static functions for spawning particle systems from code or Blueprint, such as SpawnSystemAtLocation.",
-    "long": "UNiagaraFunctionLibrary::SpawnSystemAtLocation(WorldContextObject, SystemTemplate, Location, Rotation) spawns a UNiagaraSystem asset as a component that plays once and cleans itself up by default; SpawnSystemAttached does the same on a component. A module that calls them lists Niagara in its Build.cs dependencies. Gameplay code that calls them in many places is a natural thing to hide behind one feedback function.",
+    "long": "UNiagaraFunctionLibrary::SpawnSystemAtLocation(WorldContextObject, SystemTemplate, Location, Rotation) spawns a UNiagaraSystem asset as a new component that destroys itself when the system finishes, since bAutoDestroy defaults to true; SpawnSystemAttached does the same on a component. A module that calls them lists Niagara in its Build.cs dependencies. Gameplay code that calls them in many places is a natural thing to hide behind one feedback function.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/Niagara/UNiagaraFunctionLibrary?application_version=5.8",
     "related": [
       "gameplay-statics",
@@ -4564,7 +4564,7 @@
     ],
     "category": "framework",
     "short": "UGameplayStatics functions that turn a USaveGame into an array of bytes and back, with no file or slot involved.",
-    "long": "UGameplayStatics::SaveGameToMemory(SaveObject, OutBytes) writes a small header naming the save's class and then every UPROPERTY of the object into a TArray<uint8>; LoadGameFromMemory(Bytes) reads the header, makes a new object of that class, and fills it, returning nullptr for bytes it cannot read. SaveGameToSlot is built on the same bytes plus the platform's save system. The memory form suits checkpoints kept for a session, saves sent over the network, and tests.",
+    "long": "UGameplayStatics::SaveGameToMemory(SaveObject, OutBytes) writes a small header naming the save's class and then every UPROPERTY of the object into a TArray<uint8>; LoadGameFromMemory(Bytes) reads the header, makes a new object of that class, and fills it, returning nullptr for an empty array or when the class named in the header cannot be found. SaveGameToSlot is built on the same bytes plus the platform's save system. The memory form suits checkpoints kept for a session, saves sent over the network, and tests.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/saving-and-loading-your-game-in-unreal-engine?application_version=5.8",
     "related": [
       "savegame",

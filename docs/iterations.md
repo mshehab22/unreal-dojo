@@ -2290,7 +2290,7 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
   - Boss: the gauntlet. Three gates held by three dummies each, strikes played through the feedback facade, a checkpoint per gate through the desk, a pit back to the newest checkpoint; CLEAR, TIME UP, or DOWN; R only after the end. The master never touches the systems behind the facades.
 - Glossary: five entries (`subsystem-dependency`, `niagara-function-library`, `save-game-to-memory`, `god-object`, `kismet-system-library`) and a first quest for `savegame`, facts checked in UE 5.8 source (A1779). The Facade card now lists its two use cases and has two more recall and two more scenario items (A1780).
 - Originality: the research has no Facade chapter; a 6-word comparison with the research files found no matches.
-- Review: REVIEW_RESULT
+- Review: fresh reviewer, round 1 FIXES NEEDED with no blockers (the pattern named in the worked quest before the card, two Parsons blocks with more than one valid order, and nits); all fixed (A1782). REVIEW_RESULT
 - Tester: TESTER_RESULT
 - Engine: not run, by the Lead's order (A1781). Twenty mutation copies are prepared, each a copy of the four p22 reference folders with one edit, to run with `--quest` on the quest named. They are in `C:/Users/MOHAMM~1/AppData/Local/Temp/claude/C--Projects-unreal-dojo--claude-worktrees-p3-world3-collision-6c43a6/bd624c86-bb06-41d3-9a88-e3972f6c0fc8/scratchpad/mut22/<name>`, with the list in `mutation-list-w22.txt` beside it; `w22/make_mutations_w22.py <solutions folder> <target folder>` there rebuilds them from any later reference:
   - p22-hit-feedback: feedback-bus-closed (`HitPlaysAllThree`, `MissIsOnlyACue`), feedback-heavy-above (`HeavyAndLightHits`), feedback-one-spark-floor (`HeavyAndLightHits`), feedback-never-fires (`HitPlaysAllThree`), feedback-flash-always (`HitPlaysAllThree`), feedback-zero-plays (`NoDamageNoFeedback`).
@@ -2298,4 +2298,4 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
   - p22-feedback-refactor: trap-plays-a-miss (`TrapFeelsLikeTheTurret`), turret-miss-not-counted (`MissStaysQuiet`), turret-hits-at-itself (`TurretFeelsAsBefore`).
   - p22-boss-gauntlet: gauntlet-any-gate, gauntlet-light-breaks, gauntlet-no-checkpoint, gauntlet-restart-anytime, gauntlet-keeps-checkpoints, and gauntlet-silent-miss (`TwoRoundsPlayAlike`; the checkpoint ones also `PitAndDefeat`), gauntlet-no-clock (`TimeRunsOut`).
 - Not done or left for later: the engine proof and the mutations (the Lead's queue); unverified on macOS (A75). The boss's keys are called directly in headless tests (no player controller).
-- Decisions made: A1770 to A1781 under "Awaiting Mohammad's review".
+- Decisions made: A1770 to A1782 under "Awaiting Mohammad's review".

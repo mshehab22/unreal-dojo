@@ -8,7 +8,10 @@ class UDojoP22HudTicker;
 class UDojoP22SoundDesk;
 class UDojoP22SparkPool;
 
-/** One front for everything a hit or a miss should look and sound like: the sound desk, the spark pool, and the HUD ticker behind a few calls. Callers depend on this facade; the desk, the pool, and the ticker know nothing about it. */
+/**
+ * One front for everything a hit or a miss should look and sound like: the sound desk, the spark pool, and the HUD ticker behind a few calls.
+ * Callers depend on this front; the desk, the pool, and the ticker know nothing about it.
+ */
 UCLASS()
 class UDojoP22HitFeedback : public UWorldSubsystem
 {

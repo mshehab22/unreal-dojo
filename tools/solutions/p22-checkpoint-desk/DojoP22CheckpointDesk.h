@@ -4,7 +4,11 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "DojoP22CheckpointDesk.generated.h"
 
-/** One front for checkpoints: save one, load the newest, or step back, without knowing about save objects, bytes, or slots. Keeps the three newest in memory, overwriting the oldest. Callers depend on the desk; the save object knows nothing about it. */
+/**
+ * One front for checkpoints: save one, load the newest, or step back, without knowing about save objects, bytes, or slots.
+ * Keeps the three newest in memory, overwriting the oldest.
+ * Callers depend on the desk; the save object knows nothing about it.
+ */
 UCLASS()
 class UDojoP22CheckpointDesk : public UWorldSubsystem
 {
@@ -19,11 +23,11 @@ public:
 	void SaveCheckpoint(FName Gate, FVector Where, int32 Health);
 
 	/** The newest checkpoint kept; false, with the outputs untouched, when none is kept. */
-	UFUNCTION(BlueprintCallable, Category = "Checkpoints")
+	UFUNCTION(BlueprintCallable, BlueprintPure = false, Category = "Checkpoints")
 	bool LoadLatest(FName& OutGate, FVector& OutWhere, int32& OutHealth) const;
 
 	/** The checkpoint StepsBack before the newest (0 is the newest); false, with the outputs untouched, when it is not kept. */
-	UFUNCTION(BlueprintCallable, Category = "Checkpoints")
+	UFUNCTION(BlueprintCallable, BlueprintPure = false, Category = "Checkpoints")
 	bool LoadBack(int32 StepsBack, FName& OutGate, FVector& OutWhere, int32& OutHealth) const;
 
 	/** How many checkpoints are kept now, at most SlotCount. */

@@ -13,10 +13,10 @@ xp: 60
 estimatedMinutes: 20
 concepts:
   - One world subsystem with a few task-named calls drives the sound desk, the spark pool, and the HUD ticker for every hit
-  - The facade asks for the three systems as dependencies when the world starts and keeps them
+  - The front asks for the three systems as dependencies when the world starts and keeps them
   - Every rule about how a hit sounds, sparks, and shows lives in PlayHitFeedback, once
-  - The order rules of each system, such as reserving sparks before firing them, are the facade's to keep
-  - Callers depend on the facade; the desk, the pool, and the ticker know nothing about it
+  - The order rules of each system, such as reserving sparks before firing them, are the front's to keep
+  - Callers depend on the front; the desk, the pool, and the ticker know nothing about it
 ---
 
 # Brief
@@ -29,7 +29,7 @@ Three systems are written for you, each a `UWorldSubsystem` standing in for a re
 - `UDojoP22SparkPool` owns 32 sparks. `Reserve` holds some and gives a ticket (or `INDEX_NONE` when there are not enough free), `Fire` throws the held sparks and frees them, and `Cancel` frees them unthrown.
 - `UDojoP22HudTicker` shows short lines and flashes the screen's edge.
 
-`UDojoP22HitFeedback` is the facade: a world subsystem that keeps the three and offers `PlayHitFeedback`, `PlayMissFeedback`, and the heavy threshold. Callers depend on it; the three systems know nothing about it.
+`UDojoP22HitFeedback` is the front: a world subsystem that keeps the three and offers `PlayHitFeedback`, `PlayMissFeedback`, and the heavy threshold. Callers depend on it; the three systems know nothing about it.
 
 Most of the code is written. First read the marked lines and say in a sentence why each one is there. Then fill the one gap, `PlayHitFeedback(Where, Damage)`:
 
@@ -42,7 +42,7 @@ Most of the code is written. First read the marked lines and say in a sentence w
 
 ## See it in the editor
 
-In the Level Blueprint, on Begin Play, get the Dojo P22 Hit Feedback subsystem and call Play Hit Feedback at (0, 0, 100) with a damage of 50, then with 20. Then get the Dojo P22 Hud Ticker subsystem and print its Get Lines and Get Flash Count: `-50`, `-20`, and 1. Print the length of Get Bursts on the Dojo P22 Spark Pool subsystem: 2. Change the second hit to 0 and play again: one line and one burst.
+In the Level Blueprint, on Begin Play, get the Dojo P22 Hit Feedback subsystem and call Play Hit Feedback at (0, 0, 100) with a damage of 50, then with 20. Then get the Dojo P22 Hud Ticker subsystem, print each entry of Get Lines with a For Each Loop, and print Get Flash Count: `-50`, `-20`, and 1. Print the length of Get Bursts on the Dojo P22 Spark Pool subsystem: 2. Change the second hit to 0 and play again: one line and one burst.
 
 # Files
 
@@ -74,7 +74,10 @@ struct FDojoP22PlayedCue
 	float Volume = 0.f;
 };
 
-/** Stands in for the game's audio: named cues played on one effects bus. A real desk would call UGameplayStatics::PlaySoundAtLocation; this one records what it played, so tests can hear it. */
+/**
+ * Stands in for the game's audio: named cues played on one effects bus.
+ * A real desk would call UGameplayStatics::PlaySoundAtLocation; this one records what it played, so tests can hear it.
+ */
 UCLASS()
 class UDojoP22SoundDesk : public UWorldSubsystem
 {
@@ -186,7 +189,10 @@ struct FDojoP22SparkBurst
 	FVector Normal = FVector::UpVector;
 };
 
-/** Stands in for the game's visual effects: a fixed pool of sparks that are reserved, then fired or cancelled. A real pool would spawn a Niagara system with UNiagaraFunctionLibrary::SpawnSystemAtLocation; this one records its bursts, so tests can see them. */
+/**
+ * Stands in for the game's visual effects: a fixed pool of sparks that are reserved, then fired or cancelled.
+ * A real pool would spawn a Niagara system with UNiagaraFunctionLibrary::SpawnSystemAtLocation; this one records its bursts, so tests can see them.
+ */
 UCLASS()
 class UDojoP22SparkPool : public UWorldSubsystem
 {
@@ -287,7 +293,10 @@ TArray<FDojoP22SparkBurst> UDojoP22SparkPool::GetBursts() const
 #include "Subsystems/WorldSubsystem.h"
 #include "DojoP22HudTicker.generated.h"
 
-/** Stands in for the game's HUD: a ticker of short lines and a colored flash around the screen's edge. A real ticker would update a UUserWidget; this one records what it showed, so tests can read it. */
+/**
+ * Stands in for the game's HUD: a ticker of short lines and a colored flash around the screen's edge.
+ * A real ticker would update a UUserWidget; this one records what it showed, so tests can read it.
+ */
 UCLASS()
 class UDojoP22HudTicker : public UWorldSubsystem
 {
@@ -388,7 +397,10 @@ class UDojoP22HudTicker;
 class UDojoP22SoundDesk;
 class UDojoP22SparkPool;
 
-/** One front for everything a hit or a miss should look and sound like: the sound desk, the spark pool, and the HUD ticker behind a few calls. Callers depend on this facade; the desk, the pool, and the ticker know nothing about it. */
+/**
+ * One front for everything a hit or a miss should look and sound like: the sound desk, the spark pool, and the HUD ticker behind a few calls.
+ * Callers depend on this front; the desk, the pool, and the ticker know nothing about it.
+ */
 UCLASS()
 class UDojoP22HitFeedback : public UWorldSubsystem
 {
@@ -452,11 +464,11 @@ void UDojoP22HitFeedback::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	Sound = Collection.InitializeDependency<UDojoP22SoundDesk>(); // @explain: World subsystems start in no promised order; asking for the desk as a dependency makes sure it exists and is initialized before the facade keeps it.
+	Sound = Collection.InitializeDependency<UDojoP22SoundDesk>(); // @explain: World subsystems start in no promised order; asking for the desk as a dependency makes sure it exists and is initialized before the front keeps it.
 	Sparks = Collection.InitializeDependency<UDojoP22SparkPool>();
 	Hud = Collection.InitializeDependency<UDojoP22HudTicker>();
 
-	if (Sound) Sound->SetBusVolume(EffectsVolume); // @explain: The bus starts silent, so the facade opens it once when the world starts; no caller ever has to know the bus exists.
+	if (Sound) Sound->SetBusVolume(EffectsVolume); // @explain: The bus starts silent, so the front opens it once when the world starts; no caller ever has to know the bus exists.
 }
 
 void UDojoP22HitFeedback::PlayHitFeedback(FVector Where, float Damage)
@@ -503,7 +515,7 @@ bool FDojo_P22_HitFeedback_HitPlaysAllThree::RunTest(const FString& Parameters)
 	FDojoTestWorld TestWorld;
 	UWorld* World = TestWorld.GetWorld();
 	UDojoP22HitFeedback* Feedback = World->GetSubsystem<UDojoP22HitFeedback>();
-	if (!TestNotNull(TEXT("The world has the feedback facade"), Feedback)) return false;
+	if (!TestNotNull(TEXT("The world has the hit feedback subsystem"), Feedback)) return false;
 
 	Feedback->PlayHitFeedback(FVector(100.0, 0.0, 0.0), 25.f);
 
@@ -534,7 +546,7 @@ bool FDojo_P22_HitFeedback_HeavyAndLightHits::RunTest(const FString& Parameters)
 	FDojoTestWorld TestWorld;
 	UWorld* World = TestWorld.GetWorld();
 	UDojoP22HitFeedback* Feedback = World->GetSubsystem<UDojoP22HitFeedback>();
-	if (!TestNotNull(TEXT("The world has the feedback facade"), Feedback)) return false;
+	if (!TestNotNull(TEXT("The world has the hit feedback subsystem"), Feedback)) return false;
 
 	Feedback->PlayHitFeedback(FVector::ZeroVector, 40.f);
 	Feedback->PlayHitFeedback(FVector::ZeroVector, 3.f);
@@ -572,7 +584,7 @@ bool FDojo_P22_HitFeedback_NoDamageNoFeedback::RunTest(const FString& Parameters
 	FDojoTestWorld TestWorld;
 	UWorld* World = TestWorld.GetWorld();
 	UDojoP22HitFeedback* Feedback = World->GetSubsystem<UDojoP22HitFeedback>();
-	if (!TestNotNull(TEXT("The world has the feedback facade"), Feedback)) return false;
+	if (!TestNotNull(TEXT("The world has the hit feedback subsystem"), Feedback)) return false;
 
 	Feedback->PlayHitFeedback(FVector::ZeroVector, 0.f);
 	Feedback->PlayHitFeedback(FVector::ZeroVector, -5.f);
@@ -586,15 +598,15 @@ bool FDojo_P22_HitFeedback_NoDamageNoFeedback::RunTest(const FString& Parameters
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P22_HitFeedback_MissIsOnlyACue, "Dojo.P22.HitFeedback.MissIsOnlyACue", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** A miss plays the miss cue on the open bus, and the facade opened the bus before anyone asked. */
+/** A miss plays the miss cue on the open bus, and the front opened the bus before anyone asked. */
 bool FDojo_P22_HitFeedback_MissIsOnlyACue::RunTest(const FString& Parameters)
 {
 	FDojoTestWorld TestWorld;
 	UWorld* World = TestWorld.GetWorld();
 	UDojoP22HitFeedback* Feedback = World->GetSubsystem<UDojoP22HitFeedback>();
-	if (!TestNotNull(TEXT("The world has the feedback facade"), Feedback)) return false;
+	if (!TestNotNull(TEXT("The world has the hit feedback subsystem"), Feedback)) return false;
 
-	TestEqual(TEXT("The facade opened the effects bus to 0.8 when the world started"), World->GetSubsystem<UDojoP22SoundDesk>()->GetBusVolume(), 0.8f);
+	TestEqual(TEXT("The hit feedback subsystem opened the effects bus to 0.8 when the world started"), World->GetSubsystem<UDojoP22SoundDesk>()->GetBusVolume(), 0.8f);
 
 	Feedback->PlayMissFeedback(FVector(0.0, 50.0, 0.0));
 	const TArray<FDojoP22PlayedCue> Played = World->GetSubsystem<UDojoP22SoundDesk>()->GetPlayed();
@@ -621,8 +633,8 @@ bool FDojo_P22_HitFeedback_MissIsOnlyACue::RunTest(const FString& Parameters)
 - It throws one spark per 5 damage, rounded, between 2 and the pool's capacity, at the hit, and leaves nothing reserved.
 - It pushes the rounded damage as a line such as -25, and flashes the edge red for a heavy hit only.
 - A hit of 0 or less plays, throws, and shows nothing.
-- Every rule about how a hit feels is in the facade, and callers need nothing but PlayHitFeedback and PlayMissFeedback.
-- Callers depend on the facade; the sound desk, the spark pool, and the HUD ticker know nothing about it.
+- Every rule about how a hit feels is in the front, and callers need nothing but PlayHitFeedback and PlayMissFeedback.
+- Callers depend on the front; the sound desk, the spark pool, and the HUD ticker know nothing about it.
 
 # Alternative
 
@@ -632,7 +644,7 @@ A `UGameInstanceSubsystem` would keep the facade, and anything it remembers, ali
 
 ```yaml
 - id: play-hit-feedback
-  prompt: Put PlayHitFeedback in order. It returns at once for a hit of no damage.
+  prompt: Put PlayHitFeedback in order. It returns at once for a hit of no damage, decides whether the hit is heavy, then plays the sound, then the sparks, then the HUD line, and last the flash.
   lines:
     - "void UDojoP22HitFeedback::PlayHitFeedback(FVector Where, float Damage)"
     - "{"
@@ -647,5 +659,5 @@ A `UGameInstanceSubsystem` would keep the facade, and anything it remembers, ali
     - "}"
   distractors:
     - line: "	UGameplayStatics::PlaySoundAtLocation(this, nullptr, Where, FRotator::ZeroRotator);"
-      mistake: The facade's job is to drive the game's own sound desk, which knows the bus and the cue names; calling the engine directly here, with no sound asset, skips the desk and plays nothing.
+      mistake: The front's job is to drive the game's own sound desk, which knows the bus and the cue names; calling the engine directly here, with no sound asset, skips the desk and plays nothing.
 ```

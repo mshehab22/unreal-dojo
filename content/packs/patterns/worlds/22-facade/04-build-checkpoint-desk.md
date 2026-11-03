@@ -35,7 +35,7 @@ Callers depend on the desk; `UDojoP22CheckpointSave` knows nothing about it. You
 
 ## See it in the editor
 
-In the Level Blueprint, on Begin Play, get the Dojo P22 Checkpoint Desk subsystem and call Save Checkpoint four times, with the gates G1, G2, G3, and G4 and any spots and health. Then call Load Latest and print its gate: G4. Call Load Back with 2 and print its gate: G2. Call Load Back with 3: it returns false, because G1 was overwritten. Print Get Checkpoint Count: 3.
+In the Level Blueprint, on Begin Play, get the Dojo P22 Checkpoint Desk subsystem and call Save Checkpoint three times, with the gates G1, G2, and G3 and any spots and health. Then call Load Latest and print its gate: G3. Call Load Back with 2 and print its gate: G1. Call Load Back with 3: it returns false, because only three are kept. Print Get Checkpoint Count: 3.
 
 # Files
 
@@ -78,7 +78,11 @@ public:
 #include "Subsystems/WorldSubsystem.h"
 #include "DojoP22CheckpointDesk.generated.h"
 
-/** One front for checkpoints: save one, load the newest, or step back, without knowing about save objects, bytes, or slots. Keeps the three newest in memory, overwriting the oldest. Callers depend on the desk; the save object knows nothing about it. */
+/**
+ * One front for checkpoints: save one, load the newest, or step back, without knowing about save objects, bytes, or slots.
+ * Keeps the three newest in memory, overwriting the oldest.
+ * Callers depend on the desk; the save object knows nothing about it.
+ */
 UCLASS()
 class UDojoP22CheckpointDesk : public UWorldSubsystem
 {
@@ -93,11 +97,11 @@ public:
 	void SaveCheckpoint(FName Gate, FVector Where, int32 Health);
 
 	/** The newest checkpoint kept; false, with the outputs untouched, when none is kept. */
-	UFUNCTION(BlueprintCallable, Category = "Checkpoints")
+	UFUNCTION(BlueprintCallable, BlueprintPure = false, Category = "Checkpoints")
 	bool LoadLatest(FName& OutGate, FVector& OutWhere, int32& OutHealth) const;
 
 	/** The checkpoint StepsBack before the newest (0 is the newest); false, with the outputs untouched, when it is not kept. */
-	UFUNCTION(BlueprintCallable, Category = "Checkpoints")
+	UFUNCTION(BlueprintCallable, BlueprintPure = false, Category = "Checkpoints")
 	bool LoadBack(int32 StepsBack, FName& OutGate, FVector& OutWhere, int32& OutHealth) const;
 
 	/** How many checkpoints are kept now, at most SlotCount. */
@@ -338,7 +342,7 @@ Keeping the save objects themselves in a UPROPERTY array would skip the bytes, b
 
 ```yaml
 - id: save-checkpoint
-  prompt: Put SaveCheckpoint in order. It makes the save object first.
+  prompt: Put SaveCheckpoint in order. It makes the save object first, fills Gate, then Where, then Health, sizes the slots just before writing one, and moves to the next slot before counting the save.
   lines:
     - "void UDojoP22CheckpointDesk::SaveCheckpoint(FName Gate, FVector Where, int32 Health)"
     - "{"

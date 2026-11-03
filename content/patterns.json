@@ -2645,9 +2645,7 @@
         "type": "fill-blank",
         "prompt": "A facade that gathers other jobs' state and a pass-through for every call of the systems behind it turns into a ___ object.",
         "acceptedAnswers": [
-          "god",
-          "god class",
-          "everything"
+          "god"
         ],
         "explanation": "Once everything depends on it for everything, no change to it is small."
       }

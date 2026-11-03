@@ -7,7 +7,11 @@
 
 class UTextRenderComponent;
 
-/** Runs the gauntlet: three gates, each held by three training dummies, a runner who strikes them, and a pit that sends the runner back to the last gate. Every hit and miss goes through the hit feedback facade and every checkpoint through the checkpoint desk; the gauntlet never touches the sound desk, the spark pool, the HUD ticker, or a save object. Facade pattern, twice. */
+/**
+ * Runs the gauntlet: three gates, each held by three training dummies, a runner who strikes them, and a pit that sends the runner back to the last gate.
+ * Every hit and miss goes through the hit feedback facade and every checkpoint through the checkpoint desk; the gauntlet never touches the sound desk, the spark pool, the HUD ticker, or a save object.
+ * Facade pattern, twice.
+ */
 UCLASS()
 class ADojoP22Gauntlet : public AActor
 {

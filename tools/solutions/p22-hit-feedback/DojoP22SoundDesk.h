@@ -23,7 +23,10 @@ struct FDojoP22PlayedCue
 	float Volume = 0.f;
 };
 
-/** Stands in for the game's audio: named cues played on one effects bus. A real desk would call UGameplayStatics::PlaySoundAtLocation; this one records what it played, so tests can hear it. */
+/**
+ * Stands in for the game's audio: named cues played on one effects bus.
+ * A real desk would call UGameplayStatics::PlaySoundAtLocation; this one records what it played, so tests can hear it.
+ */
 UCLASS()
 class UDojoP22SoundDesk : public UWorldSubsystem
 {

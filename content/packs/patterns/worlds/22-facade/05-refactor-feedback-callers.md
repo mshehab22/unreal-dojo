@@ -143,7 +143,10 @@ int32 ADojoP22Turret::GetShots() const
 #include "GameFramework/Actor.h"
 #include "DojoP22SpikeTrap.generated.h"
 
-/** A floor trap that springs on whoever steps on it and counts how often it sprang. It plays how a spring looks and sounds itself. */
+/**
+ * A floor trap that springs on whoever steps on it and counts how often it sprang.
+ * It plays how a spring looks and sounds itself.
+ */
 UCLASS()
 class ADojoP22SpikeTrap : public AActor
 {

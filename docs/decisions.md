@@ -4,6 +4,13 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1782 2026-11-03 World 22 review round 1 (author-patterns, M4.P2.22)
+A fresh reviewer found no blockers and two should-fixes, both fixed:
+- The worked quest said "facade" in its brief, concepts, rubric, comments, and test messages before the card names the pattern; it now says "front" or "the hit feedback subsystem" until the Alternative, and the `subsystem-dependency` hover no longer says facade.
+- Two Parsons blocks had more than one valid order; their prompts now pin the order (sound, sparks, line, flash; Gate, Where, Health, then the slots, then the count).
+
+Nits also fixed: the checkpoint editor step uses three saves so it never shows the wrap (A1775); `LoadLatest` and `LoadBack` are `BlueprintPure = false` so they keep exec pins; `LoadGameFromMemory`'s nullptr cases and the Niagara component's auto destroy are stated exactly; the god object recall accepts only "god"; the boss says the pit does not restore the saved health; the authoring paragraph says only the hit feedback facade has dependencies; the Get Lines step uses a For Each Loop; long class comments are wrapped. Reverse cost: none.
+
 ### A1781 2026-11-03 World 22 was written without the engine; the proof is the Lead's (author-patterns, M4.P2.22)
 By the Lead's order no engine run was made. The verifier, typecheck, and unit tests pass, and 20 mutation copies of the references are prepared in this session's scratch folder for the Lead's queue; the iterations entry lists each, the test it should fail, and where the copies are. Not proven yet: that the references compile on UE 5.8 (in particular `InitializeDependency` between world subsystems in the test world, and `SaveGameToMemory` and `LoadGameFromMemory` of a quest class), that every test passes with them, that the starters fail as designed, and that each mutation is caught. Unverified on macOS (A75). Reverse cost: none.
 
@@ -29,7 +36,7 @@ Options:
 - A bus left at 0: the worked quest's facade opens it, on a marked line.
 - The stub checkpoint desk, where the written-for-you `SaveCheckpoint` overwrites the oldest of three slots, and the learner writes `LoadLatest` and `LoadBack`.
 
-Chosen: the last. Reading the newest as the last filled slot passes three of four tests and fails `KeepsTheThreeNewest` after the fourth save. The brief, concepts, and rubric say only that the desk keeps the three newest, overwriting the oldest, and that `LoadLatest` gives the newest however many were saved; the first place that says the newest is not in the last slot is the hint ladder. One honest limit: the given `SaveCheckpoint` shows `NextSlot` wrapping, so a learner who reads it closely will not fail, as with Pack 3 World 4's fuse and World 18's swarm (A1404, A1694). Reverse cost: low.
+Chosen: the last. Reading the newest as the last filled slot passes three of four tests and fails `KeepsTheThreeNewest` after the fourth save. The brief, concepts, and rubric say only that the desk keeps the three newest, overwriting the oldest, and that `LoadLatest` gives the newest however many were saved (the editor step uses three saves, so it never shows the wrap); the first place that says the newest is not in the last slot is the hint ladder. One honest limit: the given `SaveCheckpoint` shows `NextSlot` wrapping, so a learner who reads it closely will not fail, as with Pack 3 World 4's fuse and World 18's swarm (A1404, A1694). Reverse cost: low.
 
 ### A1774 2026-11-03 Stand-in systems that record, behind a world subsystem facade (author-patterns, M4.P2.22)
 The Lead's example was a game instance subsystem over audio, VFX, and UI. Real audio needs an audio device, Niagara needs the plugin and an asset, and a widget needs a player, none of which a headless test world has. So the sound desk, the spark pool, and the HUD ticker are small world subsystems with deliberately fussy interfaces (a silent bus to open, sparks to reserve and then fire or cancel, ids from names), each recording what it did, and each header names the real call it stands for (`PlaySoundAtLocation`, `SpawnSystemAtLocation`, a `UUserWidget`). The facade is a `UWorldSubsystem` because the test world has no game instance and feedback belongs to the level; the worked quest's Alternative explains when a game instance subsystem is the better home. It asks for its systems with `InitializeDependency`. Reverse cost: medium (every quest builds on these four classes).
@@ -57,7 +64,7 @@ Reverse cost: low.
 Reverse cost: medium once learners have progress saved.
 
 ### A1770 2026-11-03 Decision block A1770 to A1789 from the Lead (author-patterns, M4.P2.22)
-Assigned under A71; this world uses A1770 to A1781 so far. Reverse cost: none.
+Assigned under A71; this world uses A1770 to A1782 so far. Reverse cost: none.
 
 ### A1407 2026-11-03 The yard ends a round one frame after the last blast (author-mechanics, M4.P3.4)
 A bomb's `OnDestroyed` has two listeners in the boss, the chain that lights the neighbors and the yard that counts, and UE does not promise the order in which a dynamic multicast delegate calls its listeners. Options: let the chain report the end; check in the yard's own handler; check one frame later. Chosen: the yard's handler counts the blast and sets `SetTimerForNextTick`, and the next-tick check ends the round when no bomb is lit. Why: by then every listener of that blast has run, so a spark lit by the chain is always seen; it also gives `SetTimerForNextTick` a real job. The breakdown's alternative note names the wrong version (deciding inside the same listener). In UE 5.8 the dynamic multicast delegate happens to call listeners in bind order, and the yard's own chain binds before the yard, so the round tests alone would let a yard that ends inside its own handler pass; the engine mutation run confirmed it (yard-ends-in-handler survived). `LateSparksKeepItBurning` closes that gap: it sets the yard's reach to 0 and binds a second chain to the bombs after the yard, so the only sparks come from a listener that runs after the yard's, and a yard that decides inside its handler ends after the first blast. Reverse cost: low.

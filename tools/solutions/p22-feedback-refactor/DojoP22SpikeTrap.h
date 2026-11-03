@@ -4,7 +4,10 @@
 #include "GameFramework/Actor.h"
 #include "DojoP22SpikeTrap.generated.h"
 
-/** A floor trap that springs on whoever steps on it and counts how often it sprang. It reports how a spring looked and sounded through the hit feedback facade. */
+/**
+ * A floor trap that springs on whoever steps on it and counts how often it sprang.
+ * It reports how a spring looked and sounded through the hit feedback facade.
+ */
 UCLASS()
 class ADojoP22SpikeTrap : public AActor
 {
