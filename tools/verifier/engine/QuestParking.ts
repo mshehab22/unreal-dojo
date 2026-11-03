@@ -79,8 +79,9 @@ export class QuestParking
 	}
 
 	/**
-	 * Moves a quest's files into its parked folder and leaves its quest folder in place, empty. A quest with nothing in place
-	 * keeps the parked copy it has: nothing was written at its paths since that copy was made, since a write returns it first.
+	 * Moves a quest's files into its parked folder and leaves its quest folder in place, empty. A quest with nothing in place is
+	 * not touched and keeps the parked copy it has: nothing was written at its paths since that copy was made, since a write
+	 * returns it first.
 	 */
 	async park(questId: string, location: QuestLocation): Promise<void>
 	{

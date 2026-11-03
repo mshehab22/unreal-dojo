@@ -182,7 +182,7 @@ export class EngineSandbox
 	 * Takes the workspace lock for `target.version` (major.minor), then brings the workspace to the template's state: changed
 	 * template files are written, files the template lacks are removed, `EngineAssociation` is set and the 5.8 plugins dropped
 	 * for older engines as SandboxProjectService does (A41). Build outputs are kept, so builds are incremental. The last run's
-	 * quests are left in place (`questsInPlace` lists them) for the verifier to reuse or remove, so an unchanged quest is not
+	 * quests are left in place (`questsInPlace` lists them) for the verifier to reuse, park or remove, so an unchanged quest is not
 	 * rewritten and recompiled (A1321).
 	 */
 	static async create(templateFolder: string, target: EngineTarget, options: SandboxCreateOptions = {}): Promise<EngineSandbox>

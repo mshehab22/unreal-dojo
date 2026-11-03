@@ -116,6 +116,7 @@ describe("QuestParking", () =>
 		await parking.park("a", location);
 
 		expect(await parking.parkedIds()).toEqual(["a"]);
+		expect(await readdir(location.questFolder)).toEqual([]);
 
 		await parking.restore("a", location);
 
@@ -488,6 +489,23 @@ describe("EngineVerifier on a warm workspace", () =>
 		expect((await verify(engine, quests)).problems).toEqual([]);
 		expect(engine.compiledAtBuild[backBuilds]).toEqual(["Quests/c/c.cpp"]);
 		expect(engine.questFoldersAtBuild.every((folders) => folders.join() === "a,b,c,sample-health")).toBe(true);
+	}, 60_000);
+
+	it("removes a quest parked by a run on another folder once the content drops it, parked copy included (A1325)", async () =>
+	{
+		const engine = fakeEngine();
+		const onlyB = join(scratch, "only-b");
+
+		await writeSolutions({ a: "SOLUTION", b: "SOLUTION" });
+		await verify(engine, [quest("a"), quest("b")], { questId: "a" });
+		await writeSolutions({ b: "SOLUTION" }, onlyB);
+		await verify(engine, [quest("a"), quest("b")], { solutions: onlyB, questId: "b" });
+
+		expect(await readdir(join(workspaceRoot, "5.8", "Saved", "VerifierParked"))).toContain("a");
+
+		expect((await verify(engine, [quest("b")], { solutions: onlyB })).problems).toEqual([]);
+		expect((await readdir(join(sourceFolder(), "Quests"))).sort()).toEqual(["b", "sample-health"]);
+		expect(await readdir(join(workspaceRoot, "5.8", "Saved", "VerifierParked")).catch(() => [])).not.toContain("a");
 	}, 60_000);
 
 	it("never passes a parked quest stale: one that changed while it waited is rebuilt when it comes back (A1325)", async () =>
