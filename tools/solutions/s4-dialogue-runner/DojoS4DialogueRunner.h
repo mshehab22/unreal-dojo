@@ -26,7 +26,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDojoS4OnChoiceMade, int32, Index, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDojoS4OnDialogueEnded);
 
 /** Plays one conversation at a time from a dialogue asset: it is idle or active, shows the choices that are allowed, sets flags, and announces each step to listeners. */
-UCLASS()
+UCLASS(BlueprintType)
 class UDojoS4DialogueRunner : public UObject
 {
 	GENERATED_BODY()

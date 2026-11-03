@@ -26,7 +26,7 @@ pieces:
 
 A village road runs east, and a locked gate closes it. The hero starts at the west end, far from everyone. Along the road stand a gossip, then a gatekeeper with a sign beside, then the gate. Everything is placed for you: the gossip 600 units along the road, the gatekeeper 1200, the sign 150 to the side of the gatekeeper, the gate 1800.
 
-The hero carries an interactor with a reach of 200. Whatever the interactor offers is shown on the board as `Prompt: Talk to Gatekeeper`, `Prompt: Read sign`, `Prompt: Open door`, or `Prompt: none` when nothing can be used. E uses the offered thing. The nearest usable thing is offered, and a locked gate is never offered.
+The hero carries an interactor with a reach of 200, the radius of its sphere, so a thing counts as in reach once its box touches the sphere. Whatever the interactor offers is shown on the board as `Prompt: Talk to Gatekeeper`, `Prompt: Read sign`, `Prompt: Open door`, or `Prompt: none` when nothing can be used. E uses the offered thing. The nearest usable thing is offered, and a locked gate is never offered.
 
 The gatekeeper greets the hero with `Halt. State your business.` and three answers: `I carry a message.`, `Let me through.`, and `The password is moonlight.`, which is shown only once the hero knows the password. The first two end in a short refusal and then the end of the conversation. The third sets the flag that unlocks the gate and leads to the closing line `Moonlight. Go ahead.`, which E moves on. The gossip says `Psst. The gate password changes daily.` and can be asked: `Tell me.` leads to `Today it is moonlight.` and the answer `Thanks.` sets the flag `knows-password`; `Not interested.` ends the conversation.
 
@@ -36,7 +36,7 @@ Opening the gate ends the round: the board adds `GATE OPEN in 41.2 s`, the time 
 
 A C++ director receives keys only after `EnableInput` with the player controller. The hero's interactor is a component on the hero; the director finds it with `FindComponentByClass`. The director creates the one runner and the one flag store and gives them to every villager.
 
-Compiles against earlier quests: s4-interactable (`Quests/s4-interactable/DojoS4Door.h`, `Quests/s4-interactable/DojoS4Sign.h`), s4-interactor (`Quests/s4-interactor/DojoS4Interactor.h`), s4-dialogue-runner (`Quests/s4-dialogue-runner/DojoS4DialogueRunner.h`, `Quests/s4-dialogue-runner/DojoS4FlagStore.h`), and s4-villager (`Quests/s4-villager/DojoS4Villager.h`). The pieces need no additions.
+Compiles against earlier quests: s4-interactable (`Quests/s4-interactable/DojoS4Door.h`, `Quests/s4-interactable/DojoS4Sign.h`), s4-interactor (`Quests/s4-interactor/DojoS4Interactor.h`), s4-dialogue-runner (`Quests/s4-dialogue-runner/DojoS4DialogueData.h`, `Quests/s4-dialogue-runner/DojoS4DialogueRunner.h`, `Quests/s4-dialogue-runner/DojoS4FlagStore.h`), and s4-villager (`Quests/s4-villager/DojoS4Villager.h`). The pieces need no additions.
 
 Core numbers are fixed: a reach of 200, places 600, 1200, and 1800 along the road, three answers at the gatekeeper, answers picked by position among those shown, and the flags `knows-password` and `pass`.
 
@@ -130,5 +130,5 @@ Feel: tune the reach and the places until the road feels like a short walk with 
 - The number keys pick among the shown answers by position, and a hidden answer never takes a number.
 - While a conversation plays, E only moves a closing line on, no other villager can be used, and the hero cannot walk; the keys mean exploring again as soon as it ends.
 - The pass flag unlocks the gate through the flag event, and the gate is never unlocked any other way.
-- Every binding made in BeginPlay is removed in EndPlay, and nothing runs in Tick.
+- Every delegate binding made in BeginPlay is removed in EndPlay, and nothing runs in Tick.
 - R starts a fresh round only after the finale, and a second round plays exactly like the first; the submission gives the tuned numbers with one sentence on why.

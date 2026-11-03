@@ -156,7 +156,7 @@ const FDojoS4DialogueNode* UDojoS4DialogueData::FindNode(FName NodeId) const
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDojoS4OnFlagSet, FName, Flag);
 
 /** The story so far as a set of named flags that choices set and other choices, doors, and quests read. */
-UCLASS()
+UCLASS(BlueprintType)
 class UDojoS4FlagStore : public UObject
 {
 	GENERATED_BODY()
@@ -242,7 +242,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDojoS4OnChoiceMade, int32, Index, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDojoS4OnDialogueEnded);
 
 /** Plays one conversation at a time from a dialogue asset: it is idle or active, shows the choices that are allowed, sets flags, and announces each step to listeners. */
-UCLASS()
+UCLASS(BlueprintType)
 class UDojoS4DialogueRunner : public UObject
 {
 	GENERATED_BODY()
@@ -378,6 +378,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Dialogue Spy")
 	FString GetLog() const;
 
+	/** The runner's current text at the moment of the last choice notice. */
+	UFUNCTION(BlueprintPure, Category = "Dialogue Spy")
+	FString GetTextAtLastChoice() const;
+
 	/** True when the watched flag was set at the moment of the last choice notice. */
 	UFUNCTION(BlueprintPure, Category = "Dialogue Spy")
 	bool WasFlagSetAtLastChoice() const;
@@ -396,6 +400,11 @@ private:
 	void HandleEnded();
 
 	TArray<FString> Log;
+
+	UPROPERTY()
+	TObjectPtr<UDojoS4DialogueRunner> WatchedRunner;
+
+	FString TextAtLastChoice;
 
 	UPROPERTY()
 	TObjectPtr<UDojoS4FlagStore> WatchedStore;
@@ -420,6 +429,7 @@ void UDojoS4DialogueSpy::Watch(UDojoS4DialogueRunner* Runner, UDojoS4FlagStore* 
 		return;
 	}
 
+	WatchedRunner = Runner;
 	WatchedStore = Store;
 	FlagName = WatchedFlag;
 	Runner->OnDialogueStarted.AddUniqueDynamic(this, &UDojoS4DialogueSpy::HandleStarted);
@@ -430,6 +440,11 @@ void UDojoS4DialogueSpy::Watch(UDojoS4DialogueRunner* Runner, UDojoS4FlagStore* 
 FString UDojoS4DialogueSpy::GetLog() const
 {
 	return FString::Join(Log, TEXT(", "));
+}
+
+FString UDojoS4DialogueSpy::GetTextAtLastChoice() const
+{
+	return TextAtLastChoice;
 }
 
 bool UDojoS4DialogueSpy::WasFlagSetAtLastChoice() const
@@ -445,6 +460,7 @@ void UDojoS4DialogueSpy::HandleStarted(UDojoS4DialogueData* Dialogue)
 void UDojoS4DialogueSpy::HandleChoice(int32 Index, FText ChoiceText)
 {
 	Log.Add(FString::Printf(TEXT("choice %d %s"), Index, *ChoiceText.ToString()));
+	TextAtLastChoice = WatchedRunner->GetCurrentText().ToString();
 	bFlagSetAtLastChoice = WatchedStore != nullptr && WatchedStore->Has(FlagName);
 }
 
@@ -653,6 +669,7 @@ bool FDojo_S4_Runner_FlowsThroughNodes::RunTest(const FString& Parameters)
 
 	TestTrue(TEXT("The first choice works"), Runner->Choose(0));
 	TestEqual(TEXT("The conversation moved to the next node"), Runner->GetCurrentText().ToString(), FString(TEXT("Not me.")));
+	TestEqual(TEXT("A listener read the new node when the choice was announced"), Spy->GetTextAtLastChoice(), FString(TEXT("Not me.")));
 	TestTrue(TEXT("Still active"), Runner->GetState() == EDojoS4DialogueState::EDS_Active);
 
 	TestTrue(TEXT("The last choice works"), Runner->Choose(0));
@@ -680,6 +697,7 @@ bool FDojo_S4_Runner_ChoicesFollowFlags::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Without the flag two choices are shown"), VisibleOf(Runner.Get()), FString(TEXT("Message,Leave")));
 	TestTrue(TEXT("The second shown choice is Leave"), Runner->Choose(1));
 	TestTrue(TEXT("Leave ends the conversation"), Runner->GetState() == EDojoS4DialogueState::EDS_Idle);
+	TestEqual(TEXT("The choice that ends it is announced while the last node is still current"), Spy->GetTextAtLastChoice(), FString(TEXT("Halt.")));
 	TestEqual(TEXT("The log shows Leave, not the hidden choice"), Spy->GetLog(), FString(TEXT("started, choice 1 Leave, ended")));
 	TestFalse(TEXT("The password flag was never set"), Store->Has(FName(TEXT("pass"))));
 
@@ -688,6 +706,7 @@ bool FDojo_S4_Runner_ChoicesFollowFlags::RunTest(const FString& Parameters)
 	TestEqual(TEXT("With the flag all three are shown, in the written order"), VisibleOf(Runner.Get()), FString(TEXT("Message,Password,Leave")));
 	TestTrue(TEXT("The second shown choice is now the password"), Runner->Choose(1));
 	TestTrue(TEXT("Choosing it set its flag"), Store->Has(FName(TEXT("pass"))));
+	TestEqual(TEXT("A listener read the closing line when the choice was announced"), Spy->GetTextAtLastChoice(), FString(TEXT("Pass.")));
 	TestTrue(TEXT("The flag was set when the choice was announced"), Spy->WasFlagSetAtLastChoice());
 	TestEqual(TEXT("The conversation reached the closing line"), Runner->GetCurrentText().ToString(), FString(TEXT("Pass.")));
 	TestEqual(TEXT("A closing line offers nothing to choose"), Runner->GetVisibleChoices().Num(), 0);
@@ -746,6 +765,7 @@ bool FDojo_S4_Runner_OneAfterAnother::RunTest(const FString& Parameters)
 	TStrongObjectPtr<UDojoS4FlagStore> Store(NewObject<UDojoS4FlagStore>());
 	TStrongObjectPtr<UDojoS4DialogueSpy> Spy(NewObject<UDojoS4DialogueSpy>());
 	TStrongObjectPtr<UDojoS4DialogueChain> Chain(NewObject<UDojoS4DialogueChain>());
+	// The spy is bound before the chain so its "ended" line is written before the chain starts the follow-up; the log below relies on that order.
 	Spy->Watch(Runner.Get(), Store.Get(), FName(TEXT("none")));
 	Chain->Arm(Runner.Get(), Second.Get(), Store.Get());
 
@@ -783,7 +803,7 @@ bool FDojo_S4_Runner_OneAfterAnother::RunTest(const FString& Parameters)
 
 # Alternative
 
-The runner could hold a table of states and transitions, one function per node, and the assets could name the function to call. That would let a conversation run code, such as giving the player an item, but it puts story back into code and every new effect needs a programmer. Keeping choices as data that only set flags, and letting other pieces react to flags, keeps the runner small and lets a designer change a conversation without a compile. The runner itself is a small state machine, as in the State pattern of Pack 2's "State" world; its two states are the whole of it, and the conversation's data is the Type Object pattern from "Kinds as data". Whatever the runner announces, it announces last: a notice is a moment when any other code may run, so the runner should already be finished with its own state.
+The runner could hold a table of states and transitions, one function per node, and the assets could name the function to call. That would let a conversation run code, such as giving the player an item, but it puts story back into code and every new effect needs a programmer. Keeping choices as data that only set flags, and letting other pieces react to flags, keeps the runner small and lets a designer change a conversation without a compile. The runner itself is a small state machine, as in the State pattern of Pack 2's "One mode at a time" world; its two states are the whole of it, and the conversation's data is the Type Object pattern from "Kinds as data". Whatever the runner announces, it announces last: a notice is a moment when any other code may run, so the runner should already be finished with its own state.
 
 # Parsons
 
@@ -802,7 +822,7 @@ The runner could hold a table of states and transitions, one function per node, 
     - "return Visible;"
   distractors:
     - line: "	if (Choice.RequiredFlag == NAME_None && CurrentFlags->Has(Choice.RequiredFlag))"
-      mistake: Joining the two tests with and shows only choices that have a flag, and none of the ones that never needed one.
+      mistake: A choice with no required flag has the none name, and none is never a set flag, so joining the tests with and hides every choice.
     - line: "		Visible.Insert(Choice, 0);"
       mistake: Inserting at the front reverses the order, and the numbers the player sees must follow the order the designer wrote.
 ```

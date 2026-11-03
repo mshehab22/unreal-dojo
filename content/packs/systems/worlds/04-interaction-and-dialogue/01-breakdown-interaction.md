@@ -121,7 +121,7 @@ Acceptance:
 - Conversations live in assets as nodes and choices; the runner knows no story and the assets know no code.
 - One piece owns whether a conversation is playing, and everything else asks it or listens.
 - Flags are set by choices and read by choices and doors, and the plan says who reacts when one is set.
-- The plan says what changes for the keys, the hero, and the prompt while a conversation plays, and what resets for a new round.
+- The plan says what changes for the keys, the hero, and the prompt while a conversation plays, and what a second hero shares and what it needs of its own.
 
 # Alternative Note
 

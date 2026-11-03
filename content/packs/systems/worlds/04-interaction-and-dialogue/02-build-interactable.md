@@ -300,6 +300,7 @@ bool ADojoS4Sign::Interact_Implementation(AActor* Interactor)
 #if WITH_AUTOMATION_TESTS
 
 #include "Components/BoxComponent.h"
+#include "Components/TextRenderComponent.h"
 #include "Quests/s4-interactable/DojoS4Door.h"
 #include "Quests/s4-interactable/DojoS4Interactable.h"
 #include "Quests/s4-interactable/DojoS4Sign.h"
@@ -330,20 +331,24 @@ bool FDojo_S4_Interactable_DoorStates::RunTest(const FString& Parameters)
 
 	TestTrue(TEXT("A door is an interactable"), Door->GetClass()->ImplementsInterface(UDojoS4Interactable::StaticClass()));
 	TestEqual(TEXT("A shut door offers to open"), PromptOf(Door), FString(TEXT("Open door")));
+	TestEqual(TEXT("The label says SHUT"), Door->Label->Text.ToString(), FString(TEXT("SHUT")));
 	TestTrue(TEXT("A shut door can be used"), IDojoS4Interactable::Execute_CanInteract(Door, Hero));
 
 	TestTrue(TEXT("Using a shut door does something"), IDojoS4Interactable::Execute_Interact(Door, Hero));
 	TestTrue(TEXT("The door is open"), Door->IsOpen());
 	TestEqual(TEXT("An open door offers to close"), PromptOf(Door), FString(TEXT("Close door")));
+	TestEqual(TEXT("The label says OPEN"), Door->Label->Text.ToString(), FString(TEXT("OPEN")));
 
 	TestTrue(TEXT("Using an open door does something"), IDojoS4Interactable::Execute_Interact(Door, Hero));
 	TestFalse(TEXT("The door is shut again"), Door->IsOpen());
+	TestEqual(TEXT("The label says SHUT again"), Door->Label->Text.ToString(), FString(TEXT("SHUT")));
 
 	IDojoS4Interactable::Execute_Interact(Door, Hero);
 	Door->Lock();
 	TestFalse(TEXT("Locking shuts an open door"), Door->IsOpen());
 	TestTrue(TEXT("The door is locked"), Door->IsLocked());
 	TestEqual(TEXT("A locked door says so"), PromptOf(Door), FString(TEXT("Locked")));
+	TestEqual(TEXT("And so does its label"), Door->Label->Text.ToString(), FString(TEXT("LOCKED")));
 	TestFalse(TEXT("A locked door cannot be used"), IDojoS4Interactable::Execute_CanInteract(Door, Hero));
 	TestFalse(TEXT("Using a locked door does nothing"), IDojoS4Interactable::Execute_Interact(Door, Hero));
 	TestFalse(TEXT("A locked door stays shut"), Door->IsOpen());
@@ -352,6 +357,7 @@ bool FDojo_S4_Interactable_DoorStates::RunTest(const FString& Parameters)
 	TestFalse(TEXT("The door is unlocked"), Door->IsLocked());
 	TestFalse(TEXT("Unlocking does not open it"), Door->IsOpen());
 	TestEqual(TEXT("An unlocked door offers to open"), PromptOf(Door), FString(TEXT("Open door")));
+	TestEqual(TEXT("And its label says SHUT"), Door->Label->Text.ToString(), FString(TEXT("SHUT")));
 
 	return true;
 }
@@ -431,6 +437,7 @@ bool FDojo_S4_Interactable_FindableByOverlap::RunTest(const FString& Parameters)
 - A locked door cannot be used and an attempt changes nothing.
 - A thing says it cannot be used through `CanInteract` instead of being offered and then refusing.
 - Both kinds carry a box with overlap events on, so something can find them without knowing their class.
+- The door and the sign know the interface and nothing about any hero.
 
 # Alternative
 

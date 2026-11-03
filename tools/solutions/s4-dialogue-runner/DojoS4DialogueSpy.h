@@ -23,6 +23,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Dialogue Spy")
 	FString GetLog() const;
 
+	/** The runner's current text at the moment of the last choice notice. */
+	UFUNCTION(BlueprintPure, Category = "Dialogue Spy")
+	FString GetTextAtLastChoice() const;
+
 	/** True when the watched flag was set at the moment of the last choice notice. */
 	UFUNCTION(BlueprintPure, Category = "Dialogue Spy")
 	bool WasFlagSetAtLastChoice() const;
@@ -41,6 +45,11 @@ private:
 	void HandleEnded();
 
 	TArray<FString> Log;
+
+	UPROPERTY()
+	TObjectPtr<UDojoS4DialogueRunner> WatchedRunner;
+
+	FString TextAtLastChoice;
 
 	UPROPERTY()
 	TObjectPtr<UDojoS4FlagStore> WatchedStore;

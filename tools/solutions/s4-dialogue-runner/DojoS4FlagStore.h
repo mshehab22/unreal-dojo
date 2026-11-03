@@ -8,7 +8,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDojoS4OnFlagSet, FName, Flag);
 
 /** The story so far as a set of named flags that choices set and other choices, doors, and quests read. */
-UCLASS()
+UCLASS(BlueprintType)
 class UDojoS4FlagStore : public UObject
 {
 	GENERATED_BODY()

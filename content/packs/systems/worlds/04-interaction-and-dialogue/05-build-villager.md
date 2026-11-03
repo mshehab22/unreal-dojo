@@ -5,7 +5,7 @@ order: 5
 kind: build
 scaffold: blank
 difficulty: 3
-patterns: [state]
+patterns: []
 skills: [interfaces, data]
 terms: [uinterface, iinterface, blueprintnativeevent, ftext, tobjectptr]
 prerequisites: [s4-dialogue-runner, s4-interactor, s4-interactable]
@@ -120,6 +120,14 @@ bool FDojo_S4_Villager_TalksThroughTheInterface::RunTest(const FString& Paramete
 	TestFalse(TEXT("A villager with nothing to say cannot be used"), IDojoS4Interactable::Execute_CanInteract(Bare, Hero));
 	TestFalse(TEXT("Using it does nothing"), IDojoS4Interactable::Execute_Interact(Bare, Hero));
 
+	ADojoS4Villager* NoFlags = SpawnVillager(TestWorld, TEXT("A"), Talk.Get(), Runner.Get(), nullptr, FVector(900.f, 0.f, 0.f));
+	ADojoS4Villager* NoTalk = SpawnVillager(TestWorld, TEXT("B"), nullptr, Runner.Get(), Store.Get(), FVector(1300.f, 0.f, 0.f));
+	ADojoS4Villager* NoRunner = SpawnVillager(TestWorld, TEXT("C"), Talk.Get(), nullptr, Store.Get(), FVector(1700.f, 0.f, 0.f));
+	TestFalse(TEXT("A villager without flags cannot be used"), IDojoS4Interactable::Execute_CanInteract(NoFlags, Hero));
+	TestFalse(TEXT("A villager without a conversation cannot be used"), IDojoS4Interactable::Execute_CanInteract(NoTalk, Hero));
+	TestFalse(TEXT("A villager without a runner cannot be used"), IDojoS4Interactable::Execute_CanInteract(NoRunner, Hero));
+	TestFalse(TEXT("And using one starts nothing"), IDojoS4Interactable::Execute_Interact(NoFlags, Hero) || Runner->GetState() == EDojoS4DialogueState::EDS_Active);
+
 	ADojoS4Villager* Mara = SpawnVillager(TestWorld, TEXT("Mara"), Talk.Get(), Runner.Get(), Store.Get(), FVector(500.f, 0.f, 0.f));
 	TestEqual(TEXT("The prompt names the villager"), IDojoS4Interactable::Execute_GetPrompt(Mara).ToString(), FString(TEXT("Talk to Mara")));
 	TestTrue(TEXT("A villager with a conversation can be used"), IDojoS4Interactable::Execute_CanInteract(Mara, Hero));
@@ -181,12 +189,13 @@ bool FDojo_S4_Villager_FoundAndBusy::RunTest(const FString& Parameters)
 	TStrongObjectPtr<UDojoS4DialogueRunner> Runner(NewObject<UDojoS4DialogueRunner>());
 	TStrongObjectPtr<UDojoS4FlagStore> Store(NewObject<UDojoS4FlagStore>());
 	ADojoTestActor* Hero = TestWorld.SpawnActor<ADojoTestActor>();
+	Hero->SetActorLocation(FVector(0.f, 5000.f, 0.f));
 	UDojoS4Interactor* Interactor = TestWorld.AddComponent<UDojoS4Interactor>(Hero);
 	Interactor->AttachToComponent(Hero->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	TStrongObjectPtr<UDojoS4FocusSpy> Spy(NewObject<UDojoS4FocusSpy>());
 	Spy->Watch(Interactor);
 
-	ADojoS4Villager* Mara = SpawnVillager(TestWorld, TEXT("Mara"), Talk.Get(), Runner.Get(), Store.Get(), FVector(120.f, 0.f, 0.f));
+	ADojoS4Villager* Mara = SpawnVillager(TestWorld, TEXT("Mara"), Talk.Get(), Runner.Get(), Store.Get(), FVector(0.f, 5000.f, 0.f) + FVector(120.f, 0.f, 0.f));
 	TestWorld.Tick(2);
 
 	TestTrue(TEXT("The interactor finds the villager by its box"), Interactor->GetFocus() == Mara);

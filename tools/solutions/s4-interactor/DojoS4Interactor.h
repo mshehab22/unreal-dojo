@@ -7,7 +7,7 @@
 /** Broadcast when the thing the interactor would use changes, or its prompt does; Focus is null when nothing can be used. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDojoS4OnFocusChanged, AActor*, Focus, FText, Prompt);
 
-/** A sphere on the hero that finds the interactables around it by overlap, picks the nearest one that can be used, and announces it; it never polls. */
+/** A sphere on the hero that finds the interactables around it by overlap, picks the nearest one that can be used as the hero moves, and announces it; it never polls. */
 UCLASS(ClassGroup = (Dojo), meta = (BlueprintSpawnableComponent))
 class UDojoS4Interactor : public USphereComponent
 {
@@ -48,6 +48,9 @@ private:
 	/** Something entered the sphere. */
 	UFUNCTION()
 	void HandleBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	/** The sphere moved, so what is nearest may have changed. */
+	void HandleMoved(USceneComponent* MovedComponent, EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport);
 
 	/** Something left the sphere. */
 	UFUNCTION()

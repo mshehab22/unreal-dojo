@@ -171,6 +171,7 @@ bool FDojo_S4_Village_TwoRounds::RunTest(const FString& Parameters)
 	Village.Director->PressInteract();
 	Village.Director->PressChoice(3);
 	Village.Director->PressChoice(0);
+	TestEqual(TEXT("E while talking did not read the sign beside the gatekeeper"), Village.Sign->GetReadCount(), 1);
 	TestEqual(TEXT("E, a hidden third choice, and choice 0 change nothing"), BoardOf(Village), FString(TEXT("Halt. State your business.\n1. I carry a message.\n2. Let me through.")));
 
 	Village.Director->PressChoice(2);

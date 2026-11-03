@@ -17,12 +17,28 @@ void UDojoS4Interactor::BeginPlay()
 
 	OnComponentBeginOverlap.AddUniqueDynamic(this, &UDojoS4Interactor::HandleBeginOverlap);
 	OnComponentEndOverlap.AddUniqueDynamic(this, &UDojoS4Interactor::HandleEndOverlap);
+	TransformUpdated.AddUObject(this, &UDojoS4Interactor::HandleMoved);
+
+	// Things already inside the sphere when play starts never fire a begin event, so collect them now.
+	TArray<AActor*> Inside;
+	GetOverlappingActors(Inside);
+
+	for (AActor* Candidate : Inside)
+	{
+		if (Candidate != GetOwner() && Candidate->GetClass()->ImplementsInterface(UDojoS4Interactable::StaticClass()))
+		{
+			Nearby.AddUnique(Candidate);
+		}
+	}
+
+	Refresh();
 }
 
 void UDojoS4Interactor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	OnComponentBeginOverlap.RemoveDynamic(this, &UDojoS4Interactor::HandleBeginOverlap);
 	OnComponentEndOverlap.RemoveDynamic(this, &UDojoS4Interactor::HandleEndOverlap);
+	TransformUpdated.RemoveAll(this);
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -93,6 +109,11 @@ void UDojoS4Interactor::HandleBeginOverlap(UPrimitiveComponent* OverlappedCompon
 	}
 
 	Nearby.AddUnique(OtherActor);
+	Refresh();
+}
+
+void UDojoS4Interactor::HandleMoved(USceneComponent* MovedComponent, EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
+{
 	Refresh();
 }
 
