@@ -2113,5 +2113,7 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 ![[m3-3-world-map-skippable.jpg|800]]
 *The map after the test-out: the training dummy and the pop-up target carry the skip mark; the boss does not.*
 
+- Review: a fresh reviewer found five issues; all fixed in fix round 1 (above), then PASS on d5ccdd5.
+- Tester (fresh agent, branch tip 37893f8): `npm run typecheck` passes; `npm test` 98 files passed, 5 skipped, 1268 tests passed, 29 skipped; verify-content no problems; build passes; `e2e/economy.spec.ts` 3 of 3 pass alone and in the full run. The full suite had 33 passed, 14 failed, 1 skipped: the machine's GPU process crashed on hidden-window screenshots, and `smoke.spec.ts` fails the same way on main 8077657 (problems.md). The full suite needs a rerun on a quiet machine, which the Lead's merge run does.
 - Decisions made: A1390 to A1399. Cross-owner lines (IPC contract, handler, composition root, fake fixture builder) are logged in A1390.
 - Not done or left for later: studio cosmetics are listed, not drawn; the fake never pays rematch XP; integration tests and the packaged build's `solutions/` folder were not run (no engine needed for this task, and `viewSolution` touches no Unreal service); macOS not checked.
