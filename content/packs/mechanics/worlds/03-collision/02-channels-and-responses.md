@@ -91,7 +91,7 @@ ADojoTrapDoor::ADojoTrapDoor()
   explanation: ECC_Pawn is the channel for shapes whose object type is Pawn; changing only that response leaves the box solid to everything else.
 - id: profile-surprise
   type: spot-the-bug
-  prompt: A zone should notice runners and let rolling crates pass straight through it, but crates pushed into it with a sweep stop at its edge. Which line is wrong?
+  prompt: A zone should notice runners and let moving crates pass straight through it, but crates pushed into it with a sweep stop at its edge. Which line is wrong?
   code: |
     Zone = CreateDefaultSubobject<UBoxComponent>(TEXT("Zone"));
     Zone->SetBoxExtent(FVector(200.f, 200.f, 100.f));
