@@ -1,0 +1,5 @@
+{
+	"id": "strategy",
+	"title": "Choose the rule, keep the actor",
+	"summary": "A practice launcher has to choose its target, and a row of dummies has to move, and each could be done several ways. Learn to move each way into its own small object behind one shared function, to let a designer pick it in Details or code pick its class, and to swap it while the game runs, then learn when a plain if, a state machine, or a subclass is the better choice."
+}
