@@ -101,7 +101,7 @@ async function start(): Promise<void>
 
 	let unrealServices: UnrealServices | null = null;
 
-	// Pending progress saves get up to 3 s to finish before quitting (A1211).
+	// Pending progress saves get up to 3 s to finish before each quit attempt, so a change made during the Unreal stop is saved too (A1211, A1460).
 	holdQuitForSaves(app, progressService);
 
 	// Runs, then the editor, before quitting; never builds the Unreal services just to quit (A530).
