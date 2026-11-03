@@ -2263,3 +2263,17 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Tester: fresh tester PASS at 70004fb: verifier no problems and 12 warnings; `--pack mechanics` no problems; typecheck clean; npm test 1321 passed and 32 skipped; every build and boss quest has its solution folder; no em dashes; the new test uses only public members. No UI changed, so no Playwright run.
 - Not done or left for later: unverified on macOS (A75). The boss's R key is called directly in the headless tests (no player controller).
 - Decisions made: A1400 to A1407 under "Awaiting Mohammad's review" (prerequisite, shape, boss, seeded stream, deliberate failure, reuse of World 3 and World 2 actors, glossary claims, the next-tick end check).
+## M4.P2.19 Pack 2 World 19, Data Locality (content-patterns, author-patterns)
+- What changed: a nineteenth Patterns world, "Fireflies in a row", with the full mini-arc for Data Locality (six quests and a boss), set in a summer meadow. Thousands of fireflies and embers become small records side by side in arrays walked by one loop (A1711).
+- The quests and their observables:
+  - Ten thousand fireflies, ten thousand actors (concept): cache lines, pointers that scatter, what an actor costs, records by value, FVector3f, and measuring. The pattern is not named yet (A64).
+  - One swarm, one loop (build, worked): the learner writes `Step`. Fireflies fly by their velocity, turn at the floor and the ceiling only when heading out, and pulse; a thousand fireflies add one actor (A1712).
+  - The Data Locality card (concept): records not objects, packed arrays and RemoveAtSwap, hot and cold, one array per kind, Mass Entity, Niagara, and instanced meshes.
+  - Fireflies you can catch (build, stub): the learner writes `AddFirefly`, `FindIndex`, and `RemoveFirefly`. Its deliberate failure: a handle that is the index breaks at the first removal from the middle of the packed array (A1713).
+  - Embers without objects (refactor): from a UObject per ember to `Hot` and `Cold` struct arrays; two tests read the layout through reflection (A1714).
+  - When an actor is the right size after all (concept): small numbers, things that need actors, measuring, the engine's own tools, and four quiet costs (A1715).
+  - Boss, the jar at dusk (A67 integration): a swarm of 2000 and a meadow set up at BeginPlay, releases every 2 seconds, catches through handles into the swarm, JAR FULL at ten or DUSK at 60 seconds, and R for a clean second round. Two reference plans and an 8-bullet rubric. Four tests, two full rounds (A1716).
+- Also: five glossary entries (`cache-line`, `fvector3f`, `hot-cold-split`, `remove-at-swap`, `mass-entity`) and the Data Locality card rewritten with two recall items and two scenarios (A1717).
+- Proof: `npm run typecheck` passes; `npm test` 102 files passed, 6 skipped, 1321 tests passed, 32 skipped; `npx tsx tools/verify-content.ts` no problems and 12 warnings; `--pack patterns` no problems. Engine proof waits for the Lead's queue (A1718).
+- Originality: the 6-word check against the research notes matches only Epic doc URLs and test boilerplate. The book check is owed (D13, problems.md).
+- Not done: the engine proof; the book check; macOS; the boss's R key (headless tests have no player controller). No screenshots (content only). Decisions A1710 to A1718.
