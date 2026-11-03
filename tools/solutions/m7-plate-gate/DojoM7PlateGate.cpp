@@ -36,9 +36,8 @@ void ADojoM7PlateGate::BindPlates()
 
 		Plate->OnPlatePressed.AddUniqueDynamic(this, &ADojoM7PlateGate::HandlePlateChanged);
 		Plate->OnPlateReleased.AddUniqueDynamic(this, &ADojoM7PlateGate::HandlePlateChanged);
+		HandlePlateChanged(Plate);
 	}
-
-	Refresh();
 }
 
 bool ADojoM7PlateGate::WantsOpen() const
@@ -60,16 +59,11 @@ bool ADojoM7PlateGate::IsOpen() const
 
 void ADojoM7PlateGate::HandlePlateChanged(ADojoM7SignalPlate* Plate)
 {
-	Refresh();
-}
-
-void ADojoM7PlateGate::Refresh()
-{
 	bWantsOpen = false;
-	for (const ADojoM7SignalPlate* Plate : Plates)
+	for (const ADojoM7SignalPlate* GatePlate : Plates)
 	{
-		if (!IsValid(Plate)) continue;
-		bWantsOpen = Plate->IsPressed();
+		if (!IsValid(GatePlate)) continue;
+		bWantsOpen = GatePlate->IsPressed();
 		if (!bWantsOpen) return;
 	}
 }

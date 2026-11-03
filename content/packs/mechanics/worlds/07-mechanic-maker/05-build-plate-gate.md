@@ -12,7 +12,7 @@ prerequisites: [m7-tuning-knobs, m7-signal-plate, m3-checkpoint, m3-scale-plate]
 xp: 75
 estimatedMinutes: 20
 concepts:
-  - A gate subscribes to every plate it is given and decides from them whether to stand open
+  - A gate stands open only while its plates are held
   - A panel moves at a steady speed taken from two knobs, so a full trip always takes the time a designer set
   - Arrival events fire once at each end, so listeners never watch the panel
 ---
@@ -21,10 +21,10 @@ concepts:
 
 When you place two signal plates and a plate gate that lists both, and press Play, the gate's panel stays down while the plates are empty, rises 300 cm in 0.8 s once a crate stands on each plate and announces that it is open, and sinks back the same way, announcing that it is closed, when either crate steps off.
 
-The header is done, and in the source file the constructor, `BeginPlay`, and the three getters are written. Write `BindPlates`, `HandlePlateChanged`, `Refresh`, `Tick`, and its helper `StepHeight`. Rules:
+The header is done, and in the source file the constructor, `BeginPlay`, and the three getters are written. Write `BindPlates`, `HandlePlateChanged`, `Tick`, and its helper `StepHeight`. Rules:
 
-- `BeginPlay` calls `BindPlates`. It sends both the press and the release of every valid plate in `Plates` to `HandlePlateChanged`, never binding twice however often it runs, and then decides whether the gate wants to be open. A director may add plates later and call it again.
-- `WantsOpen` is true while the gate has at least one plate and all of its plates are pressed.
+- `BeginPlay` calls `BindPlates`. It sends both the press and the release of every valid plate in `Plates` to `HandlePlateChanged`, never binding twice however often it runs, and hands each of those plates to `HandlePlateChanged` once, so the gate knows from the start whether it wants to be open. A director may add plates later and call it again.
+- `HandlePlateChanged` keeps `bWantsOpen`, which `WantsOpen` returns and `Tick` follows. What you should see: with the two plates above, the panel stays down while only one crate is on a plate, rises once a crate stands on each, and sinks when either leaves; a gate with no plates never rises.
 - Each frame, `Tick` moves the panel's relative height toward `OpenHeight` while the gate wants to be open, and toward 0 otherwise, at a steady `OpenHeight / OpenSeconds` cm per second, so a full trip takes `OpenSeconds`. It lands exactly on either end. `StepHeight` works out one frame of that movement and `Tick` applies it.
 - On arriving fully open, `OnOpened` fires once. On arriving fully closed after having been fully open, `OnClosed` fires once.
 - The two knobs keep the ranges written in the header, from the last card.
@@ -95,7 +95,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Gate")
 	FDojoM7OnGateMoved OnClosed;
 
-	/** Listens to every valid plate in Plates, never twice, then decides whether the gate wants to be open; safe to call again after adding plates. */
+	/** Listens to every valid plate in Plates, never twice, and decides whether the gate wants to be open now; safe to call again after adding plates. */
 	UFUNCTION(BlueprintCallable, Category = "Gate")
 	void BindPlates();
 
@@ -119,12 +119,9 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	/** Runs when any of the gate's plates is pressed or released. */
+	/** Runs when one of the gate's plates is pressed or released, and once for each plate when the plates are bound; decides whether the gate wants to be open. */
 	UFUNCTION()
 	void HandlePlateChanged(ADojoM7SignalPlate* Plate);
-
-	/** Decides from the plates whether the gate wants to be open. */
-	void Refresh();
 
 	/** The panel's height one frame later: a steady OpenHeight / OpenSeconds cm per second toward TargetHeight, landing exactly on it. */
 	float StepHeight(float Height, float TargetHeight, float DeltaSeconds) const;
@@ -173,7 +170,7 @@ void ADojoM7PlateGate::BeginPlay()
 void ADojoM7PlateGate::BindPlates()
 {
 	// Your code: send the press and the release of every valid plate in Plates to HandlePlateChanged, never binding twice.
-	// Your code: then decide whether the gate wants to be open.
+	// Your code: also hand each of those plates to HandlePlateChanged once, so the gate decides whether it wants to be open now.
 }
 
 bool ADojoM7PlateGate::WantsOpen() const
@@ -195,12 +192,7 @@ bool ADojoM7PlateGate::IsOpen() const
 
 void ADojoM7PlateGate::HandlePlateChanged(ADojoM7SignalPlate* Plate)
 {
-	// Your code: one of the gate's plates was pressed or released; bring bWantsOpen up to date.
-}
-
-void ADojoM7PlateGate::Refresh()
-{
-	// Your code: set bWantsOpen from the gate's plates.
+	// Your code: decide whether the gate wants to be open now, and keep it in bWantsOpen.
 }
 
 void ADojoM7PlateGate::Tick(float DeltaSeconds)
@@ -258,7 +250,7 @@ namespace DojoM7PlateGateTest
 		return Gate;
 	}
 
-	/** Parks a crate far away and binds an announcement to its ReturnHome, so its return count is how often the announcement fired. */
+	/** Parks a crate far away to serve as a counter; a test binds an announcement to its ReturnHome, so its return count is how often the announcement fired. */
 	ADojoM3Crate* MakeCounter(FDojoTestWorld& TestWorld, double Y)
 	{
 		return SpawnAt<ADojoM3Crate>(TestWorld, FVector(0.0, Y, 0.0));
@@ -448,9 +440,9 @@ bool FDojo_M7_PlateGate_KnobsSetTheTrip::RunTest(const FString& Parameters)
 
 # Hints
 
-- Four small jobs: `BindPlates` connects the plates, the handler reacts to them, `Refresh` sets `bWantsOpen`, and `Tick` only moves the panel toward where `bWantsOpen` points. `Tick` never looks at a plate.
-- `AddUniqueDynamic` ignores a binding that is already there, and one handler can be bound to both events because both carry the same one parameter. `FMath::FInterpConstantTo` moves a value toward a target by at most speed times the frame's duration, and the speed here is the height over the time.
-- The panel's height is the Z of `GetRelativeLocation` on the panel, written back with `SetRelativeLocation`; `IsValid` skips an empty slot in the plate list; `FMath::IsNearlyEqual` decides that the panel has arrived. All of them come through `CoreMinimal.h` and `Components/SceneComponent.h`.
+- Four small jobs: `BindPlates` connects the plates, the handler runs whenever a plate changes, `StepHeight` works out one frame of movement, and `Tick` moves the panel toward where `bWantsOpen` points. `Tick` never looks at a plate.
+- The handler is told which plate changed, but the plate it receives is only one of the gate's plates, and the gate's answer is about the gate. `AddUniqueDynamic` ignores a binding that is already there, and one handler can be bound to both events because both carry the same one parameter. `FMath::FInterpConstantTo` moves a value toward a target by at most speed times the frame's duration, and the speed here is the height over the time.
+- With two plates and one pressed, the plate the handler receives says pressed while the other plate is still empty, so the answer has to come from every entry in `Plates`, skipping empty slots with `IsValid`. The panel's height is the Z of `GetRelativeLocation` on the panel, written back with `SetRelativeLocation`; `IsValid` skips an empty slot in the plate list; `FMath::IsNearlyEqual` decides that the panel has arrived. All of them come through `CoreMinimal.h` and `Components/SceneComponent.h`.
 
 # Rubric
 
@@ -463,7 +455,7 @@ bool FDojo_M7_PlateGate_KnobsSetTheTrip::RunTest(const FString& Parameters)
 
 # Alternative
 
-A natural first handler lets the plate that just spoke decide: it opens the gate when that plate is pressed and closes it when that plate is released. With one plate that is right, which is why it feels finished; with two, one crate opens the gate alone, and the test with one of two plates pressed catches it. The plate passed to the handler says who changed, not what the whole set looks like, so the handler should ask every plate again, which is what `Refresh` does. Another fix keeps a count of pressed plates, adding one on a press and taking one on a release; it avoids the loop, but the count goes wrong when a plate starts pressed before the gate binds, or when a plate is bound twice, and a loop over a handful of plates costs nothing. A gate that checks its plates in `Tick` would also be correct, and needs no binding at all, at the cost of asking every plate on every frame even while nothing moves. The gate is an observer of several subjects at once, the shape a puzzle director will use in the boss.
+A natural first handler lets the plate that just spoke decide: it opens the gate when that plate is pressed and closes it when that plate is released. With one plate that is right, which is why it feels finished; with two, one crate opens the gate alone, and the test with one of two plates pressed catches it. The plate passed to the handler says who changed, not what the whole set looks like, so the handler should ask every plate again, which is what the reference handler does with its loop. Another fix keeps a count of pressed plates, adding one on a press and taking one on a release; it avoids the loop, but the count goes wrong when a plate starts pressed before the gate binds, or when a plate is bound twice, and a loop over a handful of plates costs nothing. A gate that checks its plates in `Tick` would also be correct, and needs no binding at all, at the cost of asking every plate on every frame even while nothing moves. The gate is an observer of several subjects at once, the shape a puzzle director will use in the boss.
 
 # Parsons
 

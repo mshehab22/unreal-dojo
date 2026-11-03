@@ -42,8 +42,14 @@ int32 ADojoM7PlateLamp::GetReleases() const
 	return Releases;
 }
 
+ADojoM7SignalPlate* ADojoM7PlateLamp::GetLastPlate() const
+{
+	return LastPlate;
+}
+
 void ADojoM7PlateLamp::HandlePlatePressed(ADojoM7SignalPlate* ChangedPlate)
 {
+	LastPlate = ChangedPlate;
 	bLit = true;
 	Presses++;
 	RefreshLabel();
@@ -51,6 +57,7 @@ void ADojoM7PlateLamp::HandlePlatePressed(ADojoM7SignalPlate* ChangedPlate)
 
 void ADojoM7PlateLamp::HandlePlateReleased(ADojoM7SignalPlate* ChangedPlate)
 {
+	LastPlate = ChangedPlate;
 	bLit = false;
 	Releases++;
 	RefreshLabel();

@@ -37,6 +37,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Plate Lamp")
 	int32 GetReleases() const;
 
+	/** The plate named by the last press or release the lamp heard, or null before any. */
+	UFUNCTION(BlueprintPure, Category = "Plate Lamp")
+	ADojoM7SignalPlate* GetLastPlate() const;
+
 protected:
 	/** Starts in the plate's current state, subscribes to its events, and writes the first label. */
 	virtual void BeginPlay() override;
@@ -58,4 +62,8 @@ private:
 	int32 Presses = 0;
 
 	int32 Releases = 0;
+
+	/** The plate the last announcement carried. */
+	UPROPERTY()
+	TObjectPtr<ADojoM7SignalPlate> LastPlate;
 };

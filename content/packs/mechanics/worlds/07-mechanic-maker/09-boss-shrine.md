@@ -30,6 +30,8 @@ The door opening clears the round. A shrine director hears the unlock and nothin
 
 A board on the director reads three lines: `Rounds cleared: 1`, `Gate: OPEN` or `Gate: SHUT`, and `Resetting` while a reset is coming. It changes only when the gate reports it finished opening or closing, when a round is cleared, and when the reset runs.
 
+Dependency direction: the director holds pointers to the gate, the key pickup, the door, and the crates, and only listens to their events and calls their public functions. The pieces never know the director exists, and the plates and the gate never know about the key or the door.
+
 The pieces need no additions: the plate, the gate, the ring, the pickup, and the door are used as their quests left them. The runner and the crates are the ones from the collision world.
 
 Reference game: the switch rooms of top-down adventure dungeons such as The Legend of Zelda: A Link to the Past, where a block pushed onto a floor switch holds a way open and a small key opens the last door.
@@ -105,7 +107,7 @@ Feel: once both rounds pass, tune the gate's open time and the reset pause until
     - { id: level, kind: class, label: Level Blueprint with variables for the gate and the pickup and the door and a crate array and a Rounds integer, covers: [director] }
     - { id: gate, kind: event, label: The gate placed in the level with both plates in its Plates array in Details, covers: [plates-to-gate] }
     - { id: unlock, kind: event, label: Bind Event to the door's On Unlocked runs a custom event that adds to Rounds and stores the Visitor pin, covers: [round-clear] }
-    - { id: clock, kind: step, label: The custom event calls Set Timer by Event with a Reset Seconds float variable marked Instance Editable with a slider range, covers: [reset-clock, knobs] }
+    - { id: clock, kind: step, label: The custom event calls Set Timer by Event with a Reset Seconds float variable whose Value Range sets the hard limit and whose value is set in the Level Blueprint's defaults, covers: [reset-clock, knobs] }
     - { id: reset, kind: step, label: The timer event loops the crates calling Return Home then calls Reset Pickup and Relock and Remove Key on Get Component by Class of the stored visitor, covers: [reset] }
     - { id: board, kind: event, label: Events bound to the gate's On Opened and On Closed and the two custom events set a Text Render's text, covers: [board] }
   edges:

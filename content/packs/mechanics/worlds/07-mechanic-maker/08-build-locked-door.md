@@ -24,7 +24,7 @@ Write `ADojoM7LockedDoor` from nothing. It has a box panel as its root that bloc
 
 - An open door stays open: trying it again returns true and announces nothing.
 - A visitor whose key ring holds `RequiredKey` opens the door: the panel stops colliding, the label reads `Open`, the door announces it was unlocked with itself and the visitor, and the try returns true. The key stays on the ring.
-- Anyone else, with the wrong key, no key, or no ring at all, finds it locked: the label reads `Locked`, the door counts a locked try, and the try returns false.
+- Anyone else, with the wrong key, no key, no ring, or no visitor at all (a null pointer), finds it locked: the label reads `Locked`, the door counts a locked try, and the try returns false.
 - `Relock` closes the door again: the panel blocks, the label reads `Locked`, and the count of locked tries is kept.
 
 The tests use this public interface, so keep these names:
@@ -243,6 +243,7 @@ bool FDojo_M7_LockedDoor_StaysShutWithoutTheKey::RunTest(const FString& Paramete
 	TestFalse(TEXT("A runner with the wrong key cannot open it either"), Door->TryOpen(Wrong));
 	TestEqual(TEXT("and that try is counted too"), Door->GetLockedTries(), 2);
 	TestFalse(TEXT("Nothing at all cannot open it"), Door->TryOpen(nullptr));
+	TestEqual(TEXT("and a try with no visitor is counted as locked too"), Door->GetLockedTries(), 3);
 
 	TestFalse(TEXT("The door is still shut"), Door->IsOpen());
 	TestEqual(TEXT("and reads Locked"), LabelOf(Door), FString(TEXT("Locked")));

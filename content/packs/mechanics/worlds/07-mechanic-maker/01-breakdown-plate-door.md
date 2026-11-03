@@ -67,9 +67,9 @@ Acceptance:
 - id: plate-and-gate
   title: A plate class that announces and a gate class that listens
   pieces:
-    - { id: plate, kind: class, label: ADojoSignalPlate with a box Zone that recounts with GetOverlappingActors on every begin and end overlap, covers: [plate] }
+    - { id: plate, kind: class, label: ADojoM7SignalPlate with a box Zone that recounts with GetOverlappingActors on every begin and end overlap, covers: [plate] }
     - { id: events, kind: event, label: OnPlatePressed and OnPlateReleased dynamic multicast delegates carrying the plate and broadcast only on the edge between zero and one or more, covers: [plate-events] }
-    - { id: gate, kind: class, label: ADojoPlateGate with a Frame root and a Panel box whose relative height moves with FInterpConstantTo in Tick, covers: [gate] }
+    - { id: gate, kind: class, label: ADojoM7PlateGate with a Frame root and a Panel box whose relative height moves with FInterpConstantTo in Tick, covers: [gate] }
     - { id: plates, kind: data, label: An EditAnywhere TArray of plate pointers on the gate, covers: [plate-list] }
     - { id: moved, kind: event, label: OnOpened and OnClosed on the gate fired once when the panel arrives, covers: [gate-events] }
     - { id: knobs, kind: data, label: OpenHeight and OpenSeconds as EditAnywhere floats with ClampMin and Units, covers: [knobs] }

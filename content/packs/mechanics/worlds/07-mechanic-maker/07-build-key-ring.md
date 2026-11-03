@@ -29,7 +29,9 @@ Two classes are in this quest, and both headers are written for you. Write the f
 - An actor with no ring is ignored. A ring that already holds the id refuses it, and then the pickup stays where it is for the next visitor.
 - `ResetPickup` shows the pickup again and turns its zone back on, so it can be taken again.
 
-Dependency direction: the pickup holds no pointer to any ring or visitor; it asks the actor in front of it. The ring knows nothing about pickups or doors, and the runner knows nothing about either: it only carries the ring.
+The tally, `ADojoM7KeyTally`, is given in full: a listener that counts every key a ring announces and remembers the last one. The tests use it to hear your ring.
+
+Dependency direction: the pickup holds no pointer to any ring or visitor; it asks the actor in front of it. The ring knows nothing about pickups, doors, or the tally, which subscribes to it; the runner knows nothing about any of them: it only carries the ring.
 
 This is the third piece of the shrine boss. Its tests reuse the runner from the collision world, given a ring while the game runs.
 
@@ -235,6 +237,86 @@ void ADojoM7KeyPickup::HandleZoneBeginOverlap(UPrimitiveComponent* OverlappedCom
 }
 ```
 
+## DojoM7KeyTally.h
+
+```cpp
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "DojoM7KeyTally.generated.h"
+
+class UDojoM7KeyRing;
+
+/** Counts every key a ring announces and remembers the last one; the rings it listens to never know it is there. */
+UCLASS()
+class ADojoM7KeyTally : public AActor
+{
+	GENERATED_BODY()
+
+public:
+	/** Turns ticking off. */
+	ADojoM7KeyTally();
+
+	/** Starts listening to a ring's new keys; listening twice to one ring still counts each key once. */
+	UFUNCTION(BlueprintCallable, Category = "Tally")
+	void Listen(UDojoM7KeyRing* Ring);
+
+	/** How many key announcements the tally has heard. */
+	UFUNCTION(BlueprintPure, Category = "Tally")
+	int32 GetHeard() const;
+
+	/** The key id named by the last announcement, or None. */
+	UFUNCTION(BlueprintPure, Category = "Tally")
+	FName GetLastKey() const;
+
+private:
+	/** Counts one announcement and remembers its key id. */
+	UFUNCTION()
+	void HandleKeyAdded(FName KeyId);
+
+	int32 Heard = 0;
+
+	FName LastKey;
+};
+```
+
+## DojoM7KeyTally.cpp
+
+```cpp
+#include "DojoM7KeyTally.h"
+
+#include "DojoM7KeyRing.h"
+
+ADojoM7KeyTally::ADojoM7KeyTally()
+{
+	PrimaryActorTick.bCanEverTick = false;
+}
+
+void ADojoM7KeyTally::Listen(UDojoM7KeyRing* Ring)
+{
+	if (!IsValid(Ring)) return;
+
+	Ring->OnKeyAdded.AddUniqueDynamic(this, &ADojoM7KeyTally::HandleKeyAdded);
+}
+
+int32 ADojoM7KeyTally::GetHeard() const
+{
+	return Heard;
+}
+
+FName ADojoM7KeyTally::GetLastKey() const
+{
+	return LastKey;
+}
+
+void ADojoM7KeyTally::HandleKeyAdded(FName KeyId)
+{
+	Heard++;
+	LastKey = KeyId;
+}
+```
+
 # Tests
 
 ```cpp
@@ -247,6 +329,7 @@ void ADojoM7KeyPickup::HandleZoneBeginOverlap(UPrimitiveComponent* OverlappedCom
 #include "Quests/m3-checkpoint/DojoM3Runner.h"
 #include "Quests/m7-key-ring/DojoM7KeyPickup.h"
 #include "Quests/m7-key-ring/DojoM7KeyRing.h"
+#include "Quests/m7-key-ring/DojoM7KeyTally.h"
 #include "Support/DojoTestActor.h"
 #include "Support/DojoTestWorld.h"
 #include "UObject/UnrealType.h"
@@ -286,7 +369,7 @@ namespace DojoM7KeyRingTest
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M7_KeyRing_HoldsEachKeyOnce, "Dojo.M7.KeyRing.HoldsEachKeyOnce", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Adds, repeats, removes, and clears keys on a ring, and checks Blueprints can hear a key arrive. */
+/** Adds, repeats, removes, and clears keys on a ring, and checks a listener hears exactly one announcement per key really added. */
 bool FDojo_M7_KeyRing_HoldsEachKeyOnce::RunTest(const FString& Parameters)
 {
 	using namespace DojoM7KeyRingTest;
@@ -296,19 +379,27 @@ bool FDojo_M7_KeyRing_HoldsEachKeyOnce::RunTest(const FString& Parameters)
 	ADojoTestActor* Carrier = TestWorld.SpawnActor<ADojoTestActor>();
 	if (!TestNotNull(TEXT("Carrier spawned"), Carrier)) return false;
 	UDojoM7KeyRing* Ring = GiveRing(Carrier);
-	if (!TestNotNull(TEXT("Ring made"), Ring)) return false;
+	ADojoM7KeyTally* Tally = TestWorld.SpawnActor<ADojoM7KeyTally>();
+	if (!TestNotNull(TEXT("Ring made"), Ring) || !TestNotNull(TEXT("Tally spawned"), Tally)) return false;
+	Tally->Listen(Ring);
 
 	TestEqual(TEXT("A new ring is empty"), Ring->GetKeyCount(), 0);
 	TestFalse(TEXT("None is not a key"), Ring->AddKey(NAME_None));
 	TestEqual(TEXT("so nothing was added"), Ring->GetKeyCount(), 0);
+	TestEqual(TEXT("and nothing was announced"), Tally->GetHeard(), 0);
 
 	TestTrue(TEXT("A new key goes on the ring"), Ring->AddKey(TEXT("ShrineKey")));
 	TestTrue(TEXT("and the ring holds it"), Ring->HasKey(TEXT("ShrineKey")));
+	TestEqual(TEXT("The new key is announced once"), Tally->GetHeard(), 1);
+	TestTrue(TEXT("naming the key"), Tally->GetLastKey() == FName(TEXT("ShrineKey")));
 	TestFalse(TEXT("The same key twice is refused"), Ring->AddKey(TEXT("ShrineKey")));
 	TestEqual(TEXT("so the ring holds one key"), Ring->GetKeyCount(), 1);
+	TestEqual(TEXT("and the refused key is not announced"), Tally->GetHeard(), 1);
 
 	TestTrue(TEXT("A second key goes on too"), Ring->AddKey(TEXT("CellarKey")));
 	TestEqual(TEXT("making two"), Ring->GetKeyCount(), 2);
+	TestEqual(TEXT("and a second announcement"), Tally->GetHeard(), 2);
+	TestTrue(TEXT("naming the second key"), Tally->GetLastKey() == FName(TEXT("CellarKey")));
 	TestFalse(TEXT("A key never added is not held"), Ring->HasKey(TEXT("TowerKey")));
 
 	TestTrue(TEXT("Removing a held key works"), Ring->RemoveKey(TEXT("ShrineKey")));
@@ -319,6 +410,7 @@ bool FDojo_M7_KeyRing_HoldsEachKeyOnce::RunTest(const FString& Parameters)
 	Ring->ClearKeys();
 	TestEqual(TEXT("A cleared ring is empty"), Ring->GetKeyCount(), 0);
 	TestFalse(TEXT("and holds none of its old keys"), Ring->HasKey(TEXT("CellarKey")));
+	TestEqual(TEXT("Removing and clearing announce nothing"), Tally->GetHeard(), 2);
 
 	const FProperty* OnKeyAdded = UDojoM7KeyRing::StaticClass()->FindPropertyByName(TEXT("OnKeyAdded"));
 	if (!TestNotNull(TEXT("OnKeyAdded is a UPROPERTY"), OnKeyAdded)) return false;
@@ -388,11 +480,16 @@ bool FDojo_M7_KeyRing_DuplicatesStayAndResetReturns::RunTest(const FString& Para
 	if (!TestNotNull(TEXT("Pickups and runner spawned"), Runner) || !First || !Copy) return false;
 
 	UDojoM7KeyRing* Ring = GiveRing(Runner);
+	ADojoM7KeyTally* Tally = TestWorld.SpawnActor<ADojoM7KeyTally>();
+	if (!TestNotNull(TEXT("Tally spawned"), Tally)) return false;
+	Tally->Listen(Ring);
 	Runner->SetActorLocation(FVector::ZeroVector);
 	TestTrue(TEXT("The first pickup is taken"), First->IsTaken());
+	TestEqual(TEXT("and the ring announces the key once"), Tally->GetHeard(), 1);
 
 	Runner->SetActorLocation(FVector(0.0, 1000.0, 0.0));
 	TestEqual(TEXT("A second copy of a held key adds nothing new"), Ring->GetKeyCount(), 1);
+	TestEqual(TEXT("and announces nothing"), Tally->GetHeard(), 1);
 	TestFalse(TEXT("so the copy is not taken"), Copy->IsTaken());
 	TestFalse(TEXT("and stays visible for the next visitor"), Copy->IsHidden());
 	Runner->SetActorLocation(FVector(-1000.0, 0.0, 0.0));

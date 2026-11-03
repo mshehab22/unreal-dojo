@@ -225,6 +225,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Plate Lamp")
 	int32 GetReleases() const;
 
+	/** The plate named by the last press or release the lamp heard, or null before any. */
+	UFUNCTION(BlueprintPure, Category = "Plate Lamp")
+	ADojoM7SignalPlate* GetLastPlate() const;
+
 protected:
 	/** Starts in the plate's current state, subscribes to its events, and writes the first label. */
 	virtual void BeginPlay() override;
@@ -246,6 +250,10 @@ private:
 	int32 Presses = 0;
 
 	int32 Releases = 0;
+
+	/** The plate the last announcement carried. */
+	UPROPERTY()
+	TObjectPtr<ADojoM7SignalPlate> LastPlate;
 };
 ```
 
@@ -295,8 +303,14 @@ int32 ADojoM7PlateLamp::GetReleases() const
 	return Releases;
 }
 
+ADojoM7SignalPlate* ADojoM7PlateLamp::GetLastPlate() const
+{
+	return LastPlate;
+}
+
 void ADojoM7PlateLamp::HandlePlatePressed(ADojoM7SignalPlate* ChangedPlate)
 {
+	LastPlate = ChangedPlate;
 	bLit = true;
 	Presses++;
 	RefreshLabel();
@@ -304,6 +318,7 @@ void ADojoM7PlateLamp::HandlePlatePressed(ADojoM7SignalPlate* ChangedPlate)
 
 void ADojoM7PlateLamp::HandlePlateReleased(ADojoM7SignalPlate* ChangedPlate)
 {
+	LastPlate = ChangedPlate;
 	bLit = false;
 	Releases++;
 	RefreshLabel();
@@ -385,6 +400,7 @@ bool FDojo_M7_SignalPlate_AnnouncesOnlyTheEdges::RunTest(const FString& Paramete
 	TestEqual(TEXT("A crate on the plate counts as one thing"), Plate->GetCount(), 1);
 	TestTrue(TEXT("and presses it"), Plate->IsPressed());
 	TestEqual(TEXT("The lamp heard one press"), Lamp->GetPresses(), 1);
+	TestTrue(TEXT("The press carried the plate itself"), Lamp->GetLastPlate() == Plate);
 	TestEqual(TEXT("and reads LIT"), LabelOf(Lamp), FString(TEXT("LIT")));
 
 	Runner->SetActorLocation(FVector(50.0, 1000.0, 0.0));
@@ -400,6 +416,7 @@ bool FDojo_M7_SignalPlate_AnnouncesOnlyTheEdges::RunTest(const FString& Paramete
 	Runner->SetActorLocation(FVector(300.0, -1000.0, 0.0));
 	TestFalse(TEXT("When the last one leaves, the plate is released"), Plate->IsPressed());
 	TestEqual(TEXT("The lamp heard exactly one release"), Lamp->GetReleases(), 1);
+	TestTrue(TEXT("The release carried the plate itself"), Lamp->GetLastPlate() == Plate);
 	TestEqual(TEXT("and reads DARK"), LabelOf(Lamp), FString(TEXT("DARK")));
 	TestEqual(TEXT("The plate reads 0 again"), LabelOf(Plate), FString(TEXT("0")));
 
@@ -431,6 +448,7 @@ bool FDojo_M7_SignalPlate_EveryListenerHearsOnce::RunTest(const FString& Paramet
 	TestEqual(TEXT("The first lamp heard the press"), First->GetPresses(), 1);
 	TestEqual(TEXT("The second lamp on the same plate heard it too"), Second->GetPresses(), 1);
 	TestEqual(TEXT("A lamp on another plate heard nothing"), Elsewhere->GetPresses(), 0);
+	TestTrue(TEXT("The second lamp was told which plate was pressed"), Second->GetLastPlate() == Plate);
 
 	Crate->Destroy();
 	TestFalse(TEXT("A crate destroyed on the plate counts as leaving"), Plate->IsPressed());

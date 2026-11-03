@@ -49,7 +49,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Gate")
 	FDojoM7OnGateMoved OnClosed;
 
-	/** Listens to every valid plate in Plates, never twice, then decides whether the gate wants to be open; safe to call again after adding plates. */
+	/** Listens to every valid plate in Plates, never twice, and decides whether the gate wants to be open now; safe to call again after adding plates. */
 	UFUNCTION(BlueprintCallable, Category = "Gate")
 	void BindPlates();
 
@@ -73,12 +73,9 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	/** Runs when any of the gate's plates is pressed or released. */
+	/** Runs when one of the gate's plates is pressed or released, and once for each plate when the plates are bound; decides whether the gate wants to be open. */
 	UFUNCTION()
 	void HandlePlateChanged(ADojoM7SignalPlate* Plate);
-
-	/** Decides from the plates whether the gate wants to be open. */
-	void Refresh();
 
 	/** The panel's height one frame later: a steady OpenHeight / OpenSeconds cm per second toward TargetHeight, landing exactly on it. */
 	float StepHeight(float Height, float TargetHeight, float DeltaSeconds) const;
