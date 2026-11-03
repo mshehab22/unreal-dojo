@@ -523,14 +523,14 @@ bool FDojo_S4_Interactor_NearestUsableWins::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S4_Interactor_FollowsTheHero, "Dojo.S4.Interactor.FollowsTheHero", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Walks a hero between two signs that both stay in reach and checks the focus follows who is nearer, and that a thing already in reach when the interactor starts is found. */
+/** Walks a hero between two signs that both stay in reach and checks the focus follows who is nearer, and that a thing in reach when its owner begins play is found. */
 bool FDojo_S4_Interactor_FollowsTheHero::RunTest(const FString& Parameters)
 {
 	using namespace DojoS4InteractorTest;
 
 	FDojoTestWorld TestWorld;
 
-	// The interactor is registered before its owner begins play, so it is in the world but not listening yet when the sign arrives.
+	// The sign arrives while the owner has not begun play yet, so it is found when the owner and the interactor do begin play. Whether the interactor collects it by the starting overlaps or by the begin event cannot be told apart in this test world.
 	ADojoTestActor* Early = TestWorld.GetWorld()->SpawnActorDeferred<ADojoTestActor>(ADojoTestActor::StaticClass(), FTransform(Home));
 	UDojoS4Interactor* Late = NewObject<UDojoS4Interactor>(Early);
 	Late->SetupAttachment(Early->GetRootComponent());
@@ -539,7 +539,7 @@ bool FDojo_S4_Interactor_FollowsTheHero::RunTest(const FString& Parameters)
 	ADojoS4Sign* Waiting = PlaceBeside<ADojoS4Sign>(TestWorld, FVector(80.f, 0.f, 0.f));
 	Early->FinishSpawning(FTransform(Home));
 	TestWorld.Tick(2);
-	TestTrue(TEXT("A sign that was already in reach when the interactor started is found"), Late->GetFocus() == Waiting);
+	TestTrue(TEXT("A sign that is in reach when its owner begins play is found"), Late->GetFocus() == Waiting);
 	Late->DestroyComponent();
 	Waiting->Destroy();
 
