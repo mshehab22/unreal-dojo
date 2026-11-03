@@ -99,7 +99,7 @@ export interface VerifierSandbox
 	readonly logsFolder: string;
 	writeQuest(quest: { id: string; title: string; tests: string }, files: readonly SandboxFile[]): Promise<void>;
 
-	/** Takes a quest out of the build for a step, keeping its files aside so `writeQuest` can bring them back unchanged (A1322). */
+	/** Takes a quest out of the build, keeping its files aside so `writeQuest` can bring them back unchanged (A1322); an already parked quest stays as it is. */
 	parkQuest(questId: string): Promise<void>;
 
 	/** Takes a quest out of the workspace for good. */
@@ -410,18 +410,33 @@ export class EngineVerifier
 		log(`engine: verify workspace at ${sandbox.folder}`);
 
 		// The last run's quests stay for reuse when this run has them too, so unchanged files keep their times and are not
-		// recompiled; any other quest goes before the first build, since one stale quest breaks the whole module (A1321).
+		// recompiled. Every other quest is out of the build before the first build, since one stale quest breaks the whole
+		// module (A1321): parked when the content still has it, so a run on another solutions folder keeps the module's quest
+		// folders and its include paths, and does not recompile every file (A1325); removed when the content no longer has it.
 		const installed = new Map<string, string | null>();
 		const runQuestIds = new Set(quests.map((entry) => entry.quest.id));
+		const contentQuestIds = new Set(records.map((record) => record.quest.id));
 		const leftByLastRun = await sandbox.questsInPlace();
+		let parked = 0;
 
 		for (const id of leftByLastRun)
 		{
-			if (runQuestIds.has(id)) installed.set(id, null);
-			else await sandbox.removeQuest(id);
+			if (runQuestIds.has(id))
+			{
+				installed.set(id, null);
+			}
+			else if (contentQuestIds.has(id))
+			{
+				await sandbox.parkQuest(id);
+				parked++;
+			}
+			else
+			{
+				await sandbox.removeQuest(id);
+			}
 		}
 
-		log(`engine: ${installed.size} quests from the last run kept for reuse, ${leftByLastRun.length - installed.size} removed`);
+		log(`engine: ${installed.size} quests from the last run kept for reuse, ${parked} parked (no solution in this run), ${leftByLastRun.length - installed.size - parked} removed`);
 
 		// Every solution goes in, with every boss's piece overrides over its pieces' solutions (A215).
 		const requirementsOf = new Map(records.map((record) => [record.quest.id, directRequirements(record)]));

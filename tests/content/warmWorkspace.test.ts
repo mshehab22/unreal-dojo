@@ -106,6 +106,23 @@ describe("QuestParking", () =>
 		expect(await parking.parkedIds()).toEqual([]);
 	});
 
+	it("keeps the parked copy when a parked quest is parked again with nothing in place (A1325)", async () =>
+	{
+		const parking = new QuestParking(join(scratch, "parked"));
+		const location = await questOnDisk();
+		const before = await modifiedAt(join(location.questFolder, "A.cpp"));
+
+		await parking.park("a", location);
+		await parking.park("a", location);
+
+		expect(await parking.parkedIds()).toEqual(["a"]);
+
+		await parking.restore("a", location);
+
+		expect(await readFile(join(location.questFolder, "A.cpp"), "utf8")).toBe("code");
+		expect(await modifiedAt(join(location.questFolder, "A.cpp"))).toBe(before);
+	});
+
 	it("keeps a file already in place over its parked copy", async () =>
 	{
 		const parking = new QuestParking(join(scratch, "parked"));
@@ -213,12 +230,15 @@ async function filesUnder(folder: string, prefix = ""): Promise<string[]>
  * has no object yet or the file is newer than its object, as UBT does, and keeps objects across runs (they live in the
  * workspace). The test runner judges a quest by its compiled object, not by the file on disk, so a file that changed
  * without being rebuilt would show up as a stale pass: a test passes only when the compiled text is exactly "SOLUTION".
- * It does not model header dependencies, generated code, or the include path list; the real-engine runs in A1323 cover those.
+ * Like UBT, a change in the list of quest folders (the module's include paths, one per folder) recompiles every file, since
+ * every compile's command line changes. It does not model header dependencies or generated code; the real-engine runs in
+ * A1323 cover those.
  */
 function fakeEngine(): FakeEngine
 {
 	const paths = new MacPlatformPaths("/home");
 	const objects = new Map<string, CompiledObject>();
+	let lastFolders: string | undefined;
 	const engine: FakeEngine = { target: undefined as unknown as EngineTarget, compiledAtBuild: [], questFoldersAtBuild: [], questFilesAtBuild: [] };
 	const builder = {
 		build: async (request: { projectFile: string }) =>
@@ -226,7 +246,11 @@ function fakeEngine(): FakeEngine
 			const source = join(resolve(request.projectFile, ".."), "Source", "Dojo");
 			const compiled: string[] = [];
 
-			engine.questFoldersAtBuild.push((await readdir(join(source, "Quests"))).sort());
+			const folders = (await readdir(join(source, "Quests"))).sort();
+			const includePathsChanged = lastFolders !== undefined && lastFolders !== folders.join();
+
+			lastFolders = folders.join();
+			engine.questFoldersAtBuild.push(folders);
 			engine.questFilesAtBuild.push((await filesUnder(join(source, "Quests"))).sort());
 
 			for (const path of await filesUnder(source))
@@ -234,7 +258,7 @@ function fakeEngine(): FakeEngine
 				const key = join(source, path);
 				const object = objects.get(key);
 
-				if (object !== undefined && (await modifiedAt(key)) <= object.compiledAt) continue;
+				if (!includePathsChanged && object !== undefined && (await modifiedAt(key)) <= object.compiledAt) continue;
 
 				objects.set(key, { text: await readFile(key, "utf8"), compiledAt: Date.now() });
 
@@ -278,23 +302,23 @@ describe("EngineVerifier on a warm workspace", () =>
 		solutionsFolder = join(scratch, "solutions");
 	});
 
-	/** Writes `solutions/<id>/<id>.cpp` with the given text for each quest. */
-	async function writeSolutions(solutions: Record<string, string>): Promise<void>
+	/** Writes `<folder>/<id>/<id>.cpp` with the given text for each quest; the folder is the solutions folder unless given. */
+	async function writeSolutions(solutions: Record<string, string>, folder = solutionsFolder): Promise<void>
 	{
 		for (const [id, text] of Object.entries(solutions))
 		{
-			await mkdir(join(solutionsFolder, id), { recursive: true });
-			await writeFile(join(solutionsFolder, id, `${id}.cpp`), text);
+			await mkdir(join(folder, id), { recursive: true });
+			await writeFile(join(folder, id, `${id}.cpp`), text);
 		}
 	}
 
-	/** Runs the verifier over the quests with the real sandbox and the fake engine. */
-	async function verify(engine: FakeEngine, quests: BuildQuest[]): Promise<EngineReport>
+	/** Runs the verifier over the quests with the real sandbox and the fake engine, like `--solutions <folder> --quest <id>` when those are given. */
+	async function verify(engine: FakeEngine, quests: BuildQuest[], run: { solutions?: string; questId?: string } = {}): Promise<EngineReport>
 	{
-		const verifier = new EngineVerifier({ target: engine.target, templateFolder: resolve("resources/sandbox-template"), solutionsFolder, log: () => undefined, workspaceRoot });
+		const verifier = new EngineVerifier({ target: engine.target, templateFolder: resolve("resources/sandbox-template"), solutionsFolder: run.solutions ?? solutionsFolder, log: () => undefined, workspaceRoot });
 		const records: QuestRecord[] = quests.map((entry) => ({ quest: entry, file: `examples/${entry.id}.md` }));
 
-		return verifier.verify(records);
+		return verifier.verify(records, run.questId === undefined ? undefined : new Set([run.questId]));
 	}
 
 	/** The project's `Source/Dojo` folder in the 5.8 workspace. */
@@ -380,7 +404,7 @@ describe("EngineVerifier on a warm workspace", () =>
 		expect(await readFile(join(sourceFolder(), "Tests", "a.Test.cpp"), "utf8")).toContain("// one more check");
 	}, 30_000);
 
-	it("compiles only an added quest, and takes a removed quest out before the first build, parked copy included", async () =>
+	it("compiles an added quest, and takes a quest the content dropped out before the first build, parked copy included", async () =>
 	{
 		const engine = fakeEngine();
 
@@ -394,7 +418,8 @@ describe("EngineVerifier on a warm workspace", () =>
 		const report = await verify(engine, [quest("b"), quest("c")]);
 
 		expect(report.problems).toEqual([]);
-		expect(engine.compiledAtBuild[firstRunBuilds]).toEqual(["Quests/b/b.cpp", "Quests/c/c.cpp", "Tests/c.Test.cpp"]);
+		// The quest folders changed (a went, c came), so the module's include paths changed and every file recompiled, as in UBT.
+		expect(engine.compiledAtBuild[firstRunBuilds]).toEqual(["Quests/b/b.cpp", "Quests/c/c.cpp", "Tests/b.Test.cpp", "Tests/c.Test.cpp"]);
 		expect(engine.questFoldersAtBuild[firstRunBuilds]).toEqual(["b", "c", "sample-health"]);
 		expect(await readdir(join(sourceFolder(), "Tests"))).not.toContain("a.Test.cpp");
 		expect(await readdir(join(workspaceRoot, "5.8", "Saved", "VerifierParked")).catch(() => [])).not.toContain("a");
@@ -426,6 +451,65 @@ describe("EngineVerifier on a warm workspace", () =>
 		// This run ended by parking a again, with its new file list.
 		expect((await readdir(join(workspaceRoot, "5.8", "Saved", "VerifierParked", "a", "Quest"))).sort()).toEqual(["New.h", "a.cpp"]);
 	}, 30_000);
+
+	it("runs a mutation from a scratch folder with only some solutions as one small compile: the others are parked, not removed (A1325)", async () =>
+	{
+		const engine = fakeEngine();
+		const quests = [quest("a"), quest("b"), quest("c")];
+		const scratchCopy = join(scratch, "scratch-copy");
+
+		// The author's baseline on the full folder, judged on c: c's starter check parks a and b on their solutions.
+		await writeSolutions({ a: "SOLUTION", b: "SOLUTION", c: "SOLUTION" });
+		expect((await verify(engine, quests, { questId: "c" })).problems).toEqual([]);
+
+		// A content author's mutation: a scratch folder with only their world's solution (c), changed so its tests should fail.
+		await writeSolutions({ c: "MUTANT" }, scratchCopy);
+
+		const fullRunBuilds = engine.compiledAtBuild.length;
+		const mutant = await verify(engine, quests, { solutions: scratchCopy, questId: "c" });
+
+		expect(mutant.problems.map((problem) => problem.message.split("\n")[0])).toEqual(["test Dojo.Test.c fails with the reference solution (Fail):", "starter check inconclusive: the reference solution fails, so the starter was not checked"]);
+		expect(engine.compiledAtBuild.slice(fullRunBuilds)).toEqual([["Quests/c/c.cpp"]]);
+		expect(engine.questFoldersAtBuild[fullRunBuilds]).toEqual(["a", "b", "c", "sample-health"]);
+		expect(engine.questFilesAtBuild[fullRunBuilds]).toEqual(["c/c.cpp", "sample-health/SampleHealthComponent.cpp", "sample-health/SampleHealthComponent.h"]);
+
+		// The mutation undone: c passes again, from its own fresh compile, not a stale one.
+		await writeSolutions({ c: "SOLUTION" }, scratchCopy);
+
+		const restoredBuilds = engine.compiledAtBuild.length;
+
+		expect((await verify(engine, quests, { solutions: scratchCopy, questId: "c" })).problems).toEqual([]);
+		expect(engine.compiledAtBuild[restoredBuilds]).toEqual(["Quests/c/c.cpp"]);
+
+		// Back on the full folder: a and b come back from the parked copies at their old times, so only c (left on its starter
+		// by the last starter check) recompiles, and every quest is judged and passes, a and b on what they compiled in the baseline.
+		const backBuilds = engine.compiledAtBuild.length;
+
+		expect((await verify(engine, quests)).problems).toEqual([]);
+		expect(engine.compiledAtBuild[backBuilds]).toEqual(["Quests/c/c.cpp"]);
+		expect(engine.questFoldersAtBuild.every((folders) => folders.join() === "a,b,c,sample-health")).toBe(true);
+	}, 60_000);
+
+	it("never passes a parked quest stale: one that changed while it waited is rebuilt when it comes back (A1325)", async () =>
+	{
+		const engine = fakeEngine();
+		const quests = [quest("a"), quest("b")];
+		const onlyB = join(scratch, "only-b");
+
+		await writeSolutions({ a: "SOLUTION", b: "SOLUTION" });
+		await verify(engine, quests);
+		await writeSolutions({ b: "SOLUTION" }, onlyB);
+		await verify(engine, quests, { solutions: onlyB, questId: "b" });
+
+		// a was parked by the run above; its solution now changes in the real folder, so it must recompile and fail.
+		await writeSolutions({ a: "BROKEN" });
+
+		const builds = engine.compiledAtBuild.length;
+		const report = await verify(engine, quests);
+
+		expect(engine.compiledAtBuild[builds]).toContain("Quests/a/a.cpp");
+		expect(report.problems.map((problem) => `${problem.file}: ${problem.message.split("\n")[0] ?? ""}`)).toContain("examples/a.md: test Dojo.Test.a fails with the reference solution (Fail):");
+	}, 60_000);
 
 	it("keeps every quest folder through the starter checks, so the module's include paths never change within a run", async () =>
 	{

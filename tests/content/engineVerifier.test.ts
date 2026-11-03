@@ -278,6 +278,18 @@ describe("EngineVerifier", () =>
 		expect(sandbox.operations.slice(0, 3)).toEqual(["remove gone", "write a: a.cpp=SOLUTION", "build"]);
 	});
 
+	it("parks a quest the last run left that the content still has but this run has no solution for (A1325)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+
+		sandbox.leftByLastRun = ["a", "elsewhere", "gone"];
+
+		const report = await verifyWith(sandbox, [quest("a"), quest("elsewhere")], await writeSolutions({ a: "SOLUTION" }));
+
+		expect(report.problems).toEqual([]);
+		expect(sandbox.operations.slice(0, 4)).toEqual(["park elsewhere", "remove gone", "write a: a.cpp=SOLUTION", "build"]);
+	});
+
 	it("reports a header name two quest folders would hold, ignoring case (W16)", async () =>
 	{
 		const sandbox = new FakeSandbox();

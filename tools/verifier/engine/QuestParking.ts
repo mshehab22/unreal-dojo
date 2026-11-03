@@ -78,16 +78,22 @@ export class QuestParking
 		this.root = root;
 	}
 
-	/** Moves a quest's files into its parked folder and leaves its quest folder in place, empty. */
+	/**
+	 * Moves a quest's files into its parked folder and leaves its quest folder in place, empty. A quest with nothing in place
+	 * keeps the parked copy it has: nothing was written at its paths since that copy was made, since a write returns it first.
+	 */
 	async park(questId: string, location: QuestLocation): Promise<void>
 	{
 		const staging = this.folderOf(questId, PARKING_SUFFIX);
+		const inPlace = await entryNames(location.questFolder, (entry) => entry.isFile());
+
+		if (inPlace.length === 0 && !(await exists(location.testFile))) return;
 
 		// An older parked copy, if any, is older than what is in place now.
 		await this.discard(questId);
 		await mkdir(join(staging, PARKED_QUEST_FILES), { recursive: true });
 
-		for (const name of await entryNames(location.questFolder, (entry) => entry.isFile()))
+		for (const name of inPlace)
 		{
 			await renameWithRetry(join(location.questFolder, name), join(staging, PARKED_QUEST_FILES, name));
 		}
