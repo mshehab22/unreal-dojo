@@ -2278,4 +2278,5 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Proof so far:
   - Content verifier: no problems. Originality: no 6-word or 5-word match against any research file in the quests, solutions, glossary entry, or card, except test macro boilerplate and a documentation link.
   - Engine proof: not run. The task did not allow the engine, so nothing in this world has been compiled (A1739). Queued for the Lead: the four solution folders, the starters, and the mutation copies.
+- Review: FIXES NEEDED, then fixed in 6813a99 (A1740). Tester (fresh agent, 6813a99): typecheck, 1321 tests passed and 32 skipped, verify-content no problems, build pass, starters match references, 34 mutation copies each differ in exactly one file.
 - Not done: the engine proof, the mutation run, and the check against the book (no Strategy chapter exists). No screenshots. Decisions A1730 to A1740.
