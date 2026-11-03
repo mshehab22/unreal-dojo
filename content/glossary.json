@@ -1137,7 +1137,7 @@
     "category": "memory",
     "short": "A pointer to a UObject that does not keep it alive and safely reports null once the object is gone.",
     "long": "Sometimes you want to remember an object without claiming it. An enemy can hold a TWeakObjectPtr to its current target: if the target is destroyed, Get() returns nullptr instead of a dangling address, and the enemy does not accidentally keep a dead player in memory. Check IsValid() or Get() before every use. It is ideal for caches, observers, and references held by objects that may outlive what they point at.",
-    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/TWeakObjectPtr?application_version=5.8",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TWeakObjectPtr?application_version=5.8",
     "related": [
       "tobjectptr",
       "garbage-collection",

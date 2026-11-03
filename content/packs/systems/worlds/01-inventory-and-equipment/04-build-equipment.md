@@ -26,7 +26,7 @@ Compiles against earlier quests: s1-bag (`Quests/s1-bag/DojoS1InventoryComponent
 The class declaration is given, and so is a ready-made listener, `UDojoS1EquipmentSpy`. Every function body in `DojoS1EquipmentComponent.cpp` is yours:
 
 - `UseBag` chooses the bag that items come from and go back to.
-- `Equip` wears one of an item from the bag; the item goes in the slot named by its `EquipSlot`, and whatever was worn there goes back into the bag. It returns whether the item was worn. Items with no slot, items the bag does not hold, and a missing bag all give false.
+- `Equip` wears one item from the bag; the item goes in the slot named by its `EquipSlot`, and whatever was worn there goes back into the bag. It returns whether the item was worn. Items with no slot, items the bag does not hold, and a missing bag all give false.
 - `Unequip` moves the item worn in a slot back into the bag and returns whether it did.
 - `GetEquipped` answers what is worn in a slot, and `GetTotalPower` adds up the power bonus of everything worn.
 - `OnEquipmentChanged` is broadcast once for each change.

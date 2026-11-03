@@ -64,11 +64,11 @@ TObjectPtr<UDataTable> BladeKinds;
   prompt: "Which job is the poorest fit for copying a hidden template actor?"
   choices:
     - Laying blades that start with a hand-tuned look
-    - Keeping sixty kinds of blade that differ only in numbers
+    - Keeping fifty kinds of blade that differ only in numbers
     - Starting a copy with a template's tuned components
     - Spawning one pre-equipped challenger
   answerIndex: 1
-  explanation: Sixty kinds of pure numbers are rows or assets; a template for each is sixty actors to place and edit one at a time.
+  explanation: Fifty kinds of pure numbers are rows or assets; a template for each is fifty actors to place and edit one at a time.
 - id: when-not-snapshot
   type: multiple-choice
   prompt: "A blade was laid from a tuned template at Damage 40. The designer then raises the template to 60. What does the blade already laid have?"

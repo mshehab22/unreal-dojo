@@ -467,13 +467,14 @@ The bag could keep a `TMap` from item to count and ignore slots. That makes coun
 
 ```yaml
 - id: bag-remove-loop
-  prompt: Put the removal loop in order.
+  prompt: Put the removal loop in order. The pile shrinks before the amount still to remove does.
   lines:
     - "for (int32 Index = Slots.Num() - 1; Index >= 0 && Left > 0; --Index)"
     - "{"
     - "	if (Slots[Index].Item != Item) continue;"
     - "	const int32 Taken = FMath::Min(Left, Slots[Index].Count);"
-    - "	Slots[Index].Count -= Taken; Left -= Taken;"
+    - "	Slots[Index].Count -= Taken;"
+    - "	Left -= Taken;"
     - "	if (Slots[Index].Count == 0) Slots.RemoveAt(Index);"
     - "}"
   distractors:

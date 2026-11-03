@@ -23,13 +23,13 @@ When you possess the charger and hold Space, the meter climbs from 0 to 1 over o
 
 Write `ADojoM1Charger` from nothing: a pawn with a scene root that owns its own Charge action and context. The tests use this public interface, so keep these names:
 
-- `enum class EDojoM1ShotTier : uint8` (a `UENUM`) with the values `EST_None`, `EST_Light`, `EST_Medium`, and `EST_Heavy`.
-- `UPROPERTY(EditAnywhere) float FullChargeSeconds = 1.f;` is how long Space must be held for a full charge, set by a designer before the pawn appears.
-- `UPROPERTY(EditAnywhere) TObjectPtr<UInputAction> ChargeAction;` and `UPROPERTY(EditAnywhere) TObjectPtr<UInputMappingContext> ChargeContext;` are filled in with defaults when a designer has not assigned them: a yes or no action, and a context that maps Space to it through a Hold trigger whose threshold is `FullChargeSeconds`.
-- `float GetMeter() const` is how full the charge is, from 0 to 1.
-- `bool IsCharging() const` is true from the moment Space goes down until it is let go.
-- `EDojoM1ShotTier GetLastShot() const` is the tier of the last shot, or `EST_None` before the first.
-- `int32 GetShotsFired() const` counts the shots.
+- `enum class EDojoM1ShotTier : uint8` (a `UENUM(BlueprintType)`) with the values `EST_None`, `EST_Light`, `EST_Medium`, and `EST_Heavy`.
+- `UPROPERTY(EditAnywhere) float FullChargeSeconds = 1.f;` is how long Space must be held for a full charge, set by a designer before the pawn finishes spawning (the tests change it between `SpawnActorDeferred` and `FinishSpawning`).
+- `UPROPERTY(EditAnywhere) TObjectPtr<UInputAction> ChargeAction;` and `UPROPERTY(EditAnywhere) TObjectPtr<UInputMappingContext> ChargeContext;` are filled in with defaults by the time the pawn finishes spawning when a designer has not assigned them: a yes or no action, and a context that maps Space to it through a Hold trigger whose threshold is `FullChargeSeconds`.
+- `UFUNCTION(BlueprintPure) float GetMeter() const` is how full the charge is, from 0 to 1.
+- `UFUNCTION(BlueprintPure) bool IsCharging() const` is true from the moment Space goes down until it is let go.
+- `UFUNCTION(BlueprintPure) EDojoM1ShotTier GetLastShot() const` is the tier of the last shot, or `EST_None` before the first.
+- `UFUNCTION(BlueprintPure) int32 GetShotsFired() const` counts the shots.
 - `static EDojoM1ShotTier TierForMeter(float MeterValue)` is the tier a meter value earns: below one half is Light, below full is Medium, full is Heavy.
 
 Everything else is yours to design: how the context reaches the player's subsystem as a controller arrives and leaves, and which functions the five trigger events run.
