@@ -24,14 +24,16 @@ interface SandboxRowProps
 {
 	readonly settings: Settings;
 	readonly environment: EnvironmentStatus | undefined;
+
+	/** The engine Set up the sandbox again builds with, captured when its steps open, or null while they are closed. The panel holds it so Pick another engine waits while they are open. */
+	readonly setupEngine: EngineInstall | null;
+	readonly onSetupEngineChange: (engine: EngineInstall | null) => void;
 }
 
 /** The sandbox path and state, Rebuild sandbox, and Set up the sandbox again. Only one of the two runs at a time. */
-export function SandboxRow({ settings, environment }: SandboxRowProps)
+export function SandboxRow({ settings, environment, setupEngine, onSetupEngineChange }: SandboxRowProps)
 {
 	const rebuild = useSandboxBuild((client, runId) => client.rebuildSandbox(runId), "rebuild");
-	// The engine is captured when the steps open, so a refreshed environment that loses the engine cannot close them mid-build.
-	const [setupEngine, setSetupEngine] = useState<EngineInstall | null>(null);
 	const [showsRebuild, setShowsRebuild] = useState(true);
 	const isSettingUpAgain = setupEngine !== null;
 	const isRebuilding = rebuild.status === "running";
@@ -50,7 +52,7 @@ export function SandboxRow({ settings, environment }: SandboxRowProps)
 		if (!environment?.engine) return;
 
 		setShowsRebuild(false);
-		setSetupEngine(environment.engine);
+		onSetupEngineChange(environment.engine);
 	};
 
 	return (
@@ -94,7 +96,7 @@ export function SandboxRow({ settings, environment }: SandboxRowProps)
 					)}
 				</>
 			)}
-			{setupEngine !== null && <SandboxSetupAgain engine={setupEngine} previousSandboxPath={settings.sandboxPath} onClose={() => setSetupEngine(null)} />}
+			{setupEngine !== null && <SandboxSetupAgain engine={setupEngine} previousSandboxPath={settings.sandboxPath} onClose={() => onSetupEngineChange(null)} />}
 		</SettingRow>
 	);
 }

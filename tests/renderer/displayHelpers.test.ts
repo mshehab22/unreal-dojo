@@ -202,7 +202,7 @@ ${rawLine}`, context).message).toContain("another Unreal editor with Live Coding
 
 	it("words a rebuild refused for a gone sandbox for Settings, and leaves any other error as main sent it (M5.1k)", () =>
 	{
-		const gone = { code: "sandbox-not-ready" as const, message: "The sandbox project could not be found at C:\Dojo\DojoSandbox.", suggestedAction: "Put the folder back, or open Settings and choose Set up the sandbox again.", detail: "C:\Dojo\DojoSandbox" };
+		const gone = { code: "sandbox-not-ready" as const, message: "The sandbox project could not be found at C:\\Dojo\\DojoSandbox.", suggestedAction: "Put the folder back, or open Settings and choose Set up the sandbox again.", detail: "C:\\Dojo\\DojoSandbox" };
 		const other = { code: "engine-not-found" as const, message: "The Unreal Engine folder is gone.", suggestedAction: "Pick the engine folder again in Settings." };
 
 		expect(describeRebuildRefusal(gone)).toMatchObject({ message: gone.message, detail: gone.detail, suggestedAction: expect.stringContaining("use Set up the sandbox again") });

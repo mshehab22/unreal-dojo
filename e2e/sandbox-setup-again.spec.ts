@@ -106,6 +106,7 @@ test("a deleted sandbox is set up again from Settings with first-run's steps, an
 		await expect(flow).toContainText("To put it back where it was, choose");
 		await expect(row.getByTestId("app-error")).toHaveCount(0);
 		await expect(row.getByRole("button", { name: "Rebuild sandbox" })).toBeDisabled();
+		await expect(window.getByRole("button", { name: "Pick another engine" })).toBeDisabled();
 		await flow.getByRole("button", { name: "Choose a folder" }).click();
 		await expect(flow.getByTestId("sandbox-folder")).toBeVisible();
 		await expectNoSidewaysScroll(window, `folder step ${label}`);
@@ -125,6 +126,7 @@ test("a deleted sandbox is set up again from Settings with first-run's steps, an
 		await expect(row.getByTestId("sandbox-setup-again")).toHaveCount(0);
 		await expect(row).toContainText("Ready");
 		await expect(row.getByTestId("sandbox-missing-hint")).toHaveCount(0);
+		await expect(window.getByRole("button", { name: "Pick another engine" })).toBeEnabled();
 		await row.getByRole("button", { name: "Rebuild sandbox" }).click();
 		await expect(row).toContainText("Rebuilt in", { timeout: FAKE_BUILD_TIMEOUT_MS });
 		await expect(row.getByTestId("app-error")).toHaveCount(0);

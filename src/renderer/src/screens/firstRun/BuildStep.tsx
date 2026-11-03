@@ -87,7 +87,8 @@ export function BuildStep({ engine, folder, onBack, onNext, context = "first-run
 			)}
 			{build.status === "failed" && build.result && (
 				<div data-testid="build-failed" className="flex flex-col gap-2">
-					<AppErrorView error={describeSandboxFailure(build.result, context)} onRetry={build.start} retryLabel="Build again" />
+					{/* A path too long for Windows fails the same way on a rebuild here, so it offers no Build again; its advice is to go back for a short folder (A1308). */}
+					<AppErrorView error={describeSandboxFailure(build.result, context)} onRetry={build.result.failure?.code === "sandbox-path-too-long" ? undefined : build.start} retryLabel="Build again" />
 					{build.result.compilerOutput && (
 						<button type="button" onClick={() => setShowOutput(!showOutput)} className="self-start text-xs text-paper-faint hover:text-paper-muted">
 							{showOutput ? "Hide the compiler output" : "Show the compiler output"}
