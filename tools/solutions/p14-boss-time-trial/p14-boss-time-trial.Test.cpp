@@ -28,12 +28,20 @@ namespace DojoP14TrialTest
 		return Champion;
 	}
 
-	/** Spawns the director last, with the champion set before its BeginPlay. */
+	/** Spawns the director with the champion set before its BeginPlay; round 1 starts on the next frame. */
 	ADojoP14TrialDirector* SpawnDirector(FDojoTestWorld& TestWorld, AActor* Champion)
 	{
 		ADojoP14TrialDirector* Director = TestWorld.GetWorld()->SpawnActorDeferred<ADojoP14TrialDirector>(ADojoP14TrialDirector::StaticClass(), FTransform(FVector(0.f, 500.f, 0.f)));
 		Director->Champion = Champion;
 		Director->FinishSpawning(FTransform(FVector(0.f, 500.f, 0.f)));
+		return Director;
+	}
+
+	/** Spawns the director and ticks one frame, so round 1 has started. */
+	ADojoP14TrialDirector* SpawnDirectorAndStart(FDojoTestWorld& TestWorld, AActor* Champion)
+	{
+		ADojoP14TrialDirector* Director = SpawnDirector(TestWorld, Champion);
+		TestWorld.Tick(1);
 		return Director;
 	}
 
@@ -77,7 +85,7 @@ bool FDojo_P14_TimeTrial_RankedAndPracticeKeptApart::RunTest(const FString& Para
 
 	FDojoTestWorld TestWorld;
 	AActor* Champion = SpawnChampion(TestWorld);
-	ADojoP14TrialDirector* Director = SpawnDirector(TestWorld, Champion);
+	ADojoP14TrialDirector* Director = SpawnDirectorAndStart(TestWorld, Champion);
 	if (!TestNotNull(TEXT("Champion spawned"), Champion) || !TestNotNull(TEXT("Director spawned"), Director)) return false;
 
 	TestTrue(TEXT("Round 1 starts with play"), Director->IsRunning());
@@ -133,7 +141,7 @@ bool FDojo_P14_TimeTrial_FalseStartsAreNotTimed::RunTest(const FString& Paramete
 
 	FDojoTestWorld TestWorld;
 	AActor* Champion = SpawnChampion(TestWorld);
-	ADojoP14TrialDirector* Director = SpawnDirector(TestWorld, Champion);
+	ADojoP14TrialDirector* Director = SpawnDirectorAndStart(TestWorld, Champion);
 	if (!TestNotNull(TEXT("Champion spawned"), Champion) || !TestNotNull(TEXT("Director spawned"), Director)) return false;
 
 	TickUntil(TestWorld, 1.f);
@@ -167,7 +175,7 @@ bool FDojo_P14_TimeTrial_FalseStartsAreNotTimed::RunTest(const FString& Paramete
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P14_TimeTrial_TrackKeepsOneSetOfLights, "Dojo.P14.TimeTrial.TrackKeepsOneSetOfLights", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** A director on a track with lights already placed counts down on those; on a bare track it places one set and keeps using it, round after round. */
+/** A director counts down on lights placed on the track, whether they begin play before or after it; on a bare track it places one set and keeps using that same set, round after round. */
 bool FDojo_P14_TimeTrial_TrackKeepsOneSetOfLights::RunTest(const FString& Parameters)
 {
 	using namespace DojoP14TrialTest;
@@ -176,7 +184,7 @@ bool FDojo_P14_TimeTrial_TrackKeepsOneSetOfLights::RunTest(const FString& Parame
 		FDojoTestWorld PlacedTrack;
 		ADojoP14StartLights* Placed = PlacedTrack.SpawnActor<ADojoP14StartLights>();
 		AActor* Champion = SpawnChampion(PlacedTrack);
-		ADojoP14TrialDirector* Director = SpawnDirector(PlacedTrack, Champion);
+		ADojoP14TrialDirector* Director = SpawnDirectorAndStart(PlacedTrack, Champion);
 		if (!TestNotNull(TEXT("Placed lights spawned"), Placed) || !TestNotNull(TEXT("Director spawned"), Director)) return false;
 
 		TestTrue(TEXT("The director uses the lights already on the track"), Director->GetLights() == Placed);
@@ -185,21 +193,35 @@ bool FDojo_P14_TimeTrial_TrackKeepsOneSetOfLights::RunTest(const FString& Parame
 		TestTrue(TEXT("The placed lights counted down"), Placed->IsGreen());
 	}
 
+	{
+		FDojoTestWorld LateLightsTrack;
+		AActor* Champion = SpawnChampion(LateLightsTrack);
+		ADojoP14TrialDirector* Director = SpawnDirector(LateLightsTrack, Champion);
+		ADojoP14StartLights* PlacedLater = LateLightsTrack.SpawnActor<ADojoP14StartLights>();
+		if (!TestNotNull(TEXT("Director spawned"), Director) || !TestNotNull(TEXT("Later lights spawned"), PlacedLater)) return false;
+		LateLightsTrack.Tick(1);
+
+		TestTrue(TEXT("Lights that begin play after the director, as placed actors may, are the ones it uses"), Director->GetLights() == PlacedLater);
+		TestEqual(TEXT("And it adds none"), CountActors<ADojoP14StartLights>(LateLightsTrack), 1);
+	}
+
 	FDojoTestWorld BareTrack;
 	AActor* Champion = SpawnChampion(BareTrack);
-	ADojoP14TrialDirector* Director = SpawnDirector(BareTrack, Champion);
+	ADojoP14TrialDirector* Director = SpawnDirectorAndStart(BareTrack, Champion);
 	if (!TestNotNull(TEXT("Director spawned"), Director)) return false;
 
 	TestNotNull(TEXT("On a bare track the director places lights"), Director->GetLights());
 	TestEqual(TEXT("One set"), CountActors<ADojoP14StartLights>(BareTrack), 1);
 
+	ADojoP14StartLights* RoundOneLights = Director->GetLights();
 	TickUntil(BareTrack, 121.f);
 	TestFalse(TEXT("Round 1 timed out"), Director->IsRunning());
 	Director->RestartRound();
 	TickUntil(BareTrack, 125.f);
 
 	TestEqual(TEXT("Still one set of lights after a restart"), CountActors<ADojoP14StartLights>(BareTrack), 1);
-	TestTrue(TEXT("The same lights turned green for round 2"), Director->GetLights()->IsGreen());
+	TestTrue(TEXT("Round 2 counts down on the same set as round 1"), Director->GetLights() == RoundOneLights);
+	TestTrue(TEXT("Which turned green again"), RoundOneLights->IsGreen());
 	TestEqual(TEXT("Still one finish line"), CountActors<ADojoP14FinishLine>(BareTrack), 1);
 
 	return true;
@@ -214,7 +236,7 @@ bool FDojo_P14_TimeTrial_TimeRunsOut::RunTest(const FString& Parameters)
 
 	FDojoTestWorld TestWorld;
 	AActor* Champion = SpawnChampion(TestWorld);
-	ADojoP14TrialDirector* Director = SpawnDirector(TestWorld, Champion);
+	ADojoP14TrialDirector* Director = SpawnDirectorAndStart(TestWorld, Champion);
 	if (!TestNotNull(TEXT("Champion spawned"), Champion) || !TestNotNull(TEXT("Director spawned"), Director)) return false;
 
 	TickUntil(TestWorld, 3.5f);

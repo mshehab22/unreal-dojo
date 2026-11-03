@@ -47,7 +47,7 @@ Replacing a static with a subsystem fixes who owns a thing and how long it lives
 
 **A one per world rule in a static.** A static flag or a static pointer counts every world in the program, so the second player in Play In Editor, or the next track, finds it already taken. Keep such a rule in the world: ask the world for its other actors, or let a world subsystem hold the claim.
 
-**Finding the world through a global.** `GWorld` and the engine's list of world contexts name whichever world the engine is busy with, which in the editor or in a multiplayer test may not be the one your actor stands in. Gameplay code asks its own actor or component for `GetWorld()`.
+**Finding the world through a global.** `GWorld` names whichever world the engine is working on at that moment, and the first of the engine's world contexts is only the first one it listed. In the editor or in a multiplayer test, neither need be the world your actor stands in. Gameplay code asks its own actor or component for `GetWorld()`.
 
 # Example
 

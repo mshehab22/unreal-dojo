@@ -14,7 +14,7 @@ concepts:
   - A static variable exists once for the whole program, not once per world, per race, or per object
   - In the editor one program holds the editor's world and every Play In Editor session, so anything static outlives them all
   - A static pointer to a UObject is invisible to the garbage collector, so the object is either rooted for good or destroyed behind the pointer's back
-  - Asking for "only one" and asking for "reachable from anywhere" are two separate needs, and the second quietly forbids a second one ever
+  - Asking for "only one" and asking for "reachable from anywhere" are two separate needs, and getting the second also rules out ever having a second instance
   - The other homes are an object handed to the code that needs it, the world it belongs to, or a subsystem the engine owns
 ---
 
@@ -47,7 +47,7 @@ The trial circuit has one lap board. Finish lines write to it, the scoreboard re
 
 **Made the first time somebody asks.** A board made by its first caller is made whenever that call happens to run, maybe in the middle of the first lap, with whatever loading that needs. The program cannot choose when.
 
-**Other homes for the one board.** Give the board to the code that needs it: the race's setup makes it and hands it to each finish line, which is all **dependency injection** means. Let the world own it, so a new world gets a new board, which is what a `UWorldSubsystem` does. And when "there must be only one" is a real rule, check it against the right scope: one per world, not one per program.
+**Other homes for the one board.** Give the board to the code that needs it: the race's setup makes it and hands it to each finish line, which is all **dependency injection** means. Let the world own it, so a new world gets a new board, which is what a `UWorldSubsystem` does. And when "there must be only one" is a real rule, enforce it where the one instance comes into being, without making it reachable from anywhere.
 
 # Example
 

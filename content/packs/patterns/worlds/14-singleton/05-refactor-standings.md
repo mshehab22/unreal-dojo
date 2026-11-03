@@ -23,7 +23,7 @@ concepts:
 
 After the refactor, every track starts with empty standings, two tracks open at the same time keep their standings apart, and a single race is counted exactly as before.
 
-`ADojoP14Checkpoint` stands on the track with an `Index`. Drivers must reach the checkpoints in order: `Touch` reports a driver to the standings, which count the checkpoint only when it is the next one that driver needs, and return whether they counted it. `UDojoP14Standings` keeps how many checkpoints each driver has passed (`GetPassed`) and who is ahead (`GetLeader`): the driver who has passed the most, the first to get there on a tie, or None before anyone has passed one. A checkpoint's `GetStandings` returns the standings it reports to.
+`ADojoP14Checkpoint` stands on the track with an `Index`. Drivers must reach the checkpoints in order: `Touch` reports a driver to the standings, which count the checkpoint only when it is the next one that driver needs, and return whether they counted it. `UDojoP14Standings` keeps how many checkpoints each driver has passed (`GetPassed`) and who is ahead (`GetLeader`): the driver who has passed the most, the first to get there on a tie, or None before anyone has passed one. A checkpoint's `GetStandings` returns the standings it reports to. The checkpoints depend on the standings; the standings know nothing about checkpoints.
 
 Today the standings are a static `Get`: the first call makes them with `NewObject`, roots them with `AddToRoot` so the garbage collector leaves them alone, and keeps them for the rest of the program. In the editor, that means the standings of yesterday's play session are still there today, and two players in Play In Editor race on one shared table.
 
@@ -324,7 +324,9 @@ bool FDojo_P14_Standings_ANewTrackStartsEmpty::RunTest(const FString& Parameters
 		Checkpoints[0]->Touch(Ada);
 		Checkpoints[1]->Touch(Ada);
 		Checkpoints[2]->Touch(Ada);
-		TestEqual(TEXT("Ada leads yesterday's race"), Checkpoints[0]->GetStandings()->GetLeader(), Ada);
+		UDojoP14Standings* YesterdaysStandings = Checkpoints[0]->GetStandings();
+		if (!TestNotNull(TEXT("Yesterday's track has standings"), YesterdaysStandings)) return false;
+		TestEqual(TEXT("Ada leads yesterday's race"), YesterdaysStandings->GetLeader(), Ada);
 	}
 
 	FDojoTestWorld Today;

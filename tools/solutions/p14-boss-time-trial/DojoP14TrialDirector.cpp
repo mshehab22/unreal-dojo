@@ -36,7 +36,8 @@ void ADojoP14TrialDirector::BeginPlay()
 		InputComponent->BindKey(EKeys::P, IE_Pressed, this, &ADojoP14TrialDirector::HandleKey);
 	}
 
-	StartRound();
+	// One frame later, every actor placed in the level has begun play, so placed lights are already running.
+	GetWorldTimerManager().SetTimerForNextTick(this, &ADojoP14TrialDirector::StartRound);
 }
 
 void ADojoP14TrialDirector::EndPlay(const EEndPlayReason::Type EndPlayReason)

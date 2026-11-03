@@ -56,7 +56,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Trial")
 	void TogglePractice();
 
-	/** True from the start of a round until it finishes or time runs out. */
+	/** True from the start of a round, round 1 from the first frame of play, until it finishes or time runs out. */
 	UFUNCTION(BlueprintPure, Category = "Trial")
 	bool IsRunning() const;
 
@@ -96,7 +96,7 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 
 protected:
-	/** Finds the champion, makes both logs, binds the keys, and starts round 1. */
+	/** Finds the champion, makes both logs, binds the keys, and starts round 1 on the next frame. */
 	virtual void BeginPlay() override;
 
 	/** Clears the round timer. */

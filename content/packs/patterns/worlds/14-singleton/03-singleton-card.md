@@ -14,8 +14,8 @@ concepts:
   - Singleton makes a class guarantee there is only one of it and lets any code reach that one through the class
   - It bundles two needs, one instance and access from anywhere, and most code only has one of them
   - Unreal replaces it with subsystems whose owner and lifetime the engine manages, found through that owner
-  - When only one must exist, check it within the right scope, such as one per world, and give it no global access
-  - Choose the owner by how long the thing must live, and prefer one well-known owner to many globals
+  - When only one must exist, enforce it where the instance comes into being, and give it no global access
+  - Choose the owner by how long the thing must live, and let owners the game already has hold the few single things
 ---
 
 # Predict
@@ -48,13 +48,13 @@ The lap board's static `Get` from the first quest is the **Singleton** pattern: 
 - `UWorldSubsystem`: one per world, gone with the level; the standings of the race in this level.
 - `ULocalPlayerSubsystem`: one per local player, so split screen gets one each; a player's own settings.
 
-Each is found with `GetSubsystem<T>()` on its owner: the world, the game instance, the local player. The engine also has a few well-known owners that already exist once per game or per world: the game instance, the game mode, the game state, and each player controller. The engine keeps some true globals of its own, such as `GEngine` and `FModuleManager`, at the engine layer. Game code has no reason to add to them.
+Each is found through its owner: `GetSubsystem<T>()` on the world, the game instance, or the local player, and `GEngine->GetEngineSubsystem<T>()` for the engine. The engine also has a few well-known owners that already exist once per game or per world: the game instance, the game mode, the game state, and each player controller. The engine keeps some true globals of its own, such as `GEngine` and `FModuleManager`, at the engine layer. Game code has no reason to add to them.
 
 **When only one is a rule.** Some things must be one of a kind: one set of start lights on a track, one coordinator for the save files. Enforce that rule where the instance comes into being, and still give it no global access: whoever owns the one instance hands it to the code that needs it.
 
 **Lazy or made on time.** The classic form makes the instance the first time anyone asks. A subsystem is made when its owner is made, and its `Initialize` runs then, so heavy setup happens at a moment the game chooses, such as a level load.
 
-**A function library is more honest for helpers.** Functions that keep no state, such as converting a lap time to text, need no object at all. A `UBlueprintFunctionLibrary` or plain functions in a namespace say exactly that.
+**Helpers need a function library, not an instance.** Functions that keep no state, such as converting a lap time to text, need no object at all. A `UBlueprintFunctionLibrary` or plain functions in a namespace say exactly that.
 
 # Example
 

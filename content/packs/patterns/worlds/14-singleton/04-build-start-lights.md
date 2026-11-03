@@ -7,7 +7,7 @@ scaffold: stub
 difficulty: 3
 patterns: [singleton]
 skills: [singleton, lifecycle]
-terms: [beginplay, endplay, tactoriterator, world, play-in-editor, static-variable]
+terms: [beginplay, endplay, destroy, world, tick, deltatime]
 prerequisites: [p14-singleton-card]
 xp: 110
 estimatedMinutes: 30
@@ -15,7 +15,7 @@ concepts:
   - Only one set of start lights may run on a track, and a second set placed by mistake must stand down where everyone can see it
   - The rule is checked when the lights begin play, and the running set gives way when it ends play
   - A duplicate stays a duplicate; it does not take over later
-  - The rule holds for each track on its own, and nothing about it is reachable from outside the lights
+  - The rule is kept inside the lights, and nothing about it is reachable from outside them
   - The countdown, given, works only on the running set
 ---
 
@@ -31,7 +31,7 @@ Write the obvious version first and run the tests. One of them fails on purpose 
 
 ## See it in the editor
 
-Place a `DojoP14StartLights` and give it a Static Mesh component in the Details panel (a sphere is enough) so you can see it. Place a second one beside it, with a sphere of its own. In the Level Blueprint, on Begin Play, call Begin Countdown on both and print the two results, then after a Delay of 4 seconds print Is Green on both. Press Play: one sphere is gone, the prints say true and false, then true and false. In the Play options, set Number of Players to 2 and play again: each player's window shows the same, one set of lights per track.
+Place a `DojoP14StartLights` and give it a Static Mesh component in the Details panel (a sphere is enough) so you can see it. Place a second one beside it, with a sphere of its own. In the Level Blueprint, on Begin Play, call Begin Countdown on both and print the two results, then after a Delay of 4 seconds print Is Green on both. Press Play: one sphere is gone, the prints say true and false, then true and false.
 
 # Files
 
@@ -297,34 +297,33 @@ bool FDojo_P14_StartLights_CountdownTakesItsTime::RunTest(const FString& Paramet
 
 - The first set of lights to begin play in a world runs, and every set that begins play there while it runs is a hidden duplicate that refuses a countdown.
 - When the running set ends play it stops running, so a set that begins play later in that world can run; a duplicate never takes over.
-- Two worlds open at once each have their own running set, and neither affects the other.
+- A duplicate stays hidden and refuses a countdown for as long as it exists.
 - The rule is enforced inside the lights, and nothing gives other code access to it from outside.
 - Running lights count down for their CountdownSeconds and turn green; a new countdown turns them red again.
 - The lights depend only on their own world; no other class knows about the rule.
 
 # Alternative
 
+The rule is one set per track, and a track is a world, which is why the lights ask their own world instead of keeping anything static: a static is one for the whole program, so with two players in Play In Editor, or two tracks open at once, the second world would find the first world's lights counted and get none of its own. In the editor, set Number of Players to 2 in the Play options and play: each player's window shows one set of lights.
+
 A world subsystem could hold the one running set: lights claim it in `BeginPlay` and release it in `EndPlay`, and the subsystem refuses a second claim. That is the better home when other code needs to find the running lights, because they can ask the subsystem instead of searching. It is one more class for a rule only the lights care about, and it is easy to drift into giving the subsystem everything else about the race. Searching the world at `BeginPlay` costs a pass over the lights in the level, once per set, which is nothing for a handful of actors. An `ensure` or `check` on a duplicate is a third choice: loud in development, but a designer's mistake should not stop the game.
 
 # Parsons
 
 ```yaml
-- id: begin-play
-  prompt: Put BeginPlay in order. A duplicate is marked before it hides.
+- id: countdown-tick
+  prompt: Put the countdown's Tick in order. The lights stop counting before they turn green.
   lines:
-    - "void ADojoP14StartLights::BeginPlay()"
+    - "void ADojoP14StartLights::Tick(float DeltaSeconds)"
     - "{"
-    - "	Super::BeginPlay();"
-    - "	for (TActorIterator<ADojoP14StartLights> Other(GetWorld()); Other; ++Other)"
-    - "	{"
-    - "		if (*Other == this || !Other->IsRunning()) continue;"
-    - "		bDuplicate = true;"
-    - "		SetActorHiddenInGame(true);"
-    - "		return;"
-    - "	}"
-    - "	bRunning = true;"
+    - "	Super::Tick(DeltaSeconds);"
+    - "	if (!bCounting) return;"
+    - "	CountedSeconds += DeltaSeconds;"
+    - "	if (CountedSeconds < CountdownSeconds) return;"
+    - "	bCounting = false;"
+    - "	bGreen = true;"
     - "}"
   distractors:
-    - line: "	for (TActorIterator<ADojoP14StartLights> Other(GEngine->GetWorldContexts()[0].World()); Other; ++Other)"
-      mistake: The first world context is whichever world the engine listed first, often the editor's own world, not the world these lights stand in; ask GetWorld() for the lights' own track.
+    - line: "	CountedSeconds += GetWorld()->GetTimeSeconds();"
+      mistake: GetTimeSeconds is the time since the world began play, not the length of this frame, so the countdown would add the whole elapsed time every frame and turn green almost at once; add DeltaSeconds.
 ```
