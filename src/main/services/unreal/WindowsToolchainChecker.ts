@@ -16,8 +16,8 @@ const REQUIRED_COMPONENTS = ["Microsoft.VisualStudio.Workload.NativeGame", "Micr
 const MINIMUM_MAJOR = 17;
 const MINIMUM_MINOR = 14;
 
-/** The oldest Windows SDK the toolchain check accepts (A1315). */
-const MINIMUM_WINDOWS_SDK = "10.0.22621.0";
+/** The oldest Windows SDK UBT accepts: `MinVersion` in `Engine/Config/Windows/Windows_SDK.json` of UE 5.6 to 5.8 (A1315). */
+const MINIMUM_WINDOWS_SDK = "10.0.19041.0";
 
 /** One Visual Studio install as vswhere's JSON describes it. */
 interface VisualStudioInstance
@@ -27,7 +27,7 @@ interface VisualStudioInstance
 	displayVersion: string;
 }
 
-/** ToolchainChecker for Windows. Asks vswhere for an install with the workload; when none has it, asks again without the filter to tell "no Visual Studio" from "no workload". With Visual Studio found, also needs a Windows SDK of 10.0.22621.0 or newer. */
+/** ToolchainChecker for Windows. Asks vswhere for an install with the workload; when none has it, asks again without the filter to tell "no Visual Studio" from "no workload". With Visual Studio found, also needs a Windows SDK of 10.0.19041.0 or newer. */
 export class WindowsToolchainChecker implements ToolchainChecker
 {
 	private readonly commandRunner: CommandRunner;

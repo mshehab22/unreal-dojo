@@ -1,15 +1,20 @@
 // Picks the Windows or macOS objects from process.platform. The only place in the app that branches on the platform for Unreal (D16).
 import { spawn } from "node:child_process";
 
+import { ClangSnippetSyntaxChecker } from "./ClangSnippetSyntaxChecker";
 import type { CommandRunner } from "./CommandRunner";
 import type { EngineRegistry } from "./EngineRegistry";
 import type { FileSystemReader } from "./FileSystemReader";
 import { MacPlatformPaths } from "./MacPlatformPaths";
 import { MacToolchainChecker } from "./MacToolchainChecker";
+import { MsvcCompilerLocator } from "./MsvcCompilerLocator";
+import { MsvcSnippetSyntaxChecker } from "./MsvcSnippetSyntaxChecker";
 import { NodeFileSystemReader } from "./NodeFileSystemReader";
 import type { PlatformPaths } from "./PlatformPaths";
 import { PosixProcessTreeKiller } from "./PosixProcessTreeKiller";
 import type { ProcessTreeKiller } from "./ProcessTreeKiller";
+import type { SandboxFileSystem } from "./SandboxFileSystem";
+import type { SnippetSyntaxChecker } from "./SnippetSyntaxChecker";
 import type { ToolchainChecker } from "./ToolchainChecker";
 import { WindowsEngineRegistry } from "./WindowsEngineRegistry";
 import { WindowsPlatformPaths } from "./WindowsPlatformPaths";
@@ -31,6 +36,9 @@ export interface UnrealPlatform
 
 	/** Runs short commands (toolchain queries, the snippet syntax check). */
 	commandRunner: CommandRunner;
+
+	/** Makes the scratch buffer syntax check over the sandbox's file system: clang on macOS (A403), cl.exe on Windows (A1310). */
+	createSnippetChecker(fileSystem: SandboxFileSystem): SnippetSyntaxChecker;
 }
 
 /** What the factory reads from the running process. Passed in so tests can ask for either platform. */
@@ -69,17 +77,21 @@ export function createUnrealPlatform(inputs: UnrealPlatformInputs): UnrealPlatfo
 			engineRegistry: new WindowsEngineRegistry(commandRunner),
 			processTreeKiller: createProcessTreeKiller(platform),
 			commandRunner,
+			createSnippetChecker: (fileSystem) => new MsvcSnippetSyntaxChecker(paths, fileSystem, commandRunner, new MsvcCompilerLocator(commandRunner, fileSystem, programFilesX86)),
 		};
 	}
 
 	if (platform === "darwin")
 	{
+		const paths = new MacPlatformPaths(homeFolder);
+
 		return {
-			paths: new MacPlatformPaths(homeFolder),
+			paths,
 			toolchainChecker: new MacToolchainChecker(commandRunner),
 			engineRegistry: null,
 			processTreeKiller: createProcessTreeKiller(platform),
 			commandRunner,
+			createSnippetChecker: (fileSystem) => new ClangSnippetSyntaxChecker(paths, fileSystem, commandRunner),
 		};
 	}
 

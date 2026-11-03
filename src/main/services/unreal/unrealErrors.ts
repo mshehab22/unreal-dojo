@@ -71,7 +71,7 @@ export function windowsSdkMissing(minimumVersion: string, newestFound: string | 
 		message: newestFound
 			? `The newest Windows SDK on this computer is ${newestFound}, which is older than Unreal needs (${minimumVersion} or newer).`
 			: `No Windows SDK is installed. Unreal needs one (${minimumVersion} or newer) to compile C++ on Windows.`,
-		suggestedAction: `Open the Visual Studio Installer, choose Modify, open Individual components, tick a Windows 11 SDK (${minimumVersion} or newer), and install.`,
+		suggestedAction: "Open the Visual Studio Installer, choose Modify, open Individual components, tick the newest Windows 11 SDK listed, and install.",
 	};
 }
 

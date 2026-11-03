@@ -135,7 +135,19 @@ export function parseSnippetDiagnostics(compilerOutput: string, snippetFile: str
 
 	flush();
 
-	return diagnostics.sort((left, right) => left.line - right.line || (left.column ?? 0) - (right.column ?? 0));
+	// MSVC repeats a template error for each column of the same header line; the learner needs it once.
+	const seen = new Set<string>();
+	const unique = diagnostics.filter((diagnostic) =>
+	{
+		const key = `${diagnostic.line}:${diagnostic.column ?? ""}:${diagnostic.severity}:${diagnostic.message}`;
+		if (seen.has(key)) return false;
+
+		seen.add(key);
+
+		return true;
+	});
+
+	return unique.sort((left, right) => left.line - right.line || (left.column ?? 0) - (right.column ?? 0));
 }
 
 /** The last part of a path, with either separator. */
