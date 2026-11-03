@@ -39,7 +39,7 @@ This is the last piece of the Vault Checkpoint boss.
 
 ## See it in the editor
 
-Place a `DojoS3Door` and set its Saveable's Save Id to `Door1`. In the level Blueprint, get the save subsystem with Get Dojo S3 Save System; on the 1 key call Toggle on the door, on the 2 key Save To Slot with `Gate`, and on the 3 key Load From Slot with `Gate`. Press Play, press 1 to open the door, 2 to save, and stop. Play again and press 3: the door swings open, the way it was when you saved.
+Place a `DojoS3Door` and set its Saveable's Save Id to `Door1`. In the level Blueprint, get the save subsystem with Get Dojo S3 Save System; on the 1 key call Toggle on the door, on the 2 key Save To Slot with `Gate`, and on the 3 key Load From Slot with `Gate`. Also print Get Panel Yaw after the load. Press Play, press 1 to open the door, 2 to save, and stop. Play again and press 3: it prints 90, the way the door was when you saved. To see the swing itself, make a Blueprint child `BP_Door` of `DojoS3Door`, add a Cube under Panel offset about 50 along Y, and place that instead.
 
 # Files
 
@@ -247,17 +247,17 @@ The door could skip the flag and save the panel's rotation itself, as a `UPROPER
 # Parsons
 
 ```yaml
-- id: door-constructor
-  prompt: Put the door's constructor body in order.
+- id: door-set-open
+  prompt: Put SetOpen in order, using the names from the reference.
   lines:
-    - "PrimaryActorTick.bCanEverTick = false;"
-    - "RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT(\"Frame\"));"
-    - "Panel = CreateDefaultSubobject<USceneComponent>(TEXT(\"Panel\"));"
-    - "Panel->SetupAttachment(RootComponent);"
-    - "Saveable = CreateDefaultSubobject<UDojoS3SaveableComponent>(TEXT(\"Saveable\"));"
+    - "void ADojoS3Door::SetOpen(bool bNewOpen)"
+    - "{"
+    - "	bOpen = bNewOpen;"
+    - "	ApplyPanel();"
+    - "}"
   distractors:
-    - line: "Panel->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);"
-      mistake: AttachToComponent is for attaching at runtime; inside a constructor a default subobject is attached with SetupAttachment.
-    - line: "Saveable = NewObject<UDojoS3SaveableComponent>(this);"
-      mistake: A constructor makes its parts with CreateDefaultSubobject so they belong to the class defaults and every placed copy; NewObject is for runtime.
+    - line: "	bOpen = !bOpen;"
+      mistake: That flips the state instead of setting it, so Open on an open door would close it.
+    - line: "	Panel->SetWorldRotation(FRotator(0.f, 90.f, 0.f));"
+      mistake: World rotation ignores how the door itself is turned, and the yaw must follow the state; the panel's relative rotation is set from bOpen in one place.
 ```

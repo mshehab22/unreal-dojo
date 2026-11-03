@@ -47,7 +47,7 @@ The same object can also go to bytes in memory with `SaveGameToMemory` and back 
 
 Saving to a slot and loading from it happen at once on the calling thread. For big saves, `AsyncSaveGameToSlot` and `AsyncLoadGameFromSlot` do the file work on another thread and call a delegate when they finish, so the frame does not hitch; the world in this pack uses the plain calls so tests can check the result on the same line.
 
-A save game holds data, not live actors. A pointer property is saved as the object's path, and reading it back only finds an object with that exact path that is already loaded; an actor spawned during play can get another name next session, and a level that is not open yet has nothing to find. Store an id you set yourself, find the actor by it, and save the values to put back.
+A save game holds data, not live actors. A pointer property is saved as the object's path, and reading it back looks the object up, or loads it, by that path; an actor spawned during play can get another name next session, and a placed actor can come back from a level package that is not the one being played. Store an id you set yourself, find the actor by it, and save the values to put back.
 
 # Example
 
@@ -121,7 +121,7 @@ if (UDojoExVaultSave* Loaded = Cast<UDojoExVaultSave>(UGameplayStatics::LoadGame
 - id: explain-save-game
   type: explain-in-one-sentence
   prompt: In one sentence, say what a USaveGame is and why it holds ids instead of pointers to actors.
-  modelAnswer: A USaveGame is a data object whose properties are written to a slot and read back later, and it holds ids because a saved pointer only finds an object with the same path that is already loaded, while an id you set finds the actor again in any session.
+  modelAnswer: A USaveGame is a data object whose properties are written to a slot and read back later, and it holds ids because a saved pointer is only looked up by the object's path, which may name nothing or the wrong copy in a later session, while an id you set finds the actor in the level being played.
   rubric:
     - Says the save game is data written to and read from a slot
     - Says a saved pointer may find nothing in a later session, so ids you set are stored

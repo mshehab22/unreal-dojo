@@ -116,8 +116,11 @@ namespace DojoS3VaultTest
 
 		PlayToCheckpoint(Test, TestWorld, Director, Tag);
 
-		// After the checkpoint: two more coins, then a load that takes them back.
-		Steps(Director, 1, 2);
+		// After the checkpoint: Q in the first door's doorway does nothing, then two more coins, then a load that takes them back.
+		Steps(Director, 1, 1);
+		Director->PressDoor();
+		Test.TestTrue(Tag + TEXT("a door cannot be shut on the runner standing in it"), Director->GetDoors()[0]->IsOpen());
+		Steps(Director, 1, 1);
 		Director->PressTake();
 		Steps(Director, 1, 2);
 		Director->PressTake();
@@ -219,7 +222,7 @@ bool FDojo_S3_VaultCheckpoint_LoadInAFreshVault::RunTest(const FString& Paramete
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S3_VaultCheckpoint_NothingAfterTheFinale, "Dojo.S3.VaultCheckpoint.NothingAfterTheFinale", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** After the finale, steps, coins, doors, saves, and loads do nothing until R. */
+/** Steps stop at both ends of the vault, and after the finale steps, saves, and loads do nothing until R. */
 bool FDojo_S3_VaultCheckpoint_NothingAfterTheFinale::RunTest(const FString& Parameters)
 {
 	using namespace DojoS3VaultTest;
@@ -232,11 +235,18 @@ bool FDojo_S3_VaultCheckpoint_NothingAfterTheFinale::RunTest(const FString& Para
 		ADojoS3VaultDirector* Director = TestWorld.GetWorld()->SpawnActorDeferred<ADojoS3VaultDirector>(ADojoS3VaultDirector::StaticClass(), FTransform::Identity);
 		if (!TestNotNull(TEXT("Director spawned"), Director)) return false;
 
-		// One coin under the runner's feet and no doors, so one press ends the round.
+		// A vault 100 long with one coin under the runner's feet and no doors, so one press ends the round.
 		Director->SlotName = Slot;
 		Director->CoinSpots = { 0.f };
 		Director->DoorSpots = {};
+		Director->VaultLength = 100.f;
 		Director->FinishSpawning(FTransform::Identity);
+
+		Director->PressStep(-1);
+		TestEqual(TEXT("No step back past the near end"), Director->GetRunner()->GetSpot(), 0.f);
+		Steps(Director, 1, 2);
+		TestEqual(TEXT("No step past the far end"), Director->GetRunner()->GetSpot(), 100.f);
+		Director->PressStep(-1);
 
 		Director->PressTake();
 		TestFalse(TEXT("The single coin ends the round"), Director->IsRunning());
@@ -263,7 +273,9 @@ bool FDojo_S3_VaultCheckpoint_UnbindsWhenItLeaves::RunTest(const FString& Parame
 	using namespace DojoS3VaultTest;
 
 	const FString Slot = TEXT("DojoS3VaultUnbind");
+	const FString Missing = TEXT("DojoS3VaultNoSuchSlot");
 	UGameplayStatics::DeleteGameInSlot(Slot, 0);
+	UGameplayStatics::DeleteGameInSlot(Missing, 0);
 
 	FDojoTestWorld TestWorld;
 	ADojoS3VaultDirector* Director = MakeVault(TestWorld, Slot);
@@ -277,7 +289,7 @@ bool FDojo_S3_VaultCheckpoint_UnbindsWhenItLeaves::RunTest(const FString& Parame
 	// Saves and loads made by anyone else reach the board through the save system's events.
 	SaveSystem->SaveToSlot(Slot);
 	TestTrue(TEXT("A save made elsewhere shows on the board"), BoardOf(Director).EndsWith(TEXT("Checkpoint saved")));
-	SaveSystem->LoadFromSlot(TEXT("DojoS3VaultNoSuchSlot"));
+	SaveSystem->LoadFromSlot(Missing);
 	TestTrue(TEXT("A failed load made elsewhere shows on the board"), BoardOf(Director).EndsWith(TEXT("Checkpoint failed")));
 	UGameplayStatics::DeleteGameInSlot(Slot, 0);
 	TestTrue(TEXT("The director listens for saves"), SaveSystem->OnSaved.IsBound());

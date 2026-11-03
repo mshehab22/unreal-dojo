@@ -21,7 +21,7 @@ concepts:
 ```yaml
 id: predict
 type: multiple-choice
-prompt: "Guess, no penalty: a lantern has `UPROPERTY(SaveGame) bool bLit` and `UPROPERTY(EditAnywhere) FLinearColor Tint`. Code writes the lantern into bytes with an archive whose ArIsSaveGame flag is set, changes both values, and reads the bytes back. What comes back?"
+prompt: "Guess, no penalty: a lantern has `UPROPERTY(SaveGame) bool bLit` and `UPROPERTY(EditAnywhere) FLinearColor Tint`. While it is lit with a red tint, code writes the lantern into bytes with an archive whose ArIsSaveGame flag is set, changes both values, and reads the bytes back. What comes back?"
 choices:
   - Both values, because both are UPROPERTYs
   - Only bLit; Tint keeps the value it was changed to
@@ -39,7 +39,7 @@ Mark the properties that are progress with the `SaveGame` specifier: `UPROPERTY(
 
 To write an actor's marked properties into bytes:
 
-- `FMemoryWriter Writer(Bytes, true);` (header `Serialization/MemoryWriter.h`) appends whatever is written to it to a `TArray<uint8>`. The `true` marks it as a persistent archive.
+- `FMemoryWriter Writer(Bytes, true);` (header `Serialization/MemoryWriter.h`) writes into a `TArray<uint8>` from its start. The `true` marks it as a persistent archive.
 - `FObjectAndNameAsStringProxyArchive Archive(Writer, true);` (header `Serialization/ObjectAndNameAsStringProxyArchive.h`) wraps it so object references are written as the object's path and found again by that path when read. A plain memory archive cannot write object references at all; it stops on an assertion.
 - `Archive.ArIsSaveGame = true;` tells the property writer to skip every property that is not marked `SaveGame`.
 - `Archive.ArNoDelta = true;` makes it write every marked property. By default the writer skips a property whose value equals the class default, which keeps level files small; in a save that skip is a trap, because loading leaves a skipped property at whatever value the actor holds when it loads, not at the default.
@@ -99,7 +99,7 @@ void DojoExRestore(AActor* Actor, const TArray<uint8>& Bytes)
   explanation: Without ArIsSaveGame the archive writes every serializable property and ignores the SaveGame flag.
 - id: spot-reader-writer
   type: spot-the-bug
-  prompt: This should put a lantern's saved properties back from Bytes, but the lantern never changes and Bytes grows. Which line is wrong?
+  prompt: This should put a lantern's saved properties back from Bytes, but the lantern never changes, and the saved bytes now hold its current values. Which line is wrong?
   code: |
     void DojoExRestore(AActor* Lantern, TArray<uint8>& Bytes)
     {
@@ -110,7 +110,7 @@ void DojoExRestore(AActor* Actor, const TArray<uint8>& Bytes)
     }
   bugLine: 3
   fix: Read from the bytes with an FMemoryReader so Serialize loads the properties instead of writing them out again.
-  explanation: Serialize writes when its archive is saving and reads when it is loading; a writer appends the lantern's current values to the bytes.
+  explanation: Serialize writes when its archive is saving and reads when it is loading; a writer starts at the beginning of the array and overwrites the checkpoint with the lantern's current values.
 - id: why-proxy
   type: multiple-choice
   prompt: Why wrap the memory writer in FObjectAndNameAsStringProxyArchive instead of serializing straight into it?

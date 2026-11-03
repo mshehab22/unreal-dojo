@@ -7,7 +7,7 @@
 
 class UDojoS3SaveableComponent;
 
-/** A lantern used to try saving: two properties are marked SaveGame and one is not, and it counts how often it was told it was restored. */
+/** A lantern used to try saving: three properties are marked SaveGame and one is not, and it counts how often it was told it was restored. */
 UCLASS()
 class ADojoS3Lantern : public AActor, public IDojoS3Restorable
 {
@@ -28,6 +28,10 @@ public:
 	/** Oil left; saved. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Lantern")
 	int32 Oil = 10;
+
+	/** The actor that tends this lantern; saved as a reference, which only the proxy archive can write. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Lantern")
+	TObjectPtr<AActor> Keeper;
 
 	/** The glass color; a look, not progress, so not saved. */
 	UPROPERTY(EditAnywhere, Category = "Lantern")

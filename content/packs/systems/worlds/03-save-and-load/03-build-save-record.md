@@ -65,7 +65,7 @@ class UDojoS3SaveRecord : public USaveGame // @explain: Deriving from USaveGame 
 public:
 	/** Each saveable actor's state, by its save id. */
 	UPROPERTY()
-	TMap<FName, FDojoS3ActorRecord> Actors; // @explain: States are keyed by a name the level designer sets, because a saved pointer only finds an actor whose path is the same and that is already loaded, while the same name always finds the same actor.
+	TMap<FName, FDojoS3ActorRecord> Actors; // @explain: States are keyed by a name the level designer sets, because a saved pointer is looked up by the actor's path, which may name nothing or the wrong copy in a later session, while the same name finds the same actor in the level being played.
 
 	/** Save ids of actors that were removed, such as coins that were picked up. */
 	UPROPERTY()

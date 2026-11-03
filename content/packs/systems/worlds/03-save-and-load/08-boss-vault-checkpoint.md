@@ -124,4 +124,4 @@ Feel: tune the step length and the two reaches until a clean run without loads t
 - Steps, coins, and doors follow the fixed numbers, each can do nothing, and F9 with no checkpoint changes nothing.
 - The board changes only after actions and on the save system's events, and nothing runs in Tick; every binding made in BeginPlay is removed in EndPlay.
 - R starts a fresh round only after the finale, throws the checkpoint away, and the keys do nothing outside a round.
-- A second round plays exactly like the first; the submission gives the layout with one sentence on why.
+- A second round plays exactly like the first; the submission gives the tuned numbers with one sentence on why.

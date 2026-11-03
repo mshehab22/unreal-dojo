@@ -28,7 +28,7 @@ The constructor, the restorable interface, and a test lantern are written for yo
 1. `CaptureState`: write the owner's SaveGame properties into the bytes it returns, and nothing else of the owner.
 2. `RestoreState`: refuse empty bytes or a missing owner. Otherwise read the bytes back into the owner's SaveGame properties, then, if the owner implements `UDojoS3Restorable`, call its `OnRestoredFromSave` through the interface. Return whether the bytes were read.
 
-`ADojoS3Lantern` has two SaveGame properties (`bLit`, `Oil`), one that is not (`Tint`), and counts how often it hears `OnRestoredFromSave`. The tests use it.
+`ADojoS3Lantern` has three SaveGame properties (`bLit`, `Oil`, and `Keeper`, a reference to another actor), one that is not (`Tint`), and counts how often it hears `OnRestoredFromSave`. The tests use it.
 
 A first version could copy each field into a struct by hand: `State.bLit = Lantern->bLit;` and back. That works for one class and has to be written again for every other one; the archive reads the SaveGame marks through reflection, so the same two functions serve a lantern, a door, and anything later.
 
@@ -154,7 +154,7 @@ public:
 
 class UDojoS3SaveableComponent;
 
-/** A lantern used to try saving: two properties are marked SaveGame and one is not, and it counts how often it was told it was restored. */
+/** A lantern used to try saving: three properties are marked SaveGame and one is not, and it counts how often it was told it was restored. */
 UCLASS()
 class ADojoS3Lantern : public AActor, public IDojoS3Restorable
 {
@@ -175,6 +175,10 @@ public:
 	/** Oil left; saved. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Lantern")
 	int32 Oil = 10;
+
+	/** The actor that tends this lantern; saved as a reference, which only the proxy archive can write. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Lantern")
+	TObjectPtr<AActor> Keeper;
 
 	/** The glass color; a look, not progress, so not saved. */
 	UPROPERTY(EditAnywhere, Category = "Lantern")
@@ -237,8 +241,10 @@ bool FDojo_S3_Saveable_OnlySaveGameTravels::RunTest(const FString& Parameters)
 	ADojoS3Lantern* Fresh = TestWorld.SpawnActor<ADojoS3Lantern>();
 	if (!TestNotNull(TEXT("Lanterns spawned"), Source) || !TestNotNull(TEXT("Second lantern spawned"), Fresh)) return false;
 
+	ADojoS3Lantern* KeeperActor = TestWorld.SpawnActor<ADojoS3Lantern>();
 	Source->bLit = true;
 	Source->Oil = 4;
+	Source->Keeper = KeeperActor;
 	Source->Tint = FLinearColor::Red;
 
 	const TArray<uint8> Bytes = Source->Saveable->CaptureState();
@@ -248,6 +254,7 @@ bool FDojo_S3_Saveable_OnlySaveGameTravels::RunTest(const FString& Parameters)
 	TestTrue(TEXT("The fresh lantern reads the bytes"), Fresh->Saveable->RestoreState(Bytes));
 	TestTrue(TEXT("Lit came back"), Fresh->bLit);
 	TestEqual(TEXT("Oil came back"), Fresh->Oil, 4);
+	TestTrue(TEXT("The saved reference finds the same keeper again"), Fresh->Keeper == KeeperActor);
 	TestTrue(TEXT("Tint is not saved, so the fresh lantern keeps its own"), Fresh->Tint.Equals(FLinearColor::White));
 	TestEqual(TEXT("The fresh lantern heard once that it was restored"), Fresh->RestoreCount, 1);
 	TestEqual(TEXT("When it heard, its oil was already back"), Fresh->OilWhenRestored, 4);
@@ -368,17 +375,18 @@ The owner could implement two functions of its own, `WriteState(FDojoS3State&)` 
 # Parsons
 
 ```yaml
-- id: saveable-capture
-  prompt: Put the writing part of CaptureState in order.
+- id: saveable-restore-tail
+  prompt: Put the end of RestoreState in order, after the archive is set up.
   lines:
-    - "FMemoryWriter Writer(Bytes, true);"
-    - "FObjectAndNameAsStringProxyArchive Archive(Writer, true);"
-    - "Archive.ArIsSaveGame = true;"
-    - "Archive.ArNoDelta = true;"
     - "Owner->Serialize(Archive);"
+    - "if (Owner->Implements<UDojoS3Restorable>())"
+    - "{"
+    - "	IDojoS3Restorable::Execute_OnRestoredFromSave(Owner);"
+    - "}"
+    - "return true;"
   distractors:
-    - line: "Owner->Serialize(Writer);"
-      mistake: Serializing into the plain writer skips the proxy; a plain memory archive cannot write the actor's object references and stops on an assertion, and the SaveGame flag set on the proxy is not used.
-    - line: "Archive.ArIsSaveGame = false;"
-      mistake: With the flag off the archive writes every serializable property of the actor, not only the ones marked SaveGame.
+    - line: "if (Owner->Implements<IDojoS3Restorable>())"
+      mistake: Implements takes the reflected U class of the interface, UDojoS3Restorable; the I class is the C++ side that holds the functions.
+    - line: "	Cast<IDojoS3Restorable>(Owner)->OnRestoredFromSave_Implementation();"
+      mistake: Calling the native version directly skips a Blueprint override of the event and crashes on an owner that does not implement it; Execute_ calls whichever version the owner has.
 ```
