@@ -205,7 +205,7 @@ namespace DojoP17RigTest
 		return Result;
 	}
 
-	/** Spawns a rig of six joints: Base (0), Platform (1) and Lantern (2) in a chain, a second root, Flag (3), with a Pennant (4) on it, and a Stray (5) whose parent index is not lower than its own. */
+	/** Spawns a rig of seven joints: Base (0), Platform (1) and Lantern (2) in a chain, a second root, Flag (3), with a Pennant (4) on it, a Stray (5) whose parent index is not lower than its own, and a root, Late (6), that Stray names. */
 	ADojoP17TowerRig* SpawnRig(FDojoTestWorld& TestWorld)
 	{
 		ADojoP17TowerRig* Rig = TestWorld.GetWorld()->SpawnActorDeferred<ADojoP17TowerRig>(ADojoP17TowerRig::StaticClass(), FTransform::Identity);
@@ -217,7 +217,8 @@ namespace DojoP17RigTest
 				MakeNode(TEXT("Lantern"), 1, FVector(0.f, 0.f, 100.f)),
 				MakeNode(TEXT("Flag"), INDEX_NONE, FVector(500.f, 0.f, 0.f)),
 				MakeNode(TEXT("Pennant"), 3, FVector(0.f, 0.f, 50.f)),
-				MakeNode(TEXT("Stray"), 7, FVector(7.f, 0.f, 0.f)),
+				MakeNode(TEXT("Stray"), 6, FVector(7.f, 0.f, 0.f)),
+				MakeNode(TEXT("Late"), INDEX_NONE, FVector(100.f, 0.f, 0.f)),
 			};
 			Rig->FinishSpawning(FTransform::Identity);
 		}
@@ -242,7 +243,7 @@ bool FDojo_P17_TowerRig_PositionsAddUp::RunTest(const FString& Parameters)
 	TestEqual(TEXT("The lantern is 100 above the platform"), Rig->GetPosition(2), FVector(0.f, 0.f, 400.f));
 	TestEqual(TEXT("The flag is a second root"), Rig->GetPosition(3), FVector(500.f, 0.f, 0.f));
 	TestEqual(TEXT("The pennant is 50 above the flag"), Rig->GetPosition(4), FVector(500.f, 0.f, 50.f));
-	TestEqual(TEXT("A parent index that is not lower than the joint's own means no parent"), Rig->GetPosition(5), FVector(7.f, 0.f, 0.f));
+	TestEqual(TEXT("A parent index that is not lower than the joint's own means no parent, even when that joint exists"), Rig->GetPosition(5), FVector(7.f, 0.f, 0.f));
 
 	TestEqual(TEXT("A joint that does not exist is at zero"), Rig->GetPosition(9), FVector::ZeroVector);
 	TestFalse(TEXT("A joint that does not exist cannot be moved"), Rig->SetLocalOffset(9, FVector(1.f, 1.f, 1.f)));

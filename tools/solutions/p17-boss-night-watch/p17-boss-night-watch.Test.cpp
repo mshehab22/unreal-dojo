@@ -58,6 +58,8 @@ bool FDojo_P17_NightWatch_TwoRoundsReadOftenRecomputeRarely::RunTest(const FStri
 	TestEqual(TEXT("The rig has three joints"), Rig->Nodes.Num(), 3);
 
 	const float Start = TestWorld.GetWorld()->GetTimeSeconds();
+	TickUntil(TestWorld, Start + 2.f);
+	TestTrue(TEXT("No gust has moved the lantern by the check at 1.5"), LabelContains(Watch, TEXT("Lantern 0,0,400")));
 	TickUntil(TestWorld, Start + 3.f);
 	TestTrue(TEXT("The first gust at 2 seconds has moved the lantern 20 along by the check at 2.5"), LabelContains(Watch, TEXT("Lantern 20,0,400")));
 	Watch->PressArmour();
