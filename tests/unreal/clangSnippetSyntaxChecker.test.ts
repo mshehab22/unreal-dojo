@@ -1,7 +1,8 @@
 // Checks the macOS snippet check: the response file, line-preserving rewrites, header errors mapped to snippet lines, exit codes, timeouts, and per-check files (A403, A410, A411).
 import { describe, expect, it } from "vitest";
 
-import { ClangSnippetSyntaxChecker, parseDiagnostics, prepareSnippet, resultOf, snippetResponseFile } from "../../src/main/services/unreal/ClangSnippetSyntaxChecker";
+import { ClangSnippetSyntaxChecker, parseDiagnostics, resultOf, snippetResponseFile } from "../../src/main/services/unreal/ClangSnippetSyntaxChecker";
+import { prepareSnippet } from "../../src/main/services/unreal/snippetSource";
 import type { CommandResult, CommandRunner } from "../../src/main/services/unreal/CommandRunner";
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
 import { FakeCommandRunner } from "./FakeCommandRunner";

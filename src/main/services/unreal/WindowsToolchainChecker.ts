@@ -5,6 +5,7 @@ import type { CommandRunner } from "./CommandRunner";
 import type { ToolchainChecker } from "./ToolchainChecker";
 import { toolchainCheckResult } from "./toolchainCheckResult";
 import { visualStudioMissing, visualStudioTooOld, visualStudioWorkloadMissing } from "./unrealErrors";
+import { vswhereLocation } from "./vswhereLocation";
 
 /** The "Game development with C++" workload and the MSVC x64 compiler component. */
 const REQUIRED_COMPONENTS = ["Microsoft.VisualStudio.Workload.NativeGame", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64"];
@@ -31,7 +32,7 @@ export class WindowsToolchainChecker implements ToolchainChecker
 	constructor(commandRunner: CommandRunner, programFilesX86: string | undefined)
 	{
 		this.commandRunner = commandRunner;
-		this.vswherePath = `${programFilesX86 ?? "C:\\Program Files (x86)"}\\Microsoft Visual Studio\\Installer\\vswhere.exe`;
+		this.vswherePath = vswhereLocation(programFilesX86);
 	}
 
 	/** Runs the vswhere checks. */

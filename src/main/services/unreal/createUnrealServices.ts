@@ -17,6 +17,8 @@ import { ClangSnippetSyntaxChecker } from "./ClangSnippetSyntaxChecker";
 import { EditorLauncher } from "./EditorLauncher";
 import { EditorService } from "./EditorService";
 import { McpEditorClient } from "./McpEditorClient";
+import { MsvcCompilerLocator } from "./MsvcCompilerLocator";
+import { MsvcSnippetSyntaxChecker } from "./MsvcSnippetSyntaxChecker";
 import { NodePortProbe } from "./NodePortProbe";
 import { FullBuildLedger } from "./FullBuildLedger";
 import { PrerequisiteFiller } from "./PrerequisiteFiller";
@@ -131,8 +133,8 @@ export function createUnrealServices(inputs: UnrealServiceInputs): UnrealService
 
 	const prerequisiteFiller = new PrerequisiteFiller(questFileWriter, new ReferenceSolutions(paths, fileSystem, inputs.solutionsFolder), (questId, files, replaceFolder) => buildLedger.recordSandboxWrite(questId, files, replaceFolder));
 
-	// Only the Mac check exists so far; Windows answers not-implemented (A402).
-	const snippetChecker = paths.buildPlatform === "Mac" ? new ClangSnippetSyntaxChecker(paths, fileSystem, commandRunner) : null;
+	// clang on the Mac (A403), cl.exe on Windows (A1310).
+	const snippetChecker = paths.buildPlatform === "Mac" ? new ClangSnippetSyntaxChecker(paths, fileSystem, commandRunner) : new MsvcSnippetSyntaxChecker(paths, fileSystem, commandRunner, new MsvcCompilerLocator(commandRunner, fileSystem, process.env["ProgramFiles(x86)"]));
 
 	const preflight = new RunPreflight({ settings: inputs.settings, paths, engineInspector: inputs.engineInspector, fileSystem });
 	const questRunService = new QuestRunService({ settings: inputs.settings, quests: inputs.quests, runnerFactory, prerequisiteFiller, sandboxService, snippetChecker, learner: inputs.learner, questFileWriter, buildLedger, failureExplainer, preflight });
