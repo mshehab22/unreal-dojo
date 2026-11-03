@@ -69,6 +69,8 @@ Pack 4, Systems Lab: the 8 systems specced in the GameDev.tv research section 6,
 
 Pack 4 World 2 is the ability system (`02-ability-system`, world id `ability-system`, A1350); the research's next system, the Quest System, is Pack 3 World 6's boss. A world that needs gameplay tags declares them as native tags in a namespaced header (`UE_DECLARE_GAMEPLAY_TAG_EXTERN` inside `namespace DojoS2Tags`) and defines them in one `.cpp` with `UE_DEFINE_GAMEPLAY_TAG_COMMENT`, so no sandbox config is needed (A1353); tag names start with the world prefix (`DojoS2.State.Rooted`) because every quest compiles into one module. A world may add concept quests when it is the first to teach an Unreal feature (A1351).
 
+Pack 4 World 3 is save and load (`03-save-and-load`, world id `save-and-load`, A1420). Tests that write save slots use a slot name unique to the test and delete it at the start and the end, because every test in the sandbox shares one `Saved/SaveGames` folder.
+
 ## Done criteria per world
 
 Verifier green with `--engine` on the Windows desktop (or logged as unverified on the Mac); a fresh reviewer agent spot-check for copied wording, solution leaks, UE API accuracy, and the fade ladder; an `iterations.md` entry listing the quests and their observables.

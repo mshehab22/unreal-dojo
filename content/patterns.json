@@ -389,7 +389,8 @@
       "p1-bounty-board",
       "p1-tutorial-sign",
       "s2-energy",
-      "s2-ability-component"
+      "s2-ability-component",
+      "s3-save-system"
     ],
     "recall": [
       {
@@ -435,6 +436,19 @@
           "AddUniqueDynamic()"
         ],
         "explanation": "AddDynamic would add a second copy of the same binding, so the handler would run twice per broadcast; the unique form checks the list first."
+      },
+      {
+        "id": "observer-recall-5",
+        "type": "multiple-choice",
+        "prompt": "A save system announces OnLoaded. Several saveable actors are restored during the load. When should the announcement go out?",
+        "choices": [
+          "Before the first actor is restored, so listeners can prepare",
+          "Once per restored actor",
+          "Once, after every actor is restored",
+          "Only when a listener asks for it"
+        ],
+        "answerIndex": 2,
+        "explanation": "A listener that reads the level when it hears OnLoaded must find it fully restored, so the sender announces once, after the work is done."
       }
     ],
     "scenarios": [
@@ -1065,7 +1079,9 @@
       "p9-arena-parts",
       "p9-sprint-parts",
       "s2-energy",
-      "s2-ability-component"
+      "s2-ability-component",
+      "s3-saveable",
+      "s3-door"
     ],
     "recall": [
       {
@@ -1198,6 +1214,33 @@
           }
         ],
         "explanation": "A stamina part, and separate sprint and health parts, can be added to any of them in whatever mix each needs."
+      },
+      {
+        "id": "component-scenario-4",
+        "type": "which-pattern",
+        "prompt": "Doors, coins, lanterns, and the player must all be saved and loaded, and designers keep adding new kinds of actor that should be saved too, without the saving code changing. Which pattern gives every kind the same way in?",
+        "choices": [
+          "component",
+          "type-object",
+          "subclass-sandbox",
+          "observer"
+        ],
+        "answer": "component",
+        "distractorNotes": [
+          {
+            "choice": "type-object",
+            "why": "Type Object shares data between instances of one kind; the need here is one capability added to many unrelated actor classes."
+          },
+          {
+            "choice": "subclass-sandbox",
+            "why": "A shared saveable base class would force doors, coins, and the player into one hierarchy they do not otherwise share."
+          },
+          {
+            "choice": "observer",
+            "why": "The save system can announce saves and loads to listeners, but that does not give each actor a way to be saved."
+          }
+        ],
+        "explanation": "A saveable component that any actor can carry turns saving into a part, so a new kind only adds the part and marks its saved properties."
       }
     ]
   },
