@@ -1,4 +1,4 @@
-// Checks that quitting waits for pending saves, for at most the limit, and holds only once.
+// Checks that quitting waits for pending saves before each quit attempt, for at most the limit, with no second wait while one runs.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { holdQuitForSaves, QUIT_SAVE_WAIT_MS, type Defer, type SaveQueue } from "../../src/main/lifecycle/holdQuitForSaves";
@@ -114,7 +114,7 @@ describe("holdQuitForSaves", () =>
 		expect(app.quitCount).toBe(1);
 	});
 
-	it("holds only once: further quit attempts while waiting add no second wait or quit", async () =>
+	it("attempts made while waiting add no second wait or quit, and its own quit is let through", async () =>
 	{
 		const { app, fire } = createApp();
 		const { saves, finish } = createBusySaves();
@@ -132,6 +132,24 @@ describe("holdQuitForSaves", () =>
 		expect(app.quitCount).toBe(1);
 		expect(fire()).toBe(false);
 		expect(saves.waits).toHaveLength(1);
+	});
+
+	it("holds the next attempt again after its own quit was let through and another step held it (A1460)", async () =>
+	{
+		const { app, fire } = createApp();
+		const { saves, finish } = createBusySaves();
+		const { defer, runLater } = createDeferrer();
+		holdQuitForSaves(app, saves, QUIT_SAVE_WAIT_MS, defer);
+
+		fire();
+		finish();
+		await vi.advanceTimersByTimeAsync(0);
+		runLater();
+
+		// This fake's quit does not fire before-quit, so the let-through pass is replayed by hand: another step held it.
+		expect(fire()).toBe(false);
+		expect(fire()).toBe(true);
+		expect(saves.waits).toHaveLength(2);
 	});
 
 	it("quits when the save queue itself fails", async () =>

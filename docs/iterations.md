@@ -2124,3 +2124,7 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Proof: `tests/window/quitSequence.test.ts` drives the save hold and the Unreal stop together on a fake app whose quit really fires `before-quit` to both: a change made while the editor closes is saved before exit (this test fails on the old code); a quit with nothing pending exits on the next turn; a save queued at quit is awaited; a hung save still exits within the Unreal stop plus 3 s, with and without the editor; pressing quit again adds no wait. The existing `holdQuitForSaves` and `stopEngineWorkBeforeQuit` tests still pass.
 - Decisions made: A1460.
 - Not done: macOS (the deferred quit's behaviour on Cmd+Q is still the unverified A1211 item); the real app's quit was not run by hand (A77: no launching the app).
+
+### Fix round 1
+- What the reviewer asked for: the main test proved the fix only through a count of save waits (the change it made landed long before the editor closed, so the old code saved it too); two test names and a comment in `src/main/index.ts` still said quit waits once; the no-editor bound for a hung save was loose enough for the old code.
+- What changed: the test now makes its change 100 ms before the editor closes and checks what was saved at the very moment the app exits; on the old code it fails with nothing saved. A new unit case shows the attempt after the helper's own let-through quit is held again. Names, the file comment, the `index.ts` comment, and the bound are corrected.

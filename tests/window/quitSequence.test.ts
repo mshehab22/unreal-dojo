@@ -12,11 +12,12 @@ const EDITOR_CLOSE_MS = 4000;
 /** Fake timers run each deferred quit (`setImmediate`) a millisecond later; a few of them may stack up in one sequence. */
 const DEFER_SLACK_MS = 5;
 
-/** A stand-in for Electron's app: every listener sees each before-quit in order, and the app exits when none of them held it. */
-function createApp(): { app: QuittingApp; exitedAt: () => number | null }
+/** A stand-in for Electron's app: every listener sees each before-quit in order, and the app exits when none of them held it. `savedAtExit` records what `savedNow` answered at that moment. */
+function createApp(savedNow: () => number = () => 0): { app: QuittingApp; exitedAt: () => number | null; savedAtExit: () => number | null }
 {
 	const listeners: ((event: { preventDefault(): void }) => void)[] = [];
 	let exitedAt: number | null = null;
+	let savedAtExit: number | null = null;
 
 	const app: QuittingApp = {
 		on: (_eventName, listener) => void listeners.push(listener),
@@ -27,11 +28,14 @@ function createApp(): { app: QuittingApp; exitedAt: () => number | null }
 			let held = false;
 			for (const listener of listeners) listener({ preventDefault: () => (held = true) });
 
-			if (!held) exitedAt = Date.now();
+			if (held) return;
+
+			exitedAt = Date.now();
+			savedAtExit = savedNow();
 		},
 	};
 
-	return { app, exitedAt: () => exitedAt };
+	return { app, exitedAt: () => exitedAt, savedAtExit: () => savedAtExit };
 }
 
 /** A save queue like ProgressService's: `save` queues a write that lands after `writeMs`, and `whenIdle` waits for every queued write or the limit. A hung queue never lands. */
@@ -98,24 +102,25 @@ describe("the quit sequence: saves, then the Unreal stop", () =>
 
 	it("saves a change made while the editor was closing, before the app exits (A1460)", async () =>
 	{
-		const { app, exitedAt } = createApp();
 		const saves = createSaves(200);
+		const { app, exitedAt, savedAtExit } = createApp(() => saves.saved);
 		holdQuitForSaves(app, saves);
 		stopEngineWorkBeforeQuit(app, createEngineWork(true));
 		const start = Date.now();
 
 		app.quit();
 
-		// The first save wait ends at once; the editor is still closing and the window is open. The learner changes something.
-		await vi.advanceTimersByTimeAsync(1000);
+		// The first save wait ended at once; the editor is still closing and the window is open. Just before it closes the learner changes something,
+		// so the write lands after the Unreal stop has already quit again.
+		await vi.advanceTimersByTimeAsync(EDITOR_CLOSE_MS - 100);
 		expect(exitedAt()).toBeNull();
 		saves.save();
 
-		await vi.advanceTimersByTimeAsync(EDITOR_CLOSE_MS + QUIT_SAVE_WAIT_MS);
+		await vi.advanceTimersByTimeAsync(100 + 200 + DEFER_SLACK_MS);
 
-		expect(saves.saved).toBe(1);
 		expect(exitedAt()).not.toBeNull();
-		expect((exitedAt() ?? 0) - start).toBeLessThanOrEqual(EDITOR_CLOSE_MS + 200 + DEFER_SLACK_MS);
+		expect(savedAtExit()).toBe(1);
+		expect((exitedAt() ?? 0) - start).toBeLessThanOrEqual(EDITOR_CLOSE_MS + 100 + DEFER_SLACK_MS);
 		expect(saves.waits.length).toBeGreaterThanOrEqual(2);
 	});
 
@@ -166,8 +171,8 @@ describe("the quit sequence: saves, then the Unreal stop", () =>
 			saves.save();
 			app.quit();
 
-			// At most the Unreal stop plus one more save wait after it; the first wait runs alongside the stop.
-			const bound = Math.max(QUIT_SAVE_WAIT_MS, editorOpen ? EDITOR_CLOSE_MS : 0) + QUIT_SAVE_WAIT_MS;
+			// Without the editor, one save wait. With it, at most the Unreal stop plus one more save wait after it; the first wait runs alongside the stop.
+			const bound = editorOpen ? Math.max(QUIT_SAVE_WAIT_MS, EDITOR_CLOSE_MS) + QUIT_SAVE_WAIT_MS : QUIT_SAVE_WAIT_MS;
 			await vi.advanceTimersByTimeAsync(bound + DEFER_SLACK_MS);
 
 			expect(exitedAt(), `editor open: ${editorOpen}`).not.toBeNull();
