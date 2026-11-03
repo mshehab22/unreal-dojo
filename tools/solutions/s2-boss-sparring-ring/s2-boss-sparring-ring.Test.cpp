@@ -130,114 +130,112 @@ namespace DojoS2RingTest
 	{
 		return FVector::Dist2D(Actual, FVector(X, Y, 0.f)) <= 1.f;
 	}
-}
 
-using namespace DojoS2RingTest;
+	/** Plays one full round by the reference route and checks every step; Round names the round in the messages. */
+	void PlayRound(FAutomationTestBase& Test, FDojoTestWorld& TestWorld, const FRing& Ring, int32 Round)
+	{
+		const FString Tag = FString::Printf(TEXT("Round %d: "), Round);
+		ADojoS2RingDirector* Director = Ring.Director;
 
-/** Plays one full round by the reference route and checks every step; Round names the round in the messages. */
-static void PlayRound(FAutomationTestBase& Test, FDojoTestWorld& TestWorld, const FRing& Ring, int32 Round)
-{
-	const FString Tag = FString::Printf(TEXT("Round %d: "), Round);
-	ADojoS2RingDirector* Director = Ring.Director;
+		Test.TestTrue(Tag + TEXT("the round runs"), Director->IsRunning());
+		Test.TestTrue(Tag + TEXT("the hero starts in the middle"), Near(Ring.Hero->GetActorLocation(), 0.f, 0.f));
+		Test.TestEqual(Tag + TEXT("the board starts full and ready"), BoardOf(Ring), FString(TEXT("Energy 100/100\n1. Dash ready\n2. Shockwave ready\n3. Focus ready\nOut 0/4")));
 
-	Test.TestTrue(Tag + TEXT("the round runs"), Director->IsRunning());
-	Test.TestTrue(Tag + TEXT("the hero starts in the middle"), Near(Ring.Hero->GetActorLocation(), 0.f, 0.f));
-	Test.TestEqual(Tag + TEXT("the board starts full and ready"), BoardOf(Ring), FString(TEXT("Energy 100/100\n1. Dash ready\n2. Shockwave ready\n3. Focus ready\nOut 0/4")));
+		// t = 0: Shockwave from the middle pushes all four from 200 to 500 and roots the hero for a second.
+		Director->PressAbility(1);
+		Test.TestTrue(Tag + TEXT("the first push moves the +X dummy to 500"), Near(Ring.Dummies[0]->GetActorLocation(), 500.f, 0.f));
+		Test.TestTrue(Tag + TEXT("the first push moves the +Y dummy to 500"), Near(Ring.Dummies[1]->GetActorLocation(), 0.f, 500.f));
+		Test.TestEqual(Tag + TEXT("the board follows the shockwave"), BoardOf(Ring), FString(TEXT("Energy 60/100\n1. Dash ready\n2. Shockwave cooling\n3. Focus ready\nOut 0/4")));
 
-	// t = 0: Shockwave from the middle pushes all four from 200 to 500 and roots the hero for a second.
-	Director->PressAbility(1);
-	Test.TestTrue(Tag + TEXT("the first push moves the +X dummy to 500"), Near(Ring.Dummies[0]->GetActorLocation(), 500.f, 0.f));
-	Test.TestTrue(Tag + TEXT("the first push moves the +Y dummy to 500"), Near(Ring.Dummies[1]->GetActorLocation(), 0.f, 500.f));
-	Test.TestEqual(Tag + TEXT("the board follows the shockwave"), BoardOf(Ring), FString(TEXT("Energy 60/100\n1. Dash ready\n2. Shockwave cooling\n3. Focus ready\nOut 0/4")));
+		// t = 0.1: rooted, so the dash is refused and costs nothing.
+		Wait(TestWorld, 0.1f);
+		Director->PressAbility(0);
+		Test.TestTrue(Tag + TEXT("a rooted hero does not dash"), Near(Ring.Hero->GetActorLocation(), 0.f, 0.f));
+		Test.TestEqual(Tag + TEXT("a refused dash costs nothing"), Ring.Energy->GetEnergy(), 60);
 
-	// t = 0.1: rooted, so the dash is refused and costs nothing.
-	Wait(TestWorld, 0.1f);
-	Director->PressAbility(0);
-	Test.TestTrue(Tag + TEXT("a rooted hero does not dash"), Near(Ring.Hero->GetActorLocation(), 0.f, 0.f));
-	Test.TestEqual(Tag + TEXT("a refused dash costs nothing"), Ring.Energy->GetEnergy(), 60);
+		// t = 1.1: the root is over; two regen steps came back, then the dash pays 20.
+		Wait(TestWorld, 1.f);
+		Director->PressAbility(0);
+		Test.TestTrue(Tag + TEXT("the dash moves the hero 300 ahead"), Near(Ring.Hero->GetActorLocation(), 300.f, 0.f));
+		Test.TestEqual(Tag + TEXT("energy after the dash"), Ring.Energy->GetEnergy(), 50);
 
-	// t = 1.1: the root is over; two regen steps came back, then the dash pays 20.
-	Wait(TestWorld, 1.f);
-	Director->PressAbility(0);
-	Test.TestTrue(Tag + TEXT("the dash moves the hero 300 ahead"), Near(Ring.Hero->GetActorLocation(), 300.f, 0.f));
-	Test.TestEqual(Tag + TEXT("energy after the dash"), Ring.Energy->GetEnergy(), 50);
+		// t = 3.2: the second shockwave reaches only the +X dummy, 200 away, and pushes it out.
+		Wait(TestWorld, 2.1f);
+		Director->PressAbility(1);
+		Test.TestTrue(Tag + TEXT("the +X dummy is pushed to 800"), Near(Ring.Dummies[0]->GetActorLocation(), 800.f, 0.f));
+		Test.TestTrue(Tag + TEXT("the +Y dummy, 583 away, stays"), Near(Ring.Dummies[1]->GetActorLocation(), 0.f, 500.f));
+		Test.TestEqual(Tag + TEXT("one is out"), Director->CountOut(), 1);
+		Test.TestEqual(Tag + TEXT("energy after the second shockwave"), Ring.Energy->GetEnergy(), 30);
 
-	// t = 3.2: the second shockwave reaches only the +X dummy, 200 away, and pushes it out.
-	Wait(TestWorld, 2.1f);
-	Director->PressAbility(1);
-	Test.TestTrue(Tag + TEXT("the +X dummy is pushed to 800"), Near(Ring.Dummies[0]->GetActorLocation(), 800.f, 0.f));
-	Test.TestTrue(Tag + TEXT("the +Y dummy, 583 away, stays"), Near(Ring.Dummies[1]->GetActorLocation(), 0.f, 500.f));
-	Test.TestEqual(Tag + TEXT("one is out"), Director->CountOut(), 1);
-	Test.TestEqual(Tag + TEXT("energy after the second shockwave"), Ring.Energy->GetEnergy(), 30);
+		// Turn right to face +Y, then dash at t = 4.3.
+		Director->PressTurnRight();
+		Wait(TestWorld, 1.1f);
+		Director->PressAbility(0);
+		Test.TestTrue(Tag + TEXT("the dash follows the turn"), Near(Ring.Hero->GetActorLocation(), 300.f, 300.f));
 
-	// Turn right to face +Y, then dash at t = 4.3.
-	Director->PressTurnRight();
-	Wait(TestWorld, 1.1f);
-	Director->PressAbility(0);
-	Test.TestTrue(Tag + TEXT("the dash follows the turn"), Near(Ring.Hero->GetActorLocation(), 300.f, 300.f));
+		// t = 6.3: the third shockwave pushes the +Y dummy out along the line from the hero.
+		Wait(TestWorld, 2.f);
+		Director->PressAbility(1);
+		Test.TestTrue(Tag + TEXT("the +Y dummy is pushed away from the hero"), Near(Ring.Dummies[1]->GetActorLocation(), -249.6f, 666.4f));
+		Test.TestEqual(Tag + TEXT("two are out"), Director->CountOut(), 2);
+		Test.TestEqual(Tag + TEXT("the shockwave spent the last of the energy"), Ring.Energy->GetEnergy(), 0);
 
-	// t = 6.3: the third shockwave pushes the +Y dummy out along the line from the hero.
-	Wait(TestWorld, 2.f);
-	Director->PressAbility(1);
-	Test.TestTrue(Tag + TEXT("the +Y dummy is pushed away from the hero"), Near(Ring.Dummies[1]->GetActorLocation(), -249.6f, 666.4f));
-	Test.TestEqual(Tag + TEXT("two are out"), Director->CountOut(), 2);
-	Test.TestEqual(Tag + TEXT("the shockwave spent the last of the energy"), Ring.Energy->GetEnergy(), 0);
+		// R in the middle of a round does nothing.
+		Director->RestartRound();
+		Test.TestTrue(Tag + TEXT("R mid-round leaves the hero where it is"), Near(Ring.Hero->GetActorLocation(), 300.f, 300.f));
+		Test.TestEqual(Tag + TEXT("R mid-round leaves the dummies out"), Director->CountOut(), 2);
 
-	// R in the middle of a round does nothing.
-	Director->RestartRound();
-	Test.TestTrue(Tag + TEXT("R mid-round leaves the hero where it is"), Near(Ring.Hero->GetActorLocation(), 300.f, 300.f));
-	Test.TestEqual(Tag + TEXT("R mid-round leaves the dummies out"), Director->CountOut(), 2);
+		// t = 6.4: Focus refills the energy and roots and channels for 2 s, overlapping the shockwave's root.
+		Wait(TestWorld, 0.1f);
+		Director->PressAbility(2);
+		Test.TestEqual(Tag + TEXT("Focus refills the energy"), Ring.Energy->GetEnergy(), 100);
 
-	// t = 6.4: Focus refills the energy and roots and channels for 2 s, overlapping the shockwave's root.
-	Wait(TestWorld, 0.1f);
-	Director->PressAbility(2);
-	Test.TestEqual(Tag + TEXT("Focus refills the energy"), Ring.Energy->GetEnergy(), 100);
+		// Turn right to face -X. At t = 7.5 the shockwave's root is over but Focus still roots the hero.
+		Director->PressTurnRight();
+		Wait(TestWorld, 1.1f);
+		Director->PressAbility(0);
+		Test.TestTrue(Tag + TEXT("Focus still holds the hero after the shockwave's root ends"), Near(Ring.Hero->GetActorLocation(), 300.f, 300.f));
+		Test.TestEqual(Tag + TEXT("the refused dash costs nothing"), Ring.Energy->GetEnergy(), 100);
 
-	// Turn right to face -X. At t = 7.5 the shockwave's root is over but Focus still roots the hero.
-	Director->PressTurnRight();
-	Wait(TestWorld, 1.1f);
-	Director->PressAbility(0);
-	Test.TestTrue(Tag + TEXT("Focus still holds the hero after the shockwave's root ends"), Near(Ring.Hero->GetActorLocation(), 300.f, 300.f));
-	Test.TestEqual(Tag + TEXT("the refused dash costs nothing"), Ring.Energy->GetEnergy(), 100);
+		// t = 8.5 and 9.6: two dashes to (-300, 300).
+		Wait(TestWorld, 1.f);
+		Director->PressAbility(0);
+		Wait(TestWorld, 1.1f);
+		Director->PressAbility(0);
+		Test.TestTrue(Tag + TEXT("two dashes reach the -X side"), Near(Ring.Hero->GetActorLocation(), -300.f, 300.f));
+		Test.TestEqual(Tag + TEXT("energy after two dashes"), Ring.Energy->GetEnergy(), 70);
 
-	// t = 8.5 and 9.6: two dashes to (-300, 300).
-	Wait(TestWorld, 1.f);
-	Director->PressAbility(0);
-	Wait(TestWorld, 1.1f);
-	Director->PressAbility(0);
-	Test.TestTrue(Tag + TEXT("two dashes reach the -X side"), Near(Ring.Hero->GetActorLocation(), -300.f, 300.f));
-	Test.TestEqual(Tag + TEXT("energy after two dashes"), Ring.Energy->GetEnergy(), 70);
+		// t = 9.7: the shockwave pushes the -X dummy out.
+		Wait(TestWorld, 0.1f);
+		Director->PressAbility(1);
+		Test.TestTrue(Tag + TEXT("the -X dummy is pushed away from the hero"), Near(Ring.Dummies[2]->GetActorLocation(), -666.4f, -249.6f));
+		Test.TestEqual(Tag + TEXT("three are out"), Director->CountOut(), 3);
 
-	// t = 9.7: the shockwave pushes the -X dummy out.
-	Wait(TestWorld, 0.1f);
-	Director->PressAbility(1);
-	Test.TestTrue(Tag + TEXT("the -X dummy is pushed away from the hero"), Near(Ring.Dummies[2]->GetActorLocation(), -666.4f, -249.6f));
-	Test.TestEqual(Tag + TEXT("three are out"), Director->CountOut(), 3);
+		// Turn right to face -Y, then dash at t = 10.8 and 11.9.
+		Director->PressTurnRight();
+		Wait(TestWorld, 1.1f);
+		Director->PressAbility(0);
+		Wait(TestWorld, 1.1f);
+		Director->PressAbility(0);
+		Test.TestTrue(Tag + TEXT("two dashes reach the -Y side"), Near(Ring.Hero->GetActorLocation(), -300.f, -300.f));
+		Test.TestEqual(Tag + TEXT("energy after the last dash"), Ring.Energy->GetEnergy(), 10);
 
-	// Turn right to face -Y, then dash at t = 10.8 and 11.9.
-	Director->PressTurnRight();
-	Wait(TestWorld, 1.1f);
-	Director->PressAbility(0);
-	Wait(TestWorld, 1.1f);
-	Director->PressAbility(0);
-	Test.TestTrue(Tag + TEXT("two dashes reach the -Y side"), Near(Ring.Hero->GetActorLocation(), -300.f, -300.f));
-	Test.TestEqual(Tag + TEXT("energy after the last dash"), Ring.Energy->GetEnergy(), 10);
+		// t = 13.6: 30 energy is not enough for the shockwave.
+		Wait(TestWorld, 1.7f);
+		Director->PressAbility(1);
+		Test.TestTrue(Tag + TEXT("a shockwave without the energy does nothing"), Near(Ring.Dummies[3]->GetActorLocation(), 0.f, -500.f));
+		Test.TestEqual(Tag + TEXT("and costs nothing"), Ring.Energy->GetEnergy(), 30);
+		Test.TestTrue(Tag + TEXT("the round still runs"), Director->IsRunning());
 
-	// t = 13.6: 30 energy is not enough for the shockwave.
-	Wait(TestWorld, 1.7f);
-	Director->PressAbility(1);
-	Test.TestTrue(Tag + TEXT("a shockwave without the energy does nothing"), Near(Ring.Dummies[3]->GetActorLocation(), 0.f, -500.f));
-	Test.TestEqual(Tag + TEXT("and costs nothing"), Ring.Energy->GetEnergy(), 30);
-	Test.TestTrue(Tag + TEXT("the round still runs"), Director->IsRunning());
-
-	// t = 14.6: 40 energy, and the last dummy goes out.
-	Wait(TestWorld, 1.f);
-	Director->PressAbility(1);
-	Test.TestTrue(Tag + TEXT("the last dummy is pushed away from the hero"), Near(Ring.Dummies[3]->GetActorLocation(), 249.6f, -666.4f));
-	Test.TestEqual(Tag + TEXT("all four are out"), Director->CountOut(), 4);
-	Test.TestFalse(Tag + TEXT("the round is over"), Director->IsRunning());
-	Test.TestEqual(Tag + TEXT("the finish time"), Director->GetFinishSeconds(), 14.6f, 0.05f);
-	Test.TestEqual(Tag + TEXT("the board shows the finale"), BoardOf(Ring), FString(TEXT("Energy 0/100\n1. Dash ready\n2. Shockwave cooling\n3. Focus cooling\nOut 4/4\nCLEAR in 14.6 s")));
+		// t = 14.6: 40 energy, and the last dummy goes out.
+		Wait(TestWorld, 1.f);
+		Director->PressAbility(1);
+		Test.TestTrue(Tag + TEXT("the last dummy is pushed away from the hero"), Near(Ring.Dummies[3]->GetActorLocation(), 249.6f, -666.4f));
+		Test.TestEqual(Tag + TEXT("all four are out"), Director->CountOut(), 4);
+		Test.TestFalse(Tag + TEXT("the round is over"), Director->IsRunning());
+		Test.TestEqual(Tag + TEXT("the finish time"), Director->GetFinishSeconds(), 14.6f, 0.05f);
+		Test.TestEqual(Tag + TEXT("the board shows the finale"), BoardOf(Ring), FString(TEXT("Energy 0/100\n1. Dash ready\n2. Shockwave cooling\n3. Focus cooling\nOut 4/4\nCLEAR in 14.6 s")));
+	}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S2_SparringRing_TwoRounds, "Dojo.S2.SparringRing.TwoRounds", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
@@ -245,6 +243,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S2_SparringRing_TwoRounds, "Dojo.S2.Sparr
 /** Plays the reference route twice, with R between, and checks the second round plays exactly like the first. */
 bool FDojo_S2_SparringRing_TwoRounds::RunTest(const FString& Parameters)
 {
+	using namespace DojoS2RingTest;
+
 	FDojoTestWorld TestWorld;
 	FRing Ring = MakeRing(TestWorld);
 	if (!TestNotNull(TEXT("Director spawned"), Ring.Director)) return false;
@@ -272,6 +272,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S2_SparringRing_NothingAfterTheFinale, "D
 /** After the finale, abilities and turns do nothing until R. */
 bool FDojo_S2_SparringRing_NothingAfterTheFinale::RunTest(const FString& Parameters)
 {
+	using namespace DojoS2RingTest;
+
 	FDojoTestWorld TestWorld;
 	FRing Ring = MakeRing(TestWorld);
 	if (!TestNotNull(TEXT("Director spawned"), Ring.Director)) return false;
@@ -303,6 +305,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S2_SparringRing_EffectsComeFromTheAsset, 
 /** Swapping the effects inside an asset changes what its key does, with no change to the director. */
 bool FDojo_S2_SparringRing_EffectsComeFromTheAsset::RunTest(const FString& Parameters)
 {
+	using namespace DojoS2RingTest;
+
 	FDojoTestWorld TestWorld;
 	FRing Ring = MakeRing(TestWorld);
 	if (!TestNotNull(TEXT("Director spawned"), Ring.Director)) return false;
@@ -331,6 +335,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S2_SparringRing_UnbindsWhenItLeaves, "Doj
 /** A director that leaves play stops listening to the hero's parts, which keep working without it. */
 bool FDojo_S2_SparringRing_UnbindsWhenItLeaves::RunTest(const FString& Parameters)
 {
+	using namespace DojoS2RingTest;
+
 	FDojoTestWorld TestWorld;
 	FRing Ring = MakeRing(TestWorld);
 	if (!TestNotNull(TEXT("Director spawned"), Ring.Director)) return false;
