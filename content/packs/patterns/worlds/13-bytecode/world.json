@@ -1,0 +1,5 @@
+{
+	"id": "bytecode",
+	"title": "Behavior written as data",
+	"summary": "The vault's potions, doors, and dart traps change every week, and some of them come from modders who will never touch C++. Learn to write that behavior as short lists of small steps that designers edit in the Details panel, and to run them with a tiny machine that passes values on a stack, keeps its own place, and refuses anything it does not understand."
+}
