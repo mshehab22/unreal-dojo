@@ -7,7 +7,7 @@ scaffold: stub
 difficulty: 3
 patterns: [object-pool]
 skills: [object-pool, lifecycle]
-terms: [object-pool, set-actor-hidden-in-game, set-actor-enable-collision, primary-actor-tick, tsubclassof, isvalid]
+terms: [object-pool, set-actor-hidden-in-game, set-actor-enable-collision, primary-actor-tick, tsubclassof, tick]
 prerequisites: [p16-object-pool-card]
 xp: 110
 estimatedMinutes: 30
@@ -25,7 +25,7 @@ When you press Play with the setup below, four shells burst again and again from
 
 `ADojoP16Shell` is a firework shell. `Fire` lights its fuse: the shell climbs at `RiseSpeed` and bursts when `FuseSeconds` have passed, and `HasBurst` says so. `Fire` refuses, returning false, while the shell rests or is already flying. All of that is given, and so is `ADojoP16ShellPool`, which spawns `PoolSize` shells, 4 by default, when play begins and sends each one to rest, wakes a resting shell for every `Acquire`, and sends it back to rest on `Release`.
 
-Yours are `RestInPool` and `WakeFromPool`. A resting shell is out of play: hidden, not colliding, not ticking, and not flying, and `IsResting` is true, so it refuses to fire. A shell can be sent to rest at any moment, also in the middle of its flight, for example when the show is stopped. `WakeFromPool` brings a resting shell back into play at the spot it is given: drawn, colliding, ticking, not resting, not flying, and not burst, as clean as a freshly spawned shell, and it waits there until it is fired. A resting shell never bursts, and a woken shell bursts only after it is fired again, however its last use ended. `Fire`, `Tick`, and the burst are given and stay as they are; the shell knows nothing about the pool.
+Yours are `RestInPool` and `WakeFromPool`. A resting shell is out of play: hidden, not colliding, not ticking, not flying, and not burst, and `IsResting` is true, so it refuses to fire. A shell can be sent to rest at any moment, also in the middle of its flight, for example when the show is stopped. `WakeFromPool` brings a resting shell back into play at the spot it is given: drawn, colliding, ticking, not resting, not flying, and not burst, as clean as a freshly spawned shell, and it waits there until it is fired. A resting shell never bursts, and a woken shell bursts only after it is fired again, however its last use ended. `Fire`, `Tick`, and the burst are given and stay as they are; the shell knows nothing about the pool.
 
 Write the obvious version first and run the tests. One of them fails on purpose for most people. Read its name and message before you read the hints.
 
@@ -76,7 +76,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Shell")
 	bool IsFlying() const;
 
-	/** True once the fuse has run out, until the shell is fired again or woken. */
+	/** True once the fuse has run out, until the shell rests, wakes, or is fired again. */
 	UFUNCTION(BlueprintPure, Category = "Shell")
 	bool HasBurst() const;
 
@@ -379,6 +379,7 @@ bool FDojo_P16_ShellFuse_AWokenShellStartsClean::RunTest(const FString& Paramete
 	TestTrue(TEXT("Its fuse ran out and it burst"), Shell->HasBurst());
 
 	Shell->RestInPool();
+	TestFalse(TEXT("A resting shell has no burst left from its last use"), Shell->HasBurst());
 	const FVector NewSpot(100.f, 0.f, 0.f);
 	Shell->WakeFromPool(NewSpot);
 	TestFalse(TEXT("A woken shell is not resting"), Shell->IsResting());
@@ -486,7 +487,7 @@ bool FDojo_P16_ShellFuse_FourShellsMakeAShow::RunTest(const FString& Parameters)
 
 # Rubric
 
-- A resting shell is hidden, does not collide, does not tick, is not flying, and refuses to fire.
+- A resting shell is hidden, does not collide, does not tick, is not flying, is not burst, and refuses to fire.
 - A resting shell never bursts, and a woken shell bursts only after it is fired again.
 - A woken shell is in play at the spot it was given, not resting, not flying, and not burst, and waits to be fired.
 - Every switch WakeFromPool turns on, RestInPool turns off.

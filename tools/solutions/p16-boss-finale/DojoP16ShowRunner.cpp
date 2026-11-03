@@ -179,7 +179,7 @@ void ADojoP16ShowRunner::TakeBackBursts()
 		if (IsValid(Rocket))
 		{
 			Bursts++;
-			Rack->Release(Rocket);
+			if (IsValid(Rack)) Rack->Release(Rocket);
 		}
 		RocketsOut.RemoveAt(Index);
 	}
@@ -192,7 +192,7 @@ void ADojoP16ShowRunner::TakeBackBursts()
 		if (IsValid(Shell))
 		{
 			Bursts++;
-			ShellPool->Release(Shell);
+			if (IsValid(ShellPool)) ShellPool->Release(Shell);
 		}
 		ShellsOut.RemoveAt(Index);
 	}

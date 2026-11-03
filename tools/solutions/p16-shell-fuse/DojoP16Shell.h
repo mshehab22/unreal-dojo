@@ -36,7 +36,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Shell")
 	bool IsFlying() const;
 
-	/** True once the fuse has run out, until the shell is fired again or woken. */
+	/** True once the fuse has run out, until the shell rests, wakes, or is fired again. */
 	UFUNCTION(BlueprintPure, Category = "Shell")
 	bool HasBurst() const;
 

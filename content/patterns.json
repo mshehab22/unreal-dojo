@@ -2136,7 +2136,7 @@
       {
         "id": "object-pool-scenario-3",
         "type": "which-pattern",
-        "prompt": "Damage numbers float up from every hit in a brawler, thirty a second in a busy fight, each a small widget that lives for a second. stat game shows widget creation spiking during fights. Which pattern fits?",
+        "prompt": "Damage numbers float up from every hit in a brawler, thirty a second in a busy fight, each a small widget that lives for a second. Unreal Insights shows widget creation spiking during fights. Which pattern fits?",
         "choices": [
           "object-pool",
           "flyweight",

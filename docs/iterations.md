@@ -2257,4 +2257,5 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Also: four glossary entries (`set-actor-hidden-in-game`, `set-actor-enable-collision`, `free-list`, `niagara-component-pool`) and the Object Pool card rewritten with two recall items and two scenarios (A1657).
 - Proof: `npm run typecheck` passes; `npm test` 102 files passed, 6 skipped, 1321 tests passed, 32 skipped; `npx tsx tools/verify-content.ts` no problems and 12 warnings; `--pack patterns` no problems. Engine proof waits for the Lead's queue (A1658).
 - Originality: the 6-word check against the research notes matches only Epic doc URLs and test boilerplate. The book check is owed (D13, problems.md).
-- Not done: the engine proof; the book check; macOS; the boss's key bindings (headless tests have no player controller). No screenshots (content only). Decisions A1650 to A1658.
+- Review: a fresh reviewer, FIXES NEEDED on bfb3a2f (A1659): the boss's abort check needed a rule quest 04 did not state (a resting shell is not burst), one scenario named the wrong stat command, one hover named an editor setting 5.8 does not show, and two full-pool sentences followed the book's shape.
+- Not done: the engine proof; the book check; macOS; the boss's key bindings (headless tests have no player controller). No screenshots (content only). Decisions A1650 to A1659.

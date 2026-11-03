@@ -4449,7 +4449,7 @@
     ],
     "category": "framework",
     "short": "Stops or starts drawing an actor during play; on its own it changes nothing about collision or ticking.",
-    "long": "SetActorHiddenInGame(true) stops the actor's components from being drawn in the game, and false draws them again; IsHidden() says which it is now. It only affects drawing. A hidden actor still collides and still ticks, which is why taking an actor out of play without destroying it also needs SetActorEnableCollision(false) and SetActorTickEnabled(false). In the editor viewport, a separate Hidden in Editor setting decides what you see while not playing.",
+    "long": "SetActorHiddenInGame(true) stops the actor's components from being drawn in the game, and false draws them again; IsHidden() says which it is now. It only affects drawing. A hidden actor still collides and still ticks, which is why taking an actor out of play without destroying it also needs SetActorEnableCollision(false) and SetActorTickEnabled(false). Hiding an actor in the editor, with the eye icon in the Outliner or the H key, is a separate thing and does not change what the game draws.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/AActor/SetActorHiddenInGame?application_version=5.8",
     "related": [
       "set-actor-enable-collision",

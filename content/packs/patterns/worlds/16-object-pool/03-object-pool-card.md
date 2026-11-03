@@ -51,7 +51,7 @@ The rocket rack from the last quest is the **Object Pool** pattern: make a fixed
 **When the pool is full.** Size it so the common case never runs out. For the rare peak, choose:
 
 - Refuse: no rocket this beat. Fine for things nobody misses, like one spark in a shower.
-- Recycle the oldest: take back the one that has been out longest and use it now. Right when a vanishing old effect is less noticeable than a missing new one.
+- Recycle the oldest: take back the one that has been out longest and use it now. Good when a rocket cut short is less jarring than a beat of the music with no rocket at all.
 - Grow, within a limit: spawn one more and keep it. Without a limit, a long fight grows the pool forever and brings back the spawning it was meant to avoid.
 
 **In Unreal.** The work a pool saves is mostly spawning and destroying actors, so pools of actors are the common case: projectiles, impact effects, pickups, enemies in waves. Hold the pool in a manager actor or a `UWorldSubsystem`, so it belongs to the world it serves, and keep its actors in `UPROPERTY` arrays, so the garbage collector can see them. Effects made with Niagara already have a pool: spawn them with an `ENCPoolMethod` of `AutoRelease` and the engine reuses their components for you.
