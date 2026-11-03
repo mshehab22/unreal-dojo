@@ -388,5 +388,5 @@ The owner could implement two functions of its own, `WriteState(FDojoS3State&)` 
     - line: "if (Owner->Implements<IDojoS3Restorable>())"
       mistake: Implements takes the reflected U class of the interface, UDojoS3Restorable; the I class is the C++ side that holds the functions.
     - line: "	Cast<IDojoS3Restorable>(Owner)->OnRestoredFromSave_Implementation();"
-      mistake: Calling the native version directly skips a Blueprint override of the event and crashes on an owner that does not implement it; Execute_ calls whichever version the owner has.
+      mistake: Calling the native version directly skips a Blueprint override of the event and crashes on an owner that implements the interface only in Blueprint, where the cast returns null; Execute_ calls whichever version the owner has.
 ```
