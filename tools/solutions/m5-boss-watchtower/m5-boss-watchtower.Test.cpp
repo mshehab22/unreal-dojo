@@ -23,6 +23,12 @@ namespace DojoM5TowerTest
 	/** The hero stands here on the laser beam. */
 	const FVector BeamSpot(1300.f, 0.f, 0.f);
 
+	/** Only the first sentry can see the hero here: the second is out of range. */
+	const FVector FirstSentryOnlySpot(200.f, 200.f, 0.f);
+
+	/** Only the second sentry can see the hero here: the first is out of range. */
+	const FVector SecondSentryOnlySpot(1900.f, 0.f, 0.f);
+
 	/** A hero and the tower that watches it. */
 	struct FYardScene
 	{
@@ -207,6 +213,39 @@ bool FDojo_M5_Watchtower_SentriesSeeOnlyWhatTheyCanSee::RunTest(const FString& P
 	Scene.Hero->SetActorLocation(FVector(100.f, 0.f, 0.f));
 	TestWorld.Tick(200);
 	TestEqual(TEXT("Near the gate, outside both cones, it drains away to nothing and stays there"), Scene.Tower->GetMeter(), 0.f, 0.001f);
+
+	Scene.Hero->SetActorLocation(FirstSentryOnlySpot);
+	TestWorld.Tick(30);
+	TestTrue(TEXT("A spot only the first sentry can see still fills the awareness"), Scene.Tower->GetMeter() > 0.3f);
+
+	Scene.Hero->SetActorLocation(FVector(100.f, 0.f, 0.f));
+	TestWorld.Tick(200);
+	TestEqual(TEXT("and it drains away again"), Scene.Tower->GetMeter(), 0.f, 0.001f);
+
+	Scene.Hero->SetActorLocation(SecondSentryOnlySpot);
+	TestWorld.Tick(30);
+	TestTrue(TEXT("A spot only the second sentry can see fills it too"), Scene.Tower->GetMeter() > 0.3f);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M5_Watchtower_AnAlarmComesBeforeTheBeam, "Dojo.M5.Watchtower.AnAlarmComesBeforeTheBeam", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Fills the awareness in one check while the hero stands in the beam and checks that the check counts the alarm and not also a zap. */
+bool FDojo_M5_Watchtower_AnAlarmComesBeforeTheBeam::RunTest(const FString& Parameters)
+{
+	using namespace DojoM5TowerTest;
+
+	FDojoTestWorld TestWorld;
+	const FYardScene Scene = MakeYard(TestWorld, [](ADojoM5Tower& Tower) { Tower.FillPerSecond = 10.f; });
+	if (!TestNotNull(TEXT("The tower spawned"), Scene.Tower)) return false;
+
+	Scene.Hero->SetActorLocation(BeamSpot);
+	TestWorld.Tick(8);
+
+	TestEqual(TEXT("The first check fills the awareness, so the alarm sounds"), Scene.Tower->GetAlarms(), 1);
+	TestEqual(TEXT("and the beam is not asked in the same check, so no zap is counted"), Scene.Tower->GetZaps(), 0);
+	TestTrue(TEXT("The hero is back at the gate"), IsNear(Scene.Hero, FVector::ZeroVector, 0.1));
 
 	return true;
 }

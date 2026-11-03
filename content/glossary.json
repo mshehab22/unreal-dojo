@@ -4382,7 +4382,7 @@
       "fmath",
       "line-trace"
     ],
-    "firstQuestId": "m5-sightline"
+    "firstQuestId": "m5-lines-and-hits"
   },
   {
     "id": "reflection-vector",

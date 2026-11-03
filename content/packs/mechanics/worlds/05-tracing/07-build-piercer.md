@@ -22,7 +22,7 @@ When you place a piercer facing a row of things, fire it, and read its results, 
 
 The header is written and the bodies are stubs. Write each body in `DojoM5Piercer.cpp`:
 
-1. `Fire` clears the last shot's results, starts with the shot as long as the reach, makes a multi trace from the actor along its forward, leaving the piercer itself out, and walks the hits in order: a hit that does not block is remembered as pierced, and the first hit that does block is remembered as the stopper, sets the shot's length, and ends the walk. It then draws the shot for one second.
+1. `Fire` clears the last shot's results, starts with the shot as long as the reach, makes a multi trace from the actor along its forward, leaving the piercer itself out, and walks the hits in order: a hit that does not block is remembered as pierced, and the first hit that does block is remembered as the stopper, sets the shot's length, and ends the walk. It draws the shot for one second and a yellow marker at each thing it passed through.
 2. The four getters return what `Fire` remembered. `GetPiercedAt` returns nothing for an index that is not in the list.
 
 Dependency direction: the piercer knows nothing about the sheets or the wall; they only answer the channel as their collision settings say.

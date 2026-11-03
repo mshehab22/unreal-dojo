@@ -36,7 +36,7 @@ A trace is cheap once and costly in bulk. Ten sentries each tracing every frame 
 
 Start the trace clear of yourself. Either ignore your own actor in the query params, or begin just outside your own shape. A trace that begins inside your collision may be answered by your own body first, as you saw with the rangefinder.
 
-Say what a result means. A `true` return says that something blocked the line, not that the thing you wanted did. A sentry looking for the player must compare `Hit.GetActor()` with the player, and treat a hit on a wall as "not seen". Likewise a `false` return may be the good news: nothing stood between the sentry and its target. Decide, per case, which answer means success.
+Say what a result means. A `true` return says that something blocked the line, not that the thing you wanted did. A sentry looking for the player must compare `Hit.GetActor()` with the player, and treat a hit on a wall as "not seen". Likewise a `false` return is not always good news or bad news: for a trace to an empty spot it means the line was free, and for a trace toward an actor that should answer it, it means the actor did not. Decide, per case, which answer means success.
 
 Keep the drawing switchable. A debug line per look is useful while you build and unwelcome once the tower works. Make it a tunable property so you can turn it off from the editor without touching code:
 
@@ -62,7 +62,7 @@ void ADojoSentry::BeginPlay()
 	GetWorldTimerManager().SetTimer(LookTimer, this, &ADojoSentry::Look, 0.25f, true);
 }
 
-// Traces toward the watched actor and reports whether nothing else is in the way.
+// Traces toward the watched actor and reports whether the first thing in the line is that actor.
 void ADojoSentry::Look()
 {
 	if (!IsValid(WatchedActor))
@@ -76,9 +76,11 @@ void ADojoSentry::Look()
 	const FVector Start = GetActorLocation();
 	const FVector End = WatchedActor->GetActorLocation();
 
+	const FCollisionObjectQueryParams Objects(FCollisionObjectQueryParams::AllObjects);
+
 	FHitResult Hit;
-	const bool bBlocked = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params);
-	const bool bSeen = !bBlocked || Hit.GetActor() == WatchedActor;
+	const bool bBlocked = GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, Objects, Params);
+	const bool bSeen = bBlocked && Hit.GetActor() == WatchedActor;
 
 	if (bDrawDebug)
 	{

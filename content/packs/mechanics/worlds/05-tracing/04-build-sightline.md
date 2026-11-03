@@ -23,9 +23,7 @@ When you place an eye facing along X, with a hero 600 units ahead, the eye sees 
 Most of the code is written for you, including the range check and the line. Write two gaps in `ADojoM5Eye::CanSee`:
 
 1. Return false when the candidate lies outside the cone: compare the dot product of the eye's forward and the unit direction toward the candidate with the cosine of the half angle.
-2. Trace from the eye to the candidate, leaving the eye itself out, set `bBlocked` from the trace, and set `bSeen` when the first thing the ray met is the candidate.
-
-Do step 1 and then step 2 the way the rangefinder did it, by the Visibility channel, and run the tests or play. The hero is never seen, even in the open, and the red line goes straight to the hero. Find out why: draw the trace, look at what it reports, and look at the collision settings of the hero's capsule in Details. Then change the question the trace asks so the hero is seen, and the pillar still hides it.
+2. Trace from the eye to the candidate on the Visibility channel, as the rangefinder did, leaving the eye itself out. Set `bBlocked` from the trace, and set `bSeen` when the first thing the ray met is the candidate.
 
 Dependency direction: the eye holds nothing and decides on request; whoever asks it, such as a sentry or a tower, holds the eye.
 
@@ -307,7 +305,7 @@ bool FDojo_M5_Sightline_TheConeAndRangeHaveEdges::RunTest(const FString& Paramet
 - The cone is a dot product of the eye's forward and the unit direction toward the candidate, compared with the cosine of the half angle.
 - The trace runs from the eye to the candidate and leaves the eye itself out of the answer.
 - The candidate is seen only when the first thing the ray meets is the candidate; a pillar or another character in the line means not seen, and the blocker is named.
-- The trace asks about the kinds of things in the way, so a character whose capsule ignores the Visibility channel is still found.
+- A pillar or another character standing in the line hides the hero, and a hero in the open is seen, whatever collision settings the hero's capsule has.
 - A debug line is drawn on every look, green when seen and red when not, and the eye holds no reference to whoever asked it.
 - Range and half angle are properties a designer can tune, and the eye looks when asked rather than every frame.
 
