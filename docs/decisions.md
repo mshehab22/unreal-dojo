@@ -4,6 +4,9 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1449 2026-11-03 One glossary entry for instanced objects (author-patterns, Lead's go)
+World 13's `instanced-specifier` and Pack 4 World 2's `instanced-subobjects` both claimed the aliases `EditInlineNew` and `DefaultToInstanced`, so main failed the verifier after both merged. Kept `instanced-subobjects` (the fuller text), added the alias "Instanced specifier", set its `firstQuestId` to `p13-bytecode-card` because Pack 2 teaches it before Pack 4 (A72), deleted `instanced-specifier`, and pointed World 13's card and trap refactor at the kept entry; A1377 and the World 13 progress entry still name the old id as history. Options: drop the two aliases from one entry (two hover cards for one idea), or keep both entries apart by wording (the same thing twice). Reverse cost: low.
+
 ### A1448 2026-11-03 World 14's engine proof (author-patterns, M4.P2.14)
 Pending. The Lead said not to touch the engine for this world: when it is written and reviewed, the Lead puts it in the engine queue. Planned proof: the four p14 references build and pass, the three starters (lap log, start lights, standings) compile and fail, and mutations of the deliberate failure (a static flag in the start lights), the lap log, the refactor, and the boss are each caught. Reverse cost: none.
 

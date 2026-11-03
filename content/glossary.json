@@ -4064,7 +4064,8 @@
     "aliases": [
       "EditInlineNew",
       "DefaultToInstanced",
-      "UPROPERTY(Instanced)"
+      "UPROPERTY(Instanced)",
+      "Instanced specifier"
     ],
     "category": "reflection",
     "short": "Objects created and tuned right inside another object's Details panel, owned by it and saved with it.",
@@ -4076,7 +4077,7 @@
       "data-asset",
       "tsubclassof"
     ],
-    "firstQuestId": "s2-instanced-effects"
+    "firstQuestId": "p13-bytecode-card"
   },
   {
     "id": "blueprint-protected",
@@ -4437,27 +4438,6 @@
       "ustruct"
     ],
     "firstQuestId": "p13-behavior-as-data"
-  },
-  {
-    "id": "instanced-specifier",
-    "term": "Instanced",
-    "aliases": [
-      "EditInlineNew",
-      "DefaultToInstanced",
-      "Instanced specifier"
-    ],
-    "category": "reflection",
-    "short": "Specifiers that let an object property hold its own object made inside the owner and edited inline in the Details panel.",
-    "long": "A class marked UCLASS(EditInlineNew) can be created right inside a property in the Details panel, and a UPROPERTY marked Instanced, or one whose class is DefaultToInstanced, gives each owner its own copy of that object, saved with the owner and duplicated with it. It is how designers build lists of small configured objects, such as steps or conditions, without making an asset for each. Each entry is still a full UObject, so a long list is many objects, and any state such an object keeps is shared by everything that uses that owner.",
-    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
-    "related": [
-      "uproperty",
-      "uclass",
-      "newobject",
-      "data-asset"
-    ],
-    "linkMode": "code-only",
-    "firstQuestId": "p13-bytecode-card"
   },
   {
     "id": "static-variable",
