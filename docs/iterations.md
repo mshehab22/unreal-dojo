@@ -2133,7 +2133,11 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 
 ## W17 Stop the e2e GPU process crash (qa, m3-3-economy-ui)
 - What changed: when the computer was busy (other sessions' test windows, Unreal builds), the test copy of the app lost its graphics process and every picture the tests tried to take after that failed, 14 of 48 tests in one run. Test copies of the app now draw without the graphics card, so there is nothing to lose. The app you install, and `npm run dev`, still use the graphics card as before.
-- How to see it: `npm run build`, then `npx playwright test`. `e2e/smoke.spec.ts` now also checks that a test launch has GPU compositing turned off.
+- How to see it: `npm run build`, then `npx playwright test`. `e2e/smoke.spec.ts` now also checks that a test launch has hardware acceleration turned off.
 - Proof (Windows 11, hidden windows, branch from main 1648be4): `npm run typecheck` passes; `tests/window/testWindowMode.test.ts` 7 of 7 (a test launch, a watched test launch, a normal start, the show variable alone, an installed app); `npm run build` passes; two full `npx playwright test` runs back to back: 47 passed, 1 skipped (the real-engine learner flow), 0 failed each time (13.0 and 12.9 minutes), with no "Unable to capture screenshot" and no GPU process exit. Before the change the same machine had 14 failures in a full run, and `smoke.spec.ts` failed alone.
 - Decisions made: A1470.
 - Not done: macOS (software rendering there is untested; nothing in the change is Windows-only). Whether Unreal work was running on the machine during these two runs is not known, so "passes while the BadBoys tests run" rests on the reason (no GPU process to lose), not on a run measured under that load. The long build-flow test still takes about 53 of its 60 seconds (problems.md).
+
+### Fix round 1
+- What the reviewer asked for: the smoke check read only whether GPU compositing was off, and a GPU crash turns it off too, so the check passed without the fix.
+- What changed: the check now asks Electron whether hardware acceleration is enabled (false only with the fix, even after a crash), with the compositing check beside it.

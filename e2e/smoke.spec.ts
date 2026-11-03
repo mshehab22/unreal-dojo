@@ -43,9 +43,11 @@ test("the app opens its main window", async ({ dojo, camera }) =>
 	const hasNodeAccess = await window.evaluate(() => typeof (globalThis as { require?: unknown }).require !== "undefined");
 	expect(hasNodeAccess).toBe(false);
 
-	// A test launch renders in software, so a busy GPU cannot crash the run (A1470): Chromium reports GPU compositing as disabled.
-	const gpuCompositing = await electronApp.evaluate(({ app }) => String((app.getGPUFeatureStatus() as unknown as Record<string, unknown>)["gpu_compositing"]));
-	expect(gpuCompositing).toMatch(/^disabled/);
+	// A test launch turns hardware acceleration off, so a busy GPU cannot crash the run (A1470). Compositing alone would not prove it:
+	// after a GPU crash Chromium falls back to software compositing too, so the switch itself is checked, with compositing beside it.
+	const rendering = await electronApp.evaluate(({ app }) => ({ hardwareAcceleration: app.isHardwareAccelerationEnabled(), compositing: app.getGPUFeatureStatus().gpu_compositing }));
+	expect(rendering.hardwareAcceleration).toBe(false);
+	expect(rendering.compositing).toMatch(/^disabled/);
 
 	await camera.capture(window, "window.png", { proofFileName: "m0-1-window.png" });
 });
