@@ -75,14 +75,14 @@ public:
 ```yaml
 - id: few-things
   type: multiple-choice
-  prompt: "A menu has 30 buttons and feels slow. A teammate suggests storing the buttons as packed structs. What comes first?"
+  prompt: "A quest log keeps 40 quests as UObjects, and opening the log takes a moment. A teammate wants to move the quests into a hot and cold split of structs. What comes first?"
   choices:
-    - Rewrite them as structs
-    - Profile; 30 buttons are not a memory layout problem, so the slowness is almost certainly somewhere else
-    - Split each button into hot and cold data
-    - Move the buttons to Mass Entity
-  answerIndex: 1
-  explanation: Thirty of anything cannot stall on memory enough to feel slow. Find the real cost before changing the layout.
+    - Write the split; quests are a classic case
+    - Move the quests to Mass Entity
+    - Make every quest an actor instead
+    - Profile; 40 objects read once when a menu opens are not a memory layout problem, so the delay is almost certainly somewhere else
+  answerIndex: 3
+  explanation: Forty objects read once cannot stall on memory long enough to notice. Find the real cost, such as loading or building the widgets, before changing the layout.
 - id: needs-actor
   type: multiple-choice
   prompt: "Which of these should stay an actor rather than become a record in an array?"
@@ -117,11 +117,11 @@ public:
   type: multiple-choice
   prompt: "A space game keeps ships 300 kilometers from the world's origin in records with FVector3f positions. What goes wrong?"
   choices:
-    - Nothing; floats are always precise enough
     - Floats lose precision far from the origin, so the ships' positions snap and jitter
+    - Nothing; floats are always precise enough
     - The records become larger than FVector
     - FVector3f cannot be stored in a TArray
-  answerIndex: 1
+  answerIndex: 0
   explanation: Far from the origin a float can only hold positions some distance apart, which is why UE 5's FVector uses doubles. Use doubles there, or keep positions relative to a nearby origin.
 - id: explain-mass
   type: explain-in-one-sentence

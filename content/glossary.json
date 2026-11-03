@@ -4544,14 +4544,12 @@
     "id": "fvector3f",
     "term": "FVector3f",
     "aliases": [
-      "TVector<float>",
-      "FVector2f",
-      "FVector4f"
+      "TVector<float>"
     ],
     "category": "math",
     "short": "A vector of three floats, 12 bytes, next to the UE 5 FVector of three doubles, 24 bytes.",
     "long": "UE 5 switched FVector to doubles so that very large worlds keep their precision far from the origin. FVector3f, which is UE::Math::TVector<float>, keeps the old three floats and half the size, which suits large arrays of small records such as particles or crowd agents that stay near the origin. Converting between the two is explicit, with FVector3f(SomeVector) and FVector(SomeVector3f). Floats lose precision far from the origin, so positions in a world many kilometers across are better kept as FVector or relative to a nearby origin.",
-    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/Math/TVector?application_version=5.8",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TVector?application_version=5.8",
     "related": [
       "fvector",
       "ustruct",

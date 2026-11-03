@@ -25,11 +25,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: each firefly record gains a name, a 200 character description for the field guide, and the time it was first seen. The movement loop reads none of them. What happens to the movement loop?"
 choices:
-  - Nothing; fields the loop does not read cost nothing
   - It slows down, because each record is now much larger, so each cache line brings fewer fireflies and the loop fetches far more memory for the same work
+  - Nothing; fields the loop does not read cost nothing
   - It speeds up, because larger records are aligned better
   - It stops compiling
-answerIndex: 1
+answerIndex: 0
 explanation: The loop reads whole cache lines. Fields it never uses still fill those lines, so fewer fireflies arrive per fetch. That is the reason for a hot and cold split.
 ```
 
@@ -83,20 +83,20 @@ struct FFireflyCold
   prompt: "What does the Data Locality pattern do?"
   choices:
     - Makes sure only one instance of a class exists
-    - Lays out the data a hot loop reads side by side, in the order it reads it, so memory arrives ahead of the loop
     - Delays work until a value is needed
+    - Lays out the data a hot loop reads side by side, in the order it reads it, so memory arrives ahead of the loop
     - Reuses objects instead of creating new ones
-  answerIndex: 1
+  answerIndex: 2
   explanation: It is about where data sits in memory relative to the loop that reads it.
 - id: swap-or-shift
   type: multiple-choice
   prompt: "A packed array of 10,000 sparks loses the spark at index 3. Which removal keeps it packed without moving the 9,996 records after it?"
   choices:
     - RemoveAt(3)
-    - RemoveAtSwap(3), which moves the last record into index 3
     - Setting a bAlive flag to false at index 3
     - Empty, then adding the 9,999 others again
-  answerIndex: 1
+    - RemoveAtSwap(3), which moves the last record into index 3
+  answerIndex: 3
   explanation: RemoveAtSwap fills the gap with the last record, so only one record moves. RemoveAt keeps the order by shifting every later record down, and a flag leaves a dead record for the loop to skip.
 - id: fill-hot-cold
   type: fill-blank
@@ -120,11 +120,11 @@ struct FFireflyCold
   type: multiple-choice
   prompt: "When is Mass Entity the better fit than an array of structs in one actor?"
   choices:
-    - For a door that opens twice a level
     - For tens of thousands of agents with several kinds of data and many systems processing them, such as a city crowd
+    - For a door that opens twice a level
     - For any game with more than ten actors
     - Never; it is only for the editor
-  answerIndex: 1
+  answerIndex: 0
   explanation: Mass shines at very large counts with many processors. A single swarm with one loop is simpler as an array of structs.
 - id: explain-cost
   type: explain-in-one-sentence

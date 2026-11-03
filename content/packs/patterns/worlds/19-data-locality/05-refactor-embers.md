@@ -29,7 +29,7 @@ Today every ember is a `UDojoP19Ember`, made with `NewObject` and held in a `UPR
 
 Refactor the embers into plain data:
 
-- No ember is an object. The brazier keeps two `UPROPERTY` arrays of `USTRUCT` records, named `Hot` and `Cold`.
+- No ember is an object, and none of the brazier's own properties is an array of object pointers. The brazier keeps two `UPROPERTY` arrays of `USTRUCT` records, named `Hot` and `Cold`.
 - A `Hot` record holds only what the step reads and writes every frame, and is no larger than 32 bytes. In UE 5 an `FVector` is three doubles, 24 bytes; `FVector3f` is three floats, 12 bytes.
 - A `Cold` record holds the rest. The record at an index in `Cold` always belongs to the ember at that index in `Hot`, after every kindle and every removal.
 - `Kindle`, `Step`, and every reading function keep their names and signatures, and each ember rises, cools, and is counted exactly as before.
@@ -38,7 +38,7 @@ Three of the five tests pass on the starter and must pass after; two do not. Rea
 
 ## See it in the editor
 
-Place a `DojoP19Brazier`. In the Level Blueprint, on Begin Play, use Set Timer by Event with a looping time of 0.1 seconds to call Kindle at the brazier's location with a velocity of 0, 0, 150 and the kind Spark, and on Event Tick print Get Ember Count. Press Play: the count climbs to about 30 and holds there, as embers cool as fast as they are kindled. Type `obj list class=DojoP19Ember` in the console: before the refactor it lists about 30 objects, and after it the class is gone and nothing is listed.
+Place a `DojoP19Brazier`. In the Level Blueprint, on Begin Play, use Set Timer by Event with a looping time of 0.1 seconds to call Kindle at the brazier's location with a velocity of 0, 0, 150 and the kind Spark, and on Event Tick print Get Ember Count. Press Play: the count climbs to about 30 and holds there, as embers cool as fast as they are kindled. Type `obj gc` in the console to collect the embers that already went out, then `obj list class=DojoP19Ember`: before the refactor it lists about 30 objects, one per ember still up, and after it the console says it does not recognize the class, because the class is gone.
 
 # Files
 
@@ -346,10 +346,11 @@ bool FDojo_P19_Embers_CooledEmbersGoOut::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P19_Embers_NoObjectPerEmber, "Dojo.P19.Embers.NoObjectPerEmber", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** The brazier keeps no array of object pointers, so no ember is an object. Fails on the starter. */
+/** The brazier's own properties include no array of object pointers, so no ember is an object. Fails on the starter. */
 bool FDojo_P19_Embers_NoObjectPerEmber::RunTest(const FString& Parameters)
 {
-	for (TFieldIterator<FArrayProperty> Array(ADojoP19Brazier::StaticClass()); Array; ++Array)
+	// Only the brazier's own properties: AActor, its parent, has object pointer arrays of its own, such as its components.
+	for (TFieldIterator<FArrayProperty> Array(ADojoP19Brazier::StaticClass(), EFieldIterationFlags::None); Array; ++Array)
 	{
 		TestFalse(FString::Printf(TEXT("The array %s holds no object pointers, so no ember is an object"), *Array->GetName()), Array->Inner->IsA<FObjectPropertyBase>());
 	}
@@ -406,7 +407,7 @@ bool FDojo_P19_Embers_HotRecordsStaySmall::RunTest(const FString& Parameters)
 - No ember is an object: the brazier keeps two UPROPERTY arrays of USTRUCT records, Hot and Cold, and no array of object pointers.
 - A Hot record holds only what the step reads and writes, and is no larger than 32 bytes.
 - A Cold record holds the kind and the kindling time, and the record at each index in Cold belongs to the ember at that index in Hot after every kindle and every removal.
-- The step reads only the Hot array.
+- The step's moving loop reads only the Hot array.
 - Kindle, Step, and every reading function keep their names and signatures, and each ember rises, cools, and is counted exactly as before.
 - The brazier depends on its records; the records point at nothing.
 

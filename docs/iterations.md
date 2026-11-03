@@ -2263,6 +2263,7 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Tester: fresh tester PASS at 70004fb: verifier no problems and 12 warnings; `--pack mechanics` no problems; typecheck clean; npm test 1321 passed and 32 skipped; every build and boss quest has its solution folder; no em dashes; the new test uses only public members. No UI changed, so no Playwright run.
 - Not done or left for later: unverified on macOS (A75). The boss's R key is called directly in the headless tests (no player controller).
 - Decisions made: A1400 to A1407 under "Awaiting Mohammad's review" (prerequisite, shape, boss, seeded stream, deliberate failure, reuse of World 3 and World 2 actors, glossary claims, the next-tick end check).
+
 ## M4.P2.19 Pack 2 World 19, Data Locality (content-patterns, author-patterns)
 - What changed: a nineteenth Patterns world, "Fireflies in a row", with the full mini-arc for Data Locality (six quests and a boss), set in a summer meadow. Thousands of fireflies and embers become small records side by side in arrays walked by one loop (A1711).
 - The quests and their observables:
@@ -2276,4 +2277,5 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Also: five glossary entries (`cache-line`, `fvector3f`, `hot-cold-split`, `remove-at-swap`, `mass-entity`) and the Data Locality card rewritten with two recall items and two scenarios (A1717).
 - Proof: `npm run typecheck` passes; `npm test` 102 files passed, 6 skipped, 1321 tests passed, 32 skipped; `npx tsx tools/verify-content.ts` no problems and 12 warnings; `--pack patterns` no problems. Engine proof waits for the Lead's queue (A1718).
 - Originality: the 6-word check against the research notes matches only Epic doc URLs and test boilerplate. The book check is owed (D13, problems.md).
-- Not done: the engine proof; the book check; macOS; the boss's R key (headless tests have no player controller). No screenshots (content only). Decisions A1710 to A1718.
+- Review: a fresh reviewer, FIXES NEEDED on 5168456 (A1719): the refactor's reflection test also walked AActor's own object arrays, so it could never pass; the console steps promised a count garbage collection does not give; one rubric bullet had no rule in the brief; two FVector3f aliases named other types; and twelve answers sat in the same position.
+- Not done: the engine proof; the book check; macOS; the boss's R key (headless tests have no player controller). No screenshots (content only). Decisions A1710 to A1719.

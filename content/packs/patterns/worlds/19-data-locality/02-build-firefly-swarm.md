@@ -29,7 +29,7 @@ Most of the code is written. First read the marked lines and say in a sentence w
 
 ## See it in the editor
 
-Place a `DojoP19Swarm` and set Starting Fireflies to 1000 and Draw Debug to true in the Details panel. Press Play: a cloud of points drifts over the swarm, rising and falling between the floor and 300 units up, each point brightening and dimming. Press F8 to eject and look at the Outliner: one `DojoP19Swarm` and no firefly actors. Type `stat game` in the console to see how little the one tick costs.
+Place a `DojoP19Swarm` on the floor of the level, at a height of 0, and set Starting Fireflies to 1000 and Draw Debug to true in the Details panel. Press Play: a cloud of points drifts over the swarm, rising and falling between the floor and 300 units up, each point brightening and dimming. Press F8 to eject and look at the Outliner: one `DojoP19Swarm` and no firefly actors. Type `stat game` in the console to see how little the one tick costs.
 
 # Files
 

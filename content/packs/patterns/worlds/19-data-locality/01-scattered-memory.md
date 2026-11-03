@@ -27,10 +27,10 @@ type: multiple-choice
 prompt: "Guess, no penalty: the meadow has 10,000 fireflies, each an actor with a sphere component that moves itself in Tick. The frame takes far too long and the fireflies' own math is tiny. Where does most of the time go?"
 choices:
   - The square roots in the movement math
-  - Running 10,000 separate ticks and reaching 10,000 objects scattered across memory, each carrying far more than a position
   - Drawing the spheres, always
+  - Running 10,000 separate ticks and reaching 10,000 objects scattered across memory, each carrying far more than a position
   - Nowhere in particular; 10,000 of anything is free on a modern PC
-answerIndex: 1
+answerIndex: 2
 explanation: Each actor's tick is dispatched on its own, and each firefly's few bytes of position sit inside a large object somewhere in memory. The processor spends the frame fetching and dispatching, not adding velocities.
 ```
 
@@ -84,21 +84,21 @@ TArray<FFirefly> Fireflies;
   type: multiple-choice
   prompt: "Why does it help to keep the data one loop reads side by side in memory?"
   choices:
-    - Memory is cheaper when it is full
     - The processor fetches a whole cache line at a time, so neighbors of the record it needs arrive for free
+    - Memory is cheaper when it is full
     - Side by side data is never garbage collected
     - The compiler refuses to loop over scattered data
-  answerIndex: 1
+  answerIndex: 0
   explanation: A fetch brings a whole line, 64 bytes on PC, into the cache. Records packed together make every fetch useful.
 - id: pointer-array
   type: multiple-choice
   prompt: "A TArray<UFirefly*> stores its elements side by side. Why is walking it still slow for movement?"
   choices:
     - TArray stores pointers out of order
-    - Only the pointers are side by side; each firefly object sits somewhere else in memory among fields the loop never reads
     - Pointers are larger than structs
     - UObject pointers cannot be read in a loop
-  answerIndex: 1
+    - Only the pointers are side by side; each firefly object sits somewhere else in memory among fields the loop never reads
+  answerIndex: 3
   explanation: The array of pointers is compact, but every dereference is another trip to a different place in memory.
 - id: fill-vector3f
   type: fill-blank

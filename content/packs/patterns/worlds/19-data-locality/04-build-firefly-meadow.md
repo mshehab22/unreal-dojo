@@ -25,7 +25,7 @@ When you press Play with the setup below, the meadow lets four fireflies drift, 
 
 `ADojoP19Meadow` holds catchable fireflies as `FDojoP19MeadowFly` records in one `UPROPERTY` array. Each frame its `Tick` calls the given `Step`: every firefly moves by its velocity and loses life, and every firefly whose life has run out is removed. `Catch` removes the firefly a handle names and returns true, or returns false when the handle names no firefly in the meadow. `IsAlive`, `GetPosition`, and `GetFireflyCount` read the meadow. All of that is given.
 
-Yours are `AddFirefly`, `FindIndex`, and `RemoveFirefly`. `AddFirefly` puts a firefly in the meadow and returns an `FDojoP19FlyHandle` that names it. `FindIndex` returns where in the array the firefly a handle names is now, or `INDEX_NONE` when the meadow does not hold it. `RemoveFirefly` removes the firefly at an index and keeps the array packed: no gaps, every record in it a live firefly, and the order of the records does not matter. A handle finds its own firefly for as long as that firefly is in the meadow, and finds nothing once it has been caught or has faded, also after other fireflies have been added. You may add private members and fields to the records; `Step`, `Catch`, `IsAlive`, `GetPosition`, and `GetFireflyCount` stay as they are.
+Yours are `AddFirefly`, `FindIndex`, and `RemoveFirefly`. `AddFirefly` puts a firefly in the meadow and returns an `FDojoP19FlyHandle` that names it. `FindIndex` returns where in the array the firefly a handle names is now, or `INDEX_NONE` when the meadow does not hold it. `RemoveFirefly` removes the firefly at an index and keeps the array packed: no gaps, every record in it a live firefly, and the order of the records does not matter. A handle finds its own firefly for as long as that firefly is in the meadow, and finds nothing once it has been caught or has faded, also after other fireflies have been added. You may add private members, and fields to the records if you need them, as long as each record stays plain numbers with no pointers in it; `Step`, `Catch`, `IsAlive`, `GetPosition`, and `GetFireflyCount` stay as they are.
 
 Write the obvious version first and run the tests. One of them fails on purpose for most people. Read its name and message before you read the hints.
 
@@ -371,7 +371,7 @@ bool FDojo_P19_Meadow_ABusyEveningStaysPacked::RunTest(const FString& Parameters
 - A handle finds its own firefly for as long as that firefly is in the meadow.
 - A handle finds nothing once its firefly is caught or has faded, also after other fireflies are added.
 - Step, Catch, IsAlive, GetPosition, and GetFireflyCount are unchanged.
-- The records the step walks stay small, with nothing in them that points elsewhere.
+- Each record stays plain numbers, with no pointers in it.
 
 # Alternative
 

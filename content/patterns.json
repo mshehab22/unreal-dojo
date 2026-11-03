@@ -2347,11 +2347,11 @@
         "prompt": "A record holds a position and a velocity as FVector. How large are those two fields together in UE 5, and how large as FVector3f?",
         "choices": [
           "24 bytes, and 12 bytes",
-          "48 bytes, and 24 bytes",
           "12 bytes, and 6 bytes",
+          "48 bytes, and 24 bytes",
           "The same either way"
         ],
-        "answerIndex": 1,
+        "answerIndex": 2,
         "explanation": "UE 5's FVector holds three doubles, 24 bytes, and FVector3f three floats, 12 bytes; two of each are 48 and 24 bytes."
       },
       {
@@ -2359,12 +2359,12 @@
         "type": "multiple-choice",
         "prompt": "A packed array of 20,000 records must lose the record at index 10. Which call keeps it packed while moving only one other record?",
         "choices": [
-          "RemoveAt(10)",
           "RemoveAtSwap(10)",
+          "RemoveAt(10)",
           "Empty()",
           "SetNum(10)"
         ],
-        "answerIndex": 1,
+        "answerIndex": 0,
         "explanation": "RemoveAtSwap moves the last record into index 10; RemoveAt shifts all 19,989 records after it down by one."
       }
     ],
@@ -2442,11 +2442,11 @@
         "prompt": "A fire basket's embers are only seen: no gameplay code ever reads where they are. A teammate wants to write a hot and cold split for them. What is the better choice?",
         "choices": [
           "Write the split; embers are a classic case",
-          "Use a Niagara system, which keeps its particles packed for you, and write no ember code at all",
           "Make each ember an actor so it can be seen",
-          "Store them in a TMap by ID"
+          "Store them in a TMap by ID",
+          "Use a Niagara system, which keeps its particles packed for you, and write no ember code at all"
         ],
-        "answerIndex": 1,
+        "answerIndex": 3,
         "explanation": "Effects that are only seen belong in Niagara. Records of your own pay off when gameplay has to read or change them."
       }
     ]
