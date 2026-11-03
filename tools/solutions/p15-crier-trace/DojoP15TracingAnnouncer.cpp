@@ -9,8 +9,7 @@ void UDojoP15TracingAnnouncer::Announce(const FString& Line)
 {
 	ForwardedCount++;
 
-	IDojoP15Announcer* Behind = Cast<IDojoP15Announcer>(Wrapped.Get());
-	if (Behind != nullptr) Behind->Announce(Line);
+	if (IDojoP15Announcer* Behind = Cast<IDojoP15Announcer>(Wrapped.Get())) Behind->Announce(Line);
 }
 
 UObject* UDojoP15TracingAnnouncer::GetWrapped() const

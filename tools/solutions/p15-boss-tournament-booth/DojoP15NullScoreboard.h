@@ -6,7 +6,7 @@
 #include "DojoP15NullScoreboard.generated.h"
 
 /** The scoreboard that stands in when nobody has been provided: it takes every point and keeps none, so every total reads 0. */
-UCLASS()
+UCLASS(BlueprintType)
 class UDojoP15NullScoreboard : public UObject, public IDojoP15Scoreboard
 {
 	GENERATED_BODY()

@@ -26,7 +26,7 @@ Two classes are yours.
 
 `UDojoP15TracingAnnouncer` wraps another announcer. `Wrap` and the getters are given. `Announce` counts the line, then passes it unchanged to the announcer it wraps; with nothing wrapped it counts the line and drops it. Because it implements `IDojoP15Announcer` itself, it can be provided to the desk like any announcer, in front of whichever one was there.
 
-`ADojoP15Crier` stands in the dojo. `CallOut` announces a line through the announcer the desk of its world has in place. With no desk it drops the line. A crier is placed once and then called out through many times during a match.
+`ADojoP15Crier` stands in the dojo. `CallOut` announces a line through the announcer the desk of its world has in place. With no desk it drops the line.
 
 The crier depends on the desk and the interface, and on no announcer class. The announcers know nothing about the crier.
 
@@ -36,7 +36,7 @@ Write the obvious version first and run the tests. One of them fails on purpose 
 
 ## See it in the editor
 
-Place a `DojoP15Crier`. In the Level Blueprint, on Begin Play, get the world subsystem Dojo P15 Announcer Desk and call Provide with a Construct Object from Class of Dojo P15 Recording Announcer (outer: the desk). On the keys 1, 2, and 3, call Call Out on the crier with the lines "One", "Two", and "Three". Press 1 and 2, then print the recording announcer's Lines (Get Provider, then Cast To Dojo P15 Recording Announcer, then Get Lines): "One", "Two". Now on key T make a Dojo P15 Tracing Announcer with Construct Object from Class, call Wrap with the desk's Get Provider, then call Provide on the desk with the tracer, and keep the tracer in a variable. Press 3, then print the tracer's Forwarded Count (1) and the recording announcer's Lines again ("One", "Two", "Three"): the line went through the tracer and on to the recording announcer.
+Place a `DojoP15Crier`. In the Level Blueprint, on Begin Play, get the world subsystem Dojo P15 Announcer Desk and call Provide with a Construct Object from Class of Dojo P15 Recording Announcer (outer: the desk). On the keys 1, 2, and 3, call Call Out on the crier with the lines "One", "Two", and "Three". Press 1 and 2, then print the recording announcer's Lines (Get Provider, then Cast To Dojo P15 Recording Announcer, then Get Lines, then Join String Array into Print String): One and Two. Now on key T make a Dojo P15 Tracing Announcer with Construct Object from Class, call Wrap with the desk's Get Provider, then call Provide on the desk with the tracer, and keep the tracer in a variable. Press 3, then print the tracer's Forwarded Count (1) and the recording announcer's Lines again (One, Two, Three): the line went through the tracer and on to the recording announcer.
 
 # Files
 
@@ -51,7 +51,7 @@ Place a `DojoP15Crier`. In the Level Blueprint, on Begin Play, get the world sub
 #include "DojoP15TracingAnnouncer.generated.h"
 
 /** An announcer that wraps another one: it counts each line and passes it on unchanged, so it can be slipped in front of any announcer and taken out again. Service Locator pattern. */
-UCLASS()
+UCLASS(BlueprintType)
 class UDojoP15TracingAnnouncer : public UObject, public IDojoP15Announcer
 {
 	GENERATED_BODY()
@@ -126,12 +126,12 @@ public:
 	/** Creates the scene root and turns ticking off. */
 	ADojoP15Crier();
 
-	/** Calls Line out through the announcer now in place; with no desk in the world, the line is dropped. */
+	/** Announces Line through the announcer the desk of this world holds; with no desk in the world, the line is dropped. */
 	UFUNCTION(BlueprintCallable, Category = "Crier")
 	void CallOut(const FString& Line);
 
 protected:
-	/** Starts the crier; there is nothing to prepare. */
+	/** Runs when the crier enters play. */
 	virtual void BeginPlay() override;
 };
 ```
@@ -176,6 +176,7 @@ void ADojoP15Crier::CallOut(const FString& Line)
 #include "Quests/p15-crier-trace/DojoP15TracingAnnouncer.h"
 #include "Support/DojoTestWorld.h"
 #include "UObject/Package.h"
+#include "UObject/StrongObjectPtr.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P15_CrierTrace_TracerPassesLinesOn, "Dojo.P15.CrierTrace.TracerPassesLinesOn", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
@@ -214,11 +215,13 @@ bool FDojo_P15_CrierTrace_CrierCallsOutThroughTheDesk::RunTest(const FString& Pa
 	FDojoTestWorld TestWorld;
 
 	UDojoP15AnnouncerDesk* Desk = UDojoP15AnnouncerDesk::Locate(TestWorld.GetWorld());
-	ADojoP15Crier* Crier = TestWorld.SpawnActor<ADojoP15Crier>();
-	if (!TestNotNull(TEXT("The world has a desk"), Desk) || !TestNotNull(TEXT("Crier spawned"), Crier)) return false;
+	if (!TestNotNull(TEXT("The world has a desk"), Desk)) return false;
 
 	UDojoP15RecordingAnnouncer* Record = NewObject<UDojoP15RecordingAnnouncer>(GetTransientPackage());
 	Desk->Provide(Record);
+
+	ADojoP15Crier* Crier = TestWorld.SpawnActor<ADojoP15Crier>();
+	if (!TestNotNull(TEXT("Crier spawned"), Crier)) return false;
 
 	Crier->CallOut(TEXT("Bout one"));
 	Crier->CallOut(TEXT("Bout two"));
@@ -258,6 +261,7 @@ bool FDojo_P15_CrierTrace_ChangesReachTheCrier::RunTest(const FString& Parameter
 	if (!TestNotNull(TEXT("The world has a desk"), Desk)) return false;
 
 	UDojoP15RecordingAnnouncer* First = NewObject<UDojoP15RecordingAnnouncer>(GetTransientPackage());
+	const TStrongObjectPtr<UObject> KeepFirst(First);
 	Desk->Provide(First);
 
 	ADojoP15Crier* Crier = TestWorld.SpawnActor<ADojoP15Crier>();
@@ -266,6 +270,7 @@ bool FDojo_P15_CrierTrace_ChangesReachTheCrier::RunTest(const FString& Parameter
 	Crier->CallOut(TEXT("One"));
 
 	UDojoP15TracingAnnouncer* Tracer = NewObject<UDojoP15TracingAnnouncer>(GetTransientPackage());
+	const TStrongObjectPtr<UObject> KeepTracer(Tracer);
 	Tracer->Wrap(Desk->GetProvider());
 	Desk->Provide(Tracer);
 
@@ -309,16 +314,15 @@ The desk could forward the call itself, with a function such as `Say(Line)`, so 
 # Parsons
 
 ```yaml
-- id: call-out
-  prompt: Put CallOut in order.
+- id: announce
+  prompt: Put the tracer's Announce in order.
   lines:
-    - "void ADojoP15Crier::CallOut(const FString& Line)"
+    - "void UDojoP15TracingAnnouncer::Announce(const FString& Line)"
     - "{"
-    - "	UDojoP15AnnouncerDesk* Desk = UDojoP15AnnouncerDesk::Locate(GetWorld());"
-    - "	if (Desk == nullptr) return;"
-    - "	Desk->Get().Announce(Line);"
+    - "	ForwardedCount++;"
+    - "	if (IDojoP15Announcer* Behind = Cast<IDojoP15Announcer>(Wrapped.Get())) Behind->Announce(Line);"
     - "}"
   distractors:
-    - line: "	UDojoP15AnnouncerDesk* Desk = NewObject<UDojoP15AnnouncerDesk>(this);"
-      mistake: A subsystem is made by the engine, one per world; building one by hand gives a desk nobody else can find, with its own empty announcer.
+    - line: "	Wrapped->Announce(Line);"
+      mistake: Wrapped is a plain UObject pointer, which has no Announce function, and it may be empty; cast it to the interface first and check the result.
 ```

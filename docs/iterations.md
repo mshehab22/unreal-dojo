@@ -2254,9 +2254,9 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
   - A crier, and a tracer slipped in front of the announcer (build, stub): the learner writes the tracing decorator's `Announce` and the crier's `CallOut`. Its deliberate failure: a crier that keeps the announcer it first fetched (A1583).
   - A gong that makes its own speaker (refactor): strikes are announced through the desk, the gong keeps its counting and its public functions, and its own speaker is gone.
   - When asking a phone book hides too much (concept): one-relationship dependencies, hidden dependencies, a kept provider going stale, a subsystem used as a bag of shared state, and services not ready before setup.
-  - Boss, the tournament booth: a 30 second round between Ayla and Brom announced through the crier and the announcer desk, scored through a second service the learner builds (a scoreboard desk), with T slipping the tracer in and out and a provider swapped between rounds. Five tests, including two full rounds, a scoreboard swap, nothing provided, and draws with the restart rules (A1586, A1589).
+  - Boss, the tournament booth: a 30 second round between Ayla and Brom announced through the crier and the announcer desk, scored through a second service the learner builds (a scoreboard desk), with T slipping the tracer in and out and a provider swapped between rounds. Seven tests, including two full rounds, a scoreboard swap, the chosen classes, the tunable numbers, nothing provided, and draws with the restart rules (A1586, A1589, A1591).
 - Also: new glossary entries `null-object` and `tscriptinterface`, and the Service Locator card audit (A1588).
 - Proof so far:
   - Content verifier: no problems. Originality: no 6-word or 5-word match against the research's Service Locator section in the quests, solutions, glossary entries, or card. The check against the book is pending because the PDF is gone.
   - Engine proof: not run. The task did not allow the engine, so nothing in this world has been compiled (A1590). Queued for the Lead: the four solution folders, the starters, and the mutation copies.
-- Not done: the engine proof, the mutation run, and the source n-gram check. No screenshots. Decisions A1580 to A1590.
+- Not done: the engine proof, the mutation run, and the source n-gram check. No screenshots. Decisions A1580 to A1591.

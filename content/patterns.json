@@ -1939,7 +1939,7 @@
     "intent": "Let code ask one place for \"the announcer\" or \"the scoreboard\" by interface and get back whichever provider was set up (loud, recording, or silent), without knowing which class that is.",
     "problem": "The gong, the bout timer, and the score screen all need to announce lines. Passing an announcer through every function is tedious, and letting each create its own welds them to one concrete class, which blocks swapping in a silent or recording version for tests or a different build.",
     "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem may keep its current provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's own registry for plugin features, and you ask whether a feature exists before asking for it. Provide a null provider so callers never check for nullptr.",
-    "whenNot": "If the dependency can be passed in through a constructor or function parameter, do that; it stays visible. Do not use a locator for something that should only be reachable in one context or phase, because a global lookup cannot enforce that.",
+    "whenNot": "If the dependency can be passed in through a constructor or function parameter, do that; it stays visible. A global lookup also cannot keep a facility to one context or phase, so do not use a locator for something that may only be reached there.",
     "useCaseQuestIds": [
       "p15-announcer-desk",
       "p15-crier-trace"
@@ -2041,7 +2041,7 @@
           "Queue the line for the next frame"
         ],
         "answerIndex": 0,
-        "explanation": "When a caller already has the dependency, passing it in keeps it visible in the trap's interface. A locator is the fallback when passing in is impractical, not the default."
+        "explanation": "When a caller already has the dependency, passing it in keeps it visible in the bell's interface. A locator is the fallback when passing in is impractical, not the default."
       },
       {
         "id": "service-locator-scenario-3",

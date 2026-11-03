@@ -6,7 +6,7 @@
 #include "DojoP15NullAnnouncer.generated.h"
 
 /** The announcer that stands in when nobody has been provided: it takes every line and only counts it, so callers never meet a missing announcer. */
-UCLASS()
+UCLASS(BlueprintType)
 class UDojoP15NullAnnouncer : public UObject, public IDojoP15Announcer
 {
 	GENERATED_BODY()

@@ -23,14 +23,14 @@ concepts:
 ```yaml
 id: predict
 type: multiple-choice
-prompt: "Guess, no penalty: a rival's attack needs the health of the particular fighter it is hitting. A teammate proposes registering every fighter's health with a locator so the attack can look it up. Right call?"
+prompt: "Guess, no penalty: a bell's chime should be as loud as the gong that set it ringing. A teammate proposes registering every gong's volume with a locator so the bell can look it up. Right call?"
 choices:
   - Yes, a locator is the right place for anything many classes need
-  - No; the attack already has its target, so pass the target in or reach its health through it
+  - No; the bell already knows which gong rang it, so pass that gong in or read the volume through it
   - Yes, but only with a game instance subsystem
   - No; health should be a console variable
 answerIndex: 1
-explanation: The target is part of this one attack, not a service for the whole game. Passing it or reaching it through the target keeps the relationship visible.
+explanation: The gong is part of this one chime, not a service for the whole game. Passing it in, or reaching its volume through it, keeps the relationship visible.
 ```
 
 # Card
@@ -68,7 +68,7 @@ void ADojoRival::Strike(ADojoFighter* Target)
   choices:
     - The announcer every system speaks through
     - The analytics sink every system reports to
-    - The particular crate a player is currently opening
+    - The particular crate a player is opening right now
     - The saving of the player's profile
   answerIndex: 2
   explanation: The crate belongs to one interaction. It is not a service for the whole game, so it should be passed in or reached through the actor that owns it.
@@ -77,10 +77,10 @@ void ADojoRival::Strike(ADojoFighter* Target)
   prompt: "A bell fetches the announcer in BeginPlay and keeps the pointer. Later a test provides a different announcer. Whom does the bell announce to?"
   choices:
     - The new announcer, because the desk tells it
-    - The one it fetched at BeginPlay, which is no longer the one in place
     - Both announcers
     - Nobody; the engine stops the bell
-  answerIndex: 1
+    - The one it fetched at BeginPlay, which is no longer the one in place
+  answerIndex: 3
   explanation: A pointer kept from BeginPlay keeps pointing at the old announcer. The desk can only answer when it is asked again.
 - id: spot-kept-provider
   type: spot-the-bug
@@ -98,11 +98,11 @@ void ADojoRival::Strike(ADojoFighter* Target)
   type: multiple-choice
   prompt: "A teammate adds fields for the current target, the selected weapon, and the last score to a world subsystem so that any class can read them. What is this?"
   choices:
-    - A good use of a locator
     - A global variable in disguise
+    - A good use of a locator
     - A null object
     - A decorator
-  answerIndex: 1
+  answerIndex: 0
   explanation: The values are facts passed between parts of the game, not a service. Everyone can reach and change them, which is what a global is.
 - id: explain-when-not
   type: explain-in-one-sentence

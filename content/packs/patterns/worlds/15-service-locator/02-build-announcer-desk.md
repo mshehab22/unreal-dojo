@@ -30,7 +30,7 @@ The desk depends on the interface only. The announcers know nothing about the de
 
 ## See it in the editor
 
-Open the Level Blueprint. On Begin Play, use Get World Subsystem with the class Dojo P15 Announcer Desk, call Get Provider on it, and print the result's display name: a Dojo P15 Null Announcer. Then call Provide with the result of Construct Object from Class (class Dojo P15 Recording Announcer, outer: the desk) and print the returned boolean: true. Call Get Provider again and print its display name: a Dojo P15 Recording Announcer. Finally call Provide with Get Player Controller (index 0), which is not an announcer, and print the boolean: false, and Get Provider still names the recording announcer.
+Open the Level Blueprint. On Begin Play, use Get World Subsystem with the class Dojo P15 Announcer Desk, call Get Provider on it, and print the result's name with Get Object Name: it starts with DojoP15NullAnnouncer. Then call Provide with the result of Construct Object from Class (class Dojo P15 Recording Announcer, outer: the desk) and print the returned boolean: true. Call Get Provider again and print its name: it starts with DojoP15RecordingAnnouncer. Finally call Provide with Get Player Controller (index 0), which is not an announcer, and print the boolean: false, and Get Provider still gives the recording announcer.
 
 # Files
 
@@ -72,7 +72,7 @@ public:
 #include "DojoP15NullAnnouncer.generated.h"
 
 /** The announcer that stands in when nobody has been provided: it takes every line and only counts it, so callers never meet a missing announcer. */
-UCLASS()
+UCLASS(BlueprintType)
 class UDojoP15NullAnnouncer : public UObject, public IDojoP15Announcer
 {
 	GENERATED_BODY()
@@ -118,7 +118,7 @@ int32 UDojoP15NullAnnouncer::GetAbsorbedCount() const
 #include "DojoP15RecordingAnnouncer.generated.h"
 
 /** An announcer that writes every line down instead of speaking it, so a test can read what was announced. */
-UCLASS()
+UCLASS(BlueprintType)
 class UDojoP15RecordingAnnouncer : public UObject, public IDojoP15Announcer
 {
 	GENERATED_BODY()
@@ -195,7 +195,7 @@ public:
 private:
 	/** The announcer in place; any object that implements the interface. */
 	UPROPERTY()
-	TObjectPtr<UObject> Current; // @explain: A UPROPERTY keeps the provider alive for the garbage collector, and the interface is found again with a cast each time it is needed.
+	TObjectPtr<UObject> Current; // @explain: A UPROPERTY keeps the provider alive for the garbage collector, and a cast turns the stored object into the interface when it is used.
 
 	/** The do-nothing announcer, made once. */
 	UPROPERTY()
@@ -259,6 +259,7 @@ UDojoP15NullAnnouncer* UDojoP15AnnouncerDesk::GetNullAnnouncer() const
 #include "Quests/p15-announcer-desk/DojoP15RecordingAnnouncer.h"
 #include "Support/DojoTestWorld.h"
 #include "UObject/Package.h"
+#include "UObject/StrongObjectPtr.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P15_AnnouncerDesk_NothingProvidedIsQuiet, "Dojo.P15.AnnouncerDesk.NothingProvidedIsQuiet", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
@@ -319,6 +320,8 @@ bool FDojo_P15_AnnouncerDesk_ReplacingAndResetting::RunTest(const FString& Param
 
 	UDojoP15RecordingAnnouncer* First = NewObject<UDojoP15RecordingAnnouncer>(GetTransientPackage());
 	UDojoP15RecordingAnnouncer* Second = NewObject<UDojoP15RecordingAnnouncer>(GetTransientPackage());
+	const TStrongObjectPtr<UObject> KeepFirst(First);
+	const TStrongObjectPtr<UObject> KeepSecond(Second);
 
 	Desk->Provide(First);
 	Desk->Get().Announce(TEXT("One"));

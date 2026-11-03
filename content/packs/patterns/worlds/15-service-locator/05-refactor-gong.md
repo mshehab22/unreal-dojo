@@ -36,7 +36,7 @@ One of the three tests passes on the starter and must pass after; the other two 
 
 ## See it in the editor
 
-Place a `DojoP15Gong`. In the Level Blueprint, on Begin Play, get the world subsystem Dojo P15 Announcer Desk and call Provide with a Construct Object from Class of Dojo P15 Recording Announcer (outer: the desk), and keep it in a variable. On the G key, call Strike on the gong and print the gong's Strike Count and the recording announcer's Lines. Before the refactor the Lines stay empty while the Output Log fills with LOUD: GONG! lines. After it the Lines gain a "Gong!" for each strike and the Output Log stays quiet.
+Place a `DojoP15Gong`. In the Level Blueprint, on Begin Play, get the world subsystem Dojo P15 Announcer Desk and call Provide with a Construct Object from Class of Dojo P15 Recording Announcer (outer: the desk), and keep it in a variable. On the G key, call Strike on the gong and print the gong's Strike Count and the recording announcer's Lines joined with Join String Array. Before the refactor the Lines stay empty while the Output Log fills with LOUD: GONG! lines. After it the Lines gain a "Gong!" for each strike and the Output Log stays quiet.
 
 # Files
 

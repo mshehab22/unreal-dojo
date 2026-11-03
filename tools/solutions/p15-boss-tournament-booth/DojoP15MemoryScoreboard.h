@@ -6,7 +6,7 @@
 #include "DojoP15MemoryScoreboard.generated.h"
 
 /** A scoreboard that keeps each fighter's total in memory for as long as it lives. */
-UCLASS()
+UCLASS(BlueprintType)
 class UDojoP15MemoryScoreboard : public UObject, public IDojoP15Scoreboard
 {
 	GENERATED_BODY()

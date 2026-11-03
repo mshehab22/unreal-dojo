@@ -47,7 +47,7 @@ Somewhere there is setup code, a game mode, a game instance, or a developer sett
 
 **When the service is missing.** Something has to happen if no provider was set. There are three common answers.
 
-- **Return nullptr.** Flexible, but every caller must check, and one forgotten check crashes.
+- **Return nullptr.** Flexible, but each caller has to test the result, and a single missed test is a crash.
 - **Assert.** The callers carry no checks, and the game halts the moment a service is missing, which suits a small team and blocks a large one.
 - **Provide a null object.** The callers carry no checks and the game keeps running. The price is that a mistake can go unnoticed, so a null object should at least count or log what it drops.
 
@@ -80,10 +80,10 @@ UDojoAnnouncerDesk::Locate(GetWorld())->Get().Announce(TEXT("Fight!"));
   prompt: "What are the three parts of a service locator?"
   choices:
     - A singleton, a factory, and an observer
-    - A service interface, providers behind it, and a place that hands out the provider in use
     - A base class, a component, and a delegate
     - A header, a source file, and a build file
-  answerIndex: 1
+    - A service interface, providers behind it, and a place that hands out the provider in use
+  answerIndex: 3
   explanation: Callers use the interface, the providers implement it, and the locator hands out whichever provider is in place.
 - id: fill-get-subsystem
   type: fill-blank
@@ -104,11 +104,11 @@ UDojoAnnouncerDesk::Locate(GetWorld())->Get().Announce(TEXT("Fight!"));
   type: multiple-choice
   prompt: "What is the main difference between a locator and a singleton?"
   choices:
-    - A locator can only hold one instance
     - A locator makes callers depend on an interface, and the provider behind it can change
+    - A locator can only hold one instance
     - A locator is always faster
     - There is no difference
-  answerIndex: 1
+  answerIndex: 0
   explanation: Both are reached from anywhere. The locator gives out an interface, so the provider can be swapped, which a singleton's concrete class does not allow.
 - id: spot-early-locate
   type: spot-the-bug

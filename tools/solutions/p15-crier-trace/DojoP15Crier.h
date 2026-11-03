@@ -14,11 +14,11 @@ public:
 	/** Creates the scene root and turns ticking off. */
 	ADojoP15Crier();
 
-	/** Calls Line out through the announcer now in place; with no desk in the world, the line is dropped. */
+	/** Announces Line through the announcer the desk of this world holds; with no desk in the world, the line is dropped. */
 	UFUNCTION(BlueprintCallable, Category = "Crier")
 	void CallOut(const FString& Line);
 
 protected:
-	/** Starts the crier; there is nothing to prepare. */
+	/** Runs when the crier enters play. */
 	virtual void BeginPlay() override;
 };

@@ -36,7 +36,7 @@ public:
 private:
 	/** The announcer in place; any object that implements the interface. */
 	UPROPERTY()
-	TObjectPtr<UObject> Current; // @explain: A UPROPERTY keeps the provider alive for the garbage collector, and the interface is found again with a cast each time it is needed.
+	TObjectPtr<UObject> Current; // @explain: A UPROPERTY keeps the provider alive for the garbage collector, and a cast turns the stored object into the interface when it is used.
 
 	/** The do-nothing announcer, made once. */
 	UPROPERTY()

@@ -6,7 +6,7 @@
 #include "DojoP15TracingAnnouncer.generated.h"
 
 /** An announcer that wraps another one: it counts each line and passes it on unchanged, so it can be slipped in front of any announcer and taken out again. Service Locator pattern. */
-UCLASS()
+UCLASS(BlueprintType)
 class UDojoP15TracingAnnouncer : public UObject, public IDojoP15Announcer
 {
 	GENERATED_BODY()

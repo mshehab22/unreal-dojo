@@ -4,6 +4,19 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1591 2026-11-03 World 15 fix round 1 (author-patterns, M4.P2.15)
+The reviewer's verdict was FIXES NEEDED with no compile error found. Changed:
+- Quest 4's Parsons block practised `CallOut`, the failing function, so it was the fix itself. It now practises the tracer's `Announce`, with one valid order.
+- `UDojoP15RecordingAnnouncer`, `UDojoP15NullAnnouncer`, `UDojoP15TracingAnnouncer`, and the boss scoreboards are `UCLASS(BlueprintType)`, because Construct Object from Class and the casts in the editor steps need it (Pack 2 worlds 10 to 13 do the same).
+- Hints of the failure before it happens were removed: the brief's "placed once" sentence, the neutral `BeginPlay` and `CallOut` comments, and the "each time it is needed" wording in a quest 2 note.
+- `CrierCallsOutThroughTheDesk` makes the crier after the announcer is provided, so only `ChangesReachTheCrier` separates the two versions.
+- The editor steps name objects with Get Object Name and join arrays before printing.
+- Correct-answer positions in quests 3 and 6 were spread, quest 6's predict no longer repeats a card scenario, and two close paraphrases of the research were reworded.
+- Test objects the desk stops referencing after a swap are held by `TStrongObjectPtr`.
+- Boss tests added for what the reviewer found uncaught: the chosen classes are what is provided, one crier exists, no hit or line after the round ends, the round is still running at 29.5 seconds, the label while a round runs, and the round length, rival interval, and win points are properties.
+- Left: a `MustImplement` filter on the boss class slots (the path string is an engine detail best checked in the editor); the slots list every UObject class, and a wrong choice is refused by Provide.
+Reverse cost: low.
+
 ### A1590 2026-11-03 World 15 was written without the engine; the proof is the Lead's (author-patterns, M4.P2.15)
 The task said not to touch the engine, so every C++ file, test, starter, and mutation copy was written and read but never compiled. It uses only long-stable calls (`UWorld::GetSubsystem`, `UObject::Implements`, `Cast` to an interface, `NewObject`, `FTimerManager::SetTimer`, `SpawnActorDeferred`, `InputComponent->BindKey`), copied in shape from the merged Pack 1 and Pack 2 solutions. Expect the first engine run to find any compile slip. Reverse cost: none.
 
@@ -53,7 +66,7 @@ Reverse cost: low.
 Reverse cost: medium once learners have progress saved.
 
 ### A1580 2026-11-03 Decision block A1580 to A1599 from the Lead (author-patterns, M4.P2.15)
-Assigned under A71; this world uses A1580 to A1590. Reverse cost: none.
+Assigned under A71; this world uses A1580 to A1591. Reverse cost: none.
 
 ### A1449 2026-11-03 One glossary entry for instanced objects (author-patterns, Lead's go)
 World 13's `instanced-specifier` and Pack 4 World 2's `instanced-subobjects` both claimed the aliases `EditInlineNew` and `DefaultToInstanced`, so main failed the verifier after both merged. Kept `instanced-subobjects` (the fuller text), added the alias "Instanced specifier", set its `firstQuestId` to `p13-bytecode-card` because Pack 2 teaches it before Pack 4 (A72), deleted `instanced-specifier`, and pointed World 13's card and trap refactor at the kept entry; A1377 and the World 13 progress entry still name the old id as history. Options: drop the two aliases from one entry (two hover cards for one idea), or keep both entries apart by wording (the same thing twice). Reverse cost: low.

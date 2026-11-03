@@ -4,6 +4,7 @@
 
 #include "Components/TextRenderComponent.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Quests/p15-announcer-desk/DojoP15AnnouncerDesk.h"
 #include "Quests/p15-announcer-desk/DojoP15NullAnnouncer.h"
 #include "Quests/p15-announcer-desk/DojoP15RecordingAnnouncer.h"
@@ -11,9 +12,11 @@
 #include "Quests/p15-boss-tournament-booth/DojoP15NullScoreboard.h"
 #include "Quests/p15-boss-tournament-booth/DojoP15ScoreboardDesk.h"
 #include "Quests/p15-boss-tournament-booth/DojoP15TournamentDirector.h"
+#include "Quests/p15-crier-trace/DojoP15Crier.h"
 #include "Quests/p15-crier-trace/DojoP15TracingAnnouncer.h"
 #include "Support/DojoTestWorld.h"
 #include "UObject/Package.h"
+#include "UObject/StrongObjectPtr.h"
 
 namespace DojoP15BoothTest
 {
@@ -95,7 +98,12 @@ bool FDojo_P15_TournamentBooth_TwoRoundsThroughTheDesks::RunTest(const FString& 
 
 	const UDojoP15RecordingAnnouncer* RoundOneRecord = Cast<UDojoP15RecordingAnnouncer>(Announcers->GetProvider());
 	if (!TestNotNull(TEXT("The director provided a recording announcer"), RoundOneRecord)) return false;
+	const TStrongObjectPtr<UObject> KeepRoundOne(Announcers->GetProvider());
 	TestTrue(TEXT("And a memory scoreboard"), Cast<UDojoP15MemoryScoreboard>(Scoreboards->GetProvider()) != nullptr);
+
+	int32 CrierCount = 0;
+	for (TActorIterator<ADojoP15Crier> It(TestWorld.GetWorld()); It; ++It) CrierCount++;
+	TestEqual(TEXT("The director spawned exactly one crier"), CrierCount, 1);
 
 	TestTrue(TEXT("Round 1 is running"), Director->IsRunning());
 	TestEqual(TEXT("It is round 1"), Director->GetRoundNumber(), 1);
@@ -103,6 +111,9 @@ bool FDojo_P15_TournamentBooth_TwoRoundsThroughTheDesks::RunTest(const FString& 
 	const float RoundOneStart = TestWorld.GetWorld()->GetTimeSeconds();
 	PressHitsAt(TestWorld, Director, RoundOneStart, TenHits);
 	TestEqual(TEXT("Ten player hits by second 13"), Director->GetPlayerHits(), 10);
+	TestTrue(TEXT("The label shows the round while it runs"), Director->Label->Text.ToString().StartsWith(TEXT("Round 1  Ayla 10  Brom 3")));
+	TickUntil(TestWorld, RoundOneStart + 29.5f);
+	TestTrue(TEXT("The round is still running just before 30 seconds"), Director->IsRunning());
 	TickUntil(TestWorld, RoundOneStart + 30.5f);
 
 	TestFalse(TEXT("Round 1 is over at 30 seconds"), Director->IsRunning());
@@ -113,7 +124,11 @@ bool FDojo_P15_TournamentBooth_TwoRoundsThroughTheDesks::RunTest(const FString& 
 	TestEqual(TEXT("The loser got none"), Scoreboards->GetPoints(TEXT("Brom")), 0);
 	TestTrue(TEXT("The label shows the result and the points"), Director->Label->Text.ToString().Contains(TEXT("Winner: Ayla")) && Director->Label->Text.ToString().Contains(TEXT("Points Ayla 3")));
 
+	TickUntil(TestWorld, RoundOneStart + 40.f);
+	TestEqual(TEXT("No rival hit lands after the round is over"), Director->GetRivalHits(), 7);
+
 	const int32 RoundOneLineCount = RoundOneRecord->GetLines().Num();
+	TestEqual(TEXT("And no line is announced after it"), RoundOneLineCount, 20);
 	Director->PressHit();
 	TestEqual(TEXT("A hit between rounds changes nothing"), Director->GetPlayerHits(), 10);
 	TestEqual(TEXT("And announces nothing"), RoundOneRecord->GetLines().Num(), RoundOneLineCount);
@@ -246,6 +261,10 @@ bool FDojo_P15_TournamentBooth_DrawsAndRestartRules::RunTest(const FString& Para
 	Director->PressNextRound();
 	TestEqual(TEXT("R is ignored while a round runs"), Director->GetRoundNumber(), 1);
 	TestEqual(TEXT("And the hits stay"), Director->GetPlayerHits(), 7);
+	TestTrue(TEXT("The label shows both counts while the round runs"), Director->Label->Text.ToString().Contains(TEXT("Ayla 7  Brom 2")));
+
+	TickUntil(TestWorld, Start + 29.5f);
+	TestTrue(TEXT("The round is still running just before 30 seconds"), Director->IsRunning());
 
 	TickUntil(TestWorld, Start + 30.5f);
 	TestFalse(TEXT("The round is over"), Director->IsRunning());
@@ -279,6 +298,7 @@ bool FDojo_P15_TournamentBooth_SwappedScoreboardTakesOver::RunTest(const FString
 
 	const UDojoP15MemoryScoreboard* First = Cast<UDojoP15MemoryScoreboard>(Scoreboards->GetProvider());
 	if (!TestNotNull(TEXT("A memory scoreboard is in place"), First)) return false;
+	const TStrongObjectPtr<UObject> KeepFirst(Scoreboards->GetProvider());
 
 	const float RoundOneStart = TestWorld.GetWorld()->GetTimeSeconds();
 	PressHitsAt(TestWorld, Director, RoundOneStart, TenHits);
@@ -298,6 +318,63 @@ bool FDojo_P15_TournamentBooth_SwappedScoreboardTakesOver::RunTest(const FString
 	TestEqual(TEXT("The first scoreboard kept Ayla's points"), First->GetPoints(TEXT("Ayla")), 3);
 	TestEqual(TEXT("And got nothing for Brom"), First->GetPoints(TEXT("Brom")), 0);
 	TestTrue(TEXT("The label reads the scoreboard now in place"), Director->Label->Text.ToString().Contains(TEXT("Points Ayla 0")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P15_TournamentBooth_ChosenClassesAreProvided, "Dojo.P15.TournamentBooth.ChosenClassesAreProvided", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** The director provides an object of exactly the class chosen in each slot, whatever it is, and not a class it names itself. */
+bool FDojo_P15_TournamentBooth_ChosenClassesAreProvided::RunTest(const FString& Parameters)
+{
+	using namespace DojoP15BoothTest;
+
+	FDojoTestWorld TestWorld;
+
+	ADojoP15TournamentDirector* Director = SpawnDirector(TestWorld, UDojoP15TracingAnnouncer::StaticClass(), UDojoP15NullScoreboard::StaticClass());
+	if (!TestNotNull(TEXT("Director spawned"), Director)) return false;
+
+	UDojoP15AnnouncerDesk* Announcers = AnnouncerDeskOf(TestWorld);
+	UDojoP15ScoreboardDesk* Scoreboards = ScoreboardDeskOf(TestWorld);
+	if (!TestNotNull(TEXT("Announcer desk found"), Announcers) || !TestNotNull(TEXT("Scoreboard desk found"), Scoreboards)) return false;
+
+	TestNotNull(TEXT("The chosen announcer class was provided"), Cast<UDojoP15TracingAnnouncer>(Announcers->GetProvider()));
+	TestTrue(TEXT("It is not the desk's own do-nothing announcer"), Announcers->GetProvider() != Announcers->GetNullAnnouncer());
+	TestNotNull(TEXT("The chosen scoreboard class was provided"), Cast<UDojoP15NullScoreboard>(Scoreboards->GetProvider()));
+	TestTrue(TEXT("It is a new object, not the desk's own do-nothing scoreboard"), Scoreboards->GetProvider() != Scoreboards->GetNullScoreboard());
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P15_TournamentBooth_TunablesAreHonoured, "Dojo.P15.TournamentBooth.TunablesAreHonoured", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** The round length, the rival's interval, and the win points come from the director's properties and not from fixed numbers. */
+bool FDojo_P15_TournamentBooth_TunablesAreHonoured::RunTest(const FString& Parameters)
+{
+	using namespace DojoP15BoothTest;
+
+	FDojoTestWorld TestWorld;
+
+	ADojoP15TournamentDirector* Director = TestWorld.GetWorld()->SpawnActorDeferred<ADojoP15TournamentDirector>(ADojoP15TournamentDirector::StaticClass(), FTransform::Identity);
+	if (!TestNotNull(TEXT("Director spawned"), Director)) return false;
+
+	Director->ScoreboardClass = UDojoP15MemoryScoreboard::StaticClass();
+	Director->RoundSeconds = 9.f;
+	Director->RivalInterval = 2.f;
+	Director->WinPoints = 5;
+	Director->FinishSpawning(FTransform::Identity);
+
+	UDojoP15ScoreboardDesk* Scoreboards = ScoreboardDeskOf(TestWorld);
+	if (!TestNotNull(TEXT("Scoreboard desk found"), Scoreboards)) return false;
+
+	const float Start = TestWorld.GetWorld()->GetTimeSeconds();
+	TickUntil(TestWorld, Start + 8.5f);
+	TestTrue(TEXT("The shorter round is still running at 8.5 seconds"), Director->IsRunning());
+
+	TickUntil(TestWorld, Start + 9.5f);
+	TestFalse(TEXT("It is over after 9 seconds"), Director->IsRunning());
+	TestEqual(TEXT("The rival hit every 2 seconds: at 2, 4, 6, and 8"), Director->GetRivalHits(), 4);
+	TestEqual(TEXT("The winner got the 5 points the property says"), Scoreboards->GetPoints(TEXT("Brom")), 5);
 
 	return true;
 }

@@ -6,7 +6,7 @@
 #include "DojoP15RecordingAnnouncer.generated.h"
 
 /** An announcer that writes every line down instead of speaking it, so a test can read what was announced. */
-UCLASS()
+UCLASS(BlueprintType)
 class UDojoP15RecordingAnnouncer : public UObject, public IDojoP15Announcer
 {
 	GENERATED_BODY()
