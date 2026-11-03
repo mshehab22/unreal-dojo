@@ -193,6 +193,16 @@ describe("BuildFailureExplainer rule 1: known outside failures", () =>
 		expect(calls.toolchain).toBe(0);
 	});
 
+	it("sends a path too long for Windows to Settings' Set up the sandbox again with a short folder, the action that can move the sandbox (M5.1k)", async () =>
+	{
+		const { explainer } = createExplainer();
+
+		const failure = await explainer.explainRun(runEvidence(log("path-too-long.txt")));
+
+		expect(failure?.suggestedAction).toContain("Set up the sandbox again");
+		expect(failure?.suggestedAction).toContain("a short folder such as C:\\Dojo");
+	});
+
 	it("wins over lines in the learner's own folder for a full disk, a locked file and a long path, which can happen after compiling started", async () =>
 	{
 		const { explainer } = createExplainer();

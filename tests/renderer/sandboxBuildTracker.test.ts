@@ -10,6 +10,7 @@ import {
 	QUIET_AFTER_MS,
 	SandboxBuildTracker,
 	STATUS_TIMEOUT_MS,
+	type SandboxBuildContext,
 	type SandboxBuildSnapshot,
 	type TrackerClient,
 	type TrackerClock,
@@ -128,10 +129,10 @@ function neverAnswers(): Promise<SandboxSetupResult>
 }
 
 /** Builds a first-run tracker over the fake main and records every snapshot. */
-function track(main: FakeMain, clock: ManualClock, operation: (runId: string) => Promise<SandboxSetupResult>): { tracker: SandboxBuildTracker; snapshots: SandboxBuildSnapshot[] }
+function track(main: FakeMain, clock: ManualClock, operation: (runId: string) => Promise<SandboxSetupResult>, context: SandboxBuildContext = "first-run"): { tracker: SandboxBuildTracker; snapshots: SandboxBuildSnapshot[] }
 {
 	const snapshots: SandboxBuildSnapshot[] = [];
-	const tracker = new SandboxBuildTracker(main, operation, (snapshot) => snapshots.push(snapshot), "first-run", clock, () => RUN_ID);
+	const tracker = new SandboxBuildTracker(main, operation, (snapshot) => snapshots.push(snapshot), context, clock, () => RUN_ID);
 
 	return { tracker, snapshots };
 }
@@ -295,6 +296,23 @@ describe("SandboxBuildTracker", () =>
 		expect(tracker.current().error?.code).toBe("run-not-found");
 		expect(tracker.current().error?.suggestedAction).toContain("Rebuild sandbox");
 		expect(tracker.current().error?.suggestedAction).not.toContain("clean copy");
+	});
+
+	it("points a lost Set up the sandbox again build to Rebuild sandbox too, since the new folder already holds the copy, and a lost rebuild to Rebuild sandbox again (M5.1k)", async () =>
+	{
+		for (const [context, expected] of [["setup-again", "open Settings and use Rebuild sandbox"], ["rebuild", "use Rebuild sandbox again"]] as const)
+		{
+			const main = new FakeMain();
+			const clock = new ManualClock();
+			const { tracker } = track(main, clock, neverAnswers, context);
+
+			tracker.start();
+			main.status = { runId: RUN_ID, state: "unknown", lastEvent: null, eventCount: 0, answer: null };
+			await clock.advance(QUIET_AFTER_MS);
+
+			expect(tracker.current().error?.code, context).toBe("run-not-found");
+			expect(tracker.current().error?.suggestedAction, context).toContain(expected);
+		}
 	});
 
 	it("applies the answer once: a late call answer after a status check changes nothing, and other runs' events are ignored", async () =>
