@@ -1,8 +1,8 @@
 #include "DojoS6GuardController.h"
 
-#include "BehaviorTree/BrainComponent.h"
 #include "BehaviorTree/Composites/BTComposite_Selector.h"
 #include "BehaviorTree/Composites/BTComposite_Sequence.h"
+#include "BrainComponent.h"
 #include "DojoS6BTDecorator_TargetInSight.h"
 #include "DojoS6BTTask_Chase.h"
 #include "DojoS6BTTask_GoToClue.h"
