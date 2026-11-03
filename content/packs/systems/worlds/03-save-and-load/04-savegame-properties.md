@@ -42,9 +42,10 @@ To write an actor's marked properties into bytes:
 - `FMemoryWriter Writer(Bytes, true);` (header `Serialization/MemoryWriter.h`) appends whatever is written to it to a `TArray<uint8>`. The `true` marks it as a persistent archive.
 - `FObjectAndNameAsStringProxyArchive Archive(Writer, true);` (header `Serialization/ObjectAndNameAsStringProxyArchive.h`) wraps it so object references are written as the object's path and found again by that path when read. A plain memory archive cannot write object references at all; it stops on an assertion.
 - `Archive.ArIsSaveGame = true;` tells the property writer to skip every property that is not marked `SaveGame`.
+- `Archive.ArNoDelta = true;` makes it write every marked property. By default the writer skips a property whose value equals the class default, which keeps level files small; in a save that skip is a trap, because loading leaves a skipped property at whatever value the actor holds when it loads, not at the default.
 - `Actor->Serialize(Archive);` walks the actor's reflected properties and writes the marked ones.
 
-Reading back is the same four lines with `FMemoryReader Reader(Bytes, true);` (header `Serialization/MemoryReader.h`) in place of the writer: `Serialize` sees a loading archive and fills the marked properties from the bytes, leaving every other property as it was.
+Reading back is the same lines with `FMemoryReader Reader(Bytes, true);` (header `Serialization/MemoryReader.h`) in place of the writer: `Serialize` sees a loading archive and fills the marked properties from the bytes, leaving every other property as it was.
 
 The properties are written with their names, so adding a new SaveGame property later does not break old bytes; it simply keeps its default when loading bytes that never held it. Renaming one does lose the old value.
 
@@ -62,6 +63,7 @@ TArray<uint8> DojoExCapture(AActor* Actor)
 	FMemoryWriter Writer(Bytes, true);
 	FObjectAndNameAsStringProxyArchive Archive(Writer, true);
 	Archive.ArIsSaveGame = true;
+	Archive.ArNoDelta = true;
 	Actor->Serialize(Archive);
 	return Bytes;
 }
@@ -72,6 +74,7 @@ void DojoExRestore(AActor* Actor, const TArray<uint8>& Bytes)
 	FMemoryReader Reader(Bytes, true);
 	FObjectAndNameAsStringProxyArchive Archive(Reader, true);
 	Archive.ArIsSaveGame = true;
+	Archive.ArNoDelta = true;
 	Actor->Serialize(Archive);
 }
 ```

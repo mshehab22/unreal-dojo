@@ -101,7 +101,7 @@ TArray<uint8> UDojoS3SaveableComponent::CaptureState() const
 		return Bytes;
 	}
 
-	// Your code: write the owner's SaveGame properties into Bytes: a memory writer over Bytes, wrapped in the proxy archive that writes names and objects as text, with only SaveGame properties allowed through.
+	// Your code: write the owner's SaveGame properties into Bytes: a memory writer over Bytes, wrapped in the proxy archive, with only SaveGame properties allowed through and every one of them written, even when it equals its default.
 	return Bytes;
 }
 
@@ -257,7 +257,7 @@ bool FDojo_S3_Saveable_OnlySaveGameTravels::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S3_Saveable_RestoreUndoesLaterChanges, "Dojo.S3.Saveable.RestoreUndoesLaterChanges", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Captures a lantern, changes it, and restores it, twice, and checks the capture itself left the lantern alone. */
+/** Captures a lantern, changes it, and restores it, twice, checks the capture itself left the lantern alone, and restores a lantern saved at its default values. */
 bool FDojo_S3_Saveable_RestoreUndoesLaterChanges::RunTest(const FString& Parameters)
 {
 	FDojoTestWorld TestWorld;
@@ -270,6 +270,14 @@ bool FDojo_S3_Saveable_RestoreUndoesLaterChanges::RunTest(const FString& Paramet
 	const TArray<uint8> Bytes = Lantern->Saveable->CaptureState();
 	TestTrue(TEXT("Capturing leaves the lantern lit"), Lantern->bLit);
 	TestEqual(TEXT("Capturing leaves the oil"), Lantern->Oil, 7);
+
+	ADojoS3Lantern* Plain = TestWorld.SpawnActor<ADojoS3Lantern>();
+	const TArray<uint8> DefaultBytes = Plain->Saveable->CaptureState();
+	Plain->bLit = true;
+	Plain->Oil = 3;
+	Plain->Saveable->RestoreState(DefaultBytes);
+	TestFalse(TEXT("A lantern saved at its defaults goes out again"), Plain->bLit);
+	TestEqual(TEXT("And its oil goes back to the default 10"), Plain->Oil, 10);
 
 	for (int32 Pass = 1; Pass <= 2; ++Pass)
 	{
@@ -342,12 +350,12 @@ bool FDojo_S3_Saveable_DesignersSetIds::RunTest(const FString& Parameters)
 # Hints
 
 - Both bodies build the same three things in the same order: a memory archive over the bytes, a proxy archive around it, and the flag that lets only SaveGame properties through. Only the first one differs between the two.
-- `FMemoryWriter` and `FMemoryReader` take the byte array and `true` for a persistent archive; `FObjectAndNameAsStringProxyArchive` takes the inner archive and `true`; its `ArIsSaveGame` member is the flag; `AActor::Serialize` takes the archive.
+- `FMemoryWriter` and `FMemoryReader` take the byte array and `true` for a persistent archive; `FObjectAndNameAsStringProxyArchive` takes the inner archive and `true`; its `ArIsSaveGame` member is the SaveGame flag and `ArNoDelta` the write-every-value flag; `AActor::Serialize` takes the archive.
 - `Implements<UDojoS3Restorable>()` asks whether an object implements the interface, and `IDojoS3Restorable::Execute_OnRestoredFromSave(Owner)` calls a BlueprintNativeEvent on it; the headers are `Serialization/MemoryReader.h` and `Serialization/ObjectAndNameAsStringProxyArchive.h`.
 
 # Rubric
 
-- `CaptureState` writes only the owner's SaveGame properties, and capturing changes nothing on the owner.
+- `CaptureState` writes the owner's SaveGame properties, all of them and nothing else, and capturing changes nothing on the owner.
 - `RestoreState` puts back exactly the SaveGame properties and leaves the others as they are.
 - A restorable owner is told once per successful restore, through the interface, after its properties are back.
 - Empty bytes and a missing owner are refused, and a refusal changes nothing and tells nobody.
@@ -366,6 +374,7 @@ The owner could implement two functions of its own, `WriteState(FDojoS3State&)` 
     - "FMemoryWriter Writer(Bytes, true);"
     - "FObjectAndNameAsStringProxyArchive Archive(Writer, true);"
     - "Archive.ArIsSaveGame = true;"
+    - "Archive.ArNoDelta = true;"
     - "Owner->Serialize(Archive);"
   distractors:
     - line: "Owner->Serialize(Writer);"
