@@ -1,5 +1,5 @@
 // The key to the World Map's stage states, drawn with the same shapes as the stages.
-import { CheckIcon, LockIcon, RotateCcwIcon } from "lucide-react";
+import { CheckIcon, LockIcon, RotateCcwIcon, SkipForwardIcon } from "lucide-react";
 
 /** One sample node and its meaning per state. */
 export function MapLegend()
@@ -35,6 +35,12 @@ export function MapLegend()
 					<RotateCcwIcon className="size-2.5" strokeWidth={3} />
 				</span>
 				Rematch due
+			</span>
+			<span className="flex items-center gap-2">
+				<span className="flex size-4 items-center justify-center rounded-pill border border-pass text-pass">
+					<SkipForwardIcon className="size-2.5" strokeWidth={2.5} />
+				</span>
+				May skip (tested out)
 			</span>
 			<span>The large node at the end of each path is the boss.</span>
 		</div>

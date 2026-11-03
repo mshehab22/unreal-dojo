@@ -11,8 +11,8 @@ import { toAppError } from "./toAppError";
 /** Where a sandbox build stands. */
 export type SandboxBuildStatus = "idle" | "running" | "succeeded" | "failed" | "cancelled" | "errored";
 
-/** Which build is tracked; it decides what to suggest if main loses track of it. */
-export type SandboxBuildContext = "first-run" | "rebuild";
+/** Which build is tracked (first run, Settings' Rebuild sandbox, or Settings' Set up the sandbox again); it decides what to suggest if main loses track of it. */
+export type SandboxBuildContext = "first-run" | "rebuild" | "setup-again";
 
 /** Everything the screen shows about the build. A new object on every change. */
 export interface SandboxBuildSnapshot
@@ -103,17 +103,17 @@ const IDLE: SandboxBuildSnapshot = {
 };
 
 /**
- * The error shown when main no longer knows the run (the app restarted, or the run was forgotten). A first-run retry would stop at
- * `sandbox-folder-not-empty` once the template was copied, so it points to Settings' rebuild instead.
+ * The error shown when main no longer knows the run (the app restarted, or the run was forgotten). A retry of a new sandbox (first run or
+ * Set up the sandbox again) would stop at `sandbox-folder-not-empty` once the template was copied, so it points to Settings' rebuild instead.
  */
 function lostRunError(runId: string, context: SandboxBuildContext): AppError
 {
 	return {
 		code: "run-not-found",
 		message: "Unreal Dojo lost track of this build.",
-		suggestedAction: context === "first-run"
-			? "Restart Unreal Dojo, then open Settings and use Rebuild sandbox. Starting the build again here would stop, because the sandbox folder already holds the copy."
-			: "Restart Unreal Dojo, then use Rebuild sandbox again.",
+		suggestedAction: context === "rebuild"
+			? "Restart Unreal Dojo, then use Rebuild sandbox again."
+			: "Restart Unreal Dojo, then open Settings and use Rebuild sandbox. Starting the build again here would stop, because the sandbox folder already holds the copy.",
 		detail: runId,
 	};
 }

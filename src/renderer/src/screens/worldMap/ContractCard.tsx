@@ -27,6 +27,7 @@ export function ContractCard({ packId, world, availability, testOut, rematchShar
 	const navigate = useNavigate();
 	const passed = world.quests.filter((quest) => availability[quest.id]?.status === "passed").length;
 	const isOpen = world.quests.some((quest) => availability[quest.id]?.status !== "locked");
+	const skippable = world.quests.filter((quest) => availability[quest.id]?.skippable === true && availability[quest.id]?.status !== "passed").length;
 
 	return (
 		<article data-testid="contract-card" data-world={world.id} className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-5 shadow-raised">
@@ -38,7 +39,11 @@ export function ContractCard({ packId, world, availability, testOut, rematchShar
 						<Badge variant={passed === world.quests.length ? "pass" : "neutral"}>
 							{passed} of {world.quests.length} passed
 						</Badge>
-						{testOut?.testedOut && <Badge variant="pass">Tested out</Badge>}
+						{testOut?.testedOut && (
+							<Badge variant="pass" data-testid="tested-out-badge">
+								Tested out{skippable > 0 ? `: ${skippable} ${skippable === 1 ? "quest" : "quests"} may be skipped` : ""}
+							</Badge>
+						)}
 					</div>
 					<h2 className="text-2xl font-semibold tracking-tight">{world.title}</h2>
 					<p className="max-w-3xl text-sm text-paper-muted">{world.summary}</p>

@@ -1,0 +1,10 @@
+Snippet-one.cpp
+C:\Dojo\DojoSandbox\Intermediate\DojoSnippets\Snippet-one.cpp(6,12): warning C4305: 'initializing': truncation from '__int64' to 'int32'
+	int32 Big = 5000000000;
+	          ^
+C:\Dojo\DojoSandbox\Intermediate\DojoSnippets\Snippet-one.cpp(6,14): error C4309: 'initializing': truncation of constant value
+	int32 Big = 5000000000;
+	            ^
+C:\Dojo\DojoSandbox\Intermediate\DojoSnippets\Snippet-one.cpp(5,8): error C4101: 'Unused': unreferenced local variable
+	int32 Unused;
+	      ^

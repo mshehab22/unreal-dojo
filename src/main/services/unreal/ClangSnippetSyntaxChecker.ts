@@ -7,6 +7,8 @@ import { AppErrorException } from "../../errors/AppErrorException";
 import type { CommandRunner } from "./CommandRunner";
 import type { PlatformPaths } from "./PlatformPaths";
 import type { SandboxFileSystem } from "./SandboxFileSystem";
+import { type CompilerDiagnostic, type CompilerDialect, parseSnippetDiagnostics, snippetCheckResult } from "./snippetDiagnostics";
+import { prepareSnippet, SNIPPET_PRELUDE } from "./snippetSource";
 import type { SnippetSyntaxChecker } from "./SnippetSyntaxChecker";
 
 /** A sandbox source that always exists; its response file carries the module's flags, include paths, and shared precompiled header. */
@@ -18,45 +20,31 @@ const ARCHITECTURES = ["arm64", "x86_64"];
 /** Response file lines dropped from the donor: compile-to-object, dependency output, colors, and warnings as errors. */
 const DROPPED_FLAGS = ["-c", "-fdiagnostics-color", "-Werror"];
 
-/** Blanks the reflection macros, whose real expansion needs code UHT generates; UPROPERTY and UFUNCTION are already empty outside UHT. */
-const PRELUDE = [
-	"// Unreal Dojo snippet check: reflection macros expand to nothing because UHT does not run on a snippet.",
-	"#undef UCLASS",
-	"#undef UINTERFACE",
-	"#undef GENERATED_BODY",
-	"#undef GENERATED_BODY_LEGACY",
-	"#undef GENERATED_UCLASS_BODY",
-	"#undef GENERATED_USTRUCT_BODY",
-	"#undef GENERATED_UINTERFACE_BODY",
-	"#undef GENERATED_IINTERFACE_BODY",
-	"#define UCLASS(...)",
-	"#define UINTERFACE(...)",
-	"#define GENERATED_BODY(...)",
-	"#define GENERATED_BODY_LEGACY(...)",
-	"#define GENERATED_UCLASS_BODY(...)",
-	"#define GENERATED_USTRUCT_BODY(...)",
-	"#define GENERATED_UINTERFACE_BODY(...)",
-	"#define GENERATED_IINTERFACE_BODY(...)",
-	"",
-].join("\n");
-
 /** `file:line:column: severity: message` as clang prints it. */
 const DIAGNOSTIC = /^(.*):(\d+):(\d+): (fatal error|error|warning|note): (.*)$/;
 
 /** `In file included from <file>:<line>:` and its continuation lines, which say which snippet line pulled a header in. */
 const INCLUDED_FROM = /^\s*(?:In file included )?from (.*):(\d+):$/;
 
-/** The command runner's limit for one check (NodeCommandRunner), named in the timeout message. */
-const CHECK_TIMEOUT_SECONDS = 20;
+/** How clang prints diagnostics: an instantiation note ends with "requested here". */
+const CLANG_DIALECT: CompilerDialect = {
+	diagnostic: (line) =>
+	{
+		const match = DIAGNOSTIC.exec(line);
+		if (!match) return null;
 
-/** Messages caused by skipping UHT, not by the learner: names GENERATED_BODY would have declared. */
-const UHT_ARTIFACTS = [/'Super'/, /'ThisClass'/, /StaticClass/, /\.generated\.h/];
+		const [, file = "", lineText = "1", columnText = "1", severity = "error", message = ""] = match;
 
-/** An `#include "X.generated.h"` line, blanked so line numbers stay the same. */
-const GENERATED_INCLUDE = /^\s*#\s*include\s+"[^"]*\.generated\.h"\s*$/gm;
+		return { file, line: Number(lineText), column: Number(columnText), severity: severity as CompilerDiagnostic["severity"], message };
+	},
+	includedFrom: (line) =>
+	{
+		const match = INCLUDED_FROM.exec(line);
 
-/** `Super::` calls. Without GENERATED_BODY, `Super` would fall through to the base class's own `Super` (`UObject` for an actor) and report a false error, so it is blanked with as many spaces, keeping columns; a typo in the called name is still caught. */
-const SUPER_CALL = /\bSuper::/g;
+		return match ? { file: match[1] ?? "", line: Number(match[2]) } : null;
+	},
+	isInstantiationNote: (message) => message.includes("requested here"),
+};
 
 /** SnippetSyntaxChecker for macOS (clang through `xcrun`). Runs in about half a second once the sandbox is built. */
 export class ClangSnippetSyntaxChecker implements SnippetSyntaxChecker
@@ -88,7 +76,7 @@ export class ClangSnippetSyntaxChecker implements SnippetSyntaxChecker
 
 		try
 		{
-			await this.fileSystem.writeTextFile(preludeFile, PRELUDE);
+			await this.fileSystem.writeTextFile(preludeFile, SNIPPET_PRELUDE);
 			await this.fileSystem.writeTextFile(snippetFile, prepareSnippet(code));
 			await this.fileSystem.writeTextFile(responseFile, snippetResponseFile(donor, preludeFile, snippetFile));
 
@@ -118,12 +106,6 @@ export class ClangSnippetSyntaxChecker implements SnippetSyntaxChecker
 	}
 }
 
-/** The snippet as compiled: generated.h includes and `Super::` blanked, every line and column where the learner wrote it. */
-export function prepareSnippet(code: string): string
-{
-	return code.replace(GENERATED_INCLUDE, "").replace(SUPER_CALL, (match) => " ".repeat(match.length));
-}
-
 /** The donor's lines without the object output, dependency output, the donor source, colors, and -Werror; then the prelude, `-fsyntax-only`, and the snippet. */
 export function snippetResponseFile(donor: string, preludeFile: string, snippetFile: string): string
 {
@@ -140,110 +122,14 @@ export function snippetResponseFile(donor: string, preludeFile: string, snippetF
 	return [...kept, `-include "${preludeFile}"`, "-fsyntax-only", "-fno-color-diagnostics", "-Wno-pragma-once-outside-header", "-Wno-infinite-recursion", `"${snippetFile}"`, ""].join("\n");
 }
 
-/** The check's answer from clang's exit code and output: `ok` only on exit code 0 with no errors; a killed run is a timeout error; a failure with no message about the snippet still fails on line 1, quoting clang's first error line (A411). */
+/** The check's answer from clang's exit code and output (A411). */
 export function resultOf(exitCode: number | null, compilerOutput: string, snippetFile: string): SyntaxCheckResult
 {
-	if (exitCode === null) return { ok: false, diagnostics: [{ line: 1, severity: "error", message: `The syntax check took longer than ${CHECK_TIMEOUT_SECONDS} seconds and was stopped. Try again; the first check after a build can be slower.` }] };
-
-	const diagnostics = parseDiagnostics(compilerOutput, snippetFile);
-	const hasError = diagnostics.some((diagnostic) => diagnostic.severity === "error");
-
-	if (exitCode !== 0 && !hasError)
-	{
-		const outputLines = compilerOutput.split(/\r?\n/);
-		const firstLine = outputLines.find((line) => /\berror\b/.test(line)) ?? outputLines.find((line) => line.trim() !== "") ?? `exit code ${exitCode}`;
-
-		diagnostics.unshift({ line: 1, severity: "error", message: `The compiler failed: ${firstLine.trim()}` });
-	}
-
-	return { ok: exitCode === 0 && !hasError, diagnostics };
+	return snippetCheckResult(exitCode, compilerOutput, snippetFile, CLANG_DIALECT);
 }
 
-/** A header error waiting to learn which snippet line caused it. */
-interface PendingHeaderError
-{
-	message: string;
-	line: number | null;
-	column?: number;
-
-	/** True once an "in instantiation ... requested here" note in the snippet placed it; other snippet notes only place it until then. */
-	placedByInstantiation: boolean;
-}
-
-/**
- * The snippet's errors and warnings in line order. An error inside a header (an engine template the snippet
- * instantiated, a header it included) is reported on the snippet line that caused it: the "in instantiation of ...
- * requested here" note in the snippet, else the "In file included from Snippet:N" line, else line 1, with the
- * header's message and file name. Header warnings and what skipping UHT causes are dropped.
- */
+/** The snippet's errors and warnings in line order, header errors placed on the snippet line that caused them (A411). */
 export function parseDiagnostics(compilerOutput: string, snippetFile: string): SyntaxDiagnostic[]
 {
-	const snippetName = snippetFile.slice(Math.max(snippetFile.lastIndexOf("/"), snippetFile.lastIndexOf("\\")) + 1);
-	const isSnippet = (file: string): boolean => file.endsWith(snippetName);
-	const diagnostics: SyntaxDiagnostic[] = [];
-	let includedFromLine: number | null = null;
-	const state: { pending: PendingHeaderError | null; lastInstantiation: { line: number; column?: number } | null } = { pending: null, lastInstantiation: null };
-
-	const flush = (): void =>
-	{
-		const waiting = state.pending;
-		state.pending = null;
-		if (!waiting) return;
-
-		// Clang prints the instantiation stack only for the first error of an instantiation; follow-on errors carry just a forward-declaration note.
-		const place = waiting.placedByInstantiation ? { line: waiting.line ?? 1, column: waiting.column } : (state.lastInstantiation ?? { line: waiting.line ?? 1, column: waiting.column });
-		if (waiting.placedByInstantiation) state.lastInstantiation = place;
-
-		diagnostics.push({ line: place.line, ...(place.column === undefined ? {} : { column: place.column }), severity: "error", message: waiting.message });
-	};
-
-	for (const line of compilerOutput.split(/\r?\n/))
-	{
-		const included = INCLUDED_FROM.exec(line);
-		if (included)
-		{
-			if (isSnippet(included[1] ?? "")) includedFromLine = Number(included[2]);
-			continue;
-		}
-
-		const match = DIAGNOSTIC.exec(line);
-		if (!match) continue;
-
-		const [, file = "", lineText = "1", columnText = "1", severity = "error", message = ""] = match;
-
-		if (severity === "note")
-		{
-			// An instantiation note in the snippet names the line that caused the header error; any other snippet note (a forward declaration) only stands in until one comes.
-			const waiting = state.pending;
-			const instantiation = message.includes("requested here");
-
-			if (waiting && isSnippet(file) && !waiting.placedByInstantiation && (instantiation || waiting.column === undefined))
-			{
-				state.pending = { message: waiting.message, line: Number(lineText), column: Number(columnText), placedByInstantiation: instantiation };
-			}
-			continue;
-		}
-
-		flush();
-
-		if (UHT_ARTIFACTS.some((pattern) => pattern.test(message))) continue;
-
-		if (isSnippet(file))
-		{
-			state.lastInstantiation = null;
-			diagnostics.push({ line: Number(lineText), column: Number(columnText), severity: severity === "warning" ? "warning" : "error", message });
-		}
-		else if (severity !== "warning")
-		{
-			const headerName = file.slice(Math.max(file.lastIndexOf("/"), file.lastIndexOf("\\")) + 1);
-
-			state.pending = { message: `${message} (in ${headerName})`, line: includedFromLine, placedByInstantiation: false };
-		}
-
-		includedFromLine = null;
-	}
-
-	flush();
-
-	return diagnostics.sort((left, right) => left.line - right.line || (left.column ?? 0) - (right.column ?? 0));
+	return parseSnippetDiagnostics(compilerOutput, snippetFile, CLANG_DIALECT);
 }

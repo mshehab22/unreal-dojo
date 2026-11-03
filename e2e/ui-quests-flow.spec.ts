@@ -745,11 +745,9 @@ test("two failed submits offer the Parsons fallback, which opens a one-item dril
 	await setViewport(1100, 700);
 	await expectNoSidewaysScroll("build with the failed-submit offers at 1100x700");
 	await setViewport(PROOF_SIZE.width, PROOF_SIZE.height);
-	await expect(async () =>
-	{
-		await hoverAtCentre(window, window.getByTestId("seer-stone-offer"));
-		await expect(window.getByRole("tooltip")).toContainText("Seer Stone", { timeout: 3_000 });
-	}).toPass({ timeout: 10_000 });
+	// The Seer Stone flow works since M3.3; its whole path is in e2e/economy.spec.ts (A1392).
+	await expect(window.getByTestId("seer-stone-offer")).toBeEnabled();
+	await expect(window.getByTestId("seer-stone-offer")).toContainText("Seer Stone");
 	await saveScreenshot("build-failed-submit-offers");
 
 	await window.getByTestId("parsons-fallback").click();

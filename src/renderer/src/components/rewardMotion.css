@@ -1,0 +1,16 @@
+/* Shared reward motions (A98, A1395): a celebration rises and settles once. Durations come from the tokens, so reduced motion turns them off. */
+@keyframes reward-rise {
+	from {
+		opacity: 0;
+		transform: translateY(12px) scale(0.92);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.reward-rise {
+	animation: reward-rise var(--duration-reward) var(--ease-reward) both;
+}

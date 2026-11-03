@@ -36,6 +36,14 @@ export function hintTextsFor(questId: string, outline: QuestOutline | undefined)
 	return WORLD_ONE_FIXTURE.hints[sourceId] ?? [];
 }
 
+/** The reference solution files of a quest; stand-ins borrow their source quest's solution, as they borrow its files. */
+export function solutionFilesFor(questId: string, outline: QuestOutline | undefined): Record<string, string>
+{
+	const sourceId = WORLD_ONE_FIXTURE.solutions[questId] ? questId : outline ? STAND_IN_SOURCE[outline.kind] : questId;
+
+	return WORLD_ONE_FIXTURE.solutions[sourceId] ?? {};
+}
+
 /** A full quest for an invented map stage: the real quest of the same kind, under the stage's id, title, and numbers. */
 export function standInQuest(outline: QuestOutline): LearnerQuest
 {

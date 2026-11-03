@@ -24,6 +24,7 @@ import type {
 	QuestDraft,
 	QuestProgress,
 	RulesSnapshot,
+	SolutionViewing,
 	SubmitOutcome,
 	WorldTestOutStatus,
 } from "@shared/types/progress";
@@ -41,8 +42,10 @@ import { daysFromNow } from "./fixtures/fakeClock";
 import {
 	blockedSandboxFolderFixture,
 	enginesFixture,
+	folderNotEmptyFixture,
 	manualEngineFixture,
 	missingEngineFixture,
+	missingSandboxFixture,
 	missingToolchainFixture,
 	saveNoticeFixture,
 	reviewProvidersFixture,
@@ -52,6 +55,8 @@ import {
 	toolchainFixture,
 } from "./fixtures/machineFixture";
 import { FakeQuestFlow } from "./FakeQuestFlow";
+import { economyProgressFixture } from "./fixtures/economyFixture";
+import { WORLD_ONE, WORLD_ONE_PACK_ID, worldOneQuest } from "./fixtures/fakeQuests";
 import { MAP_FIXTURE, type PackFixture } from "./fixtures/mapFixture";
 import { freshProgressFixture, returningProgressFixture } from "./fixtures/progressFixture";
 import { questFlowMapFixture, questFlowProgressFixture } from "./fixtures/questFlowFixture";
@@ -113,6 +118,12 @@ interface FakeState
 	/** True when the next sandbox folder pick answers with a blocker: the folder sits inside the engine folder. */
 	blockNextFolder: boolean;
 
+	/** Sandbox folders that hold a copy of the template, so a second create there is refused as main refuses it (the one in settings, unless it is gone). */
+	copiedSandboxes: string[];
+
+	/** True while the sandbox folder in settings no longer holds the project (`sandbox-deleted`): the environment says not ready and a rebuild is refused, until a new sandbox is created. */
+	sandboxGone: boolean;
+
 	/** The packs, worlds, and stages this scenario's map shows. */
 	map: PackFixture[];
 }
@@ -135,13 +146,15 @@ function initialState(scenario: FakeScenario): FakeState
 			hasApiKey: false,
 			firstRunCompletedAt: isFresh ? null : daysFromNow(-32),
 		},
-		progress: isFresh ? freshProgressFixture() : scenario === "quests" ? questFlowProgressFixture() : returningProgressFixture(),
+		progress: isFresh ? freshProgressFixture() : scenario === "quests" ? questFlowProgressFixture() : scenario === "economy" ? economyProgressFixture() : returningProgressFixture(),
 		editorConnected: false,
 		failNextBuild: scenario === "first-build-fails" || scenario === "sandbox-setup-fails",
 		quietNextBuild: scenario === "first-build-goes-quiet",
 		explainNextBuildFailure: scenario === "sandbox-setup-fails",
 		blockNextFolder: scenario === "folder-blocked",
-		map: scenario === "quests" ? questFlowMapFixture() : MAP_FIXTURE,
+		sandboxGone: scenario === "sandbox-deleted",
+		copiedSandboxes: isFresh || scenario === "sandbox-deleted" ? [] : [sandboxPathIn(sandboxFolderFixture().path)],
+		map: scenario === "quests" || scenario === "economy" ? questFlowMapFixture() : MAP_FIXTURE,
 	};
 }
 
@@ -269,11 +282,22 @@ export class FakeDojoApi implements DojoClient
 		return answer(sandboxFolderFixture());
 	}
 
-	/** Simulates copying the template and the first full build, then remembers the sandbox path on a pass, as the sandbox service does. Fails once in the first-build-fails scenario. */
+	/**
+	 * Simulates copying the template and the first full build. As the sandbox service does, it refuses a folder that already holds a copy
+	 * (a sandbox made earlier, or one whose build failed or was cancelled) and remembers the new sandbox before building, which also replaces
+	 * a deleted one. Fails once in the first-build-fails scenario.
+	 */
 	async createSandbox(request: SandboxSetupRequest): Promise<SandboxSetupResult>
 	{
 		const engine = [...enginesFixture(), manualEngineFixture()].find((candidate) => candidate.path === request.enginePath);
 		const sandboxPath = sandboxPathIn(request.folder);
+
+		if (this.state.copiedSandboxes.includes(sandboxPath)) return Promise.reject<SandboxSetupResult>(folderNotEmptyFixture(sandboxPath));
+
+		this.state.copiedSandboxes.push(sandboxPath);
+		this.state.settings = { ...this.state.settings, sandboxPath };
+		this.state.sandboxGone = false;
+
 		const shouldFail = this.state.failNextBuild;
 		const goesQuiet = this.state.quietNextBuild;
 		const failure = shouldFail && this.state.explainNextBuildFailure ? sandboxSetupFailureFixture() : undefined;
@@ -286,8 +310,6 @@ export class FakeDojoApi implements DojoClient
 		{
 			const end = await this.simulateBuild(request.runId, engine?.version ?? "5.8.3", shouldFail, goesQuiet);
 
-			if (end.ok) this.state.settings = { ...this.state.settings, sandboxPath };
-
 			if (end.ok) return { ok: true, sandboxPath, durationMs: end.durationMs, compilerOutput: "" };
 
 			return { ok: false, sandboxPath, durationMs: end.durationMs, compilerOutput: failure?.detail ?? FAILED_BUILD_OUTPUT, ...(failure ? { failure } : {}) };
@@ -299,14 +321,16 @@ export class FakeDojoApi implements DojoClient
 		return result;
 	}
 
-	/** Simulates a clean rebuild of the existing sandbox. */
+	/** Simulates a clean rebuild of the existing sandbox. A sandbox that is gone is refused the way main's preflight refuses it. */
 	async rebuildSandbox(runId: string): Promise<SandboxSetupResult>
 	{
 		const sandboxPath = this.state.settings.sandboxPath;
 
+		if (sandboxPath && this.state.sandboxGone) return Promise.reject<SandboxSetupResult>(missingSandboxFixture(sandboxPath));
+
 		if (!sandboxPath)
 		{
-			return Promise.reject<SandboxSetupResult>({ code: "sandbox-not-ready", message: "There is no sandbox to rebuild yet.", suggestedAction: "Run first-run setup to create it." } satisfies AppError);
+			return Promise.reject<SandboxSetupResult>({ code: "sandbox-not-ready", message: "There is no sandbox to rebuild yet.", suggestedAction: "Use Set up the sandbox again to create it." } satisfies AppError);
 		}
 
 		return this.rememberAnswer(runId, async () =>
@@ -405,6 +429,10 @@ export class FakeDojoApi implements DojoClient
 
 		if (!isFresh) statuses[worldKeyOf("foundations", "foundations.memory")] = { eligible: true, testedOut: false };
 
+		// The economy scenario's World 1 is ready to test out (A1399); once tested out it stays so.
+		const worldOneKey = worldKeyOf(WORLD_ONE_PACK_ID, WORLD_ONE.id);
+		if (this.scenario === "economy") statuses[worldOneKey] = this.state.progress.testedOutWorldIds.includes(worldOneKey) ? { eligible: true, testedOut: true } : { eligible: true, testedOut: false };
+
 		return answer(statuses);
 	}
 
@@ -432,6 +460,12 @@ export class FakeDojoApi implements DojoClient
 	revealHint(questId: string, hintIndex?: number): Promise<HintReveal>
 	{
 		return answerFrom(() => this.quests.revealHint(questId, hintIndex));
+	}
+
+	/** Views a quest's reference solution: a Seer Stone or the quest's XP, as the progress service prices it (A1390, A1391). */
+	viewSolution(questId: string, useSeerStone: boolean): Promise<SolutionViewing>
+	{
+		return answerFrom(() => this.quests.viewSolution(questId, useSeerStone));
 	}
 
 	/** Grades a finished concept quest. */
@@ -686,7 +720,7 @@ export class FakeDojoApi implements DojoClient
 
 		return {
 			engine,
-			sandbox: { path: this.state.settings.sandboxPath, ready: this.state.settings.sandboxPath !== null },
+			sandbox: { path: this.state.settings.sandboxPath, ready: this.state.settings.sandboxPath !== null && !this.state.sandboxGone },
 			reviewProvider,
 			loopMode: this.state.settings.loopMode,
 			editorConnected: this.state.editorConnected,
@@ -731,7 +765,7 @@ export class FakeDojoApi implements DojoClient
 						const restPassed = world.stages.every((other) => other.id === stage.id || other.status === "passed" || progress.quests[other.id]?.status === "passed");
 						const status = saved === "passed" || saved === "in_progress" ? saved : stage.kind === "boss" && stage.status === "locked" && restPassed ? "available" : stage.status;
 
-						result[stage.id] = { status, dueForRematch: stage.dueForRematch ?? false, skippable: false, ...(status === "locked" && stage.lockedReason ? { lockedReason: stage.lockedReason } : {}) };
+						result[stage.id] = { status, dueForRematch: stage.dueForRematch ?? false, skippable: this.isSkippable(pack.id, world.id, stage.id), ...(status === "locked" && stage.lockedReason ? { lockedReason: stage.lockedReason } : {}) };
 						return;
 					}
 
@@ -745,6 +779,14 @@ export class FakeDojoApi implements DojoClient
 		}
 
 		return result;
+	}
+
+	/** True for a worked or faded build of a tested-out world, as the unlock graph says. Only World 1's real quests know their scaffold, so only they can be skipped in the fake. */
+	private isSkippable(packId: string, worldId: string, questId: string): boolean
+	{
+		const quest = worldOneQuest(questId);
+
+		return this.state.progress.testedOutWorldIds.includes(worldKeyOf(packId, worldId)) && quest?.kind === "build" && (quest.scaffold === "worked" || quest.scaffold === "faded");
 	}
 
 	/** Runs a build call and remembers how it ended for getRunStatus, as main's trackRun does. */
