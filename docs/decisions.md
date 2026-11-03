@@ -4,6 +4,18 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1623 2026-11-03 The "fails on purpose" sentence is house style, so it is a Note and not a leak (qa, M4.y spot-check 2)
+The Pack 4 World 1 reviewer called "This one fails on purpose the first time for most people" in the equipment brief a leak, since the authoring rule says the failure is revealed only after the failing step. The same sentence is in 22 quests across the packs and in `content/examples/05-build-blank-proximity-lantern.md`, and the first spot-check did not flag it. Options: flag all 22 as Should fix; record it as a Note and leave the call to the Lead. Chose the Note: it warns that a trap exists without saying what it is, and a mass edit is the Lead's decision. If the Lead wants the rule applied, the sentence comes out of every one of them in one pass.
+
+### A1622 2026-11-03 Engine claims in concept text are checked against the installed 5.8 source (qa, M4.y spot-check 2)
+Both Must fix items this round (the Released trigger announcing Ongoing, and constant interpolation at speed 0) were wrong teaching text in worlds whose solutions had passed an engine proof, because the proofs test the solution and not the prose. Options: trust the engine proof; have each reviewer check every API claim in concept quests against `C:/Program Files/Epic Games/UE_5.8/Engine/Source`. Chose the source check, and I re-read the engine lines for both Must fix items myself. Worth keeping for every later spot-check on this machine.
+
+### A1621 2026-11-03 Severity meaning and two changes I made to reviewers' ratings (qa, M4.y spot-check 2)
+Must fix: a wrong fact taught as true, copied wording, or the solution or deliberate failure given away beside the brief. Should fix: a promise the learner cannot see, a spec rule broken, a hint that holds code, a tell. Note: everything else. Two ratings changed after I read the files: the Bytecode "spot-the-bug on a missing line" (the bug line is present, so Note) and the "fails on purpose" sentence (A1623). Nothing was dropped as a false positive; every reported finding that I re-read held up.
+
+### A1620 2026-11-03 Sampling for M4.y spot-check 2 (qa)
+Seeded shuffle (mulberry32, seed 20261103) of each world's quest files, 8 per world, a world of 8 or fewer taken whole: Pack 2 Worlds 12 and 13, Pack 4 Worlds 1 and 2 whole (6, 7, 6, 8); Pack 3 Worlds 1 to 3 took 8 of 10 each (not sampled: 03 and 05; 05 and 09; 05 and 06). One read-only reviewer per world, seven in parallel, with the findings re-checked against the files. Options: read every quest (about 680 KB of text and the solutions); sample as the Lead asked. Sampled. The unsampled cracking wall (`m3-cracking-wall`) was checked for one number only and is flagged for a full read.
+
 ### A1449 2026-11-03 One glossary entry for instanced objects (author-patterns, Lead's go)
 World 13's `instanced-specifier` and Pack 4 World 2's `instanced-subobjects` both claimed the aliases `EditInlineNew` and `DefaultToInstanced`, so main failed the verifier after both merged. Kept `instanced-subobjects` (the fuller text), added the alias "Instanced specifier", set its `firstQuestId` to `p13-bytecode-card` because Pack 2 teaches it before Pack 4 (A72), deleted `instanced-specifier`, and pointed World 13's card and trap refactor at the kept entry; A1377 and the World 13 progress entry still name the old id as history. Options: drop the two aliases from one entry (two hover cards for one idea), or keep both entries apart by wording (the same thing twice). Reverse cost: low.
 
