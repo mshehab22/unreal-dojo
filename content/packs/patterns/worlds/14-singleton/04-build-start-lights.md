@@ -312,7 +312,7 @@ A world subsystem could hold the one running set: lights claim it in `BeginPlay`
 
 ```yaml
 - id: countdown-tick
-  prompt: Put the countdown's Tick in order. The lights stop counting before they turn green.
+  prompt: "Put the countdown's Tick in order. Lights that are not counting change nothing, and they stop counting before they turn green."
   lines:
     - "void ADojoP14StartLights::Tick(float DeltaSeconds)"
     - "{"
