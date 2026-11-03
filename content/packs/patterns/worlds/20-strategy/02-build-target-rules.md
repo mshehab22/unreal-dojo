@@ -24,7 +24,7 @@ When you press Play with the setup below, a launcher fires at the dummy its rule
 
 `ADojoP20Launcher` is a practice launcher. It has a list of `Candidates`, the dummies in the yard, each with a name, a location, and a health. It does not decide which dummy to shoot. It holds one `Rule`, an object of a class derived from `UDojoP20TargetRule`, and asks it `ChooseTarget`, which gets the launcher's place and the dummies and answers with the index of the dummy to aim at, or `INDEX_NONE` when there is none. Three rules are written for you: nearest, weakest, and farthest. Each skips a dummy at 0 health or below, and on a tie each keeps the dummy that comes first in the list.
 
-Most of the code is written. First read the marked lines and say in a sentence why each one is there. Then fill the one gap: `PickTarget`. It asks the rule from the launcher's own place and gives back the name of the dummy the rule picked. It gives back `NAME_None` when the launcher has no rule, when the rule picks no dummy, and when the rule answers with a number that is not a place in the list.
+Most of the code is written. First read the marked lines and say in a sentence why each one is there. Then fill the one gap: `PickTarget`. It asks the rule from the launcher's own place and gives back the name of the dummy the rule picked. It gives back `NAME_None` when the launcher has no rule and when the rule picks no dummy.
 
 ## See it in the editor
 
@@ -566,7 +566,7 @@ bool FDojo_P20_TargetRules_DetailsCanMakeTheRule::RunTest(const FString& Paramet
 - PickTarget asks the launcher's rule and returns the name of the dummy at the index the rule answers with.
 - It passes the launcher's own location and the launcher's dummies to the rule.
 - With no rule it returns NAME_None and does not touch the pointer.
-- When the rule answers INDEX_NONE or any index outside the list, it returns NAME_None and does not read the list at that index.
+- When the rule answers INDEX_NONE, it returns NAME_None and does not read the list at that index.
 - It does not name any rule class, test which kind of rule it holds, or change the rule, the dummies, or any counter.
 
 # Alternative

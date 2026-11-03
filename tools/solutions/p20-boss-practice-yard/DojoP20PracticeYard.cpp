@@ -151,7 +151,7 @@ void ADojoP20PracticeYard::ApplyRuleClass()
 {
 	if (!IsValid(Launcher)) return;
 
-	if (!RuleClasses.IsValidIndex(RuleIndex) || RuleClasses[RuleIndex].Get() == nullptr)
+	if (!RuleClasses.IsValidIndex(RuleIndex) || RuleClasses[RuleIndex].Get() == nullptr || RuleClasses[RuleIndex]->HasAnyClassFlags(CLASS_Abstract))
 	{
 		Launcher->Rule = nullptr;
 		return;

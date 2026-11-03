@@ -91,15 +91,17 @@ void ADojoPickup::Collect(ADojoPlayer* Collector)
   explanation: A rule is supposed to need little from its host. One that needs a lot is really part of the host.
 - id: spot-leftover-rule
   type: spot-the-bug
-  prompt: A dummy makes its rule object from a class the first time it steps and keeps it. Which line leaves the dummy moving by the old rule after the class is changed?
+  prompt: A dummy makes its rule object from its class the first time it steps and keeps it, and its class can be changed at any time. Which line keeps the dummy moving by the old rule after the class is changed?
   code: |
-    void ADojoMover::SetRuleClass(TSubclassOf<UDojoMoveRule> NewClass)
+    void ADojoMover::Step(float DeltaSeconds)
     {
-    	RuleClass = NewClass;
+    	UClass* Chosen = RuleClass.Get();
+    	if (Rule == nullptr) Rule = NewObject<UDojoMoveRule>(this, Chosen);
+    	SetActorLocation(Rule->NextLocation(GetActorLocation(), Anchor, DeltaSeconds));
     }
-  bugLine: 3
-  fix: Let go of the rule object here, or check the object's class against the class before each step.
-  explanation: The object made for the old class is still held, and the step asks that object.
+  bugLine: 4
+  fix: Check the held object against the class as well as against nullptr, or let go of the object whenever the class is changed.
+  explanation: The object made for the old class is still held and is not null, so the step keeps asking it.
 - id: when-not-shared-memory
   type: multiple-choice
   prompt: "A patrol rule remembers which way it is heading, and one patrol rule object is given to two dummies. What happens?"

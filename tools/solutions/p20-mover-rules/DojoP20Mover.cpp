@@ -27,7 +27,7 @@ void ADojoP20Mover::Step(float DeltaSeconds)
 	UClass* Chosen = RuleClass.Get();
 	if (Chosen == nullptr || Chosen->HasAnyClassFlags(CLASS_Abstract)) return;
 
-	if (!IsValid(Rule)) Rule = NewObject<UDojoP20MoveRule>(this, Chosen);
+	if (!IsValid(Rule) || Rule->GetClass() != Chosen) Rule = NewObject<UDojoP20MoveRule>(this, Chosen);
 
 	SetActorLocation(Rule->NextLocation(GetActorLocation(), Anchor, DeltaSeconds));
 }

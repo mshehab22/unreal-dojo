@@ -27,7 +27,7 @@ After the refactor, the turret aims by the rule it holds, the switch and the num
 
 Refactor the turret onto its rule:
 
-- `PickTarget` asks `Rule` from the turret's own place and gives back the name of the dummy the rule picked. It gives back `NAME_None` when the turret has no rule, when the rule picks no dummy, and when the rule answers with a number that is not a place in the list.
+- `PickTarget` asks `Rule` from the turret's own place and gives back the name of the dummy the rule picked. It gives back `NAME_None` when the turret has no rule and when the rule picks no dummy.
 - Remove `AimStyle`, the switch, and the loop that skipped down dummies and compared them. The rules do that work now, and you must not copy it into the turret.
 - Names, signatures, `Fire`, and the counters stay as they are. The turret names no rule class.
 
@@ -37,7 +37,7 @@ Two of the three tests pass on the starter and must pass after; one does not. Re
 
 ## See it in the editor
 
-Place a Dojo P20 Turret at the origin with three Candidates: Anvil at 500, 0, 0 with Health 30; Barrel at 200, 0, 0 with Health 50; and Crate at 300, 0, 0 with Health 10. In the Level Blueprint, on Begin Play, print Pick Target. Before the refactor, Aim Style 0 prints Barrel, 1 prints Crate, and 2 prints Anvil, and the Rule dropdown changes nothing. After the refactor there is no Aim Style: choose the Nearest Rule and it prints Barrel, the Weakest Rule and it prints Crate, the Farthest Rule and it prints Anvil, and with the Rule empty it prints nothing.
+Place a Dojo P20 Turret at the origin with three Candidates: Anvil at 500, 0, 0 with Health 30; Barrel at 200, 0, 0 with Health 50; and Crate at 300, 0, 0 with Health 10. In the Level Blueprint, on Begin Play, print Pick Target. Before the refactor, Aim Style 0 prints Barrel, 1 prints Crate, and 2 prints Anvil, and the Rule dropdown changes nothing. After the refactor there is no Aim Style: choose the Nearest Rule and it prints Barrel, the Weakest Rule and it prints Crate, the Farthest Rule and it prints Anvil, and with the Rule empty it prints None.
 
 # Files
 
@@ -288,7 +288,7 @@ bool FDojo_P20_TurretRefactor_TheRuleDecidesTheAim::RunTest(const FString& Param
 # Rubric
 
 - PickTarget asks the turret's rule from the turret's location with the turret's dummies and returns the name at the index the rule answers with.
-- With no rule, an answer of INDEX_NONE, or an index outside the list, it returns NAME_None.
+- With no rule, or an answer of INDEX_NONE, it returns NAME_None and does not read the list at that index.
 - AimStyle, the switch, and the loop that skipped down dummies and compared them are gone from the turret, and no rule's work is copied into it.
 - The turret names no rule class and tests no kind of rule.
 - Fire, GetLastTarget, GetShotCount, the other members, and the names and signatures of all of them are unchanged.

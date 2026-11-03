@@ -4,6 +4,16 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1740 2026-11-03 World 20 fix round 1 (author-patterns, M4.P2.20)
+The reviewer's verdict was FIXES NEEDED with no compile error and no wrong boss number found. Changed:
+- Two spot-the-bug items put the mistake on a missing line. Quest 6's now shows `Step` with the cached-object line as the bug, and quest 1's became a multiple-choice question.
+- Quest 3's interface item is one declaration on one line. Quest 1's example code is one statement per line.
+- The reference `Step` also checks the held rule object against the class, so a class written straight to the public `RuleClass` property (a Blueprint, or Details while playing) cannot leave the old rule running. `SetRuleClass` still lets go of the object. The obvious version a learner writes still fails `NewClassMovesTheNextStep`.
+- The briefs and rubrics of quests 2 and 5 no longer promise a result for a rule that answers an index outside the list, because no test can return one without crashing the whole run. The hint still warns about it.
+- The boss director skips an abstract class in the rule list, the spec says the label shows `None` when there is no rule, quest 5's editor text says `None`, the iterations entry says four solution folders, and three texts on the `strategy` card in `patterns.json` say "base class" where they said "interface".
+- Left: the tests cannot tell that the number, the switch, and the loop are gone from the turret (only the rubric and review do). The branch is on 559a78d, so the Lead will meet textual merge work in the three docs files.
+Reverse cost: low.
+
 ### A1739 2026-11-03 World 20 was written without the engine; the proof is the Lead's (author-patterns, M4.P2.20)
 The task said no engine, so every C++ file, test, starter, and mutation copy was written and read but never compiled. It uses only long-stable calls (`UCLASS(Abstract, Blueprintable, EditInlineNew)`, `UPROPERTY(Instanced)`, `TSubclassOf`, `NewObject` with an outer, `HasAnyClassFlags(CLASS_Abstract)`, `RotateAngleAxis`, `SetTimer` with a first delay, `SpawnActor`, `InputComponent->BindKey`, `FindFProperty`), copied in shape from the merged Pack 2 solutions. Expect the first engine run to find any compile slip. Reverse cost: none.
 

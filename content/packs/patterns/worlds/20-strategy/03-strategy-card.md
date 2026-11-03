@@ -132,9 +132,8 @@ TSubclassOf<UDojoMoveRule> RuleClass;
   type: spot-the-bug
   prompt: A designer should pick the rule in Details and tune it there. Which line cannot work?
   code: |
-    UPROPERTY(EditAnywhere, Instanced)
-    TScriptInterface<IDojoTargetRule> Rule;
-  bugLine: 2
+    UPROPERTY(EditAnywhere, Instanced) TScriptInterface<IDojoTargetRule> Rule;
+  bugLine: 1
   fix: Point the property at an abstract UObject class that is marked EditInlineNew, and put the shared function on that class.
   explanation: Details can create objects of a class inline. It cannot create something that only implements an interface.
 - id: explain-strategy

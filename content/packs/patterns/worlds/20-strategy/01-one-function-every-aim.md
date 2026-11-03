@@ -45,13 +45,24 @@ FName ADojoTurret::PickTarget() const
 	for (int32 Index = 0; Index < Dummies.Num(); Index++)
 	{
 		if (Dummies[Index].Health <= 0) continue;
-		if (Best == INDEX_NONE) { Best = Index; continue; }
+
+		if (Best == INDEX_NONE)
+		{
+			Best = Index;
+			continue;
+		}
 
 		switch (AimStyle)
 		{
-		case 1:  if (Dummies[Index].Health < Dummies[Best].Health) Best = Index; break;
-		case 2:  if (DistanceTo(Index) > DistanceTo(Best)) Best = Index; break;
-		default: if (DistanceTo(Index) < DistanceTo(Best)) Best = Index; break;
+		case 1:
+			if (Dummies[Index].Health < Dummies[Best].Health) Best = Index;
+			break;
+		case 2:
+			if (DistanceTo(Index) > DistanceTo(Best)) Best = Index;
+			break;
+		default:
+			if (DistanceTo(Index) < DistanceTo(Best)) Best = Index;
+			break;
 		}
 	}
 
@@ -83,9 +94,15 @@ The turret no longer knows how many aims there are. A new aim is a new child cla
 // Before: the turret itself contains every aim.
 switch (AimStyle)
 {
-case 1:  /* weakest */ break;
-case 2:  /* farthest */ break;
-default: /* nearest */ break;
+case 1:
+	/* weakest */
+	break;
+case 2:
+	/* farthest */
+	break;
+default:
+	/* nearest */
+	break;
 }
 
 // After: the turret holds one object and asks it the same question whichever aim it is.
@@ -111,18 +128,15 @@ const int32 Index = Rule->ChooseTarget(GetActorLocation(), Dummies);
   acceptedAnswers: [virtual]
   explanation: A virtual function is looked up on the real object at run time, so the caller does not need to know which child it holds.
 - id: spot-the-growth
-  type: spot-the-bug
-  prompt: A designer wants a sixth aim that targets the dummy with the most health. Which line is the one that has to be edited, and will keep being edited for every new aim?
-  code: |
-    switch (AimStyle)
-    {
-    case 1:  /* weakest */ break;
-    case 2:  /* farthest */ break;
-    default: /* nearest */ break;
-    }
-  bugLine: 1
-  fix: Put each aim in its own class behind one shared function, and let the turret call that function on an object it holds.
-  explanation: The switch has to learn every aim, so it is edited for each new one.
+  type: multiple-choice
+  prompt: A designer wants another aim that targets the dummy with the most health, and the turret picks with a switch on AimStyle. What has to change?
+  choices:
+    - Nothing in the turret, the designer types a new number into Details
+    - A new case in the switch inside the turret, which every turret in the game runs
+    - Only a new file, because a switch finds new cases by itself
+    - Only the tests
+  answerIndex: 1
+  explanation: The switch has to learn every aim, so the shared function is edited for each new one.
 - id: what-turret-keeps
   type: multiple-choice
   prompt: "After the aims move into their own objects, what does the turret keep?"

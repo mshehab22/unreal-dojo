@@ -2420,13 +2420,13 @@
         "id": "strategy-recall-3",
         "type": "explain-in-one-sentence",
         "prompt": "In one sentence, what does Strategy let you change without touching the class that uses it?",
-        "modelAnswer": "It lets you swap the algorithm, such as a targeting or scoring rule, by handing the user a different implementation of the same interface.",
+        "modelAnswer": "It lets you swap the algorithm, such as a targeting or scoring rule, by handing the user a different child of the same base class.",
         "rubric": [
           "Mentions swapping an algorithm or rule",
-          "Mentions an interface or common base",
+          "Mentions a shared base class",
           "Says the using class stays unchanged"
         ],
-        "explanation": "The host depends on the interface; new rules arrive as new classes."
+        "explanation": "The host depends on the shared base class; new rules arrive as new child classes."
       },
       {
         "id": "strategy-recall-4",
@@ -2468,7 +2468,7 @@
             "why": "Data per kind tunes numbers; the rule itself is behavior."
           }
         ],
-        "explanation": "A targeting rule interface with three implementations, chosen per turret."
+        "explanation": "A targeting rule base class with three child classes, chosen per turret."
       },
       {
         "id": "strategy-scenario-2",

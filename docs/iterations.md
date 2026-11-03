@@ -2277,5 +2277,5 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Also: a new glossary entry `virtual-function` and the Strategy card audit (A1731).
 - Proof so far:
   - Content verifier: no problems. Originality: no 6-word or 5-word match against any research file in the quests, solutions, glossary entry, or card, except test macro boilerplate and a documentation link.
-  - Engine proof: not run. The task did not allow the engine, so nothing in this world has been compiled (A1739). Queued for the Lead: the five solution folders, the starters, and the mutation copies.
-- Not done: the engine proof, the mutation run, and the check against the book (no Strategy chapter exists). No screenshots. Decisions A1730 to A1739.
+  - Engine proof: not run. The task did not allow the engine, so nothing in this world has been compiled (A1739). Queued for the Lead: the four solution folders, the starters, and the mutation copies.
+- Not done: the engine proof, the mutation run, and the check against the book (no Strategy chapter exists). No screenshots. Decisions A1730 to A1740.
