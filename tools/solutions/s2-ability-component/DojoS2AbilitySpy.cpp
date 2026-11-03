@@ -38,6 +38,11 @@ FGameplayTagContainer UDojoS2AbilitySpy::GetTagsAtLastStart() const
 	return TagsAtLastStart;
 }
 
+bool UDojoS2AbilitySpy::WasCoolingAtLastCooldownNotice() const
+{
+	return bWasCoolingAtLastCooldownNotice;
+}
+
 void UDojoS2AbilitySpy::HandleStarted(UDojoS2AbilityComponent* Abilities, UDojoS2AbilityData* Ability)
 {
 	++StartCount;
@@ -49,4 +54,5 @@ void UDojoS2AbilitySpy::HandleStarted(UDojoS2AbilityComponent* Abilities, UDojoS
 void UDojoS2AbilitySpy::HandleCooldown(UDojoS2AbilityComponent* Abilities, UDojoS2AbilityData* Ability)
 {
 	++CooldownNoticeCount;
+	bWasCoolingAtLastCooldownNotice = Abilities->IsOnCooldown(Ability);
 }

@@ -39,12 +39,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ability Spy")
 	FGameplayTagContainer GetTagsAtLastStart() const;
 
+	/** Whether the ability named by the last cooldown notice was cooling down when that notice arrived. */
+	UFUNCTION(BlueprintPure, Category = "Ability Spy")
+	bool WasCoolingAtLastCooldownNotice() const;
+
 private:
 	/** Counts the start and reads the component's state for that ability. */
 	UFUNCTION()
 	void HandleStarted(UDojoS2AbilityComponent* Abilities, UDojoS2AbilityData* Ability);
 
-	/** Counts the cooldown notice. */
+	/** Counts the cooldown notice and reads whether that ability is cooling down. */
 	UFUNCTION()
 	void HandleCooldown(UDojoS2AbilityComponent* Abilities, UDojoS2AbilityData* Ability);
 
@@ -55,4 +59,5 @@ private:
 	int32 StartCount = 0;
 	int32 CooldownNoticeCount = 0;
 	bool bWasCoolingAtLastStart = false;
+	bool bWasCoolingAtLastCooldownNotice = false;
 };

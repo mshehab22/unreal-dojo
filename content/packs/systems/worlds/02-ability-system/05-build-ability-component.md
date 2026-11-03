@@ -287,12 +287,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ability Spy")
 	FGameplayTagContainer GetTagsAtLastStart() const;
 
+	/** Whether the ability named by the last cooldown notice was cooling down when that notice arrived. */
+	UFUNCTION(BlueprintPure, Category = "Ability Spy")
+	bool WasCoolingAtLastCooldownNotice() const;
+
 private:
 	/** Counts the start and reads the component's state for that ability. */
 	UFUNCTION()
 	void HandleStarted(UDojoS2AbilityComponent* Abilities, UDojoS2AbilityData* Ability);
 
-	/** Counts the cooldown notice. */
+	/** Counts the cooldown notice and reads whether that ability is cooling down. */
 	UFUNCTION()
 	void HandleCooldown(UDojoS2AbilityComponent* Abilities, UDojoS2AbilityData* Ability);
 
@@ -303,6 +307,7 @@ private:
 	int32 StartCount = 0;
 	int32 CooldownNoticeCount = 0;
 	bool bWasCoolingAtLastStart = false;
+	bool bWasCoolingAtLastCooldownNotice = false;
 };
 ```
 
@@ -349,6 +354,11 @@ FGameplayTagContainer UDojoS2AbilitySpy::GetTagsAtLastStart() const
 	return TagsAtLastStart;
 }
 
+bool UDojoS2AbilitySpy::WasCoolingAtLastCooldownNotice() const
+{
+	return bWasCoolingAtLastCooldownNotice;
+}
+
 void UDojoS2AbilitySpy::HandleStarted(UDojoS2AbilityComponent* Abilities, UDojoS2AbilityData* Ability)
 {
 	++StartCount;
@@ -360,6 +370,7 @@ void UDojoS2AbilitySpy::HandleStarted(UDojoS2AbilityComponent* Abilities, UDojoS
 void UDojoS2AbilitySpy::HandleCooldown(UDojoS2AbilityComponent* Abilities, UDojoS2AbilityData* Ability)
 {
 	++CooldownNoticeCount;
+	bWasCoolingAtLastCooldownNotice = Abilities->IsOnCooldown(Ability);
 }
 ```
 
@@ -454,6 +465,7 @@ bool FDojo_S2_AbilityComponent_GrantsAndStarts::RunTest(const FString& Parameter
 	TestTrue(TEXT("The notice names Dash"), Spy->GetLastStarted() == Dash);
 	TestTrue(TEXT("The cooldown was running when the start was announced"), Spy->WasCoolingAtLastStart());
 	TestEqual(TEXT("One cooldown notice for the start of the wait"), Spy->GetCooldownNoticeCount(), 1);
+	TestTrue(TEXT("At that notice Dash was already cooling"), Spy->WasCoolingAtLastCooldownNotice());
 
 	TestFalse(TEXT("A cooling ability cannot start"), User.Abilities->CanActivate(Dash));
 	TestFalse(TEXT("A cooling ability does not start"), User.Abilities->TryActivate(Dash));
@@ -468,6 +480,7 @@ bool FDojo_S2_AbilityComponent_GrantsAndStarts::RunTest(const FString& Parameter
 	TestFalse(TEXT("Ready after 1.6 seconds"), User.Abilities->IsOnCooldown(Dash));
 	TestEqual(TEXT("No time left"), User.Abilities->GetCooldownRemaining(Dash), 0.f);
 	TestEqual(TEXT("A second cooldown notice for the end of the wait"), Spy->GetCooldownNoticeCount(), 2);
+	TestFalse(TEXT("At that notice Dash was already ready"), Spy->WasCoolingAtLastCooldownNotice());
 	TestTrue(TEXT("Dash starts again"), User.Abilities->TryActivate(Dash));
 	TestEqual(TEXT("And pays again"), User.Energy->GetEnergy(), 60);
 
@@ -616,6 +629,7 @@ bool FDojo_S2_AbilityComponent_ResetAll::RunTest(const FString& Parameters)
 	TestFalse(TEXT("Shockwave no longer runs"), User.Abilities->IsRunning(Shockwave));
 	TestTrue(TEXT("The user carries no tags"), User.Abilities->GetActiveTags().IsEmpty());
 	TestEqual(TEXT("Each ended cooldown was announced"), Spy->GetCooldownNoticeCount(), 4);
+	TestFalse(TEXT("Each was announced after it ended"), Spy->WasCoolingAtLastCooldownNotice());
 
 	User.Abilities->ResetAll();
 	TestEqual(TEXT("A reset with nothing cooling announces nothing"), Spy->GetCooldownNoticeCount(), 4);
