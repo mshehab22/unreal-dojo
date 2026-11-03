@@ -58,6 +58,7 @@ Place a `DojoM3Pit` at X 1000, a `DojoM3Runner` at the origin, and a `DojoM3Crat
 
 #if WITH_AUTOMATION_TESTS
 
+#include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
 #include "Quests/m3-checkpoint/DojoM3Runner.h"
 #include "Quests/m3-return-pit/DojoM3Pit.h"
