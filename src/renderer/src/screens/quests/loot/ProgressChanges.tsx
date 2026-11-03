@@ -1,13 +1,14 @@
 // Everything an attempt changed besides XP: level and role, cards unlocked or upgraded (flipping in), skills up or due for review, spree, streak, chest, unlocks, and what comes due next.
-import { ArrowUpIcon, CalendarClockIcon, FlameIcon, LockOpenIcon, TargetIcon } from "lucide-react";
+import { ArrowUpIcon, CalendarClockIcon, FlameIcon, LockOpenIcon, ShieldIcon, TargetIcon } from "lucide-react";
 
 import type { PatternCard } from "@shared/types/content";
 import type { AttemptOutcome, RulesSnapshot } from "@shared/types/progress";
 
 import "./lootMotion.css";
 
-import { Chest } from "@/components/Chest";
+import { DailyReward } from "@/components/DailyReward";
 import { PatternCard as PatternCardView } from "@/components/PatternCard";
+import { StreakCelebration } from "@/components/StreakCelebration";
 import { describeDueGroups } from "@/lib/dueGroups";
 import { humanizeId } from "@/lib/formatting";
 import { MASTERY_NAMES, skillLabel } from "@/lib/skillNames";
@@ -77,19 +78,29 @@ export function ProgressChanges({ outcome, rules, patternCards, questTitles }: P
 				</ul>
 			)}
 
+			{outcome.streak.milestoneReached !== undefined && (
+				<StreakCelebration milestone={outcome.streak.milestoneReached} nextMilestone={rules.streakMilestones.find((milestone) => milestone > (outcome.streak.milestoneReached ?? 0))} />
+			)}
+
 			<div className="flex flex-wrap gap-x-6 gap-y-2 text-paper-muted">
-				<span className="flex items-center gap-1.5">
+				<span data-testid="loot-spree" data-spree={outcome.spree.current} className="flex items-center gap-1.5">
 					<TargetIcon className="size-4 text-pack" />
-					Spree {outcome.spree.current} (best {outcome.spree.best}){outcome.spree.armorUsed ? ", armor absorbed the miss" : ""}
+					Spree {outcome.spree.current} (best {outcome.spree.best}){outcome.spree.current >= rules.spreeBonusThreshold ? ", spree bonus on" : ""}
 				</span>
 				<span className="flex items-center gap-1.5">
 					<FlameIcon className="size-4 text-pack" />
 					Streak {outcome.streak.count}
-					{outcome.streak.milestoneReached ? `, ${outcome.streak.milestoneReached} day milestone` : ""}
 				</span>
 			</div>
 
-			{outcome.chest && <Chest reward={outcome.chest} caption="Today's daily quest is done" />}
+			{outcome.spree.armorUsed && (
+				<p data-testid="armor-used" className="flex items-center gap-2 text-paper">
+					<ShieldIcon className="size-4 text-patterns" />
+					Armor absorbed the missed first try: your spree of {outcome.spree.current} stands.
+				</p>
+			)}
+
+			<DailyReward chest={outcome.chest} monthBadge={outcome.monthBadge} />
 
 			{outcome.unlockedQuestIds.length > 0 && (
 				<p data-testid="unlocked" className="flex items-center gap-2 text-paper">

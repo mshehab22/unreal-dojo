@@ -19,7 +19,7 @@ export interface SpreeSubmit
 /** Spree rules. Pure: returns a new spree. */
 export class SpreeRules
 {
-	/** Applies one Submit. A first-try pass adds 1; a first-try miss resets to 0 unless armor absorbs it; later submits change nothing. Best is never lost. */
+	/** Applies one Submit. A first-try pass adds 1; a first-try miss resets to 0 unless armor absorbs it (only while the spree is above 0); later submits change nothing. Best is never lost. */
 	applySubmit(spree: PlayerProgress["spree"], submit: SpreeSubmit): { spree: PlayerProgress["spree"]; armorUsed: boolean }
 	{
 		if (!submit.countsForSpree || !submit.firstSubmit) return { spree: { ...spree }, armorUsed: false };
@@ -31,7 +31,8 @@ export class SpreeRules
 			return { spree: { current, best: Math.max(spree.best, current), armor: spree.armor }, armorUsed: false };
 		}
 
-		if (spree.armor > 0) return { spree: { ...spree, armor: spree.armor - 1 }, armorUsed: true };
+		// Armor only spends itself to protect a spree; a miss on a spree of 0 loses nothing, so the armor is kept (A1396).
+		if (spree.armor > 0 && spree.current > 0) return { spree: { ...spree, armor: spree.armor - 1 }, armorUsed: true };
 
 		return { spree: { ...spree, current: 0 }, armorUsed: false };
 	}

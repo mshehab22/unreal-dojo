@@ -10,7 +10,7 @@ import { SequenceRandom } from "../support/SequenceRandom";
 
 const daily = new DailyQuestService();
 const chest = new ChestRules();
-const candidates = { conceptQuestIds: ["concept-a", "concept-b"], shortBuildQuestIds: ["build-a"] };
+const candidates = { conceptQuestIds: ["concept-a", "concept-b"], shortBuildQuestIds: ["build-a"], hasDueDrillItems: true };
 const empty = { date: "2026-10-20", offered: [], done: false, monthBadges: [], completedDates: [] };
 
 describe("DailyQuestService", () =>
@@ -83,7 +83,7 @@ describe("DailyQuestService short builds", () =>
 		];
 		const availability = Object.fromEntries(quests.map((quest) => [quest.id, quest.id === "locked-concept" ? { ...open, status: "locked" as const } : open]));
 
-		expect(daily.candidatesFrom(quests, availability)).toEqual({ conceptQuestIds: ["concept"], shortBuildQuestIds: ["short"] });
+		expect(daily.candidatesFrom(quests, availability, false)).toEqual({ conceptQuestIds: ["concept"], shortBuildQuestIds: ["short"], hasDueDrillItems: false });
 	});
 });
 

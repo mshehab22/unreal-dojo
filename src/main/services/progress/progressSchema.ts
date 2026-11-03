@@ -104,6 +104,7 @@ const dailySchema: z.ZodType<DailyQuestState> = z.object({
 	done: z.boolean(),
 	monthBadges: z.array(z.string()),
 	completedDates: z.array(z.string()).default([]),
+	chest: z.enum(["freeze", "armor", "seer-stone", "studio-cosmetic", "xp-potion"]).optional(),
 });
 
 /** The whole save file. */

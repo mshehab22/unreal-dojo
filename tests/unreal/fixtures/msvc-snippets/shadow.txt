@@ -1,0 +1,13 @@
+Snippet-one.cpp
+C:\Dojo\DojoSandbox\Intermediate\DojoSnippets\Snippet-one.cpp(6,18): error C4458: declaration of 'Tags' hides class member
+	void Grow(int32 Tags) { }
+	                ^
+C:\Program Files\Epic Games\UE_5.8\Engine\Source\Runtime\Engine\Classes\GameFramework\Actor.h(1344,16): note: see declaration of 'AActor::Tags'
+	TArray<FName> Tags;
+	              ^
+C:\Dojo\DojoSandbox\Intermediate\DojoSnippets\Snippet-one.cpp(7,21): error C4458: declaration of 'Owner' hides class member
+	void Place(AActor* Owner) { SetOwner(Owner); }
+	                   ^
+C:\Program Files\Epic Games\UE_5.8\Engine\Source\Runtime\Engine\Classes\GameFramework\Actor.h(839,21): note: see declaration of 'AActor::Owner'
+	TObjectPtr<AActor> Owner;
+	                   ^

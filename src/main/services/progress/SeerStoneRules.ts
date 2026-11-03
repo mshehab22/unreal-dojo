@@ -8,11 +8,33 @@ export interface SolutionView
 	/** Seer Stones held after the view. */
 	stonesAfter: number;
 
-	/** True when a stone paid for the view (the quest keeps its XP). */
+	/** True when a stone paid for this view (the quest keeps its XP). */
 	stoneSpent: boolean;
 
-	/** When the rematch is due (ISO 8601). */
-	rematchDueAt: string;
+	/** When the rematch is due (ISO 8601), or null when this view schedules none (already viewed, or the quest was passed). */
+	rematchDueAt: string | null;
+
+	/** True when the solution was viewed before, so this view was free and changed nothing (A1391). */
+	alreadyViewed: boolean;
+}
+
+/** Where the quest stands when the learner asks to view its solution. */
+export interface SolutionViewRequest
+{
+	/** Seer Stones held now. */
+	stonesHeld: number;
+
+	/** True when the learner chose to spend a stone. */
+	spendStone: boolean;
+
+	/** True when the solution was viewed before. */
+	alreadyViewed: boolean;
+
+	/** True when the quest is passed already. */
+	passed: boolean;
+
+	/** The moment of the view. */
+	now: Date;
 }
 
 /** Seer Stone rules. Pure: no I/O. */
@@ -24,15 +46,21 @@ export class SeerStoneRules
 		return failedSubmits >= FAILED_SUBMITS_BEFORE_OFFERS;
 	}
 
-	/** Views the solution: spends a stone when asked and one is held, and always schedules a rematch 3 days out. */
-	viewSolution(stonesHeld: number, spendStone: boolean, now: Date): SolutionView
+	/**
+	 * Prices one view. A first view of an unpassed quest spends a stone when asked and one is held, and always schedules a rematch 3 days out.
+	 * A repeat view, and any view of a passed quest, is free and schedules nothing, so viewing can never be used to buy a rematch's XP (A1391).
+	 */
+	viewSolution(request: SolutionViewRequest): SolutionView
 	{
-		const stoneSpent = spendStone && stonesHeld > 0;
+		if (request.alreadyViewed || request.passed) return { stonesAfter: request.stonesHeld, stoneSpent: false, rematchDueAt: null, alreadyViewed: request.alreadyViewed };
+
+		const stoneSpent = request.spendStone && request.stonesHeld > 0;
 
 		return {
-			stonesAfter: stoneSpent ? stonesHeld - 1 : stonesHeld,
+			stonesAfter: stoneSpent ? request.stonesHeld - 1 : request.stonesHeld,
 			stoneSpent,
-			rematchDueAt: addDays(now, REMATCH_AFTER_DAYS).toISOString(),
+			rematchDueAt: addDays(request.now, REMATCH_AFTER_DAYS).toISOString(),
+			alreadyViewed: false,
 		};
 	}
 

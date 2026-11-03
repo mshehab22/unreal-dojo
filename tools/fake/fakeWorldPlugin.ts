@@ -10,7 +10,7 @@ const MODULE_ID = "virtual:dojo-fake-world";
 const RESOLVED_ID = `\0${MODULE_ID}`;
 
 /** What the fake serves when World 1 cannot be built: an empty world, so a content mistake never stops the real app from building. */
-const EMPTY_WORLD = JSON.stringify({ packId: "foundations", world: { id: "objects-and-reflection", title: "World 1 (content did not load)", summary: "", order: 1, quests: [] }, hints: {} });
+const EMPTY_WORLD = JSON.stringify({ packId: "foundations", world: { id: "objects-and-reflection", title: "World 1 (content did not load)", summary: "", order: 1, quests: [] }, hints: {}, solutions: {} });
 
 /** The plugin: the module is the fixture's JSON as a default export, read once per build. A failed read warns and serves an empty world. */
 export function fakeWorldFixture(): Plugin

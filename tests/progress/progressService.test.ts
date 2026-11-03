@@ -127,7 +127,7 @@ describe("ProgressService hints and Seer Stone", () =>
 	{
 		// Random 0.5 makes the daily chest a Seer Stone (third of five possible rewards).
 		const { service } = createTestProgressService(localMoment(2026, 10, 21), [0.5]);
-		await service.getDailyQuest({ conceptQuestIds: [], shortBuildQuestIds: [] });
+		await service.getDailyQuest({ conceptQuestIds: [], shortBuildQuestIds: [], hasDueDrillItems: true });
 		await service.chooseDailyOffer(0);
 		expect((await service.finishDrill({ correctCount: 6, totalCount: 6 })).chest).toBe("seer-stone");
 
@@ -214,7 +214,7 @@ describe("ProgressService daily quest and settings", () =>
 	it("refreshes offers, takes one choice, and gives a chest when the chosen drill is finished", async () =>
 	{
 		const { service } = createTestProgressService(localMoment(2026, 10, 21), [0]);
-		const state = await service.getDailyQuest({ conceptQuestIds: ["q1"], shortBuildQuestIds: [] });
+		const state = await service.getDailyQuest({ conceptQuestIds: ["q1"], shortBuildQuestIds: [], hasDueDrillItems: true });
 
 		expect(state.offered.map((offer) => offer.kind)).toEqual(["drill", "concept"]);
 
@@ -338,7 +338,7 @@ describe("ProgressService fix round 1", () =>
 		for (const [roll, read, expected] of rewards)
 		{
 			const { service } = createTestProgressService(localMoment(2026, 10, 21), [roll]);
-			await service.getDailyQuest({ conceptQuestIds: [], shortBuildQuestIds: [] });
+			await service.getDailyQuest({ conceptQuestIds: [], shortBuildQuestIds: [], hasDueDrillItems: true });
 			await service.chooseDailyOffer(0);
 			await service.finishDrill({ correctCount: 6, totalCount: 6 });
 
@@ -349,7 +349,7 @@ describe("ProgressService fix round 1", () =>
 	it("doubles nothing after the potion's 30 minutes are up", async () =>
 	{
 		const { service, clock } = createTestProgressService(localMoment(2026, 10, 21), [0.8]);
-		await service.getDailyQuest({ conceptQuestIds: [], shortBuildQuestIds: [] });
+		await service.getDailyQuest({ conceptQuestIds: [], shortBuildQuestIds: [], hasDueDrillItems: true });
 		await service.chooseDailyOffer(0);
 		await service.finishDrill({ correctCount: 6, totalCount: 6 });
 
@@ -368,13 +368,13 @@ describe("ProgressService fix round 1", () =>
 			progress.daily.completedDates = februaryDays;
 		};
 		const drillDay = createTestProgressService(localMoment(2027, 2, 28), [0], earlierDays);
-		await drillDay.service.getDailyQuest({ conceptQuestIds: ["c1"], shortBuildQuestIds: [] });
+		await drillDay.service.getDailyQuest({ conceptQuestIds: ["c1"], shortBuildQuestIds: [], hasDueDrillItems: true });
 		await drillDay.service.chooseDailyOffer(0);
 		expect((await drillDay.service.finishDrill({ correctCount: 6, totalCount: 6 })).monthBadge).toBe("2027-02");
 
 		const concept = makeQuest({ id: "c1", kind: "concept" });
 		const conceptDay = createTestProgressService(localMoment(2027, 2, 28), [0], earlierDays);
-		await conceptDay.service.getDailyQuest({ conceptQuestIds: ["c1"], shortBuildQuestIds: [] });
+		await conceptDay.service.getDailyQuest({ conceptQuestIds: ["c1"], shortBuildQuestIds: [], hasDueDrillItems: true });
 		await conceptDay.service.chooseDailyOffer(1);
 		expect((await conceptDay.service.recordAttempt({ quest: concept, score: 100, passed: true, compiled: true, isSubmit: false }, [concept])).monthBadge).toBe("2027-02");
 	});

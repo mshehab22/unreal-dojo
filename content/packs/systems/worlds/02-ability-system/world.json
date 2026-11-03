@@ -1,0 +1,5 @@
+{
+	"id": "ability-system",
+	"title": "Ability system",
+	"summary": "A sparring hero needs a kit of moves. Plan an ability system from scratch, then build its parts: gameplay tags for states, abilities as data assets, an energy pool that refills on a timer, a component that decides what may start and keeps the cooldowns, and a family of effects, all wired into one sparring ring."
+}

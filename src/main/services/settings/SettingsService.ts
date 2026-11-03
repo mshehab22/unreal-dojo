@@ -21,7 +21,7 @@ function secureStorageUnavailable(detail?: string): AppErrorException
 /** Builds the error for a sandbox folder that no longer holds the Dojo project. */
 function sandboxNotReady(sandboxPath: string): AppErrorException
 {
-	return new AppErrorException("sandbox-not-ready", "The sandbox folder does not hold the Dojo project.", "Create the sandbox again in setup, or pick the folder it was created in.", `no Dojo.uproject in ${sandboxPath}`);
+	return new AppErrorException("sandbox-not-ready", "The sandbox folder does not hold the Dojo project.", "Put the sandbox folder back where it was, or open the Title screen, choose Set up your studio, and create the sandbox again in an empty folder.", `no Dojo.uproject in ${sandboxPath}`);
 }
 
 /**

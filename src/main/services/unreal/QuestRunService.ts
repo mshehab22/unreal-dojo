@@ -47,8 +47,8 @@ export interface QuestRunDependencies
 	prerequisiteFiller: PrerequisiteFiller;
 	sandboxService: SandboxProjectService;
 
-	/** The platform's snippet checker, or null where none is built yet (Windows, A402). */
-	snippetChecker: SnippetSyntaxChecker | null;
+	/** The platform's snippet checker: clang on macOS (A403), cl.exe on Windows (A1310). */
+	snippetChecker: SnippetSyntaxChecker;
 
 	/** What the progress service knows about the learner's quests. */
 	learner: LearnerRecord;
@@ -118,12 +118,9 @@ export class QuestRunService
 	/** Syntax-checks a concept quest's scratch buffer with the platform compiler. */
 	async checkSnippetSyntax(code: string): Promise<SyntaxCheckResult>
 	{
-		const checker = this.dependencies.snippetChecker;
-		if (!checker) throw new AppErrorException("not-implemented", "The syntax check is not available on this computer yet.", "Use Run on a build quest to compile your code for now.", "No snippet checker for this platform (A402)");
-
 		const context = await this.dependencies.preflight.check();
 
-		return checker.check(context.engineRoot, context.sandboxFolder, code);
+		return this.dependencies.snippetChecker.check(context.engineRoot, context.sandboxFolder, code);
 	}
 
 	/** Runs a clean full build of the sandbox in settings. Rejects with the same preflight errors as a run. */

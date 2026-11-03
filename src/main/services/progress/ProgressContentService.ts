@@ -17,6 +17,7 @@ import type {
 	DrillOutcome,
 	HintReveal,
 	QuestAvailability,
+	SolutionViewing,
 	WorldTestOutStatus,
 } from "@shared/types/progress";
 import { worldKeyOf } from "@shared/types/progress";
@@ -36,6 +37,7 @@ import type { RandomSource } from "./RandomSource";
 import type { RuleQuest } from "./RuleQuest";
 import { FAILED_SUBMITS_BEFORE_OFFERS } from "./rules";
 import { Sm2Scheduler } from "./Sm2Scheduler";
+import { NO_SOLUTIONS, type SolutionSource } from "./SolutionSource";
 import { testOutTermsOf } from "./taughtTerms";
 import { toRuleQuests } from "./toRuleQuests";
 
@@ -101,13 +103,14 @@ export class ProgressContentService
 	/** The content view, cached per pack outline list (a new content load gives a new list). */
 	private cachedView: { packs: PackOutline[]; view: Promise<ContentView> } | null = null;
 
-	/** Keeps the collaborators. `createSessionId` makes drill session ids. */
+	/** Keeps the collaborators. `createSessionId` makes drill session ids; `solutions` answers the Seer Stone flow (A1390). */
 	constructor(
 		private readonly content: ProgressContentSource,
 		private readonly progress: ProgressService,
 		private readonly graders: ProgressGraders,
 		private readonly random: RandomSource,
 		createSessionId: () => string,
+		private readonly solutions: SolutionSource = NO_SOLUTIONS,
 	)
 	{
 		this.sessions = new DrillSessionStore(createSessionId);
@@ -152,6 +155,36 @@ export class ProgressContentService
 		if (quest.authored.kind !== "build" && quest.authored.kind !== "refactor") throw new AppErrorException("invalid-payload", "This quest has no hint spells.", "Hints are on build and refactor quests.");
 
 		return this.progress.revealHint(quest.rule, [...quest.authored.hints], hintIndex);
+	}
+
+	/**
+	 * Views a build or refactor quest's reference solution (the Seer Stone flow, A1390): the files are read first, so a quest with no reference
+	 * is refused before anything is charged, then the progress service prices the view (A1391). Only the quest's own files are answered.
+	 */
+	async viewSolution(questId: string, useSeerStone: boolean): Promise<SolutionViewing>
+	{
+		const { authored } = await this.openQuest(questId);
+
+		if (authored.kind !== "build" && authored.kind !== "refactor") throw new AppErrorException("invalid-payload", "Only build and refactor quests have a solution to view.", "Open a build or refactor quest.");
+
+		const reference = await this.solutions.filesOf(questId);
+		const questFileNames = new Set(authored.files.map((file) => file.name));
+		const files = Object.fromEntries(Object.entries(reference ?? {}).filter(([name]) => questFileNames.has(name)));
+
+		if (Object.keys(files).length === 0) throw new AppErrorException("invalid-payload", "This quest has no reference solution to show.", "Use a hint spell or the Parsons fallback instead.", questId);
+
+		const view = await this.progress.viewSolution(questId, useSeerStone);
+		const questProgress = this.progress.getProgress().quests[questId];
+
+		return {
+			questId,
+			files,
+			stoneSpent: view.stoneSpent,
+			seerStonesAfter: view.stonesAfter,
+			xpForfeited: questProgress?.solutionViewed === true && !questProgress.seerStoneSpent && questProgress.status !== "passed",
+			rematchDueAt: view.rematchDueAt,
+			alreadyViewed: view.alreadyViewed,
+		};
 	}
 
 	/** One quest as the quest screen receives it, with the texts of the hint spells already revealed (A502). Unrevealed hints never leave main (A222). */
@@ -266,7 +299,9 @@ export class ProgressContentService
 		const { quests } = await this.view();
 		const availability = await this.progress.getQuestAvailability(quests);
 
-		return this.progress.getDailyQuest(this.dailyQuest.candidatesFrom(quests, availability));
+		const hasDueDrillItems = this.progress.getScheduledDueItemIds().length > 0;
+
+		return this.progress.getDailyQuest(this.dailyQuest.candidatesFrom(quests, availability, hasDueDrillItems));
 	}
 
 	/** Starts a due drill, a world's test-out, or the Parsons fallback of a quest. */

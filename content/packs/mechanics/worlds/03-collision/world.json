@@ -1,0 +1,5 @@
+{
+	"id": "collision",
+	"title": "Things that touch",
+	"summary": "The training hall gets a vault room. Learn who stops whom and who only notices, listen for overlaps and hits with handlers the engine can find, and change a shape's responses while the game runs, then build flags, cracking walls, a gate that only lets runners through, a plate that counts what stands on it, and a pit that sends things back, all wired into a room whose gate opens only while enough is standing on the plate."
+}
