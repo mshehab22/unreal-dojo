@@ -4,6 +4,18 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1823 2026-11-03 Spot-check 3 does not change spot-check 2's severity rules (qa, M4.y spot-check 3)
+Options: keep the A1621 meaning (Must fix is a wrong fact taught as true, copied wording, or the solution or deliberate failure given away beside the brief; Should fix is a promise the learner cannot see, a broken spec rule, a hint with code or length, a tell; Note is the rest); loosen it now that the deliberate-failure leaks are rarer. Kept it, so the counts compare across rounds: 2 Must fix in spot-check 2, 5 in spot-check 3. No reviewer rating was changed this round and no finding was dropped; I re-read the file or engine line behind every Must fix.
+
+### A1822 2026-11-03 Glossary hover cards count as text beside the brief (qa, M4.y spot-check 3)
+Two glossary entries (`line-trace`, `collision-query-params`) describe the fix to the Tracing sentry quest's deliberate failure, and both are in that quest's `terms[]`, so their hover cards show before the failing step. Options: rate it a Note because the glossary is general reference; rate it Must fix because the app shows the card inside the quest. Chose Must fix, since the rule is about what the learner can see before the failure and the card is on screen. The fix is to cut the sentences from the two entries; the `object-type-query` entry already carries the idea.
+
+### A1821 2026-11-03 The `SetTimerForNextTick` "exactly one frame" claim is a Must fix, not a Note (qa, M4.y spot-check 3)
+`TimerManager.GuaranteeEngineTickDelay` defaults to 0 in the installed 5.8 source and its own text says next-tick timers "could run during the same engine tick". The quest teaches an exact guarantee the engine does not give when set from an actor's Tick. It does hold from inside a timer callback, which is how the boss uses it, so the solution is right and only the prose is wrong. Options: Note because the boss works; Must fix because a learner will take the guarantee elsewhere. Chose Must fix and suggested wording that is true in both places.
+
+### A1820 2026-11-03 Sampling for M4.y spot-check 3 (qa)
+Seeded shuffle (mulberry32, seed 20261104) of each world's quest files: Pack 3 World 4 took 8 of 10 (not 01 and 07), Pack 3 World 5 took 8 of 10 (not 03 and 10, the boss), Pack 4 World 4 was read whole (6). One read-only reviewer per world, three in parallel, each told the engine source is at `C:/Program Files/Epic Games/UE_5.8` and the recurring Should-fix kinds from spot-check 2. Options: read every quest; sample as the Lead asked. Sampled. The brief said main was 8bc8b5a; main is 0eec77e, which has 8bc8b5a as an ancestor, so the worlds were all present. Pack 4 World 3 has no folder yet, so World 4 was numbered and checked on its own.
+
 ### A1489 2026-11-03 The tower's looks, awareness, and beam run on one timer, not in Tick (author-mechanics, M4.P3.5)
 The Watchtower boss could let each sentry trace the hero in its own Tick, or let the tower check on a timer. Options: sentries ask in Tick; sentries own timers and report events; the tower owns one 0.1 second timer and asks. Chosen: the tower's one timer, because it keeps the order of the checks fixed (look, awareness, alarm, beam, exit), keeps one send-back per check, and teaches that a query is asked as often as its answer changes (the tracing habits card). Reverse cost: low (the sentry reports plan is the second reference plan).
 ### A1488 2026-11-03 Standalone tools: the rangefinder, feeler and piercer are not boss pieces; the feeler is the boss's first extension (author-mechanics, M4.P3.5)
