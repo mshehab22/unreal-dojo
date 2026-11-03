@@ -363,7 +363,9 @@ void UDojoS6MemorySpy::HandleChanged(UDojoS6SenseMemoryComponent* Memory)
 
 #if WITH_AUTOMATION_TESTS
 
+#include "AI/AISystemBase.h"
 #include "AIController.h"
+#include "Engine/World.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AIPerceptionSystem.h"
 #include "Perception/AISense_Hearing.h"
@@ -479,6 +481,14 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S6_SenseMemory_ListensToPerception, "Dojo
 bool FDojo_S6_SenseMemory_ListensToPerception::RunTest(const FString& Parameters)
 {
 	FDojoTestWorld TestWorld;
+
+	// A game world made in code starts without an AI system, so the test makes and starts one, as a level starting play does.
+	UWorld* World = TestWorld.GetWorld();
+	if (World->GetAISystem() == nullptr && World->CreateAISystem() != nullptr)
+	{
+		World->GetAISystem()->InitializeActorsForPlay(false);
+		World->GetAISystem()->StartPlay();
+	}
 
 	UAIPerceptionSystem* PerceptionSystem = UAIPerceptionSystem::GetCurrent(*TestWorld.GetWorld());
 	if (!TestNotNull(TEXT("The test world has a perception system"), PerceptionSystem)) return false;

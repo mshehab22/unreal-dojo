@@ -5,6 +5,7 @@
 #include "BehaviorTree/BTCompositeNode.h"
 
 class APawn;
+class UWorld;
 class UBTComposite_Selector;
 class UBTComposite_Sequence;
 
@@ -22,6 +23,9 @@ struct FDojoS6TreeKit
 
 	/** The Bool key that is true while there is a fresh clue. */
 	static FName HasClueKey();
+
+	/** Gives a world an AI system (behavior tree manager and perception) if it has none; a world made with UWorld::CreateWorld as a game world starts without one. Returns whether the world has one now. */
+	static bool EnableAI(UWorld* World);
 
 	/** Makes an empty tree whose blackboard holds the four guard keys. */
 	static UBehaviorTree* MakeTree();

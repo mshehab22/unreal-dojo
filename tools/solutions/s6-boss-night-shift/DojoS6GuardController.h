@@ -32,6 +32,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Guard")
 	void ReportCatch(AActor* Caught);
 
+	/** Forgets what the guard knows once a search is done; called by the go to clue task. */
+	UFUNCTION(BlueprintCallable, Category = "Guard")
+	void ForgetClue();
+
 	/** Stops the tree, so a finished shift leaves the guard standing. */
 	UFUNCTION(BlueprintCallable, Category = "Guard")
 	void EndShift();

@@ -4091,7 +4091,7 @@
     ],
     "category": "AI",
     "short": "A node attached to a branch that runs on an interval while the branch is active, usually to refresh blackboard keys.",
-    "long": "A service sits on a composite or a task and wakes up every Interval seconds, plus a random deviation, for as long as that part of the tree is running. Its job is to keep the blackboard current: copy what perception or a component knows into keys, so decorators and tasks only read keys. Override TickNode for the periodic work and OnBecomeRelevant for work when the branch starts, and call the parent version so the timer keeps running.",
+    "long": "A service sits on a composite or a task and wakes up every Interval seconds, plus or minus a random deviation, for as long as that part of the tree is running. Its job is to keep the blackboard current: copy what perception or a component knows into keys, so decorators and tasks only read keys. Override TickNode for the periodic work and OnBecomeRelevant for work when the branch starts, and call the parent version so the timer keeps running.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTService?application_version=5.8",
     "related": [
       "behavior-tree",
@@ -4113,7 +4113,7 @@
     ],
     "category": "AI",
     "short": "A condition attached to a behavior tree node that decides whether its branch may run and can interrupt running branches when its answer changes.",
-    "long": "A decorator gates the node under it: CalculateRawConditionValue returns true to let the branch run. On its own it is checked only when the tree reaches that node. Its FlowAbortMode adds observing: Self aborts its own branch when the condition turns false, LowerPriority aborts branches to its right when it turns true, and Both does both. UBTDecorator_BlackboardBase observes one blackboard key and asks the tree to re-check the condition whenever that key changes, which is how a guard drops its patrol the moment a clue appears.",
+    "long": "A decorator gates the node under it: CalculateRawConditionValue returns true to let the branch run. On its own it is checked only when the tree reaches that node. Its FlowAbortMode adds observing: Self aborts its own branch when the condition turns false, LowerPriority aborts branches to its right when it turns true, and Both does both. UBTDecorator_BlackboardBase registers for changes to one blackboard key and, when an abort mode is set, asks the tree to check the condition again whenever that key changes.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTDecorator?application_version=5.8",
     "related": [
       "behavior-tree",

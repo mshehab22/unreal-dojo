@@ -50,6 +50,12 @@ void ADojoS6GuardController::ReportCatch(AActor* Caught)
 	OnCaught.Broadcast(Caught);
 }
 
+/** Forgets what the guard knows once a search is done. */
+void ADojoS6GuardController::ForgetClue()
+{
+	SenseMemory->Forget();
+}
+
 /** Stops the tree, so a finished shift leaves the guard standing. */
 void ADojoS6GuardController::EndShift()
 {

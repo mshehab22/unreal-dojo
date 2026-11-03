@@ -25,10 +25,11 @@ The tree kit, the guard pawn, and the hold task are written for you; the later q
 
 How a Behavior Tree runs here: there is no Behavior Tree asset in a headless test, so `FDojoS6TreeKit` builds the tree in code, node by node, the same objects the Behavior Tree editor saves into an asset, with the guard's four blackboard keys. `FDojoS6TreeKit::Run` hands it to the guard's AI controller, which makes the blackboard and starts the tree. A finished tree starts again from the root, so a tree with one Walk Beat task walks the whole beat point by point.
 
-Fill the two gaps in `UDojoS6BTTask_WalkBeat`:
+Fill the gaps in `UDojoS6BTTask_WalkBeat`:
 
 1. `ExecuteTask`: the guard and its next point are found for you. Store the point as this guard's destination in the node memory block, and report that the task is still running, so the tree keeps calling `TickTask` instead of moving on.
-2. `TickTask`: when the destination is within one step or within `AcceptanceRadius`, put the guard exactly on it, move the guard on to its next beat point, and finish the task as a success. Otherwise the starter takes one step.
+2. `TickTask`: when the destination is within one step or within `AcceptanceRadius`, put the guard exactly on it, move the guard on to its next beat point, and finish the task as a success. Otherwise take one step of `WalkSpeed` times the frame time straight toward it.
+3. `InitializeMemory` and `CleanupMemory`: build and tear down this guard's `FDojoS6WalkBeatMemory` in its block. `GetInstanceMemorySize` already tells the tree how many bytes that is.
 
 Dependency direction: the task points at the guard pawn through the AI controller and reads the guard's beat; the guard knows nothing about trees or tasks. The guard owns where it is on its beat, the task owns only the walk in progress.
 
@@ -36,7 +37,7 @@ This is the second piece of the Night Shift boss.
 
 ## See it in the editor
 
-Make a Blackboard asset `BB_Guard` and a Behavior Tree asset `BT_Guard` that uses it. In `BT_Guard`, put a Sequence under the root and a Walk Beat task under the Sequence; Walk Beat appears in the task list because it is a `UBTTaskNode` class. Place a `DojoS6Guard` in the level, give it two Beat points in Details, and in its Event Graph call Run Behavior Tree on Get AI Controller with `BT_Guard` on BeginPlay. Press Play: the guard glides to each point in turn. With the Behavior Tree editor open while playing, the Walk Beat node lights up while it runs, and finishes once per point.
+Make a Blackboard asset `BB_Guard` and a Behavior Tree asset `BT_Guard` that uses it. In `BT_Guard`, put a Sequence under the root and a Walk Beat task under the Sequence; Walk Beat appears in the task list because it is a `UBTTaskNode` class. Make a Blueprint class from `DojoS6Guard` called `BP_Guard`, place one in the level, give it two Beat points in Details, and in its Event Graph call Run Behavior Tree on Get AI Controller with `BT_Guard` on BeginPlay. Press Play: the guard glides to each point in turn. With the Behavior Tree editor open while playing, the Walk Beat node lights up while it runs, and finishes once per point.
 
 # Files
 
@@ -50,6 +51,7 @@ Make a Blackboard asset `BB_Guard` and a Behavior Tree asset `BT_Guard` that use
 #include "BehaviorTree/BTCompositeNode.h"
 
 class APawn;
+class UWorld;
 class UBTComposite_Selector;
 class UBTComposite_Sequence;
 
@@ -67,6 +69,9 @@ struct FDojoS6TreeKit
 
 	/** The Bool key that is true while there is a fresh clue. */
 	static FName HasClueKey();
+
+	/** Gives a world an AI system (behavior tree manager and perception) if it has none; a world made with UWorld::CreateWorld as a game world starts without one. Returns whether the world has one now. */
+	static bool EnableAI(UWorld* World);
 
 	/** Makes an empty tree whose blackboard holds the four guard keys. */
 	static UBehaviorTree* MakeTree();
@@ -118,6 +123,7 @@ struct FDojoS6TreeKit
 ```cpp
 #include "DojoS6TreeKit.h"
 
+#include "AI/AISystemBase.h"
 #include "AIController.h"
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Bool.h"
@@ -125,6 +131,7 @@ struct FDojoS6TreeKit
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Vector.h"
 #include "BehaviorTree/Composites/BTComposite_Selector.h"
 #include "BehaviorTree/Composites/BTComposite_Sequence.h"
+#include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Pawn.h"
 
@@ -162,6 +169,30 @@ FName FDojoS6TreeKit::ClueLocationKey()
 FName FDojoS6TreeKit::HasClueKey()
 {
 	return TEXT("HasClue");
+}
+
+/** Gives a world an AI system if it has none, and starts it the way a world starting play would. */
+bool FDojoS6TreeKit::EnableAI(UWorld* World)
+{
+	if (World == nullptr)
+	{
+		return false;
+	}
+
+	if (World->GetAISystem() == nullptr)
+	{
+		UAISystemBase* AISystem = World->CreateAISystem();
+
+		if (AISystem == nullptr)
+		{
+			return false;
+		}
+
+		AISystem->InitializeActorsForPlay(false);
+		AISystem->StartPlay();
+	}
+
+	return true;
 }
 
 /** Makes an empty tree whose blackboard holds the four guard keys. */
@@ -455,13 +486,13 @@ uint16 UDojoS6BTTask_WalkBeat::GetInstanceMemorySize() const
 /** Builds the memory block when a guard starts the tree. */
 void UDojoS6BTTask_WalkBeat::InitializeMemory(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTMemoryInit::Type InitType) const
 {
-	InitializeNodeMemory<FDojoS6WalkBeatMemory>(NodeMemory, InitType);
+	// Your code: build this guard's FDojoS6WalkBeatMemory in the block, with the node base class's helper for that.
 }
 
 /** Tears the memory block down when a guard's tree stops. */
 void UDojoS6BTTask_WalkBeat::CleanupMemory(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTMemoryClear::Type CleanupType) const
 {
-	CleanupNodeMemory<FDojoS6WalkBeatMemory>(NodeMemory, CleanupType);
+	// Your code: tear this guard's FDojoS6WalkBeatMemory down, with the matching helper.
 }
 
 /** Moves the guard one frame's walk closer and finishes the task on arrival. */
@@ -481,8 +512,7 @@ void UDojoS6BTTask_WalkBeat::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* 
 	const float Step = Guard->WalkSpeed * DeltaSeconds;
 
 	// Your code: when the destination is within one step or within AcceptanceRadius, stand the guard on it, move the guard on to its next beat point, finish the task as a success, and leave.
-
-	Guard->SetActorLocation(Here + ToGo.GetSafeNormal() * Step);
+	// Your code: otherwise take one step of length Step straight toward the destination.
 }
 
 /** The guard pawn the tree is running for, or null. */
@@ -543,6 +573,7 @@ bool FDojo_S6_WalkBeat_WalksTheBeat::RunTest(const FString& Parameters)
 	using namespace DojoS6WalkBeatTest;
 
 	FDojoTestWorld TestWorld;
+	if (!TestTrue(TEXT("The test world has an AI system"), FDojoS6TreeKit::EnableAI(TestWorld.GetWorld()))) return false;
 	TStrongObjectPtr<UBehaviorTree> Tree(MakeBeatTree());
 	ADojoS6Guard* Guard = MakeGuard(TestWorld, FVector::ZeroVector, { FVector(300.f, 0.f, 0.f), FVector(300.f, 300.f, 0.f) });
 	if (!TestNotNull(TEXT("Guard spawned"), Guard)) return false;
@@ -575,6 +606,7 @@ bool FDojo_S6_WalkBeat_TwoGuardsOneTree::RunTest(const FString& Parameters)
 	using namespace DojoS6WalkBeatTest;
 
 	FDojoTestWorld TestWorld;
+	if (!TestTrue(TEXT("The test world has an AI system"), FDojoS6TreeKit::EnableAI(TestWorld.GetWorld()))) return false;
 	TStrongObjectPtr<UBehaviorTree> Tree(MakeBeatTree());
 	ADojoS6Guard* East = MakeGuard(TestWorld, FVector::ZeroVector, { FVector(600.f, 0.f, 0.f) });
 	ADojoS6Guard* South = MakeGuard(TestWorld, FVector(0.f, 1000.f, 0.f), { FVector(0.f, 400.f, 0.f) });
@@ -603,6 +635,7 @@ bool FDojo_S6_WalkBeat_EmptyBeatStandsStill::RunTest(const FString& Parameters)
 	using namespace DojoS6WalkBeatTest;
 
 	FDojoTestWorld TestWorld;
+	if (!TestTrue(TEXT("The test world has an AI system"), FDojoS6TreeKit::EnableAI(TestWorld.GetWorld()))) return false;
 	TStrongObjectPtr<UBehaviorTree> Tree(MakeBeatTree());
 	ADojoS6Guard* Guard = MakeGuard(TestWorld, FVector(50.f, 50.f, 0.f), {});
 	if (!TestNotNull(TEXT("Guard spawned"), Guard)) return false;
@@ -620,7 +653,7 @@ bool FDojo_S6_WalkBeat_EmptyBeatStandsStill::RunTest(const FString& Parameters)
 
 # Hints
 
-- In `ExecuteTask`, the memory block for this guard arrives as the raw `NodeMemory` pointer; the starter already shows, in `TickTask`, the one call that turns it into your struct. The three results a task can return are Succeeded, Failed, and InProgress, and only one of them makes the tree come back next frame.
+- In `ExecuteTask`, the memory block for this guard arrives as the raw `NodeMemory` pointer; one call on the node base class turns it into your struct, and two more build and tear the struct down in place. The three results a task can return are Succeeded, Failed, and InProgress, and only one of them makes the tree come back next frame.
 - In `TickTask`, compare the distance still to go with the larger of the step and the acceptance radius. Arriving is three things in a fixed order: stand on the point, tell the guard to move on, finish. Leave the function right after, so the walking line below does not run on the same frame.
 - If one guard works and two guards drift toward each other's points, the destination is being kept somewhere both guards share. Each guard's tree has its own memory block; the task object itself is shared by both trees.
 

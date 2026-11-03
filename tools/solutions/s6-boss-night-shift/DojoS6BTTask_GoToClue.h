@@ -17,7 +17,7 @@ struct FDojoS6GoToClueMemory
 	float LookLeft = 0.f;
 };
 
-/** A task that walks the guard to the clue in the blackboard, looks around for a moment, and then forgets the clue so the guard goes back to its beat. */
+/** A task that walks the guard to the clue in the blackboard, looks around for a moment, and then asks the guard controller to forget the clue, so the guard goes back to its beat. */
 UCLASS()
 class UDojoS6BTTask_GoToClue : public UBTTaskNode
 {

@@ -118,6 +118,7 @@ bool FDojo_S6_NearClue_StopsTheBeat::RunTest(const FString& Parameters)
 	using namespace DojoS6NearClueTest;
 
 	FDojoTestWorld TestWorld;
+	if (!TestTrue(TEXT("The test world has an AI system"), FDojoS6TreeKit::EnableAI(TestWorld.GetWorld()))) return false;
 	TStrongObjectPtr<UBehaviorTree> Tree(MakeClueTree(1500.f));
 	ADojoS6Guard* Guard = StartGuard(TestWorld, Tree.Get());
 	if (!TestNotNull(TEXT("The guard's controller has a memory"), MemoryOf(Guard))) return false;
@@ -145,6 +146,7 @@ bool FDojo_S6_NearClue_StaleClueResumesTheBeat::RunTest(const FString& Parameter
 	using namespace DojoS6NearClueTest;
 
 	FDojoTestWorld TestWorld;
+	if (!TestTrue(TEXT("The test world has an AI system"), FDojoS6TreeKit::EnableAI(TestWorld.GetWorld()))) return false;
 	TStrongObjectPtr<UBehaviorTree> Tree(MakeClueTree(1500.f));
 	ADojoS6Guard* Guard = StartGuard(TestWorld, Tree.Get());
 	if (!TestNotNull(TEXT("The guard's controller has a memory"), MemoryOf(Guard))) return false;
@@ -171,6 +173,7 @@ bool FDojo_S6_NearClue_FarClueIsIgnored::RunTest(const FString& Parameters)
 	using namespace DojoS6NearClueTest;
 
 	FDojoTestWorld TestWorld;
+	if (!TestTrue(TEXT("The test world has an AI system"), FDojoS6TreeKit::EnableAI(TestWorld.GetWorld()))) return false;
 	TStrongObjectPtr<UBehaviorTree> WideTree(MakeClueTree(1500.f));
 	ADojoS6Guard* Guard = StartGuard(TestWorld, WideTree.Get());
 	if (!TestNotNull(TEXT("The guard's controller has a memory"), MemoryOf(Guard))) return false;

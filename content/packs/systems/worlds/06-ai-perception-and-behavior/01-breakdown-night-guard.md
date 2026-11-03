@@ -76,7 +76,7 @@ Acceptance:
     - { id: memory, kind: component, label: UDojoS6SenseMemoryComponent bound to OnTargetPerceptionUpdated that keeps the target and visible flag and clue and broadcasts OnMemoryChanged, covers: [memory, announcements] }
     - { id: service, kind: step, label: A service on the root that copies the memory into four blackboard keys on an interval, covers: [priority] }
     - { id: tree, kind: data, label: A root selector with chase and search and walk beat branches left to right, covers: [modes] }
-    - { id: decorators, kind: step, label: Decorators on chase and search that observe their keys and abort both ways, covers: [priority] }
+    - { id: decorators, kind: step, label: Decorators on chase and search that interrupt running branches when the facts change, covers: [priority] }
     - { id: tasks, kind: step, label: Latent tasks for chase and go to clue and walk beat that keep per-guard state in node memory, covers: [movement] }
     - { id: board, kind: class, label: A director that binds OnMemoryChanged and rewrites a text board, covers: [board] }
   edges:

@@ -89,7 +89,7 @@ Feel: tune the sight angle and the hearing range until a careful player can reac
     - { id: controller, kind: class, label: ADojoS6GuardController with a perception component configured for sight and hearing and a UDojoS6SenseMemoryComponent watching it, covers: [controller] }
     - { id: tree, kind: step, label: OnPossess builds a root selector with Read Memory and a chase sequence and a search sequence and Walk Beat and runs it, covers: [priorities] }
     - { id: decorators, kind: step, label: A target in sight decorator on chase and Near Clue on search both observing their keys with abort mode Both, covers: [interrupts] }
-    - { id: tasks, kind: step, label: UDojoS6BTTask_Chase reports a catch to the controller and UDojoS6BTTask_GoToClue keeps its walk and look time in node memory and forgets the clue, covers: [new-tasks] }
+    - { id: tasks, kind: step, label: UDojoS6BTTask_Chase reports a catch to the controller and UDojoS6BTTask_GoToClue keeps its walk and look time in node memory and asks the controller to forget the clue, covers: [new-tasks] }
     - { id: director, kind: class, label: ADojoS6ShiftDirector binds OnMemoryChanged and OnCaught and a vault overlap and writes the board, covers: [board] }
     - { id: rounds, kind: step, label: StartRound removes the old guard and controller and spawns a fresh guard and resets the thief and R only after a finale, covers: [rounds] }
   edges:

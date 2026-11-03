@@ -173,6 +173,7 @@ bool FDojo_S6_ReadMemory_FirstFrameSeesTheMemory::RunTest(const FString& Paramet
 	using namespace DojoS6ReadMemoryTest;
 
 	FDojoTestWorld TestWorld;
+	if (!TestTrue(TEXT("The test world has an AI system"), FDojoS6TreeKit::EnableAI(TestWorld.GetWorld()))) return false;
 	TStrongObjectPtr<UBehaviorTree> Tree(MakeServiceTree());
 	ADojoS6Guard* Guard = MakeGuard(TestWorld, true);
 	ADojoTestActor* Intruder = TestWorld.SpawnActor<ADojoTestActor>();
@@ -200,6 +201,7 @@ bool FDojo_S6_ReadMemory_FollowsChanges::RunTest(const FString& Parameters)
 	using namespace DojoS6ReadMemoryTest;
 
 	FDojoTestWorld TestWorld;
+	if (!TestTrue(TEXT("The test world has an AI system"), FDojoS6TreeKit::EnableAI(TestWorld.GetWorld()))) return false;
 	TStrongObjectPtr<UBehaviorTree> Tree(MakeServiceTree());
 	ADojoS6Guard* Guard = MakeGuard(TestWorld, true);
 	ADojoTestActor* Intruder = TestWorld.SpawnActor<ADojoTestActor>();
@@ -244,6 +246,7 @@ bool FDojo_S6_ReadMemory_ClueGoesStale::RunTest(const FString& Parameters)
 	using namespace DojoS6ReadMemoryTest;
 
 	FDojoTestWorld TestWorld;
+	if (!TestTrue(TEXT("The test world has an AI system"), FDojoS6TreeKit::EnableAI(TestWorld.GetWorld()))) return false;
 	TStrongObjectPtr<UBehaviorTree> Tree(MakeServiceTree());
 	ADojoS6Guard* Guard = MakeGuard(TestWorld, true);
 	if (!TestTrue(TEXT("The tree starts"), FDojoS6TreeKit::Run(Guard, Tree.Get()))) return false;
@@ -270,6 +273,7 @@ bool FDojo_S6_ReadMemory_NoMemoryChangesNothing::RunTest(const FString& Paramete
 	using namespace DojoS6ReadMemoryTest;
 
 	FDojoTestWorld TestWorld;
+	if (!TestTrue(TEXT("The test world has an AI system"), FDojoS6TreeKit::EnableAI(TestWorld.GetWorld()))) return false;
 	TStrongObjectPtr<UBehaviorTree> Tree(MakeServiceTree());
 	ADojoS6Guard* Guard = MakeGuard(TestWorld, false);
 	if (!TestTrue(TEXT("The tree starts"), FDojoS6TreeKit::Run(Guard, Tree.Get()))) return false;
@@ -303,7 +307,7 @@ bool FDojo_S6_ReadMemory_NoMemoryChangesNothing::RunTest(const FString& Paramete
 
 # Alternative
 
-The memory could write the blackboard itself, in the same place it broadcasts `OnMemoryChanged`. Keys would then change the instant the news arrives, with no quarter-second delay. The cost is that the memory would have to know about blackboards and key names, so it could no longer serve a guard without a tree, such as the state machine plan from the breakdown, and the staleness rule would need a timer of its own. The service keeps the memory a plain component and puts the translation into tree terms in one node a designer can see. Its interval is a dial between how fresh the keys are and how much work each guard does per second. The memory announces; the service is a periodic reader; the decorator in the next quest is the tree's own Observer, reacting the moment a key changes.
+The memory could write the blackboard itself, in the same place it broadcasts `OnMemoryChanged`. Keys would then change the instant the news arrives, with no quarter-second delay. The cost is that the memory would have to know about blackboards and key names, so it could no longer serve a guard without a tree, such as the state machine plan from the breakdown, and the staleness rule would need a timer of its own. The service keeps the memory a plain component and puts the translation into tree terms in one node a designer can see. Its interval is a dial between how fresh the keys are and how much work each guard does per second. The memory announces, and the service is a periodic reader of what it knows.
 
 # Parsons
 

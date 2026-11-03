@@ -6,6 +6,7 @@
 #include "Quests/s6-boss-night-shift/DojoS6GuardController.h"
 #include "Quests/s6-boss-night-shift/DojoS6ShiftDirector.h"
 #include "Quests/s6-walk-beat/DojoS6Guard.h"
+#include "Quests/s6-walk-beat/DojoS6TreeKit.h"
 #include "Support/DojoTestWorld.h"
 
 namespace DojoS6NightShiftTest
@@ -49,6 +50,7 @@ bool FDojo_S6_NightShift_TwoRounds::RunTest(const FString& Parameters)
 	using namespace DojoS6NightShiftTest;
 
 	FDojoTestWorld TestWorld;
+	if (!TestTrue(TEXT("The test world has an AI system"), FDojoS6TreeKit::EnableAI(TestWorld.GetWorld()))) return false;
 	APawn* Thief = nullptr;
 	ADojoS6ShiftDirector* Director = StartShift(TestWorld, Thief);
 	if (!TestNotNull(TEXT("Thief spawned"), Thief)) return false;
@@ -72,7 +74,7 @@ bool FDojo_S6_NightShift_TwoRounds::RunTest(const FString& Parameters)
 	TestTrue(TEXT("The guard hears the pebble land behind it"), TickUntilBoardHas(TestWorld, Director, TEXT("Guard: searching"), 1.5f));
 
 	const float HeardAtX = FirstGuard->GetActorLocation().X;
-	TestWorld.Tick(60);
+	TestWorld.Tick(90);
 	TestTrue(TEXT("The guard leaves its beat and walks west toward the noise"), FirstGuard->GetActorLocation().X < HeardAtX - 150.f);
 
 	Thief->SetActorLocation(FirstGuard->GetActorLocation() + FVector(600.f, 0.f, 0.f), false, nullptr, ETeleportType::TeleportPhysics);

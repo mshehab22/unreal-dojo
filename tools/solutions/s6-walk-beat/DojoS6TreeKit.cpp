@@ -1,5 +1,6 @@
 #include "DojoS6TreeKit.h"
 
+#include "AI/AISystemBase.h"
 #include "AIController.h"
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Bool.h"
@@ -7,6 +8,7 @@
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Vector.h"
 #include "BehaviorTree/Composites/BTComposite_Selector.h"
 #include "BehaviorTree/Composites/BTComposite_Sequence.h"
+#include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Pawn.h"
 
@@ -44,6 +46,30 @@ FName FDojoS6TreeKit::ClueLocationKey()
 FName FDojoS6TreeKit::HasClueKey()
 {
 	return TEXT("HasClue");
+}
+
+/** Gives a world an AI system if it has none, and starts it the way a world starting play would. */
+bool FDojoS6TreeKit::EnableAI(UWorld* World)
+{
+	if (World == nullptr)
+	{
+		return false;
+	}
+
+	if (World->GetAISystem() == nullptr)
+	{
+		UAISystemBase* AISystem = World->CreateAISystem();
+
+		if (AISystem == nullptr)
+		{
+			return false;
+		}
+
+		AISystem->InitializeActorsForPlay(false);
+		AISystem->StartPlay();
+	}
+
+	return true;
 }
 
 /** Makes an empty tree whose blackboard holds the four guard keys. */

@@ -1,10 +1,9 @@
 #include "DojoS6BTTask_GoToClue.h"
 
-#include "AIController.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "DojoS6GuardController.h"
 #include "GameFramework/Pawn.h"
-#include "Quests/s6-sense-memory/DojoS6SenseMemoryComponent.h"
 #include "Quests/s6-walk-beat/DojoS6TreeKit.h"
 
 /** Names the node and asks for TickTask. */
@@ -50,7 +49,7 @@ void UDojoS6BTTask_GoToClue::CleanupMemory(UBehaviorTreeComponent& OwnerComp, ui
 	CleanupNodeMemory<FDojoS6GoToClueMemory>(NodeMemory, CleanupType);
 }
 
-/** Walks one frame closer, or looks around, and forgets the clue when the looking is done. */
+/** Walks one frame closer, or looks around, and has the controller forget the clue when the looking is done. */
 void UDojoS6BTTask_GoToClue::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
 	AAIController* Controller = OwnerComp.GetAIOwner();
@@ -90,14 +89,9 @@ void UDojoS6BTTask_GoToClue::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* 
 		return;
 	}
 
-	if (UDojoS6SenseMemoryComponent* SenseMemory = Controller->FindComponentByClass<UDojoS6SenseMemoryComponent>())
+	if (ADojoS6GuardController* GuardController = Cast<ADojoS6GuardController>(Controller))
 	{
-		SenseMemory->Forget();
-	}
-
-	if (UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent())
-	{
-		Blackboard->SetValueAsBool(FDojoS6TreeKit::HasClueKey(), false);
+		GuardController->ForgetClue();
 	}
 
 	FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
