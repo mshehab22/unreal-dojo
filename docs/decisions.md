@@ -4,6 +4,67 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1703 2026-11-03 `patterns.json` changed outside the Lead's list, for the Spatial Partition card only (author-patterns, M4.P2.18)
+The Lead's brief listed the world folder, its solutions, new glossary entries, the board row, and this decision block. The Pack 2 mini-arc rule in `docs/systems/content-authoring.md` also asks for the pattern card's recognize items and use cases, and World 17 did the same for its card (A1677). Only the `spatial-partition` entry changed: its use cases, its Unreal form and when-not, one reworded recall explanation, and two recall and two scenario items added (A1700). No other card was touched, so the parallel worlds' cards cannot conflict with it. Reverse cost: one entry.
+
+### A1702 2026-11-03 World 18 was written without the engine; the proof is the Lead's (author-patterns, M4.P2.18)
+By the Lead's order no engine run was made. The verifier, typecheck, and unit tests pass, and mutation copies of the references are prepared for the Lead's queue (the iterations entry lists them and what each should fail). Not proven yet: that the four piece references and the boss compile on UE 5.8, that every test passes with the references, that the starters fail as designed, and that each mutation is caught. Unverified on macOS (A75). Reverse cost: none.
+
+### A1701 2026-11-03 The pieces expose what the boss's Blueprint plan needs (author-patterns, M4.P2.18)
+A Blueprint master cannot reach a plain C++ grid or a function that is not a `UFUNCTION`, and Blueprint has no deferred spawn. So the lantern keeper gains `FindLanternsNear` (the lanterns near a spot, lit or not), the swarm's `FindNear` is a `UFUNCTION`, and the swarm's `Count`, `Seed`, and `HalfSize` carry `ExposeOnSpawn` so Spawn Actor from Class sets them before the swarm scatters at BeginPlay. The C++ reference master uses the grid and `SpawnActorDeferred` directly. Reverse cost: low.
+
+### A1700 2026-11-03 Six glossary entries and the Spatial Partition card (author-patterns, M4.P2.18)
+Added `overlap-query`, `physics-broadphase`, `navigation-octree`, `uniform-grid`, `fintpoint`, and `toctree2`, all first taught in `p18-every-pair`; every term and alias was checked against every entry on main first (no bare `grid`, `cell`, or `hash` aliases; `octree` is an alias of `toctree2`). Facts checked in UE 5.8 source: `UWorld::OverlapMultiByChannel` calls `FPhysicsInterface::GeomOverlapMulti` (`WorldCollision.cpp`), whose low level query reads the Chaos scene's `GetSpacialAcceleration()` (`SceneQueryLowLevel.cpp`, the engine's spelling); `FBroadPhaseConfig` defaults to `Tree` and the console variable `p.BroadphaseType` selects grid and tree variants (`PBDRigidsEvolution.h` and `.cpp`); `FNavigationOctree` derives from `TOctree2<FNavigationOctreeElement, FNavigationOctreeSemantics>` and `UNavigationSystemV1::GetNavOctree` returns it; `FScenePrimitiveOctree` is a `TOctree2` (`PrimitiveSceneInfo.h`); `TOctree2` has `AddElement`, `RemoveElement` by `FOctreeElementId2`, and `FindElementsWithBoundsTest`; `GetTypeHash(TIntPoint)` exists, so `FIntPoint` keys a `TMap`; `FOverlapResult::GetActor` returns the owner of the hit component. The card's use cases are `p18-lantern-grid` and `p18-moth-swarm`; its Unreal form now names the broadphase tree, the navigation octree, and the plain-struct case; two recall items (half the neighbors, weak pointers) and two scenarios (8,000 ants as structs, 25 statues with collision) were added. Reverse cost: low.
+
+### A1699 2026-11-03 The boss asks from the side with fewer askers, and flies the swarm itself (author-patterns, M4.P2.18)
+Scoring a second could ask the lantern grid once per moth (2,000 questions) or the swarm once per burning lantern (a handful). Chosen: the second, with a bool array so a moth near two flames counts once; `CountsEachMothOnce` lights two lanterns under 120 apart and checks the count against the union, not the sum. The lantern grid answers the keeper's E (300 lanterns). The master turns the swarm's own tick off and calls `Step` in its `Tick`, then puts out lanterns that have burnt 8 seconds, then scores any whole second reached, so a test that ticks one frame at a time sees moths, flames, and score in step and can recount every second by measuring all moths against all lanterns. Numbers: 300 lanterns from seed 81, 2,000 moths from seed 18, a meadow 2,000 each way, 250 unit lantern cells, 150 to light, 250 to draw, 8 seconds of burning, 30 scored seconds. Reference game: Flower. Reverse cost: low.
+
+### A1698 2026-11-03 The refactor prescribes cells as wide as the reach, rounded down, so the measured bound is exact (author-patterns, M4.P2.18)
+The weaver's refactor brief names the cells (LinkRange wide, coordinates rounded down) and the rule (each cell against its own pairs and four of its eight neighbors). With that layout, the pairs a correct weave measures are exactly the pairs in the same or touching cells, which the tests count by brute force (`NearbyCellPairs`), so `MeasuresEachNearbyPairOnce` can assert "at most that many" and a weave that measures all eight neighbors fails it. Options considered: a loose budget (a fraction of all pairs), which an eight-neighbor weave would pass; a sort and sweep, kept in the Alternative. Reverse cost: low.
+
+### A1697 2026-11-03 Every grid query reports how many things it measured (author-patterns, M4.P2.18)
+A grid that answers correctly by looping over everything passes every correctness test, so each piece exposes its work: `FDojoP18Grid::FindNear` and the swarm's `FindNear` return the number measured, the keeper and the weaver keep `GetLastMeasured`. The tests bound it (under 100 of 1,000 lanterns, under 100 of 2,000 moths, at most the nearby pairs). Returning the count keeps the queries `const` without a `mutable` member. Reverse cost: low.
+
+### A1696 2026-11-03 The grids work on the ground plane, with floor for cells (author-patterns, M4.P2.18)
+The meadow is flat, so every grid and every distance ignores height (`FVector::Dist2D`, `FVector2D`). Cells use `FMath::FloorToInt32`, so the cells left of and below zero are as wide as the rest; the worked quest explains why on a marked line, and the swarm and weaver tests place things on both sides of zero. A cast that rounds toward zero would still give correct answers in the grid and swarm (the mapping stays monotonic) but would fail the weaver's exact measured bound, which the brief warns about. Reverse cost: low.
+
+### A1695 2026-11-03 Lanterns have no collision and moths are not actors, on purpose (author-patterns, M4.P2.18)
+The Lead asked to show when Unreal already answers the question and when a hand-made grid is worth it. Every quest that builds a grid builds it for something the physics scene cannot see: lanterns with only a scene root, and 2,000 moths as structs in one array. The first quest, the card, the when-not quest, and each build's Alternative say that actors with collision shapes should use an overlap query or an overlap event instead, and that the navigation octree and the renderer's octree are the engine's own partitions for its own jobs. Reverse cost: low.
+
+### A1694 2026-11-03 World 18's deliberate failure: the given Step flies the moths but does not refile them (author-patterns, M4.P2.18)
+Options:
+- A grid that never removes destroyed actors: the worked quest's weak pointers already handle it.
+- Cells smaller than the radius with only one ring visited: the worked quest's corner-to-corner loop already handles any radius.
+- Measuring all eight neighbors for pairs: a refactor requirement, stated in its brief.
+- The stub swarm whose written-for-you `Step` moves every moth and leaves the grid as it was.
+
+Chosen: the last. A learner who writes `FileAll`, `CellOf`, and `FindNear` passes three of four tests; `StaysRightAsMothsFly` fails after two seconds of flight. The brief and the rubric state only the outcome (FindNear answers for where the moths are when asked); the first place that names the cause is the hint ladder, and the when-not quest's spot-the-bug comes after. One honest limit: the worked quest's keeper refiles a lantern it moves, and the card says moving objects must be refiled, so the trap is applying a known fact to code the learner did not write, as World 2's and Pack 3 World 4's were (A1133, A1404). Reverse cost: low.
+
+### A1693 2026-11-03 The first quest requires World 13's last teaching quest (author-patterns, M4.P2.18)
+Worlds 14 to 17 are being written in parallel and their ids are not on main, so `p18-every-pair` requires `p13-bytecode-when-not`, as Worlds 14 to 17 did. The research's dependency (Spatial Partition after Update Method) is met. When those worlds merge the Lead may point it at World 17's last quest. No quest here names another world's ids. Reverse cost: one line.
+
+### A1692 2026-11-03 Spatial Partition arc, built away from the source's examples (author-patterns, M4.P2.18)
+Not used in briefs, cards, choices, distractors, or the card's items: armies, units, soldiers, a battle line, melee, or intrusive linked lists. The meadow of lanterns and moths, its numbers, and its tests are original. The originality check ran against the research's Spatial Partition section in 5-word windows; the first pass found three phrases from the old card and one of mine (a cell's list, keys that change, a distractor's wording), which were reworded; none are left. The arc:
+- `p18-every-pair` (concept, no pattern name: the square cost, overlap queries and the broadphase, the navigation octree).
+- `p18-lantern-grid` (worked: lanterns with no collision in an `FDojoP18Grid`; the learner writes `FindNear`).
+- `p18-spatial-partition-card`.
+- `p18-moth-swarm` (stub: 2,000 moths as structs; deliberate failure A1694).
+- `p18-thread-refactor` (a weaver that measures every pair becomes one that measures nearby pairs once).
+- `p18-spatial-partition-when-not`.
+- `p18-boss-moth-meadow` (boss, with an A67 integration).
+
+Reverse cost: low.
+
+### A1691 2026-11-03 Pack 2 World 18 ids (author-patterns, M4.P2.18)
+- Folder `18-spatial-partition`; world id `spatial-partition`, unique across packs (A73).
+- Quest ids `p18-<slug>`; types `FDojoP18Grid`, `ADojoP18Lantern`, `ADojoP18LanternKeeper`, `ADojoP18MothSwarm` (with `FDojoP18Moth`), `ADojoP18ThreadWeaver` (with `FDojoP18Thread`), `ADojoP18Meadow`; tests `Dojo.P18.<Quest>.<Case>` (`LanternGrid`, `MothSwarm`, `ThreadRefactor`, `MothMeadow`).
+- No enums. Locals avoid the names of `AActor`, `UActorComponent`, and `UObject` members (A1050, A1060): `Under`, `Was`, `Reach`, `Candidate`, `Measured`, `Middle`, `Spot`, `From`, `Here`, `There`, `Mine`, `Theirs`.
+
+Reverse cost: medium once learners have progress saved.
+
+### A1690 2026-11-03 Decision block A1690 to A1709 from the Lead (author-patterns, M4.P2.18)
+Assigned under A71; this world uses A1690 to A1703 so far. Reverse cost: none.
+
 ### A1407 2026-11-03 The yard ends a round one frame after the last blast (author-mechanics, M4.P3.4)
 A bomb's `OnDestroyed` has two listeners in the boss, the chain that lights the neighbors and the yard that counts, and UE does not promise the order in which a dynamic multicast delegate calls its listeners. Options: let the chain report the end; check in the yard's own handler; check one frame later. Chosen: the yard's handler counts the blast and sets `SetTimerForNextTick`, and the next-tick check ends the round when no bomb is lit. Why: by then every listener of that blast has run, so a spark lit by the chain is always seen; it also gives `SetTimerForNextTick` a real job. The breakdown's alternative note names the wrong version (deciding inside the same listener). In UE 5.8 the dynamic multicast delegate happens to call listeners in bind order, and the yard's own chain binds before the yard, so the round tests alone would let a yard that ends inside its own handler pass; the engine mutation run confirmed it (yard-ends-in-handler survived). `LateSparksKeepItBurning` closes that gap: it sets the yard's reach to 0 and binds a second chain to the bombs after the yard, so the only sparks come from a listener that runs after the yard's, and a yard that decides inside its handler ends after the first blast. Reverse cost: low.
 

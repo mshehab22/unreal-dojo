@@ -2211,9 +2211,12 @@
     "title": "Spatial Partition",
     "intent": "Bucket objects by where they are in the world, like cells on a grid, so a question such as \"which guards are within 15 meters\" only looks in the nearby buckets instead of at every guard in the level.",
     "problem": "Each of 2,000 boids needs its neighbors within 5 meters. Checking every pair is four million distance tests per frame, almost all between boids that are nowhere near each other.",
-    "unrealForm": "The engine partitions space for you in most places: the physics broadphase answers overlaps, sweeps, and traces (OverlapMultiByChannel, SweepSingleByChannel), World Partition streams by grid cell, the renderer culls through an octree, and TOctree2 is a reusable template. You write your own for gameplay data physics does not know about: a uniform grid keyed by FIntPoint in a TMap for flocking neighbors, influence maps, or tile logic, and you re-file objects when they move between cells.",
-    "whenNot": "With a few dozen objects, a plain loop is simpler and fast enough. If physics already tracks the objects, an overlap query is usually better than a second structure you must keep in sync.",
-    "useCaseQuestIds": [],
+    "unrealForm": "Wherever the engine tracks things itself, it already keeps them by place: the physics scene's broadphase keeps every collision shape in a bounding box tree, so overlap queries, sweeps, and traces (OverlapMultiByChannel, SweepSingleByChannel) look only near their shape; the navigation system files nav geometry in FNavigationOctree; the renderer culls through an octree of primitives; World Partition streams by grid cell; and TOctree2 is a template you can use yourself. You write your own for data the engine does not track: a uniform grid, a TMap from FIntPoint cells to arrays, for thousands of agents kept as structs, actors with no collision shape, influence maps, or tiles, refiling each one when it crosses into another cell.",
+    "whenNot": "With a few dozen objects, a plain loop is simpler and fast enough. If the objects have collision shapes, the physics scene already files them, and an overlap query or an overlap event beats a second structure you must keep in step with every move and every destroy.",
+    "useCaseQuestIds": [
+      "p18-lantern-grid",
+      "p18-moth-swarm"
+    ],
     "recall": [
       {
         "id": "spatial-partition-recall-1",
@@ -2226,7 +2229,7 @@
           "The cell size must change"
         ],
         "answerIndex": 0,
-        "explanation": "A grid is like a hash table whose keys change as objects move, so moves must re-file entries."
+        "explanation": "An object's cell is worked out from where it stands, so when it moves into another cell its entry has to move with it."
       },
       {
         "id": "spatial-partition-recall-2",
@@ -2251,6 +2254,30 @@
           "Mentions avoiding a check against every object"
         ],
         "explanation": "Memory and re-filing in exchange for fast queries."
+      },
+      {
+        "id": "spatial-partition-recall-4",
+        "type": "multiple-choice",
+        "prompt": "In a grid that measures every pair of nearby objects, why does each cell compare against only four of its eight neighbor cells?",
+        "choices": [
+          "Because four neighbors are always empty",
+          "So every two touching cells are compared from one side only and no pair is measured twice",
+          "To keep the grid smaller in memory",
+          "Because diagonal cells can never hold a nearby object"
+        ],
+        "answerIndex": 1,
+        "explanation": "If each of two touching cells compared against the other, every pair across them would be measured twice. Four directions cover each touching pair once."
+      },
+      {
+        "id": "spatial-partition-recall-5",
+        "type": "fill-blank",
+        "prompt": "A grid of actors that files a ___ for each actor hands back nothing, instead of a dangling pointer, once that actor is destroyed.",
+        "acceptedAnswers": [
+          "TWeakObjectPtr",
+          "weak pointer",
+          "weak object pointer"
+        ],
+        "explanation": "A weak pointer reads as null once its actor is gone, so a stale entry is skipped instead of followed."
       }
     ],
     "scenarios": [
@@ -2272,7 +2299,7 @@
           },
           {
             "choice": "object-pool",
-            "why": "Pooling guards does not reduce the number of comparisons."
+            "why": "Pooling guards saves spawning them, yet every cover point would still be measured against every guard."
           },
           {
             "choice": "dirty-flag",
@@ -2293,6 +2320,46 @@
         ],
         "answerIndex": 1,
         "explanation": "With a dozen objects the engine's own overlap events already do the spatial work. A custom partition pays off only for many objects physics does not track."
+      },
+      {
+        "id": "spatial-partition-scenario-3",
+        "type": "which-pattern",
+        "prompt": "An ant colony sim keeps 8,000 ants as structs in one array, and every ant needs the ants within 30 units of it each frame to avoid them. None of them are actors. Which pattern?",
+        "choices": [
+          "spatial-partition",
+          "object-pool",
+          "double-buffer",
+          "flyweight"
+        ],
+        "answer": "spatial-partition",
+        "distractorNotes": [
+          {
+            "choice": "object-pool",
+            "why": "Reusing ant storage avoids allocation, but each ant would still compare itself with all 8,000."
+          },
+          {
+            "choice": "double-buffer",
+            "why": "Reading last frame's positions makes the result independent of update order, yet every ant would still be measured against every other."
+          },
+          {
+            "choice": "flyweight",
+            "why": "Sharing the ants' common data saves memory, not neighbor checks."
+          }
+        ],
+        "explanation": "A uniform grid of ant indices, refiled as ants move, turns each neighbor question into a look at a few nearby cells."
+      },
+      {
+        "id": "spatial-partition-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A courtyard has 25 statues that are static meshes with collision, and a spell needs every statue within 600 units of where it lands. What fits best?",
+        "choices": [
+          "A uniform grid of the statues, refiled every frame",
+          "An overlap query with a 600 unit sphere where the spell lands",
+          "An octree rebuilt every frame",
+          "A loop over every actor in the level, measuring distance"
+        ],
+        "answerIndex": 1,
+        "explanation": "The statues already have collision shapes in the physics scene, so an overlap query finds them without a second structure. With 25 statues even a loop over just the statues would do; a structure of your own adds upkeep for nothing."
       }
     ]
   },

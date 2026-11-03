@@ -4519,5 +4519,120 @@
       "ustruct"
     ],
     "firstQuestId": "p13-behavior-as-data"
+  },
+  {
+    "id": "overlap-query",
+    "term": "Overlap query",
+    "aliases": [
+      "OverlapMultiByChannel",
+      "OverlapMultiByObjectType",
+      "OverlapAnyTestByChannel",
+      "FOverlapResult"
+    ],
+    "category": "collision",
+    "short": "A question to the physics scene: which collision shapes are inside this shape, placed here, right now.",
+    "long": "UWorld::OverlapMultiByChannel takes a position, a rotation, a channel, and an FCollisionShape such as FCollisionShape::MakeSphere(300.f), and fills an array of FOverlapResult, one per overlapping component; GetActor() on a result gives its owner. OverlapMultiByObjectType asks by object type instead of by channel, and OverlapAnyTestByChannel only answers whether anything overlaps. None of them loop over the level: they ask the physics scene's broadphase, so only shapes near the query are tested. They can only find collision shapes the physics scene knows about, so actors with no collision component and plain structs in an array are invisible to them.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/traces-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "physics-broadphase",
+      "sweep",
+      "overlap-event",
+      "collision-channel"
+    ],
+    "firstQuestId": "p18-every-pair"
+  },
+  {
+    "id": "physics-broadphase",
+    "term": "Physics broadphase",
+    "aliases": [
+      "broadphase",
+      "broad phase",
+      "p.BroadphaseType",
+      "AABB tree"
+    ],
+    "category": "physics",
+    "short": "The physics scene's own spatial structure, which keeps every collision shape's bounding box so queries and collisions only test shapes that are near each other.",
+    "long": "Before the physics engine tests two shapes exactly, it needs to know which pairs could touch at all. The broadphase answers that from bounding boxes kept in a spatial structure; in UE 5.8 the Chaos physics scene uses a tree of bounding boxes by default, and the console variable p.BroadphaseType selects grid and tree variants. Overlap queries, sweeps, line traces, and overlap events all go through it, which is why they stay fast in a level full of shapes. It is a spatial partition the engine keeps for you, but only for things with collision shapes.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/physics-in-unreal-engine?application_version=5.8",
+    "related": [
+      "overlap-query",
+      "uniform-grid",
+      "toctree2"
+    ],
+    "firstQuestId": "p18-every-pair"
+  },
+  {
+    "id": "navigation-octree",
+    "term": "Navigation octree",
+    "aliases": [
+      "FNavigationOctree",
+      "nav octree"
+    ],
+    "category": "AI",
+    "short": "The navigation system's own octree of the geometry and actors that shape the nav mesh.",
+    "long": "When the nav mesh is built or rebuilt around a change, the navigation system needs only the geometry inside the tiles it is rebuilding. It keeps every nav-relevant actor and component in FNavigationOctree, a TOctree2 of elements with their bounds, and gathers from the region it needs instead of the whole level. UNavigationSystemV1::GetNavOctree returns it. It is a good example of the Spatial Partition pattern inside the engine; it serves navigation, not gameplay questions, so gameplay data does not belong in it.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/navigation-system-in-unreal-engine?application_version=5.8",
+    "related": [
+      "nav-mesh",
+      "toctree2",
+      "physics-broadphase"
+    ],
+    "firstQuestId": "p18-every-pair"
+  },
+  {
+    "id": "uniform-grid",
+    "term": "Uniform grid",
+    "aliases": [
+      "spatial grid",
+      "grid cell",
+      "cell grid"
+    ],
+    "category": "containers",
+    "short": "Square cells of one fixed size laid over the world, each holding a list of the things inside it, so a question about a spot looks only in nearby cells.",
+    "long": "The simplest spatial partition. A cell's coordinate is a position divided by the cell size and rounded down (FMath::FloorToInt32, so cells left of zero are as wide as the rest), and a TMap from FIntPoint to an array holds only the cells that contain something. A question with a radius visits the cells from the one under its lowest corner to the one under its highest. Things that move must be refiled when they cross into another cell, and things that are destroyed must leave. Choose the cell size near the radius the questions usually ask about.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/map-containers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "fintpoint",
+      "tmap",
+      "toctree2",
+      "physics-broadphase"
+    ],
+    "firstQuestId": "p18-every-pair"
+  },
+  {
+    "id": "fintpoint",
+    "term": "FIntPoint",
+    "aliases": [
+      "TIntPoint",
+      "integer point"
+    ],
+    "category": "math",
+    "short": "A pair of int32 values, X and Y, used for things like grid cells and screen pixels.",
+    "long": "FIntPoint is TIntPoint<int32>: two integers with arithmetic, comparison, and a GetTypeHash, so it can be the key of a TMap or a TSet. That makes it the natural key for the cells of a two-dimensional grid: FIntPoint(FMath::FloorToInt32(X / CellSize), FMath::FloorToInt32(Y / CellSize)). FIntVector is the three-dimensional version.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TIntPoint?application_version=5.8",
+    "related": [
+      "uniform-grid",
+      "tmap",
+      "fvector"
+    ],
+    "firstQuestId": "p18-every-pair"
+  },
+  {
+    "id": "toctree2",
+    "term": "TOctree2",
+    "aliases": [
+      "octree",
+      "FOctreeElementId2"
+    ],
+    "category": "containers",
+    "short": "Unreal's reusable octree template, which splits space into eight smaller boxes only where many elements are crowded.",
+    "long": "TOctree2<ElementType, SemanticsType> stores elements with bounds in nested boxes that subdivide where they fill up, so clumps get small boxes and empty space stays one big box. The semantics type tells it each element's bounds and how many elements a node holds before it splits. AddElement and RemoveElement change it, and FindElementsWithBoundsTest calls a function for every element whose bounds touch a query box. The engine builds its navigation octree and the renderer's primitive octree on it. Prefer it to a uniform grid when things clump or most of the space is empty; it costs more code and more work per change.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TOctree2?application_version=5.8",
+    "related": [
+      "uniform-grid",
+      "navigation-octree",
+      "physics-broadphase"
+    ],
+    "firstQuestId": "p18-every-pair"
   }
 ]
