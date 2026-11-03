@@ -4,6 +4,16 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1379 2026-11-03 World 13 review fix round 1 (author-patterns, M4.P2.13)
+Reviewer verdict FIXES NEEDED on cd33f40, then PASS on a7ed98f. Changed:
+- `ADojoP13Potion::Drink` is no longer `const`. UnrealHeaderTool marks a const `BlueprintCallable` function that has an output as `BlueprintPure` (`UhtFunction.cs`), and a pure node has no exec pins and runs again on every pull, so the 02 editor step and the boss Blueprint plan could not have run it. Options: drop `const`; keep it and add `BlueprintPure = false` (one more specifier to teach). Chosen: drop it; the marked line says why.
+- Enum values take the A66/A267 initials with display names (A1371).
+- Four 5 and 6 word overlaps with the research notes and the chapter's "play a sound" instruction were reworded (A1372).
+- The Run Parsons prompt pins its first line, so only one order is correct (A314 grades exact order).
+- Tests: the boss pins the 150 range (a press 151 from the purse), the label's fizzle count, Health, and Gold, and a win time measured from the round start (a 2 second gap before round 2); the door feeds And, Or, and Not values other than 0 and 1, so bitwise, additive, and subtractive versions fail.
+- The boss spec says an opened door counts as used; the refactor's editor step places the trap it compares against; the worked quest's alternative notes `int32` overflow from a hostile recipe.
+Not changed: `RoutineHoldsNoObjects` checks only object properties and arrays of them (the routine has no maps or sets); the card item `blueprint-is` and `bytecode-recall-1` stay close on purpose. Reverse cost: low.
+
 ### A1378 2026-11-03 World 13's engine proof (author-patterns, M4.P2.13)
 Pending; filled in when the run ends.
 
@@ -47,7 +57,7 @@ Originality: the book PDF is not on this machine (problems.md, 2026-10-26), so t
 
 ### A1371 2026-11-03 Pack 2 World 13 ids (author-patterns, M4.P2.13)
 - Folder `13-bytecode`; world id `bytecode`, unique across packs (A73).
-- Quest ids `p13-<slug>`; classes `ADojoP13Potion`, `ADojoP13VaultDoor`, `ADojoP13DartTrap`, `ADojoP13VaultMaster`, `UDojoP13TrapRoutine`, the plain class `FDojoP13RecipeMachine`; structs `FDojoP13Stats`, `FDojoP13Instruction`, `FDojoP13CheckStep`, `FDojoP13TrapStep`, `FDojoP13ModEntry`; enums `EDojoP13Stat`, `EDojoP13Op`, `EDojoP13CheckOp`, `EDojoP13Verdict`, `EDojoP13TrapStepKind`, `EDojoP13StationKind`; tests `Dojo.P13.<Quest>.<Case>`.
+- Quest ids `p13-<slug>`; classes `ADojoP13Potion`, `ADojoP13VaultDoor`, `ADojoP13DartTrap`, `ADojoP13VaultMaster`, `UDojoP13TrapRoutine`, the plain class `FDojoP13RecipeMachine`; structs `FDojoP13Stats`, `FDojoP13Instruction`, `FDojoP13CheckStep`, `FDojoP13TrapStep`, `FDojoP13ModEntry`; enums `EDojoP13Stat` (`ES_` values), `EDojoP13Op` (`EO_`), `EDojoP13CheckOp` (`ECO_`), `EDojoP13Verdict` (`EV_`), `EDojoP13TrapStepKind` (`ETSK_`), and `EDojoP13StationKind` (`ESK_`), each value with a `UMETA` display name so the Details panel reads "Read Stat" (A66, A267); tests `Dojo.P13.<Quest>.<Case>`.
 - `p13-behavior-as-data` requires `p12-prototype-when-not`; the research's "Bytecode requires Type Object and Command" is met through the chain. `p13-door-conditions` also requires `p13-potion-recipes`, whose stats header it includes (A268).
 - Locals and parameters avoid `AActor` and `UObject` member names (A1050, A1060): `Stats`, `Step`, `Stack`, `Working`, `Machine`, `Routine`, `Station`, `Entry`, `LevelWorld`.
 Reverse cost: medium once learners have progress saved.
