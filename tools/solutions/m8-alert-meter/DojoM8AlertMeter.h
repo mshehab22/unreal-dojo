@@ -42,7 +42,7 @@ public:
 
 	/** Empties the meter and clears the caught state, ready for another round. */
 	UFUNCTION(BlueprintCallable, Category = "Alert Meter")
-	void Reset();
+	void StartOver();
 
 	/** Seconds of sight the meter is holding. */
 	UFUNCTION(BlueprintPure, Category = "Alert Meter")

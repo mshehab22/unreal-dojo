@@ -25,7 +25,7 @@ When you place a still searchlight, a runner in its beam, and an alert meter wat
 1. `BeginPlay`: start a repeating timer that calls `Pulse` every `PulseSeconds`.
 2. `Watch`: listen to the light's sight changes with `HandleSightChanged`, binding only once however many times it is called; `HandleSightChanged` remembers whether the light can see its target right now.
 3. `Pulse`: fill the meter by `PulseSeconds` while the target is seen, or take away `CalmDownPerSecond` times `PulseSeconds` while it is not (never below zero), and the first time the level reaches `CaughtAfterSeconds`, mark the catch and announce it once. Once caught, a pulse does nothing.
-4. `Reset`, `GetAlertLevel`, and `IsCaught`.
+4. `StartOver`, `GetAlertLevel`, and `IsCaught`.
 
 Dependency direction: the meter listens to the light and tells whoever listens to it; the light does not know the meter exists, and nothing polls the meter. `DojoM8AlertLog` is a listener provided for the tests.
 
@@ -86,7 +86,7 @@ public:
 
 	/** Empties the meter and clears the caught state, ready for another round. */
 	UFUNCTION(BlueprintCallable, Category = "Alert Meter")
-	void Reset();
+	void StartOver();
 
 	/** Seconds of sight the meter is holding. */
 	UFUNCTION(BlueprintPure, Category = "Alert Meter")
@@ -146,7 +146,7 @@ void ADojoM8AlertMeter::Watch(ADojoM8Searchlight* Light)
 	// Your code: ignore an invalid light; otherwise listen to its sight changes with HandleSightChanged, binding only once.
 }
 
-void ADojoM8AlertMeter::Reset()
+void ADojoM8AlertMeter::StartOver()
 {
 	// Your code: empty the meter and clear the caught state.
 }
@@ -357,7 +357,7 @@ bool FDojo_M8_AlertMeter_CatchesOnceAtTheLimit::RunTest(const FString& Parameter
 	TestWorld.Tick(600);
 	TestEqual(TEXT("Staying lit does not announce again"), Scene.Log->GetCaughtCount(), 1);
 
-	Scene.Meter->Reset();
+	Scene.Meter->StartOver();
 	TestFalse(TEXT("A reset clears the catch"), Scene.Meter->IsCaught());
 	TestEqual(TEXT("and empties the meter"), Scene.Meter->GetAlertLevel(), 0.f);
 
@@ -410,7 +410,7 @@ bool FDojo_M8_AlertMeter_NothingPollsEveryFrame::RunTest(const FString& Paramete
 - The meter listens to the light with AddUniqueDynamic and stores only whether the target is seen.
 - Each pulse adds `PulseSeconds` while seen, or takes away `CalmDownPerSecond` times `PulseSeconds` while not, and the level never goes below zero.
 - The first time the level reaches `CaughtAfterSeconds` the catch is announced exactly once.
-- Reset empties the meter and clears the caught state so a new round can be caught again.
+- StartOver empties the meter and clears the caught state so a new round can be caught again.
 - The pulse, the thresholds, and the calm-down rate are properties a designer can set in Details.
 
 # Alternative

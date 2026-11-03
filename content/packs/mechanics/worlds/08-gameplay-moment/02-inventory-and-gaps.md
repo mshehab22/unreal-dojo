@@ -23,7 +23,7 @@ type: multiple-choice
 prompt: "Guess, no penalty: you are handed a written walkthrough of a two-minute moment and told to build it. What is the best first move?"
 choices:
   - "Start on the most exciting mechanic so there is something to show"
-  - "List every mechanic, interaction, and event, with the numbers the walkthrough gives"
+  - "Write down what the player does, what touches what, and what happens, with the numbers the walkthrough gives"
   - "Open the editor and block out the level"
   - "Decide which parts are too hard and cut them"
 answerIndex: 1

@@ -12,11 +12,11 @@ class ADojoM8ExitGate;
 UENUM(BlueprintType)
 enum class EDojoM8Outcome : uint8
 {
-	EMO_Waiting UMETA(DisplayName = "Waiting"),
-	EMO_Running UMETA(DisplayName = "Running"),
-	EMO_Escaped UMETA(DisplayName = "Escaped"),
-	EMO_Caught UMETA(DisplayName = "Caught"),
-	EMO_TimeUp UMETA(DisplayName = "Time Up")
+	EO_Waiting UMETA(DisplayName = "Waiting"),
+	EO_Running UMETA(DisplayName = "Running"),
+	EO_Escaped UMETA(DisplayName = "Escaped"),
+	EO_Caught UMETA(DisplayName = "Caught"),
+	EO_TimeUp UMETA(DisplayName = "Time Up")
 };
 
 /** Keeps the time of a moment and decides how it ends: the first of an escape, a catch, or the time limit wins, and the answer then never changes. */
@@ -41,7 +41,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Moment Clock")
 	void WatchAlert(ADojoM8AlertMeter* Meter);
 
-	/** Starts the moment now, or starts it over: the time and the limit begin again and no earlier limit is left pending. */
+	/** Starts the moment now. */
 	UFUNCTION(BlueprintCallable, Category = "Moment Clock")
 	void Start();
 
@@ -69,12 +69,12 @@ private:
 	/** Ends the moment when the time limit runs out. */
 	void HandleTimeUp();
 
-	/** Records how the moment ended, if it is still running, and stops the limit. */
+	/** Records how the moment ended. */
 	void Finish(EDojoM8Outcome Result);
 
 	FTimerHandle LimitHandle;
 
-	EDojoM8Outcome Outcome = EDojoM8Outcome::EMO_Waiting;
+	EDojoM8Outcome Outcome = EDojoM8Outcome::EO_Waiting;
 
 	double StartSeconds = 0.0;
 

@@ -25,7 +25,7 @@ void ADojoM8AlertMeter::Watch(ADojoM8Searchlight* Light)
 	Light->OnSightChanged.AddUniqueDynamic(this, &ADojoM8AlertMeter::HandleSightChanged);
 }
 
-void ADojoM8AlertMeter::Reset()
+void ADojoM8AlertMeter::StartOver()
 {
 	AlertLevel = 0.f;
 	bCaught = false;

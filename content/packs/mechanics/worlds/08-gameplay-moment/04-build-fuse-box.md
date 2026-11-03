@@ -175,7 +175,7 @@ public:
 
 	/** Forgets every fuse counted and unpowers the box, ready for another round. */
 	UFUNCTION(BlueprintCallable, Category = "Fuse Box")
-	void Reset();
+	void StartOver();
 
 	/** How many fuses have been collected since the last reset. */
 	UFUNCTION(BlueprintPure, Category = "Fuse Box")
@@ -218,7 +218,7 @@ void ADojoM8FuseBox::Watch(ADojoM8Fuse* Fuse)
 	Fuse->OnCollected.AddUniqueDynamic(this, &ADojoM8FuseBox::HandleCollected);
 }
 
-void ADojoM8FuseBox::Reset()
+void ADojoM8FuseBox::StartOver()
 {
 	Collected = 0;
 	bPowered = false;
@@ -460,7 +460,7 @@ bool FDojo_M8_FuseBox_EnoughFusesPowerTheBoxOnce::RunTest(const FString& Paramet
 	TestEqual(TEXT("A fourth fuse is still counted"), Box->GetCollected(), 4);
 	TestEqual(TEXT("but the box is not announced again"), Log->GetPoweredCount(), 1);
 
-	Box->Reset();
+	Box->StartOver();
 	TestEqual(TEXT("A reset forgets the fuses"), Box->GetCollected(), 0);
 	TestFalse(TEXT("and the power"), Box->IsPowered());
 
@@ -517,7 +517,7 @@ bool FDojo_M8_FuseBox_DesignersCanTuneIt::RunTest(const FString& Parameters)
 
 - Collect has a guard and three steps, and their order matters: listeners should hear about a fuse that still stands. HandleCollected has a count and a one-time announcement.
 - Broadcast passes the same two values the delegate was declared with. For the box, the announcement must happen on the frame the count first reaches the requirement, so remember that it happened in a flag.
-- `OnCollected.Broadcast(this, Collector)` then `Destroy()` is the order for the fuse. For the box, a count that reaches the requirement and a flag that is already set are the only two conditions to check.
+- For the fuse, tell the listeners with the fuse and the collector first, then destroy the fuse. For the box, a count that reaches the requirement and a flag that is already set are the only two conditions to check.
 
 # Rubric
 

@@ -17,7 +17,7 @@ concepts:
 
 # Spec
 
-The app cannot show video, so here is the clip as a written walkthrough, with timings. It is a two-minute moment called the Blackout Escape.
+A clip cannot be played in this app, so it is described here in writing, with times. It is a two-minute moment called the Blackout Escape.
 
 - 0:00. A power cut. The player stands at one corner of a square yard at night. A searchlight tower stands in the middle of the yard. Its beam is narrow and turns slowly all the time.
 - 0:05 to 0:50. Three glowing fuses lie on the corners of the yard, one at a time. The player walks to each with W, A, S, D. Stepping on a fuse picks it up, and a counter on the wall of the fuse box reads 1 of 3, then 2 of 3, then 3 of 3.
@@ -28,7 +28,7 @@ The app cannot show video, so here is the clip as a written walkthrough, with ti
 
 Reference: the stealth sections of Metal Gear Solid and the generator rooms of Alien: Isolation. The player must feel hunted by a beam that is easy to see and easy to cross if they time it.
 
-You are planning, not coding. First list every mechanic, interaction, and event in the walkthrough, with nothing too small. Then map each to a skill you have already built (input, transforms, collision, timers, tracing, delegates) and mark the gaps, and for each gap say whether you would spike it, fake it, or cut it. Then name the classes, the data, and the events; for each pair, say which side points at the other, which side announces, and which side only listens.
+You are planning, not coding. First write down everything the player does, everything that touches something, and everything that happens on its own, down to the smallest. Then map each to a skill you have already built (input, transforms, collision, timers, tracing, delegates) and mark the gaps, and for each gap say whether you would spike it, fake it, or cut it. Then name the classes, the data, and the events; for each pair, say which side points at the other, which side announces, and which side only listens.
 
 Acceptance:
 

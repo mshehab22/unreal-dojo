@@ -31,7 +31,7 @@ void ADojoM8ExitGate::SetPowered(bool bNewPowered)
 	for (AActor* Candidate : Inside) LetOut(Candidate);
 }
 
-void ADojoM8ExitGate::Reset()
+void ADojoM8ExitGate::StartOver()
 {
 	bPowered = false;
 	bEscaped = false;

@@ -17,7 +17,7 @@ void ADojoM8FuseBox::Watch(ADojoM8Fuse* Fuse)
 	Fuse->OnCollected.AddUniqueDynamic(this, &ADojoM8FuseBox::HandleCollected);
 }
 
-void ADojoM8FuseBox::Reset()
+void ADojoM8FuseBox::StartOver()
 {
 	Collected = 0;
 	bPowered = false;

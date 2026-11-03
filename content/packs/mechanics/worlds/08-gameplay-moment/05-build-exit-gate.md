@@ -75,7 +75,7 @@ public:
 
 	/** Powers the gate down and forgets that anyone escaped, ready for another round. */
 	UFUNCTION(BlueprintCallable, Category = "Exit Gate")
-	void Reset();
+	void StartOver();
 
 	/** True while the gate has power. */
 	UFUNCTION(BlueprintPure, Category = "Exit Gate")
@@ -135,7 +135,7 @@ void ADojoM8ExitGate::SetPowered(bool bNewPowered)
 	// Your code: when the power comes on, let out every pawn that is already inside the zone.
 }
 
-void ADojoM8ExitGate::Reset()
+void ADojoM8ExitGate::StartOver()
 {
 	bPowered = false;
 	bEscaped = false;
@@ -362,7 +362,7 @@ bool FDojo_M8_ExitGate_PowerOffAndResetStartOver::RunTest(const FString& Paramet
 	Scene.Gate->SetPowered(true);
 	TestEqual(TEXT("Power back on, the waiting runner is out"), Scene.Log->GetEscapeCount(), 1);
 
-	Scene.Gate->Reset();
+	Scene.Gate->StartOver();
 	TestFalse(TEXT("A reset removes the power"), Scene.Gate->IsPowered());
 	TestFalse(TEXT("and the memory of the escape"), Scene.Gate->HasEscaped());
 
@@ -417,7 +417,7 @@ bool FDojo_M8_ExitGate_BlueprintsCanListen::RunTest(const FString& Parameters)
 
 - Both ways out go through one function, `LetOut`, so the power check and the once-only check live in one place. `SetPowered` has to look at who is already inside, because an overlap that began earlier will not begin again.
 - A shape can list the actors it overlaps right now; the function is on the primitive component. The overlap handler is already written and calls `LetOut`.
-- `Zone->GetOverlappingActors(Inside)` fills a `TArray<AActor*>`; loop over it and call `LetOut` for each. In `LetOut`, three plain conditions come first, then the flag and the broadcast.
+- Ask the zone for the actors it overlaps right now and send each one through `LetOut`. In `LetOut`, three plain conditions come first, then the flag and the announcement.
 
 # Rubric
 

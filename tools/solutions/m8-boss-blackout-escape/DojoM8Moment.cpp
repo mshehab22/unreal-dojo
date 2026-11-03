@@ -117,7 +117,7 @@ void ADojoM8Moment::PressRestart()
 	if (!Clock) return;
 
 	const EDojoM8Outcome Outcome = Clock->GetOutcome();
-	if (Outcome == EDojoM8Outcome::EMO_Running || Outcome == EDojoM8Outcome::EMO_Waiting) return;
+	if (Outcome == EDojoM8Outcome::EO_Running || Outcome == EDojoM8Outcome::EO_Waiting) return;
 
 	StartRound();
 }

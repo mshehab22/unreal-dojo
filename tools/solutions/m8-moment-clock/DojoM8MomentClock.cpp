@@ -30,7 +30,7 @@ void ADojoM8MomentClock::Start()
 {
 	GetWorldTimerManager().ClearTimer(LimitHandle);
 
-	Outcome = EDojoM8Outcome::EMO_Running;
+	Outcome = EDojoM8Outcome::EO_Running;
 	StartSeconds = GetWorld()->GetTimeSeconds();
 	EndSeconds = StartSeconds;
 	GetWorldTimerManager().SetTimer(LimitHandle, this, &ADojoM8MomentClock::HandleTimeUp, TimeLimitSeconds, false);
@@ -45,9 +45,9 @@ float ADojoM8MomentClock::GetElapsedSeconds() const
 {
 	switch (Outcome)
 	{
-	case EDojoM8Outcome::EMO_Waiting:
+	case EDojoM8Outcome::EO_Waiting:
 		return 0.f;
-	case EDojoM8Outcome::EMO_Running:
+	case EDojoM8Outcome::EO_Running:
 		return static_cast<float>(GetWorld()->GetTimeSeconds() - StartSeconds);
 	default:
 		return static_cast<float>(EndSeconds - StartSeconds);
@@ -58,13 +58,13 @@ FString ADojoM8MomentClock::GetLabel() const
 {
 	switch (Outcome)
 	{
-	case EDojoM8Outcome::EMO_Waiting:
+	case EDojoM8Outcome::EO_Waiting:
 		return TEXT("WAITING");
-	case EDojoM8Outcome::EMO_Running:
+	case EDojoM8Outcome::EO_Running:
 		return TEXT("RUNNING");
-	case EDojoM8Outcome::EMO_Escaped:
+	case EDojoM8Outcome::EO_Escaped:
 		return FString::Printf(TEXT("ESCAPED in %.1f s"), GetElapsedSeconds());
-	case EDojoM8Outcome::EMO_Caught:
+	case EDojoM8Outcome::EO_Caught:
 		return FString::Printf(TEXT("CAUGHT after %.1f s"), GetElapsedSeconds());
 	default:
 		return TEXT("TIME UP");
@@ -73,22 +73,22 @@ FString ADojoM8MomentClock::GetLabel() const
 
 void ADojoM8MomentClock::HandleEscaped(AActor* Escapee)
 {
-	Finish(EDojoM8Outcome::EMO_Escaped);
+	Finish(EDojoM8Outcome::EO_Escaped);
 }
 
 void ADojoM8MomentClock::HandleCaught()
 {
-	Finish(EDojoM8Outcome::EMO_Caught);
+	Finish(EDojoM8Outcome::EO_Caught);
 }
 
 void ADojoM8MomentClock::HandleTimeUp()
 {
-	Finish(EDojoM8Outcome::EMO_TimeUp);
+	Finish(EDojoM8Outcome::EO_TimeUp);
 }
 
 void ADojoM8MomentClock::Finish(EDojoM8Outcome Result)
 {
-	if (Outcome != EDojoM8Outcome::EMO_Running) return;
+	if (Outcome != EDojoM8Outcome::EO_Running) return;
 
 	Outcome = Result;
 	EndSeconds = GetWorld()->GetTimeSeconds();

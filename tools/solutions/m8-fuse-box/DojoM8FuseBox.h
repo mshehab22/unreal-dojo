@@ -33,7 +33,7 @@ public:
 
 	/** Forgets every fuse counted and unpowers the box, ready for another round. */
 	UFUNCTION(BlueprintCallable, Category = "Fuse Box")
-	void Reset();
+	void StartOver();
 
 	/** How many fuses have been collected since the last reset. */
 	UFUNCTION(BlueprintPure, Category = "Fuse Box")

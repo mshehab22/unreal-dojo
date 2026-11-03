@@ -88,7 +88,7 @@ void ADojoMoment::StartRound()
     {
     	Box = World->SpawnActor<ADojoBox>(BoxSpot, FRotator::ZeroRotator);
     	Box->OnPowered.AddUniqueDynamic(this, &ADojoMoment::HandlePowered);
-    	Exit->Reset();
+    	Exit->StartOver();
     }
   bugLine: 3
   fix: Destroy the old box before spawning the new one, so its announcement and its binding go with it.

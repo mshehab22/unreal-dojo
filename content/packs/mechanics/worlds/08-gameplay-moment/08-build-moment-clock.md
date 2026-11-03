@@ -23,7 +23,7 @@ When you start a moment on the clock and the exit gate announces an escape at 40
 `ADojoM8MomentClock` has its header written for you, including the five outcomes. Everything in the `.cpp` except the constructor is yours:
 
 1. `WatchExit` and `WatchAlert`: listen to the gate's escapes and the meter's catches with `HandleEscaped` and `HandleCaught`, binding only once.
-2. `Start`: begin the moment now, or begin it over: it is running, its time starts now, and the time limit starts counting down.
+2. `Start`: begin the moment: it is running, its time starts now, and the time limit starts counting down.
 3. `HandleEscaped`, `HandleCaught`, `HandleTimeUp`, and `Finish`: end the moment and record how and when.
 4. `GetOutcome`, `GetElapsedSeconds` (zero before the start, the time so far while running, the time at the instant it ended afterwards), and `GetLabel`.
 
@@ -56,11 +56,11 @@ class ADojoM8ExitGate;
 UENUM(BlueprintType)
 enum class EDojoM8Outcome : uint8
 {
-	EMO_Waiting UMETA(DisplayName = "Waiting"),
-	EMO_Running UMETA(DisplayName = "Running"),
-	EMO_Escaped UMETA(DisplayName = "Escaped"),
-	EMO_Caught UMETA(DisplayName = "Caught"),
-	EMO_TimeUp UMETA(DisplayName = "Time Up")
+	EO_Waiting UMETA(DisplayName = "Waiting"),
+	EO_Running UMETA(DisplayName = "Running"),
+	EO_Escaped UMETA(DisplayName = "Escaped"),
+	EO_Caught UMETA(DisplayName = "Caught"),
+	EO_TimeUp UMETA(DisplayName = "Time Up")
 };
 
 /** Keeps the time of a moment and decides how it ends: the first of an escape, a catch, or the time limit wins, and the answer then never changes. */
@@ -85,7 +85,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Moment Clock")
 	void WatchAlert(ADojoM8AlertMeter* Meter);
 
-	/** Starts the moment now, or starts it over: the time and the limit begin again and no earlier limit is left pending. */
+	/** Starts the moment now. */
 	UFUNCTION(BlueprintCallable, Category = "Moment Clock")
 	void Start();
 
@@ -113,12 +113,12 @@ private:
 	/** Ends the moment when the time limit runs out. */
 	void HandleTimeUp();
 
-	/** Records how the moment ended, if it is still running, and stops the limit. */
+	/** Records how the moment ended. */
 	void Finish(EDojoM8Outcome Result);
 
 	FTimerHandle LimitHandle;
 
-	EDojoM8Outcome Outcome = EDojoM8Outcome::EMO_Waiting;
+	EDojoM8Outcome Outcome = EDojoM8Outcome::EO_Waiting;
 
 	double StartSeconds = 0.0;
 
@@ -160,7 +160,7 @@ void ADojoM8MomentClock::Start()
 
 EDojoM8Outcome ADojoM8MomentClock::GetOutcome() const
 {
-	return EDojoM8Outcome::EMO_Waiting;
+	return EDojoM8Outcome::EO_Waiting;
 }
 
 float ADojoM8MomentClock::GetElapsedSeconds() const
@@ -279,10 +279,10 @@ bool FDojo_M8_MomentClock_AnEscapeFreezesTheTime::RunTest(const FString& Paramet
 
 	Scene.Gate->OnEscaped.Broadcast(Scene.Runner);
 	TestTrue(TEXT("The label says ESCAPED with the time"), Scene.Clock->GetLabel().StartsWith(TEXT("ESCAPED in 40.")));
-	TestTrue(TEXT("The outcome is Escaped"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EMO_Escaped);
+	TestTrue(TEXT("The outcome is Escaped"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EO_Escaped);
 
 	TestWorld.Tick(6000);
-	TestTrue(TEXT("Long after the 120 second limit the outcome is still Escaped"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EMO_Escaped);
+	TestTrue(TEXT("Long after the 120 second limit the outcome is still Escaped"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EO_Escaped);
 	TestNearlyEqual(TEXT("and the time stays where it stopped"), Scene.Clock->GetElapsedSeconds(), 40.f, 0.2f);
 
 	return true;
@@ -305,7 +305,7 @@ bool FDojo_M8_MomentClock_TheFirstEndingWins::RunTest(const FString& Parameters)
 	TestTrue(TEXT("The label says CAUGHT with the time"), Scene.Clock->GetLabel().StartsWith(TEXT("CAUGHT after 10.")));
 
 	Scene.Gate->OnEscaped.Broadcast(Scene.Runner);
-	TestTrue(TEXT("An escape after the catch changes nothing"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EMO_Caught);
+	TestTrue(TEXT("An escape after the catch changes nothing"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EO_Caught);
 
 	return true;
 }
@@ -325,14 +325,14 @@ bool FDojo_M8_MomentClock_TheLimitEndsTheMoment::RunTest(const FString& Paramete
 	Scene.Clock->Start();
 
 	TestWorld.Tick(240);
-	TestTrue(TEXT("At four seconds the moment is still running"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EMO_Running);
+	TestTrue(TEXT("At four seconds the moment is still running"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EO_Running);
 
 	TestWorld.Tick(120);
 	TestEqual(TEXT("At six seconds the time is up"), Scene.Clock->GetLabel(), FString(TEXT("TIME UP")));
 	TestNearlyEqual(TEXT("and the clock stopped at the limit"), Scene.Clock->GetElapsedSeconds(), 5.f, 0.2f);
 
 	Scene.Gate->OnEscaped.Broadcast(Scene.Runner);
-	TestTrue(TEXT("An escape after the time is up changes nothing"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EMO_TimeUp);
+	TestTrue(TEXT("An escape after the time is up changes nothing"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EO_TimeUp);
 
 	return true;
 }
@@ -356,11 +356,11 @@ bool FDojo_M8_MomentClock_AStartOverBeginsAFreshLimit::RunTest(const FString& Pa
 	TestNearlyEqual(TEXT("Starting over resets the time"), Scene.Clock->GetElapsedSeconds(), 0.f, 0.1f);
 
 	TestWorld.Tick(360);
-	TestTrue(TEXT("Twelve seconds after the first start the second moment is still running"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EMO_Running);
+	TestTrue(TEXT("Twelve seconds after the first start the second moment is still running"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EO_Running);
 	TestNearlyEqual(TEXT("with six seconds on it"), Scene.Clock->GetElapsedSeconds(), 6.f, 0.2f);
 
 	TestWorld.Tick(300);
-	TestTrue(TEXT("Its own limit still ends it"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EMO_TimeUp);
+	TestTrue(TEXT("Its own limit still ends it"), Scene.Clock->GetOutcome() == EDojoM8Outcome::EO_TimeUp);
 
 	return true;
 }
@@ -385,7 +385,7 @@ bool FDojo_M8_MomentClock_DesignersCanSetTheLimit::RunTest(const FString& Parame
 
 - Four things can end a moment: an escape, a catch, the limit, and nothing else. Give them one place to go through, so the recording of the ending is written once.
 - The limit is a one-shot timer set when the moment starts. `GetWorld()->GetTimeSeconds()` is the time to record at the start and at the end. A label is a switch over the outcome, and `FString::Printf` with `%.1f` gives one decimal.
-- A moment can be started more than once in a game, for example by a restart. Think about what the first start left behind. The handler functions only call `Finish`; `Finish` records the outcome and the end time.
+- A moment can be started again, for example by a restart, so decide what a second start must reset. The handler functions only call `Finish`; `Finish` records the outcome and the end time, and must not change an ending that is already recorded.
 
 # Rubric
 
@@ -417,11 +417,11 @@ The clock could poll: tick every frame, compare the time with the limit, and loo
 - id: clock-label
   prompt: Put the middle of GetLabel in order.
   lines:
-    - "	case EDojoM8Outcome::EMO_Waiting:"
+    - "	case EDojoM8Outcome::EO_Waiting:"
     - "		return TEXT(\"WAITING\");"
-    - "	case EDojoM8Outcome::EMO_Running:"
+    - "	case EDojoM8Outcome::EO_Running:"
     - "		return TEXT(\"RUNNING\");"
-    - "	case EDojoM8Outcome::EMO_Escaped:"
+    - "	case EDojoM8Outcome::EO_Escaped:"
     - "		return FString::Printf(TEXT(\"ESCAPED in %.1f s\"), GetElapsedSeconds());"
   distractors:
     - line: "		return FString::Printf(TEXT(\"ESCAPED in %d s\"), GetElapsedSeconds());"

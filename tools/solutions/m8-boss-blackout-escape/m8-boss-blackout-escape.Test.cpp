@@ -58,10 +58,10 @@ namespace DojoM8BossTest
 		Hold(TestWorld, Rig, EKeys::S, 120);
 		Test.TestEqual(TEXT("Walking back takes the third fuse"), Moment->FuseBox->GetCollected(), 3);
 		Test.TestTrue(TEXT("Three fuses power the exit"), Moment->ExitGate->IsPowered());
-		Test.TestTrue(TEXT("The moment is still running"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EMO_Running);
+		Test.TestTrue(TEXT("The moment is still running"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EO_Running);
 
 		Hold(TestWorld, Rig, EKeys::D, 140);
-		Test.TestTrue(TEXT("Walking into the powered exit ends the moment as an escape"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EMO_Escaped);
+		Test.TestTrue(TEXT("Walking into the powered exit ends the moment as an escape"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EO_Escaped);
 		Test.TestTrue(TEXT("The status line gives the time"), Moment->GetStatusLine().StartsWith(TEXT("ESCAPED in ")));
 		Test.TestTrue(TEXT("and the fuse count"), Moment->GetStatusLine().Contains(TEXT("fuses 3/3")));
 		Test.TestFalse(TEXT("Nobody was caught on the way"), Moment->AlertMeter->IsCaught());
@@ -122,18 +122,18 @@ bool FDojo_M8_BlackoutEscape_TheBeamCatchesAHeroWhoStandsStill::RunTest(const FS
 	Moment->Light->SetActorRotation(FRotator(0.0, -135.0, 0.0));
 
 	Rig.Tick(60);
-	TestTrue(TEXT("One second in the beam is not yet a catch"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EMO_Running);
+	TestTrue(TEXT("One second in the beam is not yet a catch"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EO_Running);
 	TestTrue(TEXT("but the alert is rising"), Moment->AlertMeter->GetAlertLevel() > 0.4f);
 
 	Rig.Tick(120);
-	TestTrue(TEXT("Three seconds in the beam is a catch"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EMO_Caught);
+	TestTrue(TEXT("Three seconds in the beam is a catch"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EO_Caught);
 	TestTrue(TEXT("The status line says so"), Moment->GetStatusLine().StartsWith(TEXT("CAUGHT after ")));
 
 	Moment->ExitGate->OnEscaped.Broadcast(Moment->Hero);
-	TestTrue(TEXT("An escape after the catch changes nothing"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EMO_Caught);
+	TestTrue(TEXT("An escape after the catch changes nothing"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EO_Caught);
 
 	Tap(TestWorld, Rig, EKeys::R);
-	TestTrue(TEXT("R after a catch starts a new round"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EMO_Running);
+	TestTrue(TEXT("R after a catch starts a new round"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EO_Running);
 	TestEqual(TEXT("with an empty alert"), Moment->AlertMeter->GetAlertLevel(), 0.f);
 
 	return true;
@@ -158,13 +158,13 @@ bool FDojo_M8_BlackoutEscape_TheLimitEndsARoundThatDrags::RunTest(const FString&
 	QuietTower(Moment);
 
 	Rig.Tick(240);
-	TestTrue(TEXT("At four seconds the round is still running"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EMO_Running);
+	TestTrue(TEXT("At four seconds the round is still running"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EO_Running);
 
 	Rig.Tick(120);
 	TestTrue(TEXT("At six seconds the time is up"), Moment->GetStatusLine().StartsWith(TEXT("TIME UP")));
 
 	Tap(TestWorld, Rig, EKeys::R);
-	TestTrue(TEXT("R after the time is up starts a new round"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EMO_Running);
+	TestTrue(TEXT("R after the time is up starts a new round"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EO_Running);
 
 	return true;
 }
@@ -193,7 +193,7 @@ bool FDojo_M8_BlackoutEscape_TheExitNeedsPowerAndRestartNeedsAnEnding::RunTest(c
 
 	Hold(TestWorld, Rig, EKeys::D, 180);
 	TestTrue(TEXT("The hero is standing in the exit"), Moment->Hero->GetActorLocation().Y > 1150.0);
-	TestTrue(TEXT("but with no power the moment is still running"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EMO_Running);
+	TestTrue(TEXT("but with no power the moment is still running"), Moment->Clock->GetOutcome() == EDojoM8Outcome::EO_Running);
 	TestFalse(TEXT("and nobody has escaped"), Moment->ExitGate->HasEscaped());
 
 	return true;

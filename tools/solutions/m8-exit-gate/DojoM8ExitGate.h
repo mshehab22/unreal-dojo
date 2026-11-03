@@ -33,7 +33,7 @@ public:
 
 	/** Powers the gate down and forgets that anyone escaped, ready for another round. */
 	UFUNCTION(BlueprintCallable, Category = "Exit Gate")
-	void Reset();
+	void StartOver();
 
 	/** True while the gate has power. */
 	UFUNCTION(BlueprintPure, Category = "Exit Gate")

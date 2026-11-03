@@ -251,6 +251,7 @@ void ADojoM8SightLog::HandleSightChanged(ADojoM8Searchlight* Light, bool bSeen)
 #if WITH_AUTOMATION_TESTS
 
 #include "Components/BoxComponent.h"
+#include "Components/SphereComponent.h"
 #include "Quests/m3-checkpoint/DojoM3Runner.h"
 #include "Quests/m8-searchlight/DojoM8Searchlight.h"
 #include "Quests/m8-searchlight/DojoM8SightLog.h"
@@ -329,6 +330,43 @@ bool FDojo_M8_Searchlight_SeesWhatIsInTheBeam::RunTest(const FString& Parameters
 
 	Runner->SetActorLocation(FVector(-500.0, 0.0, 0.0));
 	TestFalse(TEXT("Behind the light is not seen"), Light->CanSee(Runner));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M8_Searchlight_HeightDoesNotMatter, "Dojo.M8.Searchlight.HeightDoesNotMatter", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Raises the runner above the floor and checks it is still lit, because the beam is measured on the floor plane. */
+bool FDojo_M8_Searchlight_HeightDoesNotMatter::RunTest(const FString& Parameters)
+{
+	using namespace DojoM8SearchlightTest;
+
+	FDojoTestWorld TestWorld;
+
+	ADojoM8Searchlight* Light = SpawnStillLight(TestWorld);
+	ADojoM3Runner* Runner = SpawnRunnerAt(TestWorld, FVector(500.0, 0.0, 200.0));
+	if (!TestNotNull(TEXT("Light and runner spawned"), Runner) || !Light) return false;
+
+	TestTrue(TEXT("A runner 200 above the floor, straight ahead, is still seen"), Light->CanSee(Runner));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M8_Searchlight_ItsOwnShapeDoesNotHideIt, "Dojo.M8.Searchlight.ItsOwnShapeDoesNotHideIt", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Makes the runner's own shape block everything and checks the light still sees it with nothing in between. */
+bool FDojo_M8_Searchlight_ItsOwnShapeDoesNotHideIt::RunTest(const FString& Parameters)
+{
+	using namespace DojoM8SearchlightTest;
+
+	FDojoTestWorld TestWorld;
+
+	ADojoM8Searchlight* Light = SpawnStillLight(TestWorld);
+	ADojoM3Runner* Runner = SpawnRunnerAt(TestWorld, FVector(500.0, 0.0, 0.0));
+	if (!TestNotNull(TEXT("Light and runner spawned"), Runner) || !Light) return false;
+
+	Runner->Body->SetCollisionProfileName(TEXT("BlockAll"));
+	TestTrue(TEXT("A solid runner with nothing between it and the light is seen"), Light->CanSee(Runner));
 
 	return true;
 }
