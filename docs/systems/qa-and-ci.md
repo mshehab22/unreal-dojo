@@ -57,11 +57,11 @@ Options: `DOJO_E2E_ENGINE_PATH` (engine root, default `~/Applications/UE_5.8`), 
 
 ## Learner flow recording (`e2e/learner-flow-recording.spec.ts`, opt-in)
 
-M2.4b (A1850, A1851). Skipped unless `DOJO_RECORD_FLOW=1`, so `npm run test:e2e` and CI never run it and need no Python. It drives the fake (no engine) through first-run setup, a concept quest with a hover term, a drill, a breakdown, and a build that fails, takes a hint, and passes, then the loot screen and the next quest open on the map, and writes the captioned GIF `docs/images/m2-4-learner-flow.gif`. Run it after `npm run build`:
+M2.4b (A1850, A1851). Skipped unless `DOJO_RECORD_FLOW=1`, so `npm run test:e2e` and CI never run it and need no Python. It drives the fake (no engine) through first-run setup, a concept quest with a hover term, a drill, a breakdown, and a build that fails, takes a hint, and passes, then the loot screen with the next quest named on its button and the World Map, and writes the captioned GIF `docs/iterations/m2-4-learner-flow.gif`. Run it after `npm run build`:
 
     DOJO_RECORD_FLOW=1 npx playwright test e2e/learner-flow-recording.spec.ts
 
-The window stays hidden. The GIF is built by `e2e/support/framesToGif.py`, which needs Python 3 with Pillow (`pip install pillow`); nothing is added to `package.json`. The restart that keeps progress is not recorded, because the fake keeps its state in memory; `learner-flow.spec.ts` proves it with the real engine.
+The window stays hidden. The GIF is built by `e2e/support/framesToGif.py`, which needs Python 3 with Pillow (`pip install pillow`); nothing is added to `package.json`. Two steps are not recorded (A1851): the restart that keeps progress, because the fake keeps its state in memory, and the next quest unlocking, because the fake opens every World 1 stage but the boss from the start, so an unlock cannot show. `learner-flow.spec.ts` asserts both with the real engine. The recording is not one learner: it reloads into the fake's `quests` save after setup, and does the breakdown before the build.
 
 ## Engine smoke (`tools/qa/engine-smoke.ts`)
 

@@ -1,12 +1,13 @@
-// M2.4b: records the learner flow against the typed fake (no engine) as one captioned GIF, docs/images/m2-4-learner-flow.gif. Each step of
+// M2.4b: records the learner flow against the typed fake (no engine) as one captioned GIF, docs/iterations/m2-4-learner-flow.gif. Each step of
 // e2e/learner-flow.spec.ts (the real-engine flow) and e2e/ui-quests-flow.spec.ts is driven the same way here: set up the sandbox, hover a term,
-// predict and pass a concept quest, a drill, a breakdown submitted and revised, a build that fails, takes a hint, and passes, the loot screen, the next quest
-// unlocked. The restart that keeps progress is not here: the fake keeps its state in memory, so only the engine-gated learner flow proves it (A1851).
+// predict and pass a concept quest, a drill, a breakdown submitted and revised, a build that fails, takes a hint, and passes, the loot screen with the next quest
+// named on its button. Two steps are not here (A1851): the restart that keeps progress, because the fake keeps its state in memory, and the next quest unlocking,
+// because the fake opens every World 1 stage but the boss from the start. Only the engine-gated learner flow proves those.
 // Opt-in: it only runs with DOJO_RECORD_FLOW=1, so `npm run test:e2e` never runs it. Run it after `npm run build`:
 //     DOJO_RECORD_FLOW=1 npx playwright test e2e/learner-flow-recording.spec.ts
 // The GIF is assembled by e2e/support/framesToGif.py, which needs Python 3 with Pillow; the repo adds no dependency for it (A1850).
 // Page scripts are strings: e2e is typechecked without the DOM library.
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -19,7 +20,7 @@ import { hoverAtCentre } from "./support/hoverAtCentre";
 const ENABLED = process.env["DOJO_RECORD_FLOW"] === "1";
 
 /** Where the finished recording goes. */
-const OUTPUT_GIF = resolve("docs/images/m2-4-learner-flow.gif");
+const OUTPUT_GIF = resolve("docs/iterations/m2-4-learner-flow.gif");
 
 /** The page size every frame is taken at. */
 const FRAME_SIZE = { width: 1280, height: 800 } as const;
@@ -28,7 +29,7 @@ const FRAME_SIZE = { width: 1280, height: 800 } as const;
 const HOLD = 1_400;
 const LONG_HOLD = 2_600;
 
-/** The quest the training dummy unlocks (World 1's next stage). */
+/** The quest the loot screen's Next button offers after the training dummy (World 1's next stage). */
 const NEXT_QUEST_TITLE = "UENUM and USTRUCT bring your own types into reflection";
 
 const SHORTCUT_MODIFIER = process.platform === "darwin" ? "Meta" : "Control";
@@ -319,18 +320,17 @@ async function buildFailHintPass(): Promise<void>
 	await scrollStageToTop();
 	await frame("22. Submit: the loot screen with the review and XP", LONG_HOLD);
 
-	// The pass opens the next quest: the loot screen's Next button names it, and its stage is open on the World Map.
+	// The Next button names the next quest. This does not show an unlock: the fake opens most World 1 stages from the start (questFlowFixture), so the real flow proves that.
 	await expect(window.getByTestId("loot-next")).toContainText(NEXT_QUEST_TITLE);
 	await window.getByTestId("loot-next").scrollIntoViewIfNeeded();
-	await frame("23. The next quest is unlocked", LONG_HOLD);
+	await frame("23. The Next button names the next quest", LONG_HOLD);
 	await goTo("#/world-map", "screen-worldMap");
-	await expect(window.locator(`[data-testid="stage-node"][aria-label^=${JSON.stringify(`${NEXT_QUEST_TITLE}:`)}]`)).not.toHaveAttribute("data-status", "locked");
-	await frame("24. On the World Map the next stage is open", LONG_HOLD);
+	await frame("24. The World Map after the pass (the fake starts most stages open)", LONG_HOLD);
 }
 
 test.describe("the learner flow recorded against the fake", () =>
 {
-	test.skip(!ENABLED, "Opt-in: set DOJO_RECORD_FLOW=1 (writes docs/images/m2-4-learner-flow.gif; needs Python 3 with Pillow).");
+	test.skip(!ENABLED, "Opt-in: set DOJO_RECORD_FLOW=1 (writes docs/iterations/m2-4-learner-flow.gif; needs Python 3 with Pillow).");
 
 	test("first run to a passed build, recorded as a GIF", async ({ dojo }, testInfo) =>
 	{
@@ -353,11 +353,16 @@ test.describe("the learner flow recorded against the fake", () =>
 		const manifestPath = `${framesFolder}/manifest.json`;
 
 		writeFileSync(manifestPath, JSON.stringify(frames, null, 2));
-		mkdirSync(resolve("docs/images"), { recursive: true });
-
-		// `python` on Windows, `python3` elsewhere; the first that runs wins.
+		// `python` on Windows, `python3` elsewhere; the first that runs wins, and the second is only tried when the first fails.
 		const helper = resolve("e2e/support/framesToGif.py");
-		const attempts = ["python", "python3"].map((command) => spawnSync(command, [helper, manifestPath, OUTPUT_GIF], { encoding: "utf8" }));
+		const attempts: SpawnSyncReturns<string>[] = [];
+
+		for (const command of ["python", "python3"])
+		{
+			attempts.push(spawnSync(command, [helper, manifestPath, OUTPUT_GIF], { encoding: "utf8" }));
+			if (attempts[attempts.length - 1]?.status === 0) break;
+		}
+
 		const finished = attempts.find((attempt) => attempt.status === 0);
 
 		expect(finished, `framesToGif.py needs Python 3 with Pillow: ${attempts.map((attempt) => attempt.stderr || String(attempt.error)).join(" | ")}`).toBeTruthy();
