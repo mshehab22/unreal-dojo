@@ -2490,7 +2490,10 @@
     "problem": "Spawning code across the project names concrete classes directly, so changing which projectile a weapon fires, or routing creation through a pool, means editing every spawn site.",
     "unrealForm": "In Unreal the class choice is usually data: a TSubclassOf<ADojoProjectile> UPROPERTY that a designer sets, passed to SpawnActor. A factory function (UDojoWeaponKind::SpawnProjectile, or a static Create helper) centralizes deferred spawning with SpawnActorDeferred and FinishSpawning so initialization happens before BeginPlay, and is the natural place to add pooling later.",
     "whenNot": "If there is one class and one call site, a direct SpawnActor is clearer. Do not build abstract factory hierarchies when a TSubclassOf property already lets designers choose the class.",
-    "useCaseQuestIds": [],
+    "useCaseQuestIds": [
+      "p21-launchers",
+      "p21-wave-spawner"
+    ],
     "recall": [
       {
         "id": "factory-method-recall-1",
