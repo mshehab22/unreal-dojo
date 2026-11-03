@@ -47,7 +47,7 @@ The same object can also go to bytes in memory with `SaveGameToMemory` and back 
 
 Saving to a slot and loading from it happen at once on the calling thread. For big saves, `AsyncSaveGameToSlot` and `AsyncLoadGameFromSlot` do the file work on another thread and call a delegate when they finish, so the frame does not hitch; the world in this pack uses the plain calls so tests can check the result on the same line.
 
-A save game holds data, never actors: a pointer to a door in the level would be meaningless after the level opens again. Store what you need to find the actor again, such as a name or an id, and the values to put back.
+A save game holds data, not live actors. A pointer property is saved as the object's path, and reading it back only finds an object with that exact path that is already loaded; an actor spawned during play can get another name next session, and a level that is not open yet has nothing to find. Store an id you set yourself, find the actor by it, and save the values to put back.
 
 # Example
 
@@ -87,15 +87,15 @@ if (UDojoExVaultSave* Loaded = Cast<UDojoExVaultSave>(UGameplayStatics::LoadGame
   type: multiple-choice
   prompt: LoadGameFromSlot returns a USaveGame pointer. What do you do before reading your own Coins field from it?
   choices:
-    - Nothing; every field of every save class is on USaveGame
     - Cast it to your save class and check the result for null
+    - Nothing; every field of every save class is on USaveGame
     - Call CreateSaveGameObject on it
     - Copy it into a new object with NewObject
-  answerIndex: 1
+  answerIndex: 0
   explanation: The engine builds an object of the class that was saved; casting gives you your fields, and a null result means the slot was missing or held another class.
 - id: spot-pointer-in-save
   type: spot-the-bug
-  prompt: A checkpoint loads after the game restarts, but the door it should open is never found. Which line is wrong?
+  prompt: The vault spawns its doors when play begins. A checkpoint loads after the game restarts, but the door it should open is never found. Which line is wrong?
   code: |
     UCLASS()
     class UDojoExVaultSave : public USaveGame
@@ -106,24 +106,24 @@ if (UDojoExVaultSave* Loaded = Cast<UDojoExVaultSave>(UGameplayStatics::LoadGame
     	TObjectPtr<AActor> OpenDoor;
     };
   bugLine: 7
-  fix: Save something that names the door again in a fresh level, such as its id, and find the door by it after loading.
-  explanation: A pointer names an object that existed in the old session; when the level opens again the door is a new object, so the saved pointer leads nowhere.
+  fix: Save an id you set on the door and find the door by that id after loading.
+  explanation: The pointer is saved as the door's path; a door spawned at runtime can get another name in the next session, so the saved path finds nothing, while an id you set stays the same.
 - id: memory-or-slot
   type: multiple-choice
   prompt: A checkpoint must still load after the player quits and starts the game again. Which call writes it?
   choices:
     - SaveGameToMemory
-    - SaveGameToSlot
     - CreateSaveGameObject
+    - SaveGameToSlot
     - DoesSaveGameExist
-  answerIndex: 1
+  answerIndex: 2
   explanation: Only a slot is written to disk; memory is gone when the game quits.
 - id: explain-save-game
   type: explain-in-one-sentence
   prompt: In one sentence, say what a USaveGame is and why it holds ids instead of pointers to actors.
-  modelAnswer: A USaveGame is a data object whose properties are written to a slot and read back later, and it holds ids because the actors of a reloaded level are new objects that only an id can find again.
+  modelAnswer: A USaveGame is a data object whose properties are written to a slot and read back later, and it holds ids because a saved pointer only finds an object with the same path that is already loaded, while an id you set finds the actor again in any session.
   rubric:
     - Says the save game is data written to and read from a slot
-    - Says pointers to actors do not survive a reload, so ids are stored
+    - Says a saved pointer may find nothing in a later session, so ids you set are stored
   explanation: The slot outlives the objects; anything that refers to a level object must be something you can look up again.
 ```

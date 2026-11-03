@@ -7,7 +7,7 @@ scaffold: blank
 difficulty: 3
 patterns: [component]
 skills: [saving, actors]
-terms: [savegame-property, actor-component, uinterface, createdefaultsubobject, frotator]
+terms: [savegame-property, actor-component, createdefaultsubobject, frotator, uproperty]
 prerequisites: [s3-save-system, s3-saveable, s3-save-record]
 xp: 90
 estimatedMinutes: 25
@@ -25,11 +25,11 @@ Write `ADojoS3Door` from nothing. The tests use this public interface, so keep t
 
 - `UPROPERTY(VisibleAnywhere) TObjectPtr<USceneComponent> Panel;`, the part that swings, attached to the door's root. Its relative yaw is 90 when the door is open and 0 when it is closed.
 - `UPROPERTY(VisibleAnywhere) TObjectPtr<UDojoS3SaveableComponent> Saveable;`, created in the constructor, so the door can be saved by its id.
-- `void Open()`, `void Close()`, and `void Toggle()` change the state and swing the panel to match; `bool IsOpen() const` and `float GetPanelYaw() const` answer about the present.
+- `void Open()`, `void Close()`, and `void Toggle()`, each a `UFUNCTION(BlueprintCallable)`, change the state and swing the panel to match; `bool IsOpen() const` and `float GetPanelYaw() const` answer about the present, and the tests read the panel's own rotation too.
 - The open state is a `bool bOpen` marked `UPROPERTY(SaveGame)`, so the saveable component saves it.
 - When play begins, the panel matches the state the door was placed with.
 
-Compiles against earlier quests: s3-saveable (`Quests/s3-saveable/DojoS3SaveableComponent.h`, `Quests/s3-saveable/DojoS3Restorable.h`), s3-save-system (`Quests/s3-save-system/DojoS3SaveSystem.h`), and s3-save-record (`Quests/s3-save-record/DojoS3SaveRecord.h`).
+Compiles against earlier quests: s3-saveable (`Quests/s3-saveable/DojoS3SaveableComponent.h`), s3-save-system (`Quests/s3-save-system/DojoS3SaveSystem.h`), and s3-save-record (`Quests/s3-save-record/DojoS3SaveRecord.h`).
 
 Dependency direction: the door owns its saveable component and its panel. The save system finds the door through the component and knows nothing else about it.
 
@@ -82,6 +82,12 @@ namespace DojoS3DoorTest
 
 		return Door;
 	}
+
+	/** The yaw the panel component itself stands at, relative to the door. */
+	double PanelYaw(const ADojoS3Door* Door)
+	{
+		return Door->Panel != nullptr ? Door->Panel->GetRelativeRotation().Yaw : -1.0;
+	}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S3_Door_OpensAndCloses, "Dojo.S3.Door.OpensAndCloses", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
@@ -96,11 +102,12 @@ bool FDojo_S3_Door_OpensAndCloses::RunTest(const FString& Parameters)
 	if (!TestNotNull(TEXT("Door spawned"), Door)) return false;
 
 	TestFalse(TEXT("A new door is closed"), Door->IsOpen());
-	TestEqual(TEXT("A closed door's panel stands at 0"), Door->GetPanelYaw(), 0.f, 0.5f);
+	TestEqual(TEXT("A closed door's panel stands at 0"), PanelYaw(Door), 0.0, 0.5);
 
 	Door->Open();
 	TestTrue(TEXT("Open opens it"), Door->IsOpen());
-	TestEqual(TEXT("An open door's panel stands at 90"), Door->GetPanelYaw(), 90.f, 0.5f);
+	TestEqual(TEXT("An open door's panel stands at 90"), PanelYaw(Door), 90.0, 0.5);
+	TestEqual(TEXT("GetPanelYaw reports the panel"), Door->GetPanelYaw(), 90.f, 0.5f);
 	TestEqual(TEXT("The panel is what turned, not the door"), Door->GetActorRotation().Yaw, 0.0, 0.5);
 
 	Door->Open();
@@ -108,12 +115,12 @@ bool FDojo_S3_Door_OpensAndCloses::RunTest(const FString& Parameters)
 
 	Door->Toggle();
 	TestFalse(TEXT("Toggle closes an open door"), Door->IsOpen());
-	TestEqual(TEXT("The panel follows the toggle"), Door->GetPanelYaw(), 0.f, 0.5f);
+	TestEqual(TEXT("The panel follows the toggle"), PanelYaw(Door), 0.0, 0.5);
 
 	Door->Toggle();
 	Door->Close();
 	TestFalse(TEXT("Close closes it"), Door->IsOpen());
-	TestEqual(TEXT("The panel follows the close"), Door->GetPanelYaw(), 0.f, 0.5f);
+	TestEqual(TEXT("The panel follows the close"), PanelYaw(Door), 0.0, 0.5);
 
 	return true;
 }
@@ -133,12 +140,12 @@ bool FDojo_S3_Door_CopiedState::RunTest(const FString& Parameters)
 	Source->Open();
 	TestTrue(TEXT("The closed copy reads the open door's state"), Copy->Saveable->RestoreState(Source->Saveable->CaptureState()));
 	TestTrue(TEXT("The copy is open"), Copy->IsOpen());
-	TestEqual(TEXT("The copy's panel stands at 90"), Copy->GetPanelYaw(), 90.f, 0.5f);
+	TestEqual(TEXT("The copy's panel stands at 90"), PanelYaw(Copy), 90.0, 0.5);
 
 	Source->Close();
 	Copy->Saveable->RestoreState(Source->Saveable->CaptureState());
 	TestFalse(TEXT("The copy closes from a closed door's state"), Copy->IsOpen());
-	TestEqual(TEXT("The copy's panel is back at 0"), Copy->GetPanelYaw(), 0.f, 0.5f);
+	TestEqual(TEXT("The copy's panel is back at 0"), PanelYaw(Copy), 0.0, 0.5);
 
 	return true;
 }
@@ -170,7 +177,7 @@ bool FDojo_S3_Door_ThroughASlot::RunTest(const FString& Parameters)
 		TestFalse(TEXT("The fresh door starts closed"), Door->IsOpen());
 		TestTrue(TEXT("The load works"), SecondWorld.GetWorld()->GetSubsystem<UDojoS3SaveSystem>()->LoadFromSlot(Slot));
 		TestTrue(TEXT("The loaded door is open"), Door->IsOpen());
-		TestEqual(TEXT("The loaded door's panel stands at 90"), Door->GetPanelYaw(), 90.f, 0.5f);
+		TestEqual(TEXT("The loaded door's panel stands at 90"), PanelYaw(Door), 90.0, 0.5);
 	}
 
 	UGameplayStatics::DeleteGameInSlot(Slot, 0);
@@ -179,7 +186,7 @@ bool FDojo_S3_Door_ThroughASlot::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S3_Door_Shape, "Dojo.S3.Door.Shape", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Checks through reflection and on a placed door that the parts and the saved flag are where the brief puts them. */
+/** Checks through reflection and on placed doors that the parts and the saved flag are where the brief puts them, and that a door placed open starts open. */
 bool FDojo_S3_Door_Shape::RunTest(const FString& Parameters)
 {
 	using namespace DojoS3DoorTest;
@@ -201,6 +208,17 @@ bool FDojo_S3_Door_Shape::RunTest(const FString& Parameters)
 	}
 
 	TestFalse(TEXT("The door does not tick"), Door->PrimaryActorTick.bCanEverTick);
+
+	// A door a designer placed open: the flag is set before play begins, the way the Details panel would.
+	ADojoS3Door* PlacedOpen = TestWorld.GetWorld()->SpawnActorDeferred<ADojoS3Door>(ADojoS3Door::StaticClass(), FTransform::Identity);
+	const FBoolProperty* OpenFlag = CastField<FBoolProperty>(Open);
+	if (TestNotNull(TEXT("A second door is being placed"), PlacedOpen) && TestNotNull(TEXT("bOpen is a bool"), OpenFlag))
+	{
+		OpenFlag->SetPropertyValue_InContainer(PlacedOpen, true);
+		PlacedOpen->FinishSpawning(FTransform::Identity);
+		TestTrue(TEXT("A door placed open is open"), PlacedOpen->IsOpen());
+		TestEqual(TEXT("And its panel stands at 90 from the start"), PanelYaw(PlacedOpen), 90.0, 0.5);
+	}
 
 	return true;
 }
@@ -224,21 +242,22 @@ bool FDojo_S3_Door_Shape::RunTest(const FString& Parameters)
 
 # Alternative
 
-The door could skip the flag and save the panel's rotation itself, as a `UPROPERTY(SaveGame) FRotator PanelRotation` copied in and out. That saves exactly what is seen, but it ties the save to the look: change the swing to 110 degrees later and every old save opens the door to 90. Saving the meaning (open or closed) and deriving the look from it in one place keeps old saves correct when the art changes. A third option is to give the door no saved state at all and have a lever save whether it was pulled; that suits doors driven by switches, at the cost of a door that cannot be opened any other way. The door is one more owner for the saveable part, which is the Component pattern from Pack 2's "Actors built from parts" world at work: the saving code did not change to admit it.
+The door could skip the flag and save the panel's rotation itself, as a `UPROPERTY(SaveGame) FRotator PanelRotation` copied in and out. That saves exactly what is seen, but it ties the save to the look: change the swing to 110 degrees later and every old save opens the door to 90. Saving the meaning (open or closed) and deriving the look from it in one place keeps old saves correct when the art changes. That one place has to run on a load too: reading bytes sets the flag and runs none of the door's own code, which is why the first version showed an open door with a shut panel until the door listened for `OnRestoredFromSave`. A third option is to give the door no saved state at all and have a lever save whether it was pulled; that suits doors driven by switches, at the cost of a door that cannot be opened any other way. The door is one more owner for the saveable part, which is the Component pattern from Pack 2's "Actors built from parts" world at work: the saving code did not change to admit it.
 
 # Parsons
 
 ```yaml
-- id: door-restored
-  prompt: Put the restore hook in order, using the names from the reference.
+- id: door-constructor
+  prompt: Put the door's constructor body in order.
   lines:
-    - "void ADojoS3Door::OnRestoredFromSave_Implementation()"
-    - "{"
-    - "	ApplyPanel();"
-    - "}"
+    - "PrimaryActorTick.bCanEverTick = false;"
+    - "RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT(\"Frame\"));"
+    - "Panel = CreateDefaultSubobject<USceneComponent>(TEXT(\"Panel\"));"
+    - "Panel->SetupAttachment(RootComponent);"
+    - "Saveable = CreateDefaultSubobject<UDojoS3SaveableComponent>(TEXT(\"Saveable\"));"
   distractors:
-    - line: "	Toggle();"
-      mistake: Toggle flips the state that was just restored, so a door saved open would load closed.
-    - line: "	Super::OnRestoredFromSave_Implementation();"
-      mistake: The door's parent class, AActor, does not implement the interface, so there is no parent version to call.
+    - line: "Panel->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);"
+      mistake: AttachToComponent is for attaching at runtime; inside a constructor a default subobject is attached with SetupAttachment.
+    - line: "Saveable = NewObject<UDojoS3SaveableComponent>(this);"
+      mistake: A constructor makes its parts with CreateDefaultSubobject so they belong to the class defaults and every placed copy; NewObject is for runtime.
 ```

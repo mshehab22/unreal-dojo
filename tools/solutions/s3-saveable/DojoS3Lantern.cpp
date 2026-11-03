@@ -14,4 +14,5 @@ ADojoS3Lantern::ADojoS3Lantern()
 void ADojoS3Lantern::OnRestoredFromSave_Implementation()
 {
 	++RestoreCount;
+	OilWhenRestored = Oil;
 }

@@ -13,7 +13,7 @@ estimatedMinutes: 9
 concepts:
   - The SaveGame specifier marks which properties of an actor are progress
   - An archive with ArIsSaveGame set writes only the marked properties into bytes, and reads them back the same way
-  - The proxy archive turns object references and names into text so bytes stay valid in another session
+  - The proxy archive writes object references as paths that can be found again
 ---
 
 # Predict
@@ -40,7 +40,7 @@ Mark the properties that are progress with the `SaveGame` specifier: `UPROPERTY(
 To write an actor's marked properties into bytes:
 
 - `FMemoryWriter Writer(Bytes, true);` (header `Serialization/MemoryWriter.h`) appends whatever is written to it to a `TArray<uint8>`. The `true` marks it as a persistent archive.
-- `FObjectAndNameAsStringProxyArchive Archive(Writer, true);` (header `Serialization/ObjectAndNameAsStringProxyArchive.h`) wraps it so names and object references are written as text, which still means something in a new session.
+- `FObjectAndNameAsStringProxyArchive Archive(Writer, true);` (header `Serialization/ObjectAndNameAsStringProxyArchive.h`) wraps it so object references are written as the object's path and found again by that path when read. A plain memory archive cannot write object references at all; it stops on an assertion.
 - `Archive.ArIsSaveGame = true;` tells the property writer to skip every property that is not marked `SaveGame`.
 - `Actor->Serialize(Archive);` walks the actor's reflected properties and writes the marked ones.
 
@@ -48,7 +48,7 @@ Reading back is the same four lines with `FMemoryReader Reader(Bytes, true);` (h
 
 The properties are written with their names, so adding a new SaveGame property later does not break old bytes; it simply keeps its default when loading bytes that never held it. Renaming one does lose the old value.
 
-Two things the bytes do not do. Reading them calls none of the actor's own functions: the properties change and the actor is not told. And they do not move the actor: its transform lives in its components, not in its own marked properties.
+The bytes do not move the actor: its transform lives in its components, not in its own marked properties, so an actor that must return to a saved place keeps that place in a marked property of its own.
 
 A `USaveGame` object itself is written by `SaveGameToSlot` without `ArIsSaveGame`, so every `UPROPERTY` on the save object is saved, marked or not. The flag is for actors and components, where most properties are not progress.
 
@@ -113,11 +113,11 @@ void DojoExRestore(AActor* Actor, const TArray<uint8>& Bytes)
   prompt: Why wrap the memory writer in FObjectAndNameAsStringProxyArchive instead of serializing straight into it?
   choices:
     - It compresses the bytes
-    - It writes names and object references as text that still means something in another session
+    - It writes object references as paths and finds them again when reading, which a plain memory archive cannot do at all
     - It is the only archive that can set ArIsSaveGame
     - It makes Serialize skip transient properties
   answerIndex: 1
-  explanation: A plain memory archive would write names as indices into this session's name table and objects as raw references, neither of which survives a restart.
+  explanation: A plain memory archive asserts when it meets an object reference; the proxy writes the referenced object's path and looks it up again on load.
 - id: explain-savegame-flag
   type: explain-in-one-sentence
   prompt: In one sentence, say how an actor's SaveGame properties end up in a save and come back.

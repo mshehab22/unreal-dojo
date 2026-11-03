@@ -33,7 +33,7 @@ Keys:
 - F5 saves a checkpoint to the slot `DojoS3Vault`.
 - F9 loads the checkpoint: the vault is laid out fresh first (every coin back in place, every door closed, the runner at 0 with no coins), and the checkpoint is applied on top, so the runner, its coins, the doors, and the coins already taken are exactly as they were at the save. With no checkpoint, F9 does nothing.
 
-The round is won when the runner carries all five coins, and the board adds `CLEAR in 1.5 s`, the time since the round began. The board shows `Coins 2/5`, `Doors open 1/2`, and `Checkpoint none`, `saved`, `loaded`, or `failed`, and it learns about saves and loads from the save system's events. Reference game: Hollow Knight's benches, where resting saves where you stand and dying or quitting sends you back to that moment. The system combines two Pack 2 patterns: Component ("Actors built from parts"), for the saveable part that every runner, coin, and door carries; and Observer ("The lens, then the first payoff"), for the board, which listens to the save system instead of asking.
+The round is won when the runner carries all five coins, and the board adds `CLEAR in 1.5 s`, the time since the round began. The board shows `Coins 2/5`, `Doors open 1/2`, and `Checkpoint none`, `saved`, `loaded`, or `failed`, and it learns about saves and loads from the save system's events. Reference game: the quicksave and quickload of Skyrim (F5 and F9), where loading puts the whole world back to the moment of the save. The system combines two Pack 2 patterns: Component ("Actors built from parts"), for the saveable part that every runner, coin, and door carries; and Observer ("The lens, then the first payoff"), for the board, which listens to the save system instead of asking.
 
 How rounds start: round 1 starts when play begins, and R starts the next round, only after the finale; it throws the checkpoint away and lays the vault out fresh. The keys do nothing outside a round. A C++ director receives keys only after `EnableInput` with the player controller.
 
@@ -49,7 +49,7 @@ Extensions, in order of importance:
 2. An autosave every time a door opens, using `AsyncSaveGameToSlot` so the frame never waits, with the board showing `saving` until the callback arrives.
 3. A version number in the record, and a load that refuses a checkpoint from an older version with `Checkpoint too old` instead of loading it wrong.
 
-Feel: place the doors and the coins until a player who saves at the right moment finishes faster than one who never saves, because a checkpoint undoes a wasted trip. The submission gives the layout and one sentence on why.
+Feel: tune the step length and the two reaches until a clean run without loads takes about twenty key presses, so a checkpoint feels like a way to try a route and come back, not a chore. The submission gives the numbers and one sentence on why.
 
 # Required Pieces
 
@@ -118,7 +118,7 @@ Feel: place the doors and the coins until a player who saves at the right moment
 # Integration Rubric
 
 - The record, the saveable component, the save system, and the door are reused without changes, and every saving rule stays in them.
-- The director, the runner, and the coins know the save system only through its two functions and its two events; the save system knows none of them by name.
+- The director, the runner, and the coins know the save system only through its two functions and its two events (the director also asks the engine whether the slot exists and deletes it on R); the save system knows none of them by name.
 - A load puts the runner, its coins, both doors (state and panel), and every coin exactly as they were at the save, including coins taken after the save coming back and coins taken before it staying gone.
 - A checkpoint saved in one world loads into a vault built fresh in another.
 - Steps, coins, and doors follow the fixed numbers, each can do nothing, and F9 with no checkpoint changes nothing.

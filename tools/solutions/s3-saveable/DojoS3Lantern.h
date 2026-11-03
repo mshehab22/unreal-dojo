@@ -18,15 +18,15 @@ public:
 	ADojoS3Lantern();
 
 	/** The part that saves this lantern. */
-	UPROPERTY(VisibleAnywhere, Category = "Lantern")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Lantern")
 	TObjectPtr<UDojoS3SaveableComponent> Saveable;
 
 	/** Whether the lantern is lit; saved. */
-	UPROPERTY(EditAnywhere, SaveGame, Category = "Lantern")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Lantern")
 	bool bLit = false;
 
 	/** Oil left; saved. */
-	UPROPERTY(EditAnywhere, SaveGame, Category = "Lantern")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Lantern")
 	int32 Oil = 10;
 
 	/** The glass color; a look, not progress, so not saved. */
@@ -36,6 +36,9 @@ public:
 	/** How many times the lantern heard it was restored. */
 	int32 RestoreCount = 0;
 
-	/** Counts the restore. */
+	/** The oil the lantern had when it last heard it was restored, or -1. */
+	int32 OilWhenRestored = -1;
+
+	/** Counts the restore and notes the oil at that moment. */
 	virtual void OnRestoredFromSave_Implementation() override;
 };

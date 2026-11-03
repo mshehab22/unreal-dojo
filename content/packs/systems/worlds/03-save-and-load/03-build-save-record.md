@@ -32,7 +32,7 @@ This is the first piece of the Vault Checkpoint boss.
 
 ## See it in the editor
 
-In the level Blueprint, on BeginPlay, call Create Save Game Object with `DojoS3SaveRecord`, then Save Game to Slot with the slot name `Vault` and user index 0, and print Does Save Game Exist for `Vault`: it prints true. Open the project's `Saved/SaveGames` folder in the file browser: a `Vault.sav` file is there. Delete it with Delete Game in Slot and print Does Save Game Exist again: false.
+In the level Blueprint, on the 1 key, call Create Save Game Object with `DojoS3SaveRecord`, then Save Game to Slot with the slot name `Vault` and user index 0, and print Does Save Game Exist for `Vault`. On the 2 key call Delete Game in Slot with `Vault` and print Does Save Game Exist again. Press Play and press 1: it prints true, and the project's `Saved/SaveGames` folder now holds `Vault.sav`. Press 2: it prints false and the file is gone.
 
 # Files
 
@@ -65,7 +65,7 @@ class UDojoS3SaveRecord : public USaveGame // @explain: Deriving from USaveGame 
 public:
 	/** Each saveable actor's state, by its save id. */
 	UPROPERTY()
-	TMap<FName, FDojoS3ActorRecord> Actors; // @explain: States are keyed by a name the level designer sets, because a pointer to an actor means nothing once the level is opened again, but the same name finds the same actor.
+	TMap<FName, FDojoS3ActorRecord> Actors; // @explain: States are keyed by a name the level designer sets, because a saved pointer only finds an actor whose path is the same and that is already loaded, while the same name always finds the same actor.
 
 	/** Save ids of actors that were removed, such as coins that were picked up. */
 	UPROPERTY()
@@ -260,23 +260,22 @@ The record could hold one array per kind of saveable thing, `TArray<FDojoS3DoorS
 # Parsons
 
 ```yaml
-- id: record-mark-gone
-  prompt: Put MarkGone in order.
+- id: record-store-actor
+  prompt: Put StoreActor in order.
   lines:
-    - "void UDojoS3SaveRecord::MarkGone(FName SaveId)"
+    - "void UDojoS3SaveRecord::StoreActor(FName SaveId, const TArray<uint8>& Bytes)"
     - "{"
     - "	if (SaveId.IsNone())"
     - "	{"
     - "		return;"
     - "	}"
-    - "	GoneIds.AddUnique(SaveId);"
-    - "	Actors.Remove(SaveId);"
+    - "	Actors.FindOrAdd(SaveId).Bytes = Bytes;"
     - "}"
   distractors:
-    - line: "	GoneIds.Add(SaveId);"
-      mistake: Add appends every time, so marking the same id twice lists it twice; AddUnique keeps one.
-    - line: "	Actors.RemoveAt(SaveId);"
-      mistake: RemoveAt belongs to TArray and takes an index; a TMap removes by key with Remove.
+    - line: "	Actors.Add(SaveId, Bytes);"
+      mistake: The map's values are FDojoS3ActorRecord structs, not byte arrays, so this does not compile; the bytes go into the record's Bytes field.
+    - line: "	Actors[SaveId].Bytes = Bytes;"
+      mistake: The bracket operator asserts when the key is missing, so the first store under a new id would stop the game; FindOrAdd makes the entry.
 - id: record-find-actor
   prompt: Put FindActor in order.
   lines:

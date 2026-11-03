@@ -11,7 +11,7 @@ class UDojoS3Restorable : public UInterface
 	GENERATED_BODY()
 };
 
-/** An actor that wants to hear when its saved state has just been put back, so it can bring the rest of itself in line. */
+/** An actor that wants to hear when its saved state has just been put back. */
 class IDojoS3Restorable
 {
 	GENERATED_BODY()

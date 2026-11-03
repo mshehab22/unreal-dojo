@@ -8,7 +8,7 @@ difficulty: 3
 patterns: [component]
 skills: [saving, components, interfaces]
 terms: [savegame-property, actor-component, uinterface, iinterface, fname]
-prerequisites: [s3-savegame-properties, s3-save-record]
+prerequisites: [s3-savegame-properties, s3-save-record, s1-item-data]
 xp: 80
 estimatedMinutes: 25
 concepts:
@@ -21,7 +21,7 @@ concepts:
 
 When a lantern that is lit with 4 oil and a red tint is captured, and a fresh lantern restores those bytes, the fresh lantern is lit with 4 oil, keeps its own white tint, and hears once that it was restored; empty bytes are refused and change nothing.
 
-Compiles against earlier quests: none. The component stands alone, so any actor can carry one.
+Compiles against earlier quests: s1-item-data (`Quests/s1-item-data/DojoS1WorldItem.h`), only for the tests. The component stands alone, so any actor can carry one; the tests prove it on the loose pile from World 1, `ADojoS1WorldItem`, which knows nothing about saving.
 
 The constructor, the restorable interface, and a test lantern are written for you. Fill the two bodies that are left:
 
@@ -130,7 +130,7 @@ class UDojoS3Restorable : public UInterface
 	GENERATED_BODY()
 };
 
-/** An actor that wants to hear when its saved state has just been put back, so it can bring the rest of itself in line. */
+/** An actor that wants to hear when its saved state has just been put back. */
 class IDojoS3Restorable
 {
 	GENERATED_BODY()
@@ -165,15 +165,15 @@ public:
 	ADojoS3Lantern();
 
 	/** The part that saves this lantern. */
-	UPROPERTY(VisibleAnywhere, Category = "Lantern")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Lantern")
 	TObjectPtr<UDojoS3SaveableComponent> Saveable;
 
 	/** Whether the lantern is lit; saved. */
-	UPROPERTY(EditAnywhere, SaveGame, Category = "Lantern")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Lantern")
 	bool bLit = false;
 
 	/** Oil left; saved. */
-	UPROPERTY(EditAnywhere, SaveGame, Category = "Lantern")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Lantern")
 	int32 Oil = 10;
 
 	/** The glass color; a look, not progress, so not saved. */
@@ -183,7 +183,10 @@ public:
 	/** How many times the lantern heard it was restored. */
 	int32 RestoreCount = 0;
 
-	/** Counts the restore. */
+	/** The oil the lantern had when it last heard it was restored, or -1. */
+	int32 OilWhenRestored = -1;
+
+	/** Counts the restore and notes the oil at that moment. */
 	virtual void OnRestoredFromSave_Implementation() override;
 };
 ```
@@ -207,6 +210,7 @@ ADojoS3Lantern::ADojoS3Lantern()
 void ADojoS3Lantern::OnRestoredFromSave_Implementation()
 {
 	++RestoreCount;
+	OilWhenRestored = Oil;
 }
 ```
 
@@ -217,9 +221,9 @@ void ADojoS3Lantern::OnRestoredFromSave_Implementation()
 
 #if WITH_AUTOMATION_TESTS
 
+#include "Quests/s1-item-data/DojoS1WorldItem.h"
 #include "Quests/s3-saveable/DojoS3Lantern.h"
 #include "Quests/s3-saveable/DojoS3SaveableComponent.h"
-#include "Support/DojoTestActor.h"
 #include "Support/DojoTestWorld.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S3_Saveable_OnlySaveGameTravels, "Dojo.S3.Saveable.OnlySaveGameTravels", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
@@ -246,6 +250,7 @@ bool FDojo_S3_Saveable_OnlySaveGameTravels::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Oil came back"), Fresh->Oil, 4);
 	TestTrue(TEXT("Tint is not saved, so the fresh lantern keeps its own"), Fresh->Tint.Equals(FLinearColor::White));
 	TestEqual(TEXT("The fresh lantern heard once that it was restored"), Fresh->RestoreCount, 1);
+	TestEqual(TEXT("When it heard, its oil was already back"), Fresh->OilWhenRestored, 4);
 
 	return true;
 }
@@ -277,6 +282,7 @@ bool FDojo_S3_Saveable_RestoreUndoesLaterChanges::RunTest(const FString& Paramet
 		TestEqual(FString::Printf(TEXT("Pass %d: oil back to 7"), Pass), Lantern->Oil, 7);
 		TestTrue(FString::Printf(TEXT("Pass %d: the tint change stays"), Pass), Lantern->Tint.Equals(FLinearColor::Blue));
 		TestEqual(FString::Printf(TEXT("Pass %d: told once per restore"), Pass), Lantern->RestoreCount, Pass);
+		TestEqual(FString::Printf(TEXT("Pass %d: told after the oil was back"), Pass), Lantern->OilWhenRestored, 7);
 	}
 
 	return true;
@@ -301,11 +307,11 @@ bool FDojo_S3_Saveable_RefusesWhatItCannotRead::RunTest(const FString& Parameter
 	TestEqual(TEXT("A component with no owner captures nothing"), Loose->CaptureState().Num(), 0);
 	TestFalse(TEXT("A component with no owner restores nothing"), Loose->RestoreState({ 1, 2, 3 }));
 
-	ADojoTestActor* Plain = TestWorld.SpawnActor<ADojoTestActor>();
-	UDojoS3SaveableComponent* PlainSaveable = TestWorld.AddComponent<UDojoS3SaveableComponent>(Plain);
-	if (!TestNotNull(TEXT("A plain actor got a saveable component"), PlainSaveable)) return false;
+	ADojoS1WorldItem* Pile = TestWorld.SpawnActor<ADojoS1WorldItem>();
+	UDojoS3SaveableComponent* PileSaveable = TestWorld.AddComponent<UDojoS3SaveableComponent>(Pile);
+	if (!TestNotNull(TEXT("World 1's pile got a saveable component"), PileSaveable)) return false;
 
-	TestTrue(TEXT("An owner that is not restorable can still be restored"), PlainSaveable->RestoreState(PlainSaveable->CaptureState()));
+	TestTrue(TEXT("An owner that is not restorable, World 1's pile, can still be restored"), PileSaveable->RestoreState(PileSaveable->CaptureState()));
 
 	return true;
 }
@@ -363,7 +369,7 @@ The owner could implement two functions of its own, `WriteState(FDojoS3State&)` 
     - "Owner->Serialize(Archive);"
   distractors:
     - line: "Owner->Serialize(Writer);"
-      mistake: Serializing into the plain writer skips the proxy, so names and object references are written in a form that means nothing in another session, and the SaveGame flag set on the proxy is not used.
+      mistake: Serializing into the plain writer skips the proxy; a plain memory archive cannot write the actor's object references and stops on an assertion, and the SaveGame flag set on the proxy is not used.
     - line: "Archive.ArIsSaveGame = false;"
       mistake: With the flag off the archive writes every serializable property of the actor, not only the ones marked SaveGame.
 ```

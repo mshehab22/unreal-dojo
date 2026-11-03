@@ -53,5 +53,6 @@ private:
 	/** Ids of saveables this world has lost, or that a loaded save said were lost. */
 	TSet<FName> LostIds;
 
+	/** The world's handle for the destroyed-actor listener, kept to remove it. */
 	FDelegateHandle DestroyedHandle;
 };

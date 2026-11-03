@@ -3587,7 +3587,7 @@
     ],
     "category": "reflection",
     "short": "Properties marked with the SaveGame specifier, which an archive with ArIsSaveGame set writes into a save and reads back.",
-    "long": "Most of an actor's properties are settings or looks, not progress. Marking the progress ones UPROPERTY(SaveGame) lets one generic routine save any actor: wrap a memory writer in an FObjectAndNameAsStringProxyArchive, set ArIsSaveGame on it, and call the actor's Serialize, and only the marked properties are written, by name. Reading the bytes back with a memory reader and the same setup puts just those properties back and leaves the rest alone. Reading calls none of the actor's functions, so anything the properties drive must be refreshed by the actor afterwards. A USaveGame object is written without the flag, so all of its properties are saved.",
+    "long": "Most of an actor's properties are settings or looks, not progress. Marking the progress ones UPROPERTY(SaveGame) lets one generic routine save any actor: wrap a memory writer in an FObjectAndNameAsStringProxyArchive, set ArIsSaveGame on it, and call the actor's Serialize, and only the marked properties are written, by name. Reading the bytes back with a memory reader and the same setup puts just those properties back and leaves the rest alone. A USaveGame object is written without the flag, so all of its properties are saved.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
     "related": [
       "savegame",

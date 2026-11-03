@@ -101,6 +101,7 @@ private:
 	/** Ids of saveables this world has lost, or that a loaded save said were lost. */
 	TSet<FName> LostIds;
 
+	/** The world's handle for the destroyed-actor listener, kept to remove it. */
 	FDelegateHandle DestroyedHandle;
 };
 ```
@@ -389,7 +390,7 @@ bool FDojo_S3_SaveSystem_FailuresAreAnnounced::RunTest(const FString& Parameters
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S3_SaveSystem_FreshWorlds, "Dojo.S3.SaveSystem.FreshWorlds", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Saves in one world after destroying a lantern, loads into a second world, saves again there, and loads into a third. */
+/** Saves after destroying a lantern, then loads and saves again through a world that has it, a world built without it, and a last world that has it. */
 bool FDojo_S3_SaveSystem_FreshWorlds::RunTest(const FString& Parameters)
 {
 	using namespace DojoS3SaveSystemTest;
@@ -422,13 +423,25 @@ bool FDojo_S3_SaveSystem_FreshWorlds::RunTest(const FString& Parameters)
 	}
 
 	{
+		// A level built without the lost lantern: nothing is destroyed here, so only the loaded record remembers it.
 		FDojoTestWorld ThirdWorld;
-		FRow Row = PlaceRow(ThirdWorld);
+		ADojoS3Lantern* First = Place(ThirdWorld, TEXT("Lantern1"), false, 10);
+		ADojoS3Lantern* Third = Place(ThirdWorld, TEXT("Lantern3"), false, 10);
 
 		TestTrue(TEXT("Third world: the load works"), SystemOf(ThirdWorld)->LoadFromSlot(Slot));
-		TestTrue(TEXT("Third world: the lantern lost in the first world is still gone"), IsGone(Row.Second));
-		TestTrue(TEXT("Third world: the first lantern is still lit"), Row.First->bLit);
-		TestEqual(TEXT("Third world: the third lantern has the oil of the second save"), Row.Third->Oil, 2);
+		TestTrue(TEXT("Third world: the first lantern is lit"), First->bLit);
+		TestEqual(TEXT("Third world: the third lantern has the oil of the second save"), Third->Oil, 2);
+		TestTrue(TEXT("Third world: saving again works"), SystemOf(ThirdWorld)->SaveToSlot(Slot));
+	}
+
+	{
+		FDojoTestWorld FourthWorld;
+		FRow Row = PlaceRow(FourthWorld);
+
+		TestTrue(TEXT("Fourth world: the load works"), SystemOf(FourthWorld)->LoadFromSlot(Slot));
+		TestTrue(TEXT("Fourth world: the lantern lost in the first world is still gone"), IsGone(Row.Second));
+		TestTrue(TEXT("Fourth world: the first lantern is still lit"), Row.First->bLit);
+		TestEqual(TEXT("Fourth world: the third lantern still has 2 oil"), Row.Third->Oil, 2);
 	}
 
 	UGameplayStatics::DeleteGameInSlot(Slot, 0);

@@ -124,21 +124,34 @@ private:
 	/** Ends the round when every coin is carried, then rewrites the board. */
 	void RefreshBoard();
 
+	/** The world's save system, found at BeginPlay. */
 	UPROPERTY()
 	TObjectPtr<UDojoS3SaveSystem> SaveSystem;
 
+	/** The runner the director spawned. */
 	UPROPERTY()
 	TObjectPtr<ADojoS3Runner> Runner;
 
+	/** One entry per coin spot; an entry is gone or being destroyed once its coin is taken. */
 	UPROPERTY()
 	TArray<TObjectPtr<ADojoS3Coin>> Coins;
 
+	/** One door per door spot. */
 	UPROPERTY()
 	TArray<TObjectPtr<ADojoS3Door>> Doors;
 
+	/** The checkpoint line's last word: none, saved, loaded, or failed. */
 	FString CheckpointText = TEXT("none");
+
+	/** True from the start of a round until the finale. */
 	bool bRunning = false;
+
+	/** True after the finale, until R. */
 	bool bFinished = false;
+
+	/** World time when the round began. */
 	float StartSeconds = 0.f;
+
+	/** How long the last finished round took. */
 	float FinishSeconds = 0.f;
 };

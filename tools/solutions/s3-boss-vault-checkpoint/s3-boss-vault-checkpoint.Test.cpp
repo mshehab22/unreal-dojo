@@ -95,7 +95,7 @@ namespace DojoS3VaultTest
 		Test.TestEqual(Tag + TEXT("the runner actor stands at 200"), Runner->GetActorLocation().X, 200.0);
 		Test.TestEqual(Tag + TEXT("the runner carries two coins again"), Runner->GetCoins(), 2);
 		Test.TestTrue(Tag + TEXT("the first door is open"), Director->GetDoors()[0]->IsOpen());
-		Test.TestEqual(Tag + TEXT("the first door's panel is swung open"), Director->GetDoors()[0]->GetPanelYaw(), 90.f, 0.5f);
+		Test.TestEqual(Tag + TEXT("the first door's panel is swung open"), Director->GetDoors()[0]->Panel->GetRelativeRotation().Yaw, 90.0, 0.5);
 		Test.TestFalse(Tag + TEXT("the second door is closed"), Director->GetDoors()[1]->IsOpen());
 		Test.TestEqual(Tag + TEXT("the coins at 100 and 200 stay taken and the rest lie in place"), CoinSpotsOf(Director), TArray<float>({ 400.f, 600.f, 800.f }));
 		Test.TestEqual(Tag + TEXT("the board after the load"), BoardOf(Director), FString(TEXT("Coins 2/5\nDoors open 1/2\nCheckpoint loaded")));
@@ -257,19 +257,29 @@ bool FDojo_S3_VaultCheckpoint_NothingAfterTheFinale::RunTest(const FString& Para
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S3_VaultCheckpoint_UnbindsWhenItLeaves, "Dojo.S3.VaultCheckpoint.UnbindsWhenItLeaves", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** The director never ticks, and once it leaves play it stops listening to the save system. */
+/** The director never ticks, its board follows saves and loads made by anyone, and once it leaves play it stops listening to the save system. */
 bool FDojo_S3_VaultCheckpoint_UnbindsWhenItLeaves::RunTest(const FString& Parameters)
 {
 	using namespace DojoS3VaultTest;
 
+	const FString Slot = TEXT("DojoS3VaultUnbind");
+	UGameplayStatics::DeleteGameInSlot(Slot, 0);
+
 	FDojoTestWorld TestWorld;
-	ADojoS3VaultDirector* Director = MakeVault(TestWorld, TEXT("DojoS3VaultUnbind"));
+	ADojoS3VaultDirector* Director = MakeVault(TestWorld, Slot);
 	if (!TestNotNull(TEXT("Director spawned"), Director)) return false;
 
 	UDojoS3SaveSystem* SaveSystem = TestWorld.GetWorld()->GetSubsystem<UDojoS3SaveSystem>();
 	if (!TestNotNull(TEXT("The world has a save system"), SaveSystem)) return false;
 
 	TestFalse(TEXT("The director never ticks"), Director->PrimaryActorTick.bCanEverTick);
+
+	// Saves and loads made by anyone else reach the board through the save system's events.
+	SaveSystem->SaveToSlot(Slot);
+	TestTrue(TEXT("A save made elsewhere shows on the board"), BoardOf(Director).EndsWith(TEXT("Checkpoint saved")));
+	SaveSystem->LoadFromSlot(TEXT("DojoS3VaultNoSuchSlot"));
+	TestTrue(TEXT("A failed load made elsewhere shows on the board"), BoardOf(Director).EndsWith(TEXT("Checkpoint failed")));
+	UGameplayStatics::DeleteGameInSlot(Slot, 0);
 	TestTrue(TEXT("The director listens for saves"), SaveSystem->OnSaved.IsBound());
 	TestTrue(TEXT("The director listens for loads"), SaveSystem->OnLoaded.IsBound());
 
