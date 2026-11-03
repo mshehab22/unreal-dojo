@@ -1,0 +1,5 @@
+{
+	"id": "ai-perception-and-behavior",
+	"title": "AI perception and behavior",
+	"summary": "A vault needs a night guard. Plan a guard that sees and hears, then build its parts: a memory that turns perception into facts, a Behavior Tree task that walks a beat, a service and a decorator that steer the tree from that memory, and a controller that runs it all through one night shift."
+}

@@ -4124,6 +4124,111 @@
     "firstQuestId": "p7-state-card"
   },
   {
+    "id": "bt-task-node",
+    "term": "Behavior Tree task",
+    "aliases": [
+      "UBTTaskNode",
+      "ExecuteTask",
+      "TickTask",
+      "FinishLatentTask",
+      "EBTNodeResult"
+    ],
+    "category": "AI",
+    "short": "A leaf of a behavior tree that does the actual work and reports success, failure, or that it is still running.",
+    "long": "A task is where a behavior tree acts: move, wait, attack, play a sound. In C++ you derive from UBTTaskNode and override ExecuteTask, which returns Succeeded or Failed at once, or InProgress for work that takes several frames. An InProgress task gets TickTask calls when bNotifyTick is set (the INIT_TASK_NODE_NOTIFY_FLAGS macro sets it when TickTask is overridden) and ends itself with FinishLatentTask. One task object is shared by every AI that runs the tree, so per-AI state goes in node memory, not in member variables.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTTaskNode?application_version=5.8",
+    "related": [
+      "behavior-tree",
+      "node-memory",
+      "bt-decorator",
+      "bt-service",
+      "blackboard"
+    ],
+    "firstQuestId": "s6-walk-beat"
+  },
+  {
+    "id": "node-memory",
+    "term": "Node memory",
+    "aliases": [
+      "NodeMemory",
+      "GetInstanceMemorySize",
+      "CastInstanceNodeMemory",
+      "InitializeNodeMemory"
+    ],
+    "category": "AI",
+    "short": "A small block of bytes a behavior tree keeps for each node and each AI running it, where shared nodes store per-AI state.",
+    "long": "Behavior tree nodes are not copied per AI: ten guards running one tree share one task object. Anything a node must remember for one guard, such as where that guard is walking, lives in node memory instead. The node says how many bytes it needs with GetInstanceMemorySize, the tree hands each run a NodeMemory pointer to that guard's block, and CastInstanceNodeMemory turns the pointer into your struct. InitializeNodeMemory and CleanupNodeMemory build and tear the struct down properly. Setting bCreateNodeInstance makes a separate node object per AI instead, at a memory cost.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTNode?application_version=5.8",
+    "related": [
+      "bt-task-node",
+      "behavior-tree"
+    ],
+    "firstQuestId": "s6-walk-beat"
+  },
+  {
+    "id": "bt-service",
+    "term": "Behavior Tree service",
+    "aliases": [
+      "UBTService",
+      "TickNode",
+      "OnBecomeRelevant"
+    ],
+    "category": "AI",
+    "short": "A node attached to a branch that runs on an interval while the branch is active, usually to refresh blackboard keys.",
+    "long": "A service sits on a composite or a task and wakes up every Interval seconds, plus or minus a random deviation, for as long as that part of the tree is running. Its job is to keep the blackboard current: copy what perception or a component knows into keys, so decorators and tasks only read keys. Override TickNode for the periodic work and OnBecomeRelevant for work when the branch starts, and call the parent version so the timer keeps running.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTService?application_version=5.8",
+    "related": [
+      "behavior-tree",
+      "blackboard",
+      "bt-decorator",
+      "bt-task-node"
+    ],
+    "firstQuestId": "s6-memory-service"
+  },
+  {
+    "id": "bt-decorator",
+    "term": "Behavior Tree decorator",
+    "aliases": [
+      "UBTDecorator",
+      "CalculateRawConditionValue",
+      "FlowAbortMode",
+      "observer aborts",
+      "UBTDecorator_BlackboardBase"
+    ],
+    "category": "AI",
+    "short": "A condition attached to a behavior tree node that decides whether its branch may run and can interrupt running branches when its answer changes.",
+    "long": "A decorator gates the node under it: CalculateRawConditionValue returns true to let the branch run. On its own it is checked only when the tree reaches that node. Its FlowAbortMode adds observing: Self aborts its own branch when the condition turns false, LowerPriority aborts branches to its right when it turns true, and Both does both. UBTDecorator_BlackboardBase registers for changes to one blackboard key and, when an abort mode is set, asks the tree to check the condition again whenever that key changes.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTDecorator?application_version=5.8",
+    "related": [
+      "behavior-tree",
+      "blackboard",
+      "bt-service",
+      "bt-task-node"
+    ],
+    "firstQuestId": "s6-clue-decorator"
+  },
+  {
+    "id": "ai-stimulus",
+    "term": "AI stimulus",
+    "aliases": [
+      "FAIStimulus",
+      "OnTargetPerceptionUpdated",
+      "WasSuccessfullySensed",
+      "ReportNoiseEvent",
+      "GetSenseClassForStimulus"
+    ],
+    "category": "AI",
+    "short": "One piece of news from AI perception: which sense noticed something, where, and whether it is being sensed now or was just lost.",
+    "long": "When a perception component's view of an actor changes, OnTargetPerceptionUpdated fires with the actor and an FAIStimulus. The stimulus holds StimulusLocation, Strength, an optional Tag, and the sense that produced it, which UAIPerceptionSystem::GetSenseClassForStimulus turns into a class such as UAISense_Sight. WasSuccessfullySensed is true while sight still sees the actor and false in the update that says it was lost. Hearing stimuli come from UAISense_Hearing::ReportNoiseEvent, which game code calls wherever a noise happens.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/FAIStimulus?application_version=5.8",
+    "related": [
+      "ai-perception",
+      "ai-controller",
+      "blackboard"
+    ],
+    "firstQuestId": "s6-sense-memory"
+  },
+  {
     "id": "abstract-specifier",
     "term": "UCLASS(Abstract)",
     "aliases": [
