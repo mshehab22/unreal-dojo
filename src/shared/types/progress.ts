@@ -299,6 +299,9 @@ export interface DailyQuestState
 
 	/** Every calendar day (YYYY-MM-DD) whose daily quest was done, for the month badge. */
 	completedDates: string[];
+
+	/** What today's chest held, once the chosen offer is done, so the Studio can show it after a reload (A1394). A new day's state has none. */
+	chest?: ChestReward;
 }
 
 /** Whether a quest can be started, with the reason when it cannot, for the World Map. */
@@ -497,6 +500,31 @@ export interface QuestDraft
 
 	/** Worked-level self-explanations by marked line key. Replaces the saved set when present. */
 	selfExplanations?: Record<string, string>;
+}
+
+/** Answer of viewing a quest's reference solution (the Seer Stone flow, A1390). */
+export interface SolutionViewing
+{
+	/** The quest whose solution this is. */
+	questId: string;
+
+	/** The reference files by file name, in name order. */
+	files: Record<string, string>;
+
+	/** True when a Seer Stone paid for this view, so the quest keeps its XP. */
+	stoneSpent: boolean;
+
+	/** Seer Stones held after the view. */
+	seerStonesAfter: number;
+
+	/** True when the quest's first pass now pays no XP: the first view of an unpassed quest was paid with its XP instead of a stone. Also true on a repeat view of such a quest. */
+	xpForfeited: boolean;
+
+	/** When the rematch this view scheduled is due (ISO 8601), or null when it scheduled none (a repeat view, or a passed quest). */
+	rematchDueAt: string | null;
+
+	/** True when the solution had been viewed before, so this view was free and changed nothing (A1391). */
+	alreadyViewed: boolean;
 }
 
 /** Answer of revealing the next hint spell. */

@@ -24,6 +24,7 @@ import type {
 	QuestDraft,
 	QuestProgress,
 	RulesSnapshot,
+	SolutionViewing,
 	SubmitOutcome,
 	WorldTestOutStatus,
 } from "@shared/types/progress";
@@ -52,6 +53,8 @@ import {
 	toolchainFixture,
 } from "./fixtures/machineFixture";
 import { FakeQuestFlow } from "./FakeQuestFlow";
+import { economyProgressFixture } from "./fixtures/economyFixture";
+import { WORLD_ONE, WORLD_ONE_PACK_ID, worldOneQuest } from "./fixtures/fakeQuests";
 import { MAP_FIXTURE, type PackFixture } from "./fixtures/mapFixture";
 import { freshProgressFixture, returningProgressFixture } from "./fixtures/progressFixture";
 import { questFlowMapFixture, questFlowProgressFixture } from "./fixtures/questFlowFixture";
@@ -135,13 +138,13 @@ function initialState(scenario: FakeScenario): FakeState
 			hasApiKey: false,
 			firstRunCompletedAt: isFresh ? null : daysFromNow(-32),
 		},
-		progress: isFresh ? freshProgressFixture() : scenario === "quests" ? questFlowProgressFixture() : returningProgressFixture(),
+		progress: isFresh ? freshProgressFixture() : scenario === "quests" ? questFlowProgressFixture() : scenario === "economy" ? economyProgressFixture() : returningProgressFixture(),
 		editorConnected: false,
 		failNextBuild: scenario === "first-build-fails" || scenario === "sandbox-setup-fails",
 		quietNextBuild: scenario === "first-build-goes-quiet",
 		explainNextBuildFailure: scenario === "sandbox-setup-fails",
 		blockNextFolder: scenario === "folder-blocked",
-		map: scenario === "quests" ? questFlowMapFixture() : MAP_FIXTURE,
+		map: scenario === "quests" || scenario === "economy" ? questFlowMapFixture() : MAP_FIXTURE,
 	};
 }
 
@@ -405,6 +408,10 @@ export class FakeDojoApi implements DojoClient
 
 		if (!isFresh) statuses[worldKeyOf("foundations", "foundations.memory")] = { eligible: true, testedOut: false };
 
+		// The economy scenario's World 1 is ready to test out (A1399); once tested out it stays so.
+		const worldOneKey = worldKeyOf(WORLD_ONE_PACK_ID, WORLD_ONE.id);
+		if (this.scenario === "economy") statuses[worldOneKey] = this.state.progress.testedOutWorldIds.includes(worldOneKey) ? { eligible: true, testedOut: true } : { eligible: true, testedOut: false };
+
 		return answer(statuses);
 	}
 
@@ -432,6 +439,12 @@ export class FakeDojoApi implements DojoClient
 	revealHint(questId: string, hintIndex?: number): Promise<HintReveal>
 	{
 		return answerFrom(() => this.quests.revealHint(questId, hintIndex));
+	}
+
+	/** Views a quest's reference solution: a Seer Stone or the quest's XP, as the progress service prices it (A1390, A1391). */
+	viewSolution(questId: string, useSeerStone: boolean): Promise<SolutionViewing>
+	{
+		return answerFrom(() => this.quests.viewSolution(questId, useSeerStone));
 	}
 
 	/** Grades a finished concept quest. */
@@ -731,7 +744,7 @@ export class FakeDojoApi implements DojoClient
 						const restPassed = world.stages.every((other) => other.id === stage.id || other.status === "passed" || progress.quests[other.id]?.status === "passed");
 						const status = saved === "passed" || saved === "in_progress" ? saved : stage.kind === "boss" && stage.status === "locked" && restPassed ? "available" : stage.status;
 
-						result[stage.id] = { status, dueForRematch: stage.dueForRematch ?? false, skippable: false, ...(status === "locked" && stage.lockedReason ? { lockedReason: stage.lockedReason } : {}) };
+						result[stage.id] = { status, dueForRematch: stage.dueForRematch ?? false, skippable: this.isSkippable(pack.id, world.id, stage.id), ...(status === "locked" && stage.lockedReason ? { lockedReason: stage.lockedReason } : {}) };
 						return;
 					}
 
@@ -745,6 +758,14 @@ export class FakeDojoApi implements DojoClient
 		}
 
 		return result;
+	}
+
+	/** True for a worked or faded build of a tested-out world, as the unlock graph says. Only World 1's real quests know their scaffold, so only they can be skipped in the fake. */
+	private isSkippable(packId: string, worldId: string, questId: string): boolean
+	{
+		const quest = worldOneQuest(questId);
+
+		return this.state.progress.testedOutWorldIds.includes(worldKeyOf(packId, worldId)) && quest?.kind === "build" && (quest.scaffold === "worked" || quest.scaffold === "faded");
 	}
 
 	/** Runs a build call and remembers how it ended for getRunStatus, as main's trackRun does. */

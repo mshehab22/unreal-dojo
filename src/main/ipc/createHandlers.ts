@@ -31,6 +31,7 @@ import {
 	sandboxSetupRequestSchema,
 	settingsPatchSchema,
 	syntaxCheckRequestSchema,
+	useSeerStoneSchema,
 } from "./requestSchemas";
 import { runCancelled } from "../services/unreal/sandboxErrors";
 import { trackRun } from "./trackRun";
@@ -311,6 +312,7 @@ export function createHandlers(dependencies: HandlerDependencies): HandlerTable
 			},
 		},
 		revealHint: { argumentSchemas: [idSchema, hintIndexSchema.optional()], handle: (questId, hintIndex) => progressContentService.revealHint(questId, hintIndex) },
+		viewSolution: { argumentSchemas: [idSchema, useSeerStoneSchema], handle: (questId, useSeerStone) => progressContentService.viewSolution(questId, useSeerStone) },
 		submitConcept: { argumentSchemas: [conceptSubmissionSchema], handle: (submission) => progressContentService.submitConcept(submission) },
 		submitBreakdown: { argumentSchemas: [breakdownSubmissionSchema], handle: (submission) => progressContentService.submitBreakdown(submission) },
 		reviseBreakdown: { argumentSchemas: [breakdownRevisionSchema], handle: (revision) => progressContentService.reviseBreakdown(revision) },

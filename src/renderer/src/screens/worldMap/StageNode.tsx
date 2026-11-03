@@ -1,6 +1,7 @@
 // One quest on a world's path: a node shaped by its state, larger for a boss, with a tooltip.
 // Open is an outline, in progress a thick ring with a center dot, passed a solid fill with a check, a due rematch a warm ring that glows.
-import { CheckIcon, LockIcon, RotateCcwIcon } from "lucide-react";
+// A stage a test-out lets the learner skip carries a small skip mark (A1397).
+import { CheckIcon, LockIcon, RotateCcwIcon, SkipForwardIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { QuestOutline } from "@shared/types/catalog";
@@ -27,9 +28,12 @@ function stateLine(availability: QuestAvailability | undefined, rematchShare: nu
 	if (availability.dueForRematch) return `Due for a rematch: ${Math.round(rematchShare * 100)}% of the XP, and it locks the idea in`;
 	if (availability.status === "locked") return availability.lockedReason ?? "Locked";
 	if (availability.status === "passed") return "Passed";
-	if (availability.status === "in_progress") return "In progress";
 
-	return "Open";
+	const skipLine = availability.skippable ? ". Tested out: you may skip it, or play it for the practice" : "";
+
+	if (availability.status === "in_progress") return `In progress${skipLine}`;
+
+	return `Open${skipLine}`;
 }
 
 /** The node's ring and fill for each state. */
@@ -57,6 +61,7 @@ export function StageNode({ quest, availability, rematchShare }: StageNodeProps)
 	const status = availability?.status ?? "locked";
 	const isBoss = quest.kind === "boss";
 	const isRematch = availability?.dueForRematch === true;
+	const isSkippable = availability?.skippable === true && status !== "passed";
 	const Icon = QUEST_KIND_DISPLAY[quest.kind].icon;
 
 	/** The icon inside the node. */
@@ -78,12 +83,18 @@ export function StageNode({ quest, availability, rematchShare }: StageNodeProps)
 					data-testid="stage-node"
 					data-status={status}
 					data-rematch={isRematch}
+					data-skippable={isSkippable}
 					data-kind={quest.kind}
 					aria-label={`${quest.title}: ${stateLine(availability, rematchShare)}`}
 					aria-disabled={status === "locked"}
 					onClick={() => status !== "locked" && navigate("quest", { id: quest.id })}
 					className="group relative z-10 flex w-20 shrink-0 flex-col items-center gap-2 text-center outline-none"
 				>
+					{isSkippable && (
+						<span data-testid="stage-skippable" aria-hidden="true" className="absolute top-0 right-4 z-10 flex size-4 items-center justify-center rounded-pill border border-pass bg-ink text-pass">
+							<SkipForwardIcon className="size-2.5" strokeWidth={2.5} />
+						</span>
+					)}
 					<span
 						className={cn(
 							"flex items-center justify-center rounded-pill border-2 transition-colors duration-(--duration-fast)",

@@ -25,6 +25,7 @@ import type {
 	QuestDraft,
 	QuestProgress,
 	RulesSnapshot,
+	SolutionViewing,
 	SubmitOutcome,
 } from "@shared/types/progress";
 import { worldKeyOf } from "@shared/types/progress";
@@ -38,9 +39,9 @@ import { drillReward } from "./drillReward";
 import { judgeBuild } from "./FakeBuildJudge";
 import { FakeDrillSessions } from "./FakeDrillSessions";
 import { gradeDrillItem, gradeQuestion } from "./FakeItemGrader";
-import { emptyQuestProgress, recordAttempt } from "./FakeQuestLedger";
+import { emptyQuestProgress, recordAttempt, recordStreakDay } from "./FakeQuestLedger";
 import { gradeBreakdown, gradeSentence, reviewCode } from "./FakeReviews";
-import { hintTextsFor, standInQuest, WORLD_ONE, worldOneQuest } from "./fixtures/fakeQuests";
+import { hintTextsFor, solutionFilesFor, standInQuest, WORLD_ONE, worldOneQuest } from "./fixtures/fakeQuests";
 import { QuestRunSimulator } from "./QuestRunSimulator";
 
 /** What the flow reads from and writes to the fake that owns it. */
@@ -266,6 +267,40 @@ export class FakeQuestFlow
 		return { hintIndex: nextIndex, text, xpCost, hintsRevealed: saved.hintsRevealed, alreadyRevealed: false };
 	}
 
+	/**
+	 * Views a quest's reference solution by the progress service's rules (A1390, A1391): after the failed-submit count, a stone or the quest's XP pays
+	 * for the first view of an unpassed quest and a rematch comes due in the rules' days; a repeat view and a passed quest's view are free.
+	 */
+	viewSolution(questId: string, useSeerStone: boolean): SolutionViewing
+	{
+		const quest = this.codeQuest(questId);
+		const progress = this.host.progress();
+		const rules = this.host.rules();
+		const saved: QuestProgress = { ...(progress.quests[questId] ?? emptyQuestProgress()) };
+		const passed = saved.status === "passed";
+		const files = solutionFilesFor(quest.id, this.host.outline(quest.id));
+
+		if (Object.keys(files).length === 0) throw fail("invalid-payload", "This quest has no reference solution to show.", "Use a hint spell or the Parsons fallback instead.");
+
+		if (saved.solutionViewed || passed)
+		{
+			return { questId, files, stoneSpent: false, seerStonesAfter: progress.seerStones, xpForfeited: saved.solutionViewed && !saved.seerStoneSpent && !passed, rematchDueAt: null, alreadyViewed: saved.solutionViewed };
+		}
+
+		if (saved.attempts < rules.failedSubmitsBeforeOffers) throw fail("quest-locked", "The solution opens after two failed submits.", "Submit again, or reveal a hint spell first.");
+		if (useSeerStone && progress.seerStones === 0) throw fail("invalid-payload", "You hold no Seer Stone.", "View it with this quest's XP instead, or earn a stone from a daily chest.");
+
+		const rematchDueAt = daysAhead(rules.rematchAfterDays);
+
+		saved.solutionViewed = true;
+		saved.seerStoneSpent = useSeerStone;
+		progress.quests = { ...progress.quests, [questId]: saved };
+		progress.rematches = { ...progress.rematches, [questId]: rematchDueAt };
+		if (useSeerStone) progress.seerStones -= 1;
+
+		return { questId, files, stoneSpent: useSeerStone, seerStonesAfter: progress.seerStones, xpForfeited: !useSeerStone, rematchDueAt, alreadyViewed: false };
+	}
+
 	/** Grades a finished concept quest; explain answers that only a self-check could grade are left out of the pass share (A315). */
 	submitConcept(submission: ConceptSubmission): ConceptOutcome
 	{
@@ -396,12 +431,16 @@ export class FakeQuestFlow
 
 		const { pays, testsOut } = drillReward(session.request.kind, { answeredAll, gradedCount: totalCount, correctCount });
 		const chest = pays ? this.finishDailyOffer("drill", undefined) : undefined;
+		let milestoneReached: number | undefined;
 
 		if (pays)
 		{
 			progress.xp += rules.drillXp;
 
-			if (progress.streak.lastActivityAt?.slice(0, 10) !== new Date().toISOString().slice(0, 10)) progress.streak = { ...progress.streak, count: progress.streak.count + 1, lastActivityAt: new Date().toISOString() };
+			const streakDay = recordStreakDay(progress.streak, rules);
+
+			progress.streak = streakDay.streak;
+			milestoneReached = streakDay.milestoneReached;
 		}
 
 		const testedOut = session.request.kind === "test-out" && testsOut ? [worldKeyOf(session.request.packId, session.request.worldId)] : [];
@@ -409,7 +448,7 @@ export class FakeQuestFlow
 
 		const nextDueAt = Object.values(progress.schedule).filter((dueAt) => new Date(dueAt).getTime() > Date.now()).sort()[0] ?? null;
 
-		return { xpGained: pays ? rules.drillXp : 0, streak: { count: progress.streak.count }, correctCount, totalCount, selfCheckedCount: selfChecked.size, nextDueAt, testedOutWorldIds: testedOut, ...(chest ? { chest } : {}) };
+		return { xpGained: pays ? rules.drillXp : 0, streak: { count: progress.streak.count, ...(milestoneReached ? { milestoneReached } : {}) }, correctCount, totalCount, selfCheckedCount: selfChecked.size, nextDueAt, testedOutWorldIds: testedOut, ...(chest ? { chest } : {}) };
 	}
 
 	// Review follow-ups
@@ -583,10 +622,15 @@ export class FakeQuestFlow
 		if (chosen.kind !== kind && !(kind === "build" && chosen.kind === "build")) return undefined;
 		if (chosen.questId && chosen.questId !== questId) return undefined;
 
-		progress.daily = { ...daily, done: true, completedDates: [...daily.completedDates, daily.date] };
-		progress.seerStones = Math.min(this.host.rules().maxSeerStones, progress.seerStones + 1);
+		// The fake's chest always holds a Seer Stone while one fits, else an XP potion, so the e2e flows know what opens.
+		const rules = this.host.rules();
+		const chest: ChestReward = progress.seerStones < rules.maxSeerStones ? "seer-stone" : "xp-potion";
 
-		return "seer-stone";
+		progress.daily = { ...daily, done: true, completedDates: [...daily.completedDates, daily.date], chest };
+		if (chest === "seer-stone") progress.seerStones += 1;
+		else progress.xpPotionUntil = new Date(Date.now() + rules.xpPotion.minutes * 60_000).toISOString();
+
+		return chest;
 	}
 
 	/** Loot that changes nothing, for a boss breakdown grade (A317). */

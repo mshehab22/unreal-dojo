@@ -2,7 +2,6 @@
 import { EyeIcon, ListOrderedIcon } from "lucide-react";
 
 import { useNavigate } from "@/app/router/useRoute";
-import { DisabledWithReason } from "@/components/DisabledWithReason";
 import { Button } from "@/components/ui/button";
 
 /** Props for FailedSubmitOffers. */
@@ -12,10 +11,14 @@ interface FailedSubmitOffersProps
 	readonly failedSubmits: number;
 	readonly seerStones: number;
 	readonly hasParsons: boolean;
+
+	/** True once the solution was viewed: seeing it again is free (A1391). */
+	readonly solutionViewed: boolean;
+	readonly onViewSolution: () => void;
 }
 
-/** Both offers, side by side. Viewing the solution has no contract method yet, so it explains itself instead of acting. */
-export function FailedSubmitOffers({ questId, failedSubmits, seerStones, hasParsons }: FailedSubmitOffersProps)
+/** Both offers, side by side. Viewing the solution opens the Seer Stone choice, or the solution itself when it was viewed before (A1392). */
+export function FailedSubmitOffers({ questId, failedSubmits, seerStones, hasParsons, solutionViewed, onViewSolution }: FailedSubmitOffersProps)
 {
 	const navigate = useNavigate();
 
@@ -28,12 +31,10 @@ export function FailedSubmitOffers({ questId, failedSubmits, seerStones, hasPars
 					Rebuild it from shuffled lines
 				</Button>
 			)}
-			<DisabledWithReason testId="seer-stone-offer" reason="Viewing the reference solution arrives with the Seer Stone flow (M3.3). It will cost this quest's XP, or a Seer Stone, and schedule a rematch.">
-				<Button variant="outline" size="sm" className="h-auto min-h-8 min-w-0 shrink py-1.5 text-left whitespace-normal" disabled>
-					<EyeIcon />
-					View the solution ({seerStones} Seer {seerStones === 1 ? "Stone" : "Stones"} held)
-				</Button>
-			</DisabledWithReason>
+			<Button variant="outline" size="sm" className="h-auto min-h-8 min-w-0 shrink self-start py-1.5 text-left whitespace-normal" onClick={onViewSolution} data-testid="seer-stone-offer">
+				<EyeIcon />
+				{solutionViewed ? "Show the solution again (free)" : `View the solution (${seerStones} Seer ${seerStones === 1 ? "Stone" : "Stones"} held)`}
+			</Button>
 		</div>
 	);
 }

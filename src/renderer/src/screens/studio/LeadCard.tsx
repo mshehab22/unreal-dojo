@@ -1,4 +1,6 @@
-// The Studio's lead programmer card: portrait, name, role, and the XP bar.
+// The Studio's lead programmer card: portrait, name, role, the XP bar, and an XP potion while one is active.
+import { FlaskConicalIcon } from "lucide-react";
+
 import type { PlayerProgress, RulesSnapshot } from "@shared/types/progress";
 
 import { Panel } from "@/components/Panel";
@@ -35,6 +37,12 @@ export function LeadCard({ progress, rules }: LeadCardProps)
 				</div>
 			</div>
 			<XpBar standing={standing} totalXp={progress.xp} />
+			{progress.xpPotionUntil !== null && new Date(progress.xpPotionUntil).getTime() > Date.now() && (
+				<p data-testid="xp-potion" className="flex items-center gap-2 text-sm text-pack">
+					<FlaskConicalIcon className="size-4" />
+					XP potion: +{Math.round(rules.xpPotion.share * 100)}% XP until {new Date(progress.xpPotionUntil).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+				</p>
+			)}
 			<dl data-testid="lead-stats" className="mt-auto grid grid-cols-4 gap-2 border-t border-line pt-4">
 				{stats.map(([label, value]) => (
 					<div key={label} className="flex flex-col-reverse gap-0.5">

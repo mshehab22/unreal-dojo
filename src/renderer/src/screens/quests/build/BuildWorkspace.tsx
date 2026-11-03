@@ -3,7 +3,7 @@ import { PanelLeftCloseIcon, PanelLeftOpenIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import type { LearnerQuest } from "@shared/types/catalog";
-import type { PlayerProgress, RulesSnapshot } from "@shared/types/progress";
+import type { PlayerProgress, RulesSnapshot, SolutionViewing } from "@shared/types/progress";
 import type { RunResult } from "@shared/types/run";
 
 import { useNavigate } from "@/app/router/useRoute";
@@ -17,6 +17,7 @@ import { useDojoQuery } from "@/data/useDojoQuery";
 import { useDraftAutosave } from "@/data/useDraftAutosave";
 import { useQuestRun } from "@/data/useQuestRun";
 import { hasShortcutModifier, modifierKeyLabel } from "@/lib/platform";
+import { spreeStakeFor } from "@/lib/spreeStake";
 import { cn } from "@/lib/utils";
 
 import { useLootStore } from "../loot/useLootStore";
@@ -29,7 +30,9 @@ import { LastSubmitCard } from "./LastSubmitCard";
 import { RunColumn } from "./RunColumn";
 import { lastSubmitResult } from "./lastSubmitResult";
 import { markedLinesOf } from "./markedLines";
+import { SeerStoneDialog } from "./SeerStoneDialog";
 import { SelfExplanationGate } from "./SelfExplanationGate";
+import { SpreeStakeNote } from "./SpreeStakeNote";
 
 /** A build or refactor quest. */
 type CodeQuest = Extract<LearnerQuest, { kind: "build" | "refactor" }>;
@@ -105,10 +108,14 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 	const retry = useDojoAction((client, attemptId: string) => client.retryReview(attemptId), [QUERY_KEYS.progress]);
 	const reveal = useDojoAction((client, hintIndex: number) => client.revealHint(quest.id, hintIndex), [QUERY_KEYS.progress, questKey(quest.id)]);
 	const openEditor = useDojoAction((client) => client.openEditor(quest.id), [QUERY_KEYS.environment]);
+	const viewSolution = useDojoAction((client, useSeerStone: boolean) => client.viewSolution(quest.id, useSeerStone), [QUERY_KEYS.progress, QUERY_KEYS.availability]);
+	const [solutionOpen, setSolutionOpen] = useState(false);
+	const [solution, setSolution] = useState<SolutionViewing | null>(null);
 
 	const questProgress = progress.quests[quest.id];
 	const isPassed = questProgress?.status === "passed";
 	const failedSubmits = progress.attempts.filter((attempt) => attempt.questId === quest.id && !attempt.passed).length;
+	const spreeStake = spreeStakeFor({ questPassed: isPassed, submitsSoFar: questProgress?.attempts ?? 0, spree: progress.spree, bonusThreshold: rules.spreeBonusThreshold, bonusShare: rules.spreeBonusShare });
 	const lastSubmit = lootEntry?.quest.id === quest.id && lootEntry.detail.kind === "build" ? lootEntry : null;
 	const busy = run.status === "running" || submit.status === "running";
 	const activeMarkedLines = gateOpen ? [] : (quest.files.find((file) => file.name === activeFile)?.markedLines ?? []).map((marked) => marked.line);
@@ -187,6 +194,22 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 
 			return next;
 		});
+	};
+
+	/** Views the solution with the chosen payment, and shows it in the dialog. */
+	const chooseSolutionPayment = async (useSeerStone: boolean): Promise<void> =>
+	{
+		const viewed = await viewSolution.run(useSeerStone);
+
+		if (viewed) setSolution(viewed);
+	};
+
+	/** Opens the Seer Stone dialog; a solution viewed before is fetched again at once, free (A1391), so the choice never shows twice. */
+	const openSolution = (): void =>
+	{
+		setSolutionOpen(true);
+
+		if (questProgress?.solutionViewed && !solution) void chooseSolutionPayment(false);
 	};
 
 	const shortcuts = useRef({ startRun, startSubmit, save: autosave.saveNow });
@@ -285,10 +308,34 @@ export function BuildWorkspace({ quest, initialProgress, rules }: BuildWorkspace
 						isOpeningEditor={openEditor.isPending}
 						lastSubmit={lastSubmit && <LastSubmitCard outcome={lastSubmit.outcome} review={lastSubmit.detail.kind === "build" ? lastSubmit.detail.review : undefined} onOpenLoot={() => navigate("loot", { quest: quest.id })} onRetryReview={() => void retryReview()} isRetrying={retry.isPending} />}
 						hints={<HintSpells hintCount={quest.hintCount} revealed={hintTexts} nextCost={Math.round(quest.xp * rules.hintCostShare)} onReveal={() => void revealHint()} isRevealing={reveal.isPending} />}
-						offers={!isPassed && failedSubmits >= rules.failedSubmitsBeforeOffers ? <FailedSubmitOffers questId={quest.id} failedSubmits={failedSubmits} seerStones={progress.seerStones} hasParsons={(quest.parsons?.length ?? 0) > 0} /> : undefined}
+						spree={<SpreeStakeNote stake={spreeStake} armor={progress.spree.armor} />}
+						offers={
+							!isPassed && failedSubmits >= rules.failedSubmitsBeforeOffers ? (
+								<FailedSubmitOffers
+									questId={quest.id}
+									failedSubmits={failedSubmits}
+									seerStones={progress.seerStones}
+									hasParsons={(quest.parsons?.length ?? 0) > 0}
+									solutionViewed={questProgress?.solutionViewed === true}
+									onViewSolution={openSolution}
+								/>
+							) : undefined
+						}
 					/>
 				</aside>
 			</div>
+			<SeerStoneDialog
+				open={solutionOpen}
+				onOpenChange={setSolutionOpen}
+				viewing={solution}
+				seerStones={progress.seerStones}
+				questXp={quest.xp}
+				rematchAfterDays={rules.rematchAfterDays}
+				rematchShare={rules.rematchShare}
+				isPending={viewSolution.isPending}
+				error={viewSolution.error}
+				onChoose={(useSeerStone) => void chooseSolutionPayment(useSeerStone)}
+			/>
 			<KeyboardHints
 				hints={[
 					{ keys: [modifierKeyLabel(), "Enter"], label: "Run" },

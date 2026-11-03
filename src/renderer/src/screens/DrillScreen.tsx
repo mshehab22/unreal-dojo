@@ -2,7 +2,7 @@
 import { ArrowRightIcon, CheckIcon } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
-import type { DrillSession } from "@shared/types/drill";
+import type { DrillRequest, DrillSession } from "@shared/types/drill";
 import type { DrillItemResult, DrillOutcome, ItemResponse } from "@shared/types/progress";
 
 import { useRouteParameters } from "@/app/router/useRoute";
@@ -25,12 +25,24 @@ import { DrillSummaryCard } from "./quests/drill/DrillSummaryCard";
 /** The title for each kind of drill. */
 const TITLES = { due: "Today's drill", "test-out": "Test-out drill", "parsons-fallback": "Put the lines in order" } as const;
 
+/** The header's one line for each kind of drill; a test-out names its world (A1397). */
+function summaryFor(kind: DrillRequest["kind"], worldTitle: string | undefined): string
+{
+	if (kind === "parsons-fallback") return "Rebuild a piece of the quest from its lines; distractors hide among them.";
+	if (kind === "test-out") return `The terms of ${worldTitle ?? "this world"}, mixed. Keep every one proficient to skip its worked and faded build quests. Bosses are never skipped.`;
+
+	return "Short recall, mixed across topics. A miss is due for review, never lost.";
+}
+
 /** Starts the session once, then walks its items: answer, check, read the feedback, next. Cmd/Ctrl+Enter checks or moves on. */
 export function DrillScreen()
 {
 	const parameters = useRouteParameters();
 	const [request] = useState(() => drillRequestFromRoute(parameters));
 	const patternCards = useDojoQuery(QUERY_KEYS.patternCards, (client) => client.getPatternCards());
+	const rules = useDojoQuery(QUERY_KEYS.rules, (client) => client.getRules());
+	const packs = useDojoQuery(QUERY_KEYS.packs, (client) => client.listPacks());
+	const worldTitle = request.kind === "test-out" ? packs.data?.find((pack) => pack.id === request.packId)?.worlds.find((world) => world.id === request.worldId)?.title : undefined;
 	const [session, setSession] = useState<DrillSession | null>(null);
 	const [index, setIndex] = useState(0);
 	const [response, setResponse] = useState<ItemResponse | null>(null);
@@ -39,7 +51,7 @@ export function DrillScreen()
 	const started = useRef(false);
 	const start = useDojoAction((client) => client.startDrill(request));
 	const answer = useDojoAction((client, sessionId: string, itemId: string, given: ItemResponse) => client.answerDrillItem({ sessionId, itemId, response: given }));
-	const finish = useDojoAction((client, sessionId: string) => client.finishDrill(sessionId), [QUERY_KEYS.progress, QUERY_KEYS.drillSummary, QUERY_KEYS.testOut, QUERY_KEYS.daily]);
+	const finish = useDojoAction((client, sessionId: string) => client.finishDrill(sessionId), [QUERY_KEYS.progress, QUERY_KEYS.drillSummary, QUERY_KEYS.testOut, QUERY_KEYS.daily, QUERY_KEYS.availability]);
 	const current = session?.items[index];
 	const isLast = session !== null && index === session.items.length - 1;
 
@@ -103,7 +115,7 @@ export function DrillScreen()
 
 	return (
 		<section data-testid="screen-drill" data-kind={request.kind} className="mx-auto flex w-full max-w-4xl flex-col gap-6" onKeyDown={onKeyDown}>
-			<ScreenHeader eyebrow="Drill" title={TITLES[request.kind]} summary={request.kind === "parsons-fallback" ? "Rebuild a piece of the quest from its lines; distractors hide among them." : "Short recall, mixed across topics. A miss is due for review, never lost."} />
+			<ScreenHeader eyebrow="Drill" title={TITLES[request.kind]} summary={summaryFor(request.kind, worldTitle)} />
 			{error && <AppErrorView error={error} onRetry={() => void (session ? (result ? next() : check()) : begin())} />}
 			{!session && !start.error && <LoadingBlock height="h-80" />}
 			{session && !outcome && current && (
@@ -135,7 +147,7 @@ export function DrillScreen()
 					<KeyboardHints hints={[{ keys: [modifierKeyLabel(), "Enter"], label: result ? "Next" : "Check" }, { keys: ["Tab"], label: "Move between choices and buttons" }]} />
 				</>
 			)}
-			{outcome && <DrillSummaryCard outcome={outcome} request={request} />}
+			{outcome && <DrillSummaryCard outcome={outcome} request={request} streakMilestones={rules.data?.streakMilestones ?? []} {...(worldTitle ? { testOutWorldTitle: worldTitle } : {})} />}
 		</section>
 	);
 }
