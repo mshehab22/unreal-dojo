@@ -23,7 +23,7 @@ XP (first pass only; repeats 0; rematch 50%; drills flat 10 per completed drill)
 | at level | 1.00 |
 | below | 0.60 |
 | far below | 0.25 |
-Band = difficulty (1..5) compared to floor(level / 4) + 1 clamped to 1..5. Hint spells cost 15% of base each. Solution viewed without a Seer Stone: XP for the quest is 0 and a rematch is scheduled within 3 days. Fail but compiled: 5% effort XP, once per quest.
+Band = difficulty (1..5) compared to floor(level / 4) + 1 clamped to 1..5. Hint spells cost 15% of base each. Solution viewed without a Seer Stone: a pass before the rematch pays 0, and the rematch scheduled within 3 days pays 50%; a Seer Stone view's first pass pays in full whatever the date (A1391). Fail but compiled: 5% effort XP, once per quest.
 
 Levels: xp to next = round(200 * 1.35^(level-1)). Roles at levels 1, 4, 8, 12, 16, 20, 25, 30, 40, 50: Apprentice, Scripter, Builder, Systems Smith, Pattern Seeker, Architect, Engine Whisperer, Lead, Principal, Legend.
 
