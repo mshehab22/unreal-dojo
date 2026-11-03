@@ -13,7 +13,7 @@ xp: 70
 estimatedMinutes: 25
 concepts:
   - The kind of critter is a class chosen in data, so the spawner's code never names one
-  - A critter that works out its health from its level needs the level before it begins play
+  - A critter's health comes from its level and its kind
   - An entry that names no class is refused and counted as nothing
   - A wave places only the critters it made, in order, with no gap for an entry it skipped
   - The spawner knows the critter base class and nothing about slimes or imps
@@ -23,7 +23,7 @@ concepts:
 
 When you press Play with the spawner below, the wave Slime level 4, Imp level 2, Slime level 2 appears in a row 150 units apart, and the three critters show the health their own level and kind give them: 40, 30, and 20.
 
-`ADojoP21Critter` is the base of every critter. It has a `Level`, a `HealthPerLevel`, and a `Health` that it works out when it begins play. `ADojoP21Slime` has 10 health per level and `ADojoP21Imp` has 15. `FDojoP21SpawnEntry` is one row of a wave: a `CritterClass` a designer picks from a list, and a `Level`. `ADojoP21Spawner` has a `Wave`, an array of those rows, a `Spacing`, and a count of everything it has made.
+`ADojoP21Critter` is the base of every critter. It has a `Level`, a `HealthPerLevel`, and a `Health` worked out from them. `ADojoP21Slime` has 10 health per level and `ADojoP21Imp` has 15. `FDojoP21SpawnEntry` is one row of a wave: a `CritterClass` a designer picks from a list, and a `Level`. `ADojoP21Spawner` has a `Wave`, an array of those rows, a `Spacing`, and a count of everything it has made.
 
 Most of the code is written. Fill the two gaps in `ADojoP21Spawner`:
 
@@ -47,7 +47,7 @@ Place a `DojoP21Spawner`. In Details, add three rows to Wave: Slime with Level 4
 #include "GameFramework/Actor.h"
 #include "DojoP21Critter.generated.h"
 
-/** A creature of the Ember Range: its level sets its health the moment it begins play. */
+/** A creature of the Ember Range: its health comes from its level and its kind. */
 UCLASS()
 class ADojoP21Critter : public AActor
 {
@@ -57,15 +57,15 @@ public:
 	/** Creates the scene root and turns ticking off. */
 	ADojoP21Critter();
 
-	/** How strong this critter is; its health is worked out from it when it begins play. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Critter", meta = (ExposeOnSpawn = true)) // @explain: ExposeOnSpawn puts this on the Blueprint Spawn Actor node as a pin, which Blueprint sets before begin play, the same deferred route the C++ factory takes.
+	/** How strong this critter is; its health is worked out from it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Critter", meta = (ExposeOnSpawn = true))
 	int32 Level = 1;
 
 	/** Health gained per level. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Critter")
 	int32 HealthPerLevel = 10;
 
-	/** Hit points, filled in once when the critter begins play. */
+	/** Hit points: the level times the health per level. */
 	UPROPERTY(BlueprintReadOnly, Category = "Critter")
 	int32 Health = 0;
 
@@ -74,7 +74,7 @@ public:
 	int32 LevelAtBeginPlay = 0;
 
 protected:
-	/** Works out health from the level as it is right now. */
+	/** Works out health from the level. */
 	virtual void BeginPlay() override;
 };
 ```
@@ -98,7 +98,7 @@ void ADojoP21Critter::BeginPlay()
 	Super::BeginPlay();
 
 	LevelAtBeginPlay = Level;
-	Health = HealthPerLevel * Level; // @explain: Health is worked out here, once, from whatever the level is at this moment, so a level given after begin play is too late to count.
+	Health = HealthPerLevel * Level;
 }
 ```
 
@@ -183,7 +183,7 @@ struct FDojoP21SpawnEntry
 
 	/** The class to spawn; a designer picks it from a list of critter classes in the Details panel. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn")
-	TSubclassOf<ADojoP21Critter> CritterClass; // @explain: TSubclassOf limits the picker to the critter base and its children, so the class is data that a designer chooses and the spawner's code never names a kind.
+	TSubclassOf<ADojoP21Critter> CritterClass;
 
 	/** The level the new critter starts with; anything below 1 is treated as 1. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn")
@@ -224,7 +224,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Spawner")
 	int32 SpawnedCount = 0;
 
-	/** Makes one critter of the entry's class at Where, with the entry's level already set when it begins play; nullptr, and nothing counted, when the entry names no class. */
+	/** Makes one critter of the entry's class at Where with the entry's level; nullptr, and nothing counted, when the entry names no class. */
 	UFUNCTION(BlueprintCallable, Category = "Spawner")
 	ADojoP21Critter* Create(const FDojoP21SpawnEntry& Entry, const FTransform& Where);
 
@@ -425,7 +425,7 @@ A virtual creator per kind, as in the last quest, would work here too: a slime s
 
 ```yaml
 - id: create-the-critter
-  prompt: Put Create in order. Its first line inside the braces refuses an entry that names no class.
+  prompt: Put Create in order. Its first line inside the braces refuses an entry that names no class, and counting the critter is the last step before the return.
   lines:
     - "ADojoP21Critter* ADojoP21Spawner::Create(const FDojoP21SpawnEntry& Entry, const FTransform& Where)"
     - "{"

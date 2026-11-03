@@ -2280,6 +2280,7 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Tester: fresh tester PASS at 70004fb: verifier no problems and 12 warnings; `--pack mechanics` no problems; typecheck clean; npm test 1321 passed and 32 skipped; every build and boss quest has its solution folder; no em dashes; the new test uses only public members. No UI changed, so no Playwright run.
 - Not done or left for later: unverified on macOS (A75). The boss's R key is called directly in the headless tests (no player controller).
 - Decisions made: A1400 to A1407 under "Awaiting Mohammad's review" (prerequisite, shape, boss, seeded stream, deliberate failure, reuse of World 3 and World 2 actors, glossary claims, the next-tick end check).
+
 ## M4.P2.21 Pack 2 World 21, Factory Method (content-patterns, author-systems)
 - What was asked: write Pack 2 World 21 so the learner meets Factory Method the Pack 2 way in UE 5.8 C++: a creator that decides which class to make (a virtual create, or a TSubclassOf chosen in data), how SpawnActor, NewObject, and CreateDefaultSubobject already act as factories, how it differs from Prototype and Type Object, a when-not quest, and a boss.
 - What changed: a twenty-first Patterns world, "Ask for a result, not a class" (folder `21-factory-method`, world id `factory-method`, prefix `p21`, A1750), set on the Ember Range: launchers fire bolts and a spawner sends waves of critters. Seven quests, in the World 13 shape.

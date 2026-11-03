@@ -54,7 +54,7 @@ A maker is one of the lightest patterns in this course, which is exactly why it 
 ADoor* Door = GetWorld()->SpawnActor<ADoor>(DoorClass, Where);
 
 // Worth a function: three weapons now share the same bolt setup and a pool is coming.
-ADojoP21Bolt* ADojoP21Turret::MakeBolt(TSubclassOf<ADojoP21Bolt> BoltClass, const FTransform& Muzzle);
+virtual ADojoP21Bolt* MakeBolt(TSubclassOf<ADojoP21Bolt> BoltClass, const FTransform& Muzzle);
 ```
 
 # Questions
@@ -75,10 +75,10 @@ ADojoP21Bolt* ADojoP21Turret::MakeBolt(TSubclassOf<ADojoP21Bolt> BoltClass, cons
   prompt: "Designers need to choose which enemy class a spawn point makes. What is the simplest thing that works?"
   choices:
     - A factory class per enemy, chosen by a switch
-    - A TSubclassOf property on the spawn point
     - A new C++ file for every choice
     - A singleton that decides for everyone
-  answerIndex: 1
+    - A TSubclassOf property on the spawn point
+  answerIndex: 3
   explanation: TSubclassOf gives the designer a filtered picker, and one SpawnActor call serves every class they pick.
 - id: when-not-forward
   type: multiple-choice
@@ -98,7 +98,7 @@ ADojoP21Bolt* ADojoP21Turret::MakeBolt(TSubclassOf<ADojoP21Bolt> BoltClass, cons
     class AEmberLauncherFactory : public ALauncherFactory
     {
     	GENERATED_BODY()
-    	virtual ALauncher* CreateLauncher() override { return NewObject<AEmberLauncher>(); }
+    	virtual ALauncher* CreateLauncher() override { return GetWorld()->SpawnActor<AEmberLauncher>(); }
     };
   bugLine: 2
   fix: Drop the factory subclass and pick the launcher class in data with a TSubclassOf property on whatever places launchers.

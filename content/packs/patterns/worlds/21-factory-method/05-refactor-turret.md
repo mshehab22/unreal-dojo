@@ -289,13 +289,13 @@ bool FDojo_P21_TurretRefactor_SpreadFansOut::RunTest(const FString& Parameters)
 	const TArray<ADojoP21Bolt*> Fan = Turret->FireSpread();
 	if (!TestEqual(TEXT("Three bolts were made"), Fan.Num(), 3)) return false;
 
-	const float ExpectedYaw[3] = { 70.f, 90.f, 110.f };
+	const double ExpectedYaw[3] = { 70.0, 90.0, 110.0 };
 	for (int32 Index = 0; Index < 3; Index++)
 	{
 		TestTrue(TEXT("Each is an ember bolt"), Cast<ADojoP21EmberBolt>(Fan[Index]) != nullptr);
 		TestTrue(TEXT("Each appears at the muzzle"), Fan[Index]->GetActorLocation().Equals(FVector(100.f, 50.f, 0.f), 0.1f));
 		TestTrue(TEXT("Each knew its shooter when it began play"), Fan[Index]->bShooterKnownAtBeginPlay);
-		TestTrue(TEXT("And each is turned as the fan says"), FMath::IsNearlyEqual(Fan[Index]->GetActorRotation().Yaw, ExpectedYaw[Index], 0.1f));
+		TestTrue(TEXT("And each is turned as the fan says"), FMath::IsNearlyEqual(Fan[Index]->GetActorRotation().Yaw, ExpectedYaw[Index], 0.1));
 	}
 
 	TestEqual(TEXT("Three shots were counted"), Turret->ShotsFired, 3);
@@ -374,6 +374,7 @@ bool FDojo_P21_TurretRefactor_ARefusalStopsEveryKindOfShot::RunTest(const FStrin
 - When MakeBolt makes nothing, the firing function returns nothing, FireSpread returns only the bolts that were made, and nothing is counted for the others.
 - Which bolts each shot makes, where they appear, how they are turned, how hard they hit, and how many are counted are exactly as before.
 - A subclass that overrides MakeBolt changes every kind of shot with no change to the three firing functions.
+- The turret knows the bolt base class and the classes it asks for; the bolts know the turret only as their shooter, an actor.
 
 # Alternative
 

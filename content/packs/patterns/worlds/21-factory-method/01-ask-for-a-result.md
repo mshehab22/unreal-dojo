@@ -50,20 +50,12 @@ The range fires bolts. Every launcher, every trap, and every cutscene that wants
 # Example
 
 ```cpp
-// Every call site asks the launcher; only the subclass names a class.
-ADojoP21Bolt* ADojoP21Launcher::Fire()
-{
-	const FTransform Muzzle(GetActorRotation(), GetActorLocation() + GetActorForwardVector() * MuzzleDistance);
-	ADojoP21Bolt* Bolt = CreateBolt(Muzzle);
-	if (Bolt == nullptr) return nullptr;
+// Before: every call site names the class and repeats the setup.
+AEmberBolt* Bolt = GetWorld()->SpawnActor<AEmberBolt>(Where);
+Bolt->Shooter = this;
 
-	Bolt->Shooter = this;
-	Bolt->FinishSpawning(Muzzle);
-	return Bolt;
-}
-
-// The subclass makes the choice, in one line.
-return GetWorld()->SpawnActorDeferred<ADojoP21EmberBolt>(ADojoP21EmberBolt::StaticClass(), Muzzle);
+// After: every call site asks, and one function decides the class and does the setup.
+ABolt* Bolt = MakeBolt(Where);
 ```
 
 # Questions

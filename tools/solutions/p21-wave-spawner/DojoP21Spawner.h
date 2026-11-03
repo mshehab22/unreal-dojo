@@ -28,7 +28,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Spawner")
 	int32 SpawnedCount = 0;
 
-	/** Makes one critter of the entry's class at Where, with the entry's level already set when it begins play; nullptr, and nothing counted, when the entry names no class. */
+	/** Makes one critter of the entry's class at Where with the entry's level; nullptr, and nothing counted, when the entry names no class. */
 	UFUNCTION(BlueprintCallable, Category = "Spawner")
 	ADojoP21Critter* Create(const FDojoP21SpawnEntry& Entry, const FTransform& Where);
 

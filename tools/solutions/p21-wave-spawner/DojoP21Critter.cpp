@@ -14,5 +14,5 @@ void ADojoP21Critter::BeginPlay()
 	Super::BeginPlay();
 
 	LevelAtBeginPlay = Level;
-	Health = HealthPerLevel * Level; // @explain: Health is worked out here, once, from whatever the level is at this moment, so a level given after begin play is too late to count.
+	Health = HealthPerLevel * Level;
 }

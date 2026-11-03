@@ -35,7 +35,7 @@ explanation: The turrets ask for a result and do not care how it is made. Swappi
 
 # Card
 
-What you built for the launchers and the wave is the **Factory Method** pattern. Making a thing goes through one function that callers ask for a result, and that function decides which class to build and how to start it. Callers never write the class name and never repeat the setup.
+What you built for the launchers is the **Factory Method** pattern. Making a thing goes through one function that callers ask for a result, and that function decides which class to build and how to start it. Callers never write the class name and never repeat the setup.
 
 **Pieces.**
 
@@ -59,18 +59,16 @@ What you built for the launchers and the wave is the **Factory Method** pattern.
 # Example
 
 ```cpp
-// The maker, with the class chosen in data and the preparation done once.
-ADojoP21Critter* ADojoP21Spawner::Create(const FDojoP21SpawnEntry& Entry, const FTransform& Where)
+// The creator asks; each subclass of the creator answers with its own class.
+class ADojoP21Launcher
 {
-	if (Entry.CritterClass.Get() == nullptr) return nullptr;
+protected:
+	virtual ADojoP21Bolt* CreateBolt(const FTransform& Muzzle) PURE_VIRTUAL(ADojoP21Launcher::CreateBolt, return nullptr;);
+};
 
-	ADojoP21Critter* Critter = GetWorld()->SpawnActorDeferred<ADojoP21Critter>(Entry.CritterClass, Where);
-	if (Critter == nullptr) return nullptr;
-
-	Critter->Level = FMath::Max(1, Entry.Level);
-	Critter->FinishSpawning(Where);
-	return Critter;
-}
+// The same decision as data: a class a designer picks, handed to one maker.
+UPROPERTY(EditAnywhere, Category = "Spawn")
+TSubclassOf<ADojoP21Critter> CritterClass;
 ```
 
 # Questions
@@ -99,7 +97,7 @@ ADojoP21Critter* ADojoP21Spawner::Create(const FDojoP21SpawnEntry& Entry, const 
 - id: fill-subclass
   type: fill-blank
   prompt: "A property of type TSubclassOf<ADojoP21Critter> shows a picker limited to the critter base and its ___."
-  acceptedAnswers: [children, subclasses, child classes, derived classes]
+  acceptedAnswers: [children, subclasses, child classes, derived classes, descendants, child]
   explanation: TSubclassOf narrows a class reference to a family, so a designer cannot pick an unrelated class.
 - id: spot-hardcode
   type: spot-the-bug

@@ -25,19 +25,19 @@ The range master runs the Ember Range. A round has two launchers and a row of cr
 
 The master's own spot is the origin of the range. The first launcher stands at the master's spot and the second 100 units along the Y axis from it, both facing along the positive X axis. A spawner stands 300 units along the X axis from the master and makes the wave, with 150 units between critters, so the standard critters stand at 450, 600, 750, and 900 units. Key 1 fires the first launcher and key 2 fires the second. Each launcher may fire 8 bolts a round, counted by the launcher itself.
 
-A bolt that is made hits the nearest living critter whose place is further along the X axis than the muzzle, takes that critter's health down by the bolt's damage, and is spent. A critter at 0 health or less is defeated and removed. A shot with nothing ahead of it is spent and hurts nobody. A launcher with no shots left, a number with no launcher, and any key while no round runs do nothing. Defeating every critter wins the round: the label shows WIN, the time to one decimal, and the shots used. After 30 seconds without a win the label shows TIME UP. While a round runs, the label shows `Critters` still alive out of the wave, and the shots left of each launcher, such as `Critters 3/4  Shots left 7 6`.
+A bolt that is made hits the nearest living critter whose place is further along the X axis than the muzzle, takes that critter's health down by the bolt's damage, and is spent. A critter at 0 health or less is defeated and removed. A shot with nothing ahead of it is spent and hurts nobody. A launcher with no shots left, a number with no launcher, and a number key while no round runs do nothing. Defeating every critter wins the round: the label shows WIN, the time to one decimal, and the shots used. After 30 seconds without a win the label shows TIME UP. While a round runs, the label shows `Critters` still alive out of the wave, and the shots left of each launcher, such as `Critters 3/4  Shots left 7 6`.
 
 How rounds start: round 1 starts when play begins, and R starts the next round, only after one has ended. Starting a round destroys the last round's launchers, critters, and spawner and builds fresh ones from the data, so every count starts again. A C++ master receives keys only after `EnableInput` with the player controller.
 
 The launchers and the spawner are the pieces' own actors. The master asks a launcher to `Fire` and a spawner to `SpawnWave`; it never names a kind of launcher, bolt, or critter, so a new kind is a new entry in the master's lists, never a change to the master. The pieces need no changes.
 
-Compiles against earlier quests: p21-launchers (`Quests/p21-launchers/DojoP21Launcher.h`, `Quests/p21-launchers/DojoP21EmberLauncher.h`, `Quests/p21-launchers/DojoP21FrostLauncher.h`) and p21-wave-spawner (`Quests/p21-wave-spawner/DojoP21Critter.h`, `Quests/p21-wave-spawner/DojoP21Slime.h`, `Quests/p21-wave-spawner/DojoP21Imp.h`, `Quests/p21-wave-spawner/DojoP21SpawnEntry.h`, `Quests/p21-wave-spawner/DojoP21Spawner.h`).
+Compiles against earlier quests: p21-launchers (`Quests/p21-launchers/DojoP21Bolt.h`, `Quests/p21-launchers/DojoP21Launcher.h`, `Quests/p21-launchers/DojoP21EmberLauncher.h`, `Quests/p21-launchers/DojoP21FrostLauncher.h`) and p21-wave-spawner (`Quests/p21-wave-spawner/DojoP21Critter.h`, `Quests/p21-wave-spawner/DojoP21Slime.h`, `Quests/p21-wave-spawner/DojoP21Imp.h`, `Quests/p21-wave-spawner/DojoP21SpawnEntry.h`, `Quests/p21-wave-spawner/DojoP21Spawner.h`).
 
 Core numbers are fixed: 8 shots per launcher, a 30 second round, 100 units between launchers, a spawner 300 units out, and 150 between critters.
 
 Extensions, in order of importance:
 
-1. A third kind of launcher added only through data: a launcher that overrides `CreateBolt` to make a fan of bolts, or a Blueprint child of the launcher base, with key 3 added for it and no other change to the master.
+1. A third kind of launcher added only through data: a launcher that overrides `CreateBolt` to make a fan of bolts, or a Blueprint child of an existing launcher class, with key 3 added to the key bindings as the only change to the master.
 2. Critters that step 50 units toward the launchers every 3 seconds, and a round that is lost, with LOST on the label, when one reaches 200 units from the master.
 3. Bolts taken from a pool: a launcher subclass whose `CreateBolt` reuses a bolt the master has handed back after a hit.
 
@@ -119,7 +119,7 @@ Feel: tune the shots and health so that neither launcher alone can win a round a
 
 - The launcher and spawner pieces are reused unchanged, and the master only calls Fire and SpawnWave: it never names a kind of launcher, bolt, or critter.
 - The launchers are built from the list of classes and the critters from the wave, in order, at the fixed places, so a new kind is a new entry in a list.
-- Key 1 and key 2 fire the first and second launcher; a number with no launcher, a launcher with no shots left, and any key with no round running do nothing.
+- Key 1 and key 2 fire the first and second launcher; a number with no launcher, a launcher with no shots left, and a number key with no round running do nothing.
 - Each launcher stops at 8 shots a round, counted by the launcher, and neither launcher alone can win the round.
 - A bolt that was made hurts the nearest living critter ahead of the muzzle by its damage and is spent; a critter at 0 health is defeated, and a shot with nothing ahead hurts nobody.
 - Defeating every critter wins with the time and the shots used shown; 30 seconds without that shows TIME UP.

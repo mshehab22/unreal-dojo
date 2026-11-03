@@ -4,7 +4,9 @@
 
 #include "Components/TextRenderComponent.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Quests/p21-boss-ember-range/DojoP21RangeMaster.h"
+#include "Quests/p21-launchers/DojoP21Bolt.h"
 #include "Quests/p21-launchers/DojoP21EmberLauncher.h"
 #include "Quests/p21-launchers/DojoP21FrostLauncher.h"
 #include "Quests/p21-wave-spawner/DojoP21Imp.h"
@@ -45,6 +47,17 @@ namespace DojoP21RangeTest
 		for (int32 Shot = 0; Shot < Count; Shot++) Master->PressFire(Number);
 	}
 
+	/** How many bolts of any kind exist in the world. */
+	int32 CountBolts(UWorld* World)
+	{
+		int32 Count = 0;
+		for (TActorIterator<ADojoP21Bolt> Iterator(World); Iterator; ++Iterator)
+		{
+			Count++;
+		}
+		return Count;
+	}
+
 	/** The label text now. */
 	FString LabelText(ADojoP21RangeMaster* Master)
 	{
@@ -70,8 +83,8 @@ namespace DojoP21RangeTest
 
 		const TArray<ADojoP21Critter*> Row = Master->GetCritters();
 		if (!Test.TestEqual(Say(TEXT("The row is four long")), Row.Num(), 4)) return;
-		Test.TestTrue(Say(TEXT("The first critter is a slime 450 units out")), Row[0]->GetClass() == ADojoP21Slime::StaticClass() && FMath::IsNearlyEqual(Row[0]->GetActorLocation().X, 450.f, 0.1f));
-		Test.TestTrue(Say(TEXT("The second is an imp at 600")), Row[1]->GetClass() == ADojoP21Imp::StaticClass() && FMath::IsNearlyEqual(Row[1]->GetActorLocation().X, 600.f, 0.1f));
+		Test.TestTrue(Say(TEXT("The first critter is a slime 450 units out")), Row[0]->GetClass() == ADojoP21Slime::StaticClass() && FMath::IsNearlyEqual(Row[0]->GetActorLocation().X, 450.0, 0.1));
+		Test.TestTrue(Say(TEXT("The second is an imp at 600")), Row[1]->GetClass() == ADojoP21Imp::StaticClass() && FMath::IsNearlyEqual(Row[1]->GetActorLocation().X, 600.0, 0.1));
 		Test.TestEqual(Say(TEXT("The last critter, the level 3 imp, has 45 health")), Row[3]->Health, 45);
 
 		TestWorld.Tick(60);
@@ -81,6 +94,7 @@ namespace DojoP21RangeTest
 		Test.TestEqual(Say(TEXT("An ember and a frost bolt leave the nearest critter with 1 health")), Row[0]->Health, 1);
 		Test.TestEqual(Say(TEXT("And the others untouched")), Row[1]->Health, 30);
 		Test.TestEqual(Say(TEXT("It is not defeated yet")), Master->GetDefeatedCount(), 0);
+		Test.TestEqual(Say(TEXT("Spent bolts leave nothing behind")), CountBolts(TestWorld.GetWorld()), 0);
 		Master->PressFire(2);
 		Test.TestEqual(Say(TEXT("One more frost bolt defeats it")), Master->GetDefeatedCount(), 1);
 		Test.TestEqual(Say(TEXT("Three critters remain")), Master->GetCritters().Num(), 3);

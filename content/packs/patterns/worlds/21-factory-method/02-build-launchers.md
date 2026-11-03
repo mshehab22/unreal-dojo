@@ -28,7 +28,7 @@ Most of the code is written. First read the marked lines and say in a sentence w
 
 ## See it in the editor
 
-Place a `DojoP21EmberLauncher`, a `DojoP21FrostLauncher`, and a `DojoP21DudLauncher` in the level, a few hundred units apart, all facing the same way. In the Level Blueprint, on Begin Play call Fire on each launcher and print the Damage of the bolt it returns: 12 and 7, and the dud returns nothing, so print Is Valid for it: false. Then print `Shots Fired` on each launcher: 1, 1, and 0. Select a bolt in the World Outliner: its `Shooter` names the launcher that made it, and `Shooter Known At Begin Play` is checked. Add a fourth launcher by making a Blueprint child of `DojoP21Launcher`: nothing in the class asks you to touch Fire.
+Place a `DojoP21EmberLauncher`, a `DojoP21FrostLauncher`, and a `DojoP21DudLauncher` in the level, a few hundred units apart, all facing the same way. In the Level Blueprint, on Begin Play call Fire on each launcher and print the Damage of the bolt it returns: 12 and 7, and the dud returns nothing, so print Is Valid for it: false. Then print `Shots Fired` on each launcher: 1, 1, and 0. Also print each returned bolt's `Shooter`, which names the launcher that made it, and its `Shooter Known At Begin Play`, which is true. Add a fourth kind by making a Blueprint child of `DojoP21EmberLauncher`, or a C++ subclass of `DojoP21Launcher` that overrides `CreateBolt`: nothing in the base class asks you to touch Fire.
 
 # Files
 
@@ -396,7 +396,7 @@ bool FDojo_P21_Launchers_BoltIsReadyBeforeItBeginsPlay::RunTest(const FString& P
 	TestTrue(TEXT("The shooter is the launcher"), Bolt->Shooter == Launcher);
 	TestTrue(TEXT("And the bolt already knew it when it began play"), Bolt->bShooterKnownAtBeginPlay);
 	TestTrue(TEXT("The bolt appears 50 units in front of the launcher"), Bolt->GetActorLocation().Equals(FVector(100.f, 50.f, 0.f), 0.1f));
-	TestTrue(TEXT("Facing the way the launcher faces"), FMath::IsNearlyEqual(Bolt->GetActorRotation().Yaw, 90.f, 0.1f));
+	TestTrue(TEXT("Facing the way the launcher faces"), FMath::IsNearlyEqual(Bolt->GetActorRotation().Yaw, 90.0, 0.1));
 
 	Launcher->MuzzleDistance = 120.f;
 	ADojoP21Bolt* Far = Launcher->Fire();
@@ -456,7 +456,7 @@ The base launcher could hold a bolt class as a property and spawn it directly, w
 
 ```yaml
 - id: fire-the-bolt
-  prompt: Put Fire in order. Its first line inside the braces works out the muzzle.
+  prompt: Put Fire in order. Its first line inside the braces works out the muzzle, and counting the shot is the last step before the return.
   lines:
     - "ADojoP21Bolt* ADojoP21Launcher::Fire()"
     - "{"
