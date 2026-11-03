@@ -259,7 +259,7 @@ bool FDojo_S2_Effects_FamilyShape::RunTest(const FString& Parameters)
 
 # Alternative
 
-Each effect could be a function in the ability component behind a switch on an enum, `EDojoS2EffectKind::Dash` and `Push`. That keeps everything in one file, but every new kind edits that switch and its settings pile up in one struct whether a kind uses them or not. A family of classes lets a new kind arrive as one new file, and the base keeps the one place where effects touch the world: if pushes should later sweep against walls, only `MoveActor` changes. The price is that the base must stay small; a tool used by only one kind belongs in that kind. This is the Subclass Sandbox pattern from Pack 2's "Many kinds, one toolbox" world: `Apply` is the entry that enforces the rules, `OnApply` is the hook, and the protected tools are the sandbox.
+Each effect could be a function in the ability component behind a switch on an enum, `EDojoS2EffectKind::EEK_Dash` and `EEK_Push`. That keeps everything in one file, but every new kind edits that switch and its settings pile up in one struct whether a kind uses them or not. A family of classes lets a new kind arrive as one new file, and the base keeps the one place where effects touch the world: if pushes should later sweep against walls, only `MoveActor` changes. The price is that the base must stay small; a tool used by only one kind belongs in that kind. This is the Subclass Sandbox pattern from Pack 2's "Many kinds, one toolbox" world: `Apply` is the entry that enforces the rules, `OnApply` is the hook, and the protected tools are the sandbox.
 
 # Parsons
 

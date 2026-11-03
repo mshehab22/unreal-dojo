@@ -365,6 +365,7 @@ bool FDojo_S2_SparringRing_UnbindsWhenItLeaves::RunTest(const FString& Parameter
 	if (!TestNotNull(TEXT("Director spawned"), Ring.Director)) return false;
 
 	Begin(Ring);
+	TestFalse(TEXT("The director never ticks"), Ring.Director->PrimaryActorTick.bCanEverTick);
 	TestTrue(TEXT("The director listens for starts"), Ring.Abilities->OnAbilityActivated.IsBound());
 	TestTrue(TEXT("The director listens for cooldowns"), Ring.Abilities->OnCooldownChanged.IsBound());
 	TestTrue(TEXT("The director listens for energy"), Ring.Energy->OnEnergyChanged.IsBound());

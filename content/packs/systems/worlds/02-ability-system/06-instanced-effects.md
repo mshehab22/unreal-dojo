@@ -90,15 +90,16 @@ public:
   explanation: Abstract tells the engine and the editor the class is a parent only, so it is never offered as an object to create.
 - id: spot-shared-state
   type: spot-the-bug
-  prompt: Two heroes use the same Shockwave asset. After a while, each hero's shockwave stops pushing anything, even though neither has used it three times. Which line is wrong?
+  prompt: Each hero may push three times per round. Two heroes use the same Shockwave asset, and after four pushes between them, neither hero's shockwave pushes anything. Which line is wrong?
   code: |
-    void UDojoExPushEffect::OnApply(AActor* User)
+    UCLASS(EditInlineNew)
+    class UDojoExPushEffect : public UDojoExEffect
     {
-    	if (TimesUsed >= 3) return;
-    	++TimesUsed;
-    	PushEverythingNear(User);
-    }
-  bugLine: 4
+    	GENERATED_BODY()
+    	int32 TimesUsed = 0;
+    	virtual void OnApply(AActor* User) override;
+    };
+  bugLine: 5
   fix: Keep the use count on the user, for example in a component, because the effect object inside the asset is shared by every hero.
   explanation: Both heroes run the same effect object, so its counter adds up the uses of everyone who shares the asset.
 - id: subclass-or-instanced

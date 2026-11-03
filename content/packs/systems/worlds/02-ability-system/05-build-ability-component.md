@@ -14,7 +14,7 @@ estimatedMinutes: 35
 concepts:
   - Every reason to refuse a start is checked before anything changes
   - A timer per cooldown and per run, each remembering which ability it is for
-  - Tags that stay on the user exactly as long as an ability runs
+  - The user's tags always match the abilities that are running
 ---
 
 # Brief
@@ -28,7 +28,7 @@ The class declaration is given, and so is a ready-made listener, `UDojoS2Ability
 - `UseEnergy` chooses the pool that costs are paid from, and `Grant` gives the user an ability (false for null or one it already has).
 - `CanActivate` is true when the ability is granted, not cooling down, not running, not blocked by the tags the user carries now, and affordable. An ability that costs energy needs a pool that can pay; a free one needs no pool at all.
 - `TryActivate` starts the ability when `CanActivate` allows it: it pays the cost, starts the cooldown if the ability has one, and puts the ability's `GrantedTags` on the user for its `Duration` if it has one. Then it announces `OnCooldownChanged` (when a cooldown started) and `OnAbilityActivated`, after everything is in place. It returns whether the ability started.
-- When a cooldown ends, `OnCooldownChanged` fires again, and a listener asking `IsOnCooldown` at that moment hears false. The user carries an ability's granted tags exactly while that ability runs.
+- When a cooldown ends, `OnCooldownChanged` fires again, and a listener asking `IsOnCooldown` at that moment hears false. The user carries the granted tags of the abilities running now, and no others.
 - `IsOnCooldown`, `GetCooldownRemaining`, `IsRunning`, and `GetActiveTags` answer about the present.
 - `ResetAll` ends every cooldown and every run at once, for a new round, announcing each cooldown that ended; none of the timers it ended may fire later. `EndPlay` stops every timer.
 
@@ -157,8 +157,6 @@ private:
 
 ```cpp
 #include "DojoS2AbilityComponent.h"
-#include "GameFramework/Actor.h"
-#include "Quests/s2-energy/DojoS2EnergyComponent.h"
 
 #include "Engine/World.h"
 #include "Quests/s2-ability-data/DojoS2AbilityData.h"
@@ -239,7 +237,7 @@ void UDojoS2AbilityComponent::EndCooldown(UDojoS2AbilityData* Ability)
 {
 }
 
-/** The run of one ability is over, so its tags leave the user. */
+/** The run of one ability is over. */
 void UDojoS2AbilityComponent::EndRun(UDojoS2AbilityData* Ability)
 {
 }
@@ -737,7 +735,7 @@ bool FDojo_S2_AbilityComponent_FreeAndInstant::RunTest(const FString& Parameters
 - `TryActivate` checks every reason to refuse before it pays, starts a timer, or changes a tag, so a refused start changes nothing and announces nothing.
 - An ability's cooldown and run end on timers, each remembering which ability it belongs to, and nothing counts time in Tick.
 - `OnCooldownChanged` fires when a cooldown starts and when it ends, and `OnAbilityActivated` fires once per start, after the cost, the cooldown, and the tags are in place.
-- The user carries an ability's granted tags exactly while that ability runs.
+- The user carries the granted tags of the abilities running now, and no others.
 - `ResetAll` leaves no timer behind: nothing it ended announces anything later.
 - The component holds the pointer to the pool; the pool and the assets know nothing about the component.
 
@@ -775,7 +773,6 @@ Cooldowns could be stored as the world time each ability is next allowed, compar
     - "{"
     - "	FTimerHandle& CooldownTimer = CooldownTimers.FindOrAdd(Ability);"
     - "	Timers.SetTimer(CooldownTimer, FTimerDelegate::CreateUObject(this, &UDojoS2AbilityComponent::EndCooldown, Ability), CooldownSeconds, false);"
-    - "	OnCooldownChanged.Broadcast(this, Ability);"
     - "}"
   distractors:
     - line: "	FTimerHandle CooldownTimer = CooldownTimers.FindOrAdd(Ability);"
