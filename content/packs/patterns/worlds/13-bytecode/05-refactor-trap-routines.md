@@ -7,7 +7,7 @@ scaffold: stub
 difficulty: 4
 patterns: [bytecode]
 skills: [bytecode, refactoring]
-terms: [instanced-specifier, data-asset, ustruct, tick, deltatime, tobjectptr]
+terms: [instanced-subobjects, data-asset, ustruct, tick, deltatime, tobjectptr]
 prerequisites: [p13-door-conditions]
 xp: 110
 estimatedMinutes: 30
