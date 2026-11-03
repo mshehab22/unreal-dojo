@@ -4438,5 +4438,42 @@
       "ustruct"
     ],
     "firstQuestId": "p13-behavior-as-data"
+  },
+  {
+    "id": "mutable-member",
+    "term": "Mutable member",
+    "aliases": [
+      "mutable specifier",
+      "mutable keyword"
+    ],
+    "category": "cpp idiom",
+    "short": "A class member marked mutable, which a const function is still allowed to change.",
+    "long": "A const function promises not to change the object a caller can see. A member marked mutable is outside that promise, so a const function may still write it. The usual use is a remembered answer: a const GetGuard function can store the sum it worked out, clear a flag, and count the work, while the fighter looks unchanged to anyone calling it. Use it only for caches and counters, never for data that is really part of the object's state, because it hides changes from every const reference.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/epic-cplusplus-coding-standard-for-unreal-engine?application_version=5.8",
+    "related": [
+      "coding-standard",
+      "forceinline",
+      "tobjectptr"
+    ],
+    "firstQuestId": "p17-recompute-every-frame"
+  },
+  {
+    "id": "render-state-dirty",
+    "term": "MarkRenderStateDirty",
+    "aliases": [
+      "MarkRenderTransformDirty",
+      "MarkRenderDynamicDataDirty",
+      "render state dirty"
+    ],
+    "category": "components",
+    "short": "The actor component calls that mark its render data stale, so the engine rebuilds or resends it later.",
+    "long": "A component does not rebuild its render data every time one of its settings changes. It calls MarkRenderStateDirty to say the whole render state must be recreated, MarkRenderTransformDirty when only its transform changed, or MarkRenderDynamicDataDirty when only per-frame data changed, and the engine does the work once at a safe point. It is the engine's own dirty flag. Calling it each frame on a component whose settings did not change throws the saving away.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UActorComponent?application_version=5.8",
+    "related": [
+      "actor-component",
+      "scene-component",
+      "tick"
+    ],
+    "firstQuestId": "p17-dirty-flag-card"
   }
 ]

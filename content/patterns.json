@@ -2109,11 +2109,14 @@
   {
     "id": "dirty-flag",
     "title": "Dirty Flag",
-    "intent": "When an expensive result (final stats, a total weight, a world transform) depends on inputs that change often, just raise a flag on each change and do the real recompute once, the next time someone asks for the result.",
-    "problem": "A character's final stats depend on base stats, ten equipment slots, and active buffs. Recomputing every time any input changes wastes work when several changes land in one frame, while recomputing every Tick wastes work when nothing changed.",
-    "unrealForm": "The engine uses dirty flags everywhere: scene components cache world transforms and mark them stale when local transforms change, MarkRenderStateDirty tells the render thread what to resend, packages track unsaved changes, and push-model replication marks properties dirty. In gameplay code you keep a bStatsDirty bool, set it in every setter, and recompute inside the getter when it is set.",
-    "whenNot": "When a running total is simpler (adding and subtracting one value), keep the total. When deferring could lose work or cause a hitch at a bad moment, compute eagerly. The risk is missing a mutation path, so route every change through a small set of functions.",
-    "useCaseQuestIds": [],
+    "intent": "When an expensive result (a guard rating, a ladder rating, a tower joint's position) depends on inputs that change now and then, raise a flag on each change and do the real recompute once, the next time someone asks for the result.",
+    "problem": "A fighter's guard rating depends on a base guard, the worn items, and the active buffs, and the screen, the damage code, and the enemy all read it every frame. Recomputing on every read repeats a sum whose answer cannot have changed, and recomputing on every change repeats it for answers nobody reads when several changes land together.",
+    "unrealForm": "Dirty flags run all through the engine: a scene component keeps its component-to-world transform ready and refreshes it after a change, MarkRenderStateDirty has the renderer pick up new data later, packages carry an unsaved bit, Slate widgets invalidate, and push-model replication marks properties. In gameplay code you keep a bStatsDirty bool, set it in every setter, and recompute inside the getter when it is set.",
+    "whenNot": "When adding or subtracting one value keeps a running total correct, keep the total. When the value is cheap to work out, or when deferring could lose work or cause a hitch at a bad moment, compute eagerly. The risks are a mutation path that forgets the flag and a value built on another remembered value that is left old, so route every change through a small set of functions.",
+    "useCaseQuestIds": [
+      "p17-guard-rating",
+      "p17-tower-rig"
+    ],
     "recall": [
       {
         "id": "dirty-flag-recall-1",
@@ -2147,6 +2150,28 @@
         ],
         "answerIndex": 3,
         "explanation": "If you can update the result incrementally for free, a flag only adds a branch and a chance to forget."
+      },
+      {
+        "id": "dirty-flag-recall-4",
+        "type": "fill-blank",
+        "prompt": "A const function may refresh a remembered answer if the member that holds it is marked ___.",
+        "acceptedAnswers": [
+          "mutable"
+        ],
+        "explanation": "A mutable member can be written through a const function, which is how a read can store the answer it has just worked out."
+      },
+      {
+        "id": "dirty-flag-recall-5",
+        "type": "multiple-choice",
+        "prompt": "Which engine call tells the renderer that a component's data must be rebuilt later instead of right now?",
+        "choices": [
+          "MarkRenderStateDirty",
+          "DestroyComponent",
+          "SetTickEnabled",
+          "RegisterComponent"
+        ],
+        "answerIndex": 0,
+        "explanation": "MarkRenderStateDirty sets a flag on the component, and the engine rebuilds its render state once at a safe point."
       }
     ],
     "scenarios": [
@@ -2203,6 +2228,46 @@
           }
         ],
         "explanation": "Cache the result and invalidate it when a point is spent."
+      },
+      {
+        "id": "dirty-flag-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A tower's lantern position is read by a camera, a light, and a sound every frame, and the wind moves the tower's base only now and then. Which pattern?",
+        "choices": [
+          "update-method",
+          "dirty-flag",
+          "observer",
+          "double-buffer"
+        ],
+        "answer": "dirty-flag",
+        "distractorNotes": [
+          {
+            "choice": "update-method",
+            "why": "Working the position out in every tick is the repeated work you want to avoid."
+          },
+          {
+            "choice": "observer",
+            "why": "Telling the camera, the light, and the sound at every move would make each of them recompute separately."
+          },
+          {
+            "choice": "double-buffer",
+            "why": "There is no reader and writer racing over one value."
+          }
+        ],
+        "explanation": "Keep each joint's position, mark it old when the tower moves, and work it out when it is read."
+      },
+      {
+        "id": "dirty-flag-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A hit's damage is the fighter's strength times two, and it is read whenever a hit lands. Should the product be cached behind a dirty flag?",
+        "choices": [
+          "No; one multiplication is cheaper than a stored copy, a flag, and every setter that must set it",
+          "Yes; every number that is read should be cached",
+          "Yes, but only with a timer",
+          "No; damage should be recomputed in Tick"
+        ],
+        "answerIndex": 0,
+        "explanation": "A flag pays when the work is worth saving. For a single multiplication the flag costs more and adds a path that can be forgotten."
       }
     ]
   },

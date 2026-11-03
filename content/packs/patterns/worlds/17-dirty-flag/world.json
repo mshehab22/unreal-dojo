@@ -1,0 +1,5 @@
+{
+	"id": "dirty-flag",
+	"title": "Work it out only when it changed",
+	"summary": "A fighter's guard rating, a tower's joints, and a ladder's rating are all read every frame and change rarely. Learn to remember a derived value, mark it old when its source changes, and work it out only when it is asked for, so a busy minute costs a handful of sums, and learn the traps: a missed change, a value built on another remembered value, and the cases where a running total or plain recomputing is better."
+}

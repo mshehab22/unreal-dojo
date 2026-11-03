@@ -2244,3 +2244,19 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
   - Two runs were first inconclusive from machine contention (an editor startup stall launching zenserver, and a sandbox build stopped at its time limit while the second engine slot and other projects were busy); both were rerun in the same lock hold and caught. A normal mutation run took about 7 minutes.
 - Decisions made: A1350 to A1358.
 - Still open: macOS is unverified (no engine there, A75). The board is a text render, not a widget. The director binds 1 to 3, the arrows, and R when a player controller exists; the headless tests have none, so they call its press functions and the key binding itself is unverified, as in World 1.
+
+## M4.P2.17 Pack 2 World 17, Dirty Flag (content-patterns, author-patterns)
+- What changed: a seventeenth Patterns world, "Work it out only when it changed", with the full arc for Dirty Flag (six teaching quests and a boss), set around a fighter's guard rating, a watch tower, and a ladder. A derived value is remembered with a flag that every change sets, and it is worked out again only when it is asked for after a change. Unreal forms: a component with mutable cache members, a custom tree of joints with kept positions, and the engine's own flags (the scene component's transform, render state, packages, Slate, push-model replication) in the card. Built away from the source chapter's ship-mast-pirate-parrot transform example (A1672, A1677).
+- The quests and their observables:
+  - The same sum, sixty times a second (concept): a rating read much more often than it changes, working it out on every read or on every change, and a remembered answer with a note.
+  - A guard rating that works itself out only when it must (build, worked): the learner writes `GetGuard`. Ten changes before a read cost one sum, ten reads after cost none, and a change that changes nothing leaves the answer alone.
+  - Remember it, mark it old, refresh it when asked (concept): the card, with the four parts, the three ways to clean the flag, fine and coarse flags, and the engine's own flags.
+  - A tower of joints that answers where each one is (build, stub): the learner writes `GetPosition` and `SetLocalOffset`. Reading an untouched tower works each joint out once, moving the lantern works only the lantern out, and moving the base moves everything below it. Its deliberate failure: a flag on each joint that only the moved joint sets (A1673).
+  - A ladder that re-sorts on every score (refactor): `AddScore` and `RemoveScore` stop working the best-three rating out, and `GetRating` does it once after any number of changes.
+  - When a flag costs more than the sum (concept): running totals, cheap values, a value built on another remembered value, missed and constant flags, and deferred work.
+  - Boss, the night watch: a 36 second round with armour, lantern oil that wears off, and gusts that push a tower, a check every second, and counts that prove the guard is worked out 4 and 5 times and the tower 24 times in two rounds (A1676).
+- Also: new glossary entries `mutable-member` and `render-state-dirty`, and the Dirty Flag card audit (A1677).
+- Proof so far:
+  - Content verifier: no problems. Originality: no 6-word or 5-word match against the research's Dirty Flag section in the quests, solutions, glossary entries, or card. The check against the book is pending because the PDF is gone.
+  - Engine proof: not run. The task did not allow the engine, so nothing in this world has been compiled (A1679). Queued for the Lead: the four solution folders, the starters, and the mutation copies.
+- Not done: the engine proof, the mutation run, and the source n-gram check. No screenshots. Decisions A1670 to A1679.
