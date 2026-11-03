@@ -314,6 +314,7 @@ bool FDojo_S5_WavePlan_DesignersCanEdit::RunTest(const FString& Parameters)
 - A plan without a curve keeps every wave at the base count.
 - `IsOutOfSight` refuses hatches closer than the minimum distance, whichever way the viewer faces.
 - `IsOutOfSight` compares the angle to the hatch with the half view angle using the viewer's facing, and treats a missing viewer as nobody watching.
+- The plan and the hatch only answer questions; neither points at the director or the beetles.
 
 # Alternative
 

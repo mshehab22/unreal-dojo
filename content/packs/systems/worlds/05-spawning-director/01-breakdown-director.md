@@ -13,12 +13,12 @@ estimatedMinutes: 25
 concepts:
   - Keeping the shape of every wave in data, so a harder night is a new asset
   - Deciding which piece owns the beetles, which owns the pacing, and who only listens
-  - Counting what is alive and what is still to come from events, not by searching the level
+  - Knowing how many beetles are loose from events, not by searching the level
 ---
 
 # Spec
 
-A training pit has four hatches in its walls, and clockwork beetles crawl out of them in waves. A night is five waves. Wave 1 has 3 beetles, and a difficulty curve makes each later wave bigger, up to twice the first by wave 5. One beetle comes out every second, but never more than 3 are loose at once: when 3 are out, the next one waits until one is swatted. A beetle never comes out of a hatch the player is looking at, or one that is closer than 6 meters, because a monster that appears in plain view or right behind you feels unfair.
+A training pit has four hatches in its walls, and clockwork beetles crawl out of them in waves. A night is five waves. Wave 1 has 3 beetles, and a difficulty curve makes later waves bigger, up to twice the first by wave 5. One beetle comes out every second, but never more than 3 are loose at once: when 3 are out, the next one waits until one is swatted. A beetle never comes out of a hatch the player is looking at, or one that is closer than 6 meters, because a monster that appears in plain view or right behind you feels unfair.
 
 When every beetle of a wave has been swatted, the pit rests for 3 seconds and the gate opens; then the gate shuts and the next wave begins. After the last wave the night is over. A banner over the pit says which wave is running, when it is cleared, and how long the rest lasts.
 
@@ -57,7 +57,7 @@ Acceptance:
 - id: budget
   kind: step
   label: Counting live beetles and beetles still to come from the beetles' defeat events
-  why: The live limit and the end of a wave both depend on those two numbers.
+  why: The live limit needs to know what is loose, and someone must decide when a wave is over.
 - id: pacing
   kind: step
   label: Timers for the spawn interval and the rest between waves
@@ -116,7 +116,7 @@ Acceptance:
 - The numbers of a night live in one asset, and the director reads them instead of holding copies.
 - One piece owns the beetles and reuses them; the director asks it for a beetle and gives each one back after its defeat.
 - The director has one current state, and the plan says what each state does with a spawn, a defeat, and a timer.
-- The plan says how the director knows when a wave is over, using what is alive and what is still to come.
+- The plan says how the director knows when a wave is over.
 - The director announces wave changes with events, and the banner and the gate only listen and unbind when they leave play.
 - The plan says what a second pit with its own hatches needs.
 

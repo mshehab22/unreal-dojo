@@ -122,12 +122,12 @@ ADojoS5Beetle* UDojoS5PoolComponent::SpawnSleeping()
 		return nullptr;
 	}
 
-	FActorSpawnParameters Params;
-	Params.Owner = GetOwner();
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	FActorSpawnParameters Parameters;
+	Parameters.Owner = GetOwner();
+	Parameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	const FVector Where = GetOwner() != nullptr ? GetOwner()->GetActorLocation() : FVector::ZeroVector;
-	ADojoS5Beetle* Beetle = World->SpawnActor<ADojoS5Beetle>(BeetleClass, Where, FRotator::ZeroRotator, Params);
+	ADojoS5Beetle* Beetle = World->SpawnActor<ADojoS5Beetle>(BeetleClass, Where, FRotator::ZeroRotator, Parameters);
 
 	if (Beetle == nullptr)
 	{

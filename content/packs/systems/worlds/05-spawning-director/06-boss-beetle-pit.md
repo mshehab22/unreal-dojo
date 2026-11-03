@@ -51,7 +51,7 @@ Extensions, in order of importance:
 2. A big beetle kind that counts as two against the live limit, described in an asset of its own, so the director asks the kind instead of counting heads.
 3. Pacing from the player: when a wave is cleared in under half its beetle count in seconds, the next rest is one second shorter.
 
-Feel: tune the spawn interval and the live limit until wave 5 keeps the hero turning without ever having two beetles come out of the same hatch back to back. The submission gives the numbers and one sentence on why.
+Feel: tune the spawn interval and the live limit until, during wave 5, the hero always has a beetle to turn to but never has three loose for more than 2 seconds. The submission gives the numbers and one sentence on why.
 
 # Required Pieces
 

@@ -47,6 +47,11 @@ namespace DojoS5BeetlePitTest
 		Pit.Hero = TestWorld.SpawnActor<ADojoTestActor>();
 
 		Pit.Keeper = TestWorld.GetWorld()->SpawnActorDeferred<ADojoS5PitKeeper>(ADojoS5PitKeeper::StaticClass(), FTransform::Identity);
+		if (Pit.Keeper == nullptr)
+		{
+			return Pit;
+		}
+
 		Pit.Keeper->Hero = Pit.Hero;
 		Pit.Keeper->Plan = MakeNight();
 		Pit.Keeper->FinishSpawning(FTransform::Identity);
@@ -122,7 +127,7 @@ bool FDojo_S5_BeetlePit_TwoNights::RunTest(const FString& Parameters)
 		TestTrue(Label + TEXT("the night is running"), Pit.Keeper->IsRunning());
 		TestEqual(Label + TEXT("the board starts clean"), BoardOf(Pit), FString(TEXT("Swats 0\nGate shut")));
 		TestEqual(Label + TEXT("the banner shows wave 1"), BannerOf(Pit), FString(TEXT("Wave 1: 3 beetles")));
-		TestEqual(Label + TEXT("the hero faces the first hatch again"), Pit.Hero->GetActorForwardVector().X, 1.f, 0.01f);
+		TestEqual(Label + TEXT("the hero faces the first hatch again"), Pit.Hero->GetActorForwardVector().X, 1.0, 0.01);
 		TestEqual(Label + TEXT("a beetle is out at once"), Pit.Keeper->GetDirector()->GetAlive(), 1);
 
 		PlayNight(TestWorld, Pit);

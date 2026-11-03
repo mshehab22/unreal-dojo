@@ -41,7 +41,7 @@ This is the third piece of the Beetle Pit boss.
 
 ## See it in the editor
 
-Place a `DojoS5WaveDirector`, a `BP_Burrow` with a pool, and four `DojoS5Hatch` actors 8 meters from the Player Start. In the level Blueprint, on BeginPlay call Setup with `DA_Night`, the pool, the player pawn, and the four hatches, bind custom events to On Wave Started, On Wave Cleared, and On Rest Started that print their values, and call Start Night. On the 1 key, get the pool's Get Awake Beetles and call Defeat on the first one. Press Play and watch beetles appear behind you. Swat one the moment it appears, before the next has come out, and look at what is printed.
+Place a `DojoS5WaveDirector`, a `BP_Burrow` with a pool, and four `DojoS5Hatch` actors 8 meters from the Player Start. In the level Blueprint, on BeginPlay call Setup with `DA_Night`, the pool, the player pawn, and the four hatches, bind custom events to On Wave Started, On Wave Cleared, and On Rest Started that print their values, and call Start Night. On the 1 key, get the pool's Get Awake Beetles and call Defeat on the first one. Press Play and watch beetles appear behind you and never in front. Swat every beetle of wave 1 with the 1 key and watch the printed rest, then wave 2.
 
 # Files
 

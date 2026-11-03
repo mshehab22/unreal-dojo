@@ -25,7 +25,7 @@ The beetle, the spawning helper, and the counting functions are written for you.
 1. `Acquire`: wake the first sleeping beetle, in the order the pool made them, at `Location`. Only when none is asleep, spawn a new one with `SpawnSleeping` (which returns null once the pool holds `MaxSize`) and wake that. Return the woken beetle, or null when every beetle is busy.
 2. `Release`: put a beetle back to sleep and return true, but only for a beetle this pool made that is awake right now. A null pointer, a beetle from somewhere else, and a beetle that is already asleep all give false and change nothing.
 
-A beetle never destroys itself. `Defeat` only announces the swat through `OnDefeated`, and whoever woke the beetle gives it back. The pool holds its beetles in a `UPROPERTY` array, so the garbage collector keeps them while they sleep.
+Dependency direction: the pool points at its beetles; a beetle only broadcasts and knows nothing about the pool. A beetle never destroys itself. `Defeat` only announces the swat through `OnDefeated`, and whoever woke the beetle gives it back. The pool holds its beetles in a `UPROPERTY` array, so the garbage collector keeps them while they sleep.
 
 This is the second piece of the Beetle Pit boss.
 
@@ -146,7 +146,7 @@ bool ADojoS5Beetle::IsAwake() const
 
 class ADojoS5Beetle;
 
-/** Keeps every beetle it ever made and wakes a sleeping one before it spawns another (the Object Pool pattern), up to a fixed size; any actor can carry one. */
+/** Keeps every beetle it ever made and wakes a sleeping one before it spawns another, up to a fixed size; any actor can carry one. */
 UCLASS(ClassGroup = (Dojo), meta = (BlueprintSpawnableComponent))
 class UDojoS5PoolComponent : public UActorComponent
 {
@@ -311,12 +311,12 @@ ADojoS5Beetle* UDojoS5PoolComponent::SpawnSleeping()
 		return nullptr;
 	}
 
-	FActorSpawnParameters Params;
-	Params.Owner = GetOwner();
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	FActorSpawnParameters Parameters;
+	Parameters.Owner = GetOwner();
+	Parameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	const FVector Where = GetOwner() != nullptr ? GetOwner()->GetActorLocation() : FVector::ZeroVector;
-	ADojoS5Beetle* Beetle = World->SpawnActor<ADojoS5Beetle>(BeetleClass, Where, FRotator::ZeroRotator, Params);
+	ADojoS5Beetle* Beetle = World->SpawnActor<ADojoS5Beetle>(BeetleClass, Where, FRotator::ZeroRotator, Parameters);
 
 	if (Beetle == nullptr)
 	{
@@ -490,6 +490,7 @@ bool FDojo_S5_Pool_PrewarmAndLeave::RunTest(const FString& Parameters)
 - A woken beetle is at the requested spot, shown, and can be hit.
 - Release only takes back the pool's own awake beetles, puts them to sleep without destroying them, and refuses everything else.
 - The pool keeps every beetle it made in a `UPROPERTY` array and only destroys them when the pool itself is removed.
+- The pool points at its beetles and a beetle knows nothing about the pool; it only announces a swat.
 
 # Alternative
 

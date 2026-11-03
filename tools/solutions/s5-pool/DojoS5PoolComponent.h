@@ -6,7 +6,7 @@
 
 class ADojoS5Beetle;
 
-/** Keeps every beetle it ever made and wakes a sleeping one before it spawns another (the Object Pool pattern), up to a fixed size; any actor can carry one. */
+/** Keeps every beetle it ever made and wakes a sleeping one before it spawns another, up to a fixed size; any actor can carry one. */
 UCLASS(ClassGroup = (Dojo), meta = (BlueprintSpawnableComponent))
 class UDojoS5PoolComponent : public UActorComponent
 {
