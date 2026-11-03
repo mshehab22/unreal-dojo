@@ -654,7 +654,7 @@ bool FDojo_S6_WalkBeat_EmptyBeatStandsStill::RunTest(const FString& Parameters)
 # Hints
 
 - In `ExecuteTask`, the memory block for this guard arrives as the raw `NodeMemory` pointer; one call on the node base class turns it into your struct, and two more build and tear the struct down in place. The three results a task can return are Succeeded, Failed, and InProgress, and only one of them makes the tree come back next frame.
-- In `TickTask`, compare the distance still to go with the larger of the step and the acceptance radius. Arriving is three things in a fixed order: stand on the point, tell the guard to move on, finish. Leave the function right after, so the walking line below does not run on the same frame.
+- In `TickTask`, compare the distance still to go with the larger of the step and the acceptance radius. Arriving is three things in a fixed order: stand on the point, tell the guard to move on, finish. Leave the function right after, so the step toward the point does not also run on that frame.
 - If one guard works and two guards drift toward each other's points, the destination is being kept somewhere both guards share. Each guard's tree has its own memory block; the task object itself is shared by both trees.
 
 # Rubric
