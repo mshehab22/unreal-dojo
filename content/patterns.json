@@ -1640,7 +1640,7 @@
       {
         "id": "prototype-scenario-2",
         "type": "which-pattern",
-        "prompt": "Designers want sixty blade kinds that differ only in numbers, edited side by side in a spreadsheet view. A teammate proposes sixty hidden template blades in the level. Which pattern is the better fit?",
+        "prompt": "Designers want thirty-five blade kinds that differ only in numbers, edited side by side in a spreadsheet view. A teammate proposes thirty-five hidden template blades in the level. Which pattern is the better fit?",
         "choices": [
           "flyweight",
           "prototype",
@@ -1667,7 +1667,7 @@
       {
         "id": "prototype-scenario-3",
         "type": "which-pattern",
-        "prompt": "The trial book has forty trials, each written as the basic trial plus one or two changes. The designers want to retune the basic trial and have all forty follow. Which pattern?",
+        "prompt": "Every trial in the hall's book starts from the Basic trial's time limit and reward and sets only its own blade count. The designers want to raise the Basic reward and have every other trial follow. Which pattern?",
         "choices": [
           "flyweight",
           "command",

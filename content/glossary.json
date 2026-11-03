@@ -1178,7 +1178,7 @@
     "category": "memory",
     "short": "A variable that holds a class rather than an object, limited to one base class and its children.",
     "long": "When a tower needs to know what to fire, you do not want an existing fireball; you want the fireball class so it can spawn new ones. UPROPERTY(EditAnywhere) TSubclassOf<ADojoProjectile> ProjectileClass; gives designers a dropdown that only lists projectile classes, including Blueprint children. You then pass it to SpawnActor. This is the clean replacement for hardcoding asset paths in a constructor, which breaks the moment someone renames or moves the Blueprint.",
-    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TSubclassOf?application_version=5.8",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/TSubclassOf?application_version=5.8",
     "related": [
       "spawnactor",
       "blueprint-class",
@@ -1283,6 +1283,87 @@
       "destroy"
     ],
     "firstQuestId": "f2-tsubclassof-and-spawning"
+  },
+  {
+    "id": "spawn-collision-handling",
+    "term": "Spawn Collision Handling",
+    "aliases": [
+      "ESpawnActorCollisionHandlingMethod",
+      "SpawnCollisionHandlingOverride",
+      "DontSpawnIfColliding",
+      "AdjustIfPossibleButDontSpawnIfColliding"
+    ],
+    "category": "framework",
+    "short": "The spawn setting that says what to do when a new actor's shapes would sit inside something they block.",
+    "long": "Every spawn decides what to do at a blocked spot. AlwaysSpawn, the usual default, places the actor anyway, inside a wall if need be; the two Adjust methods look for a nearby free spot and then either spawn regardless or give up; DontSpawnIfColliding gives up at once. Set it per spawn with FActorSpawnParameters::SpawnCollisionHandlingOverride, or per class with the actor's SpawnCollisionHandlingMethod. When a spawn gives up, SpawnActor returns nullptr, so a scatterer must check the result before counting or using it. The check uses the new actor's own shapes and responses, so a trigger that only overlaps can appear anywhere.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/ESpawnActorCollisionHandlingMethod?application_version=5.8",
+    "related": [
+      "spawnactor",
+      "spawn-actor-deferred",
+      "collision-response",
+      "isvalid"
+    ],
+    "firstQuestId": "m4-spawning-with-care"
+  },
+  {
+    "id": "spawn-actor-deferred",
+    "term": "SpawnActorDeferred",
+    "aliases": [
+      "SpawnActorDeferred()",
+      "FinishSpawning",
+      "deferred spawn",
+      "deferred spawning"
+    ],
+    "category": "framework",
+    "short": "A spawn that hands you the new actor before its construction and BeginPlay run, so you can set it up first.",
+    "long": "SpawnActor runs the whole start of an actor's life, construction script and BeginPlay included, before it returns, so anything BeginPlay reads must be set before that. GetWorld()->SpawnActorDeferred<T>(Class, Transform) stops just short: you get the actor, set its properties, and then call FinishSpawning(Transform) to run construction and BeginPlay with your values in place. A rack that loads bombs already burning, or a projectile told its speed before it starts moving, needs it. Every deferred spawn must be finished, or the actor never begins play.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UWorld?application_version=5.8",
+    "related": [
+      "spawnactor",
+      "beginplay",
+      "spawn-collision-handling",
+      "on-construction"
+    ],
+    "firstQuestId": "m4-spawning-with-care"
+  },
+  {
+    "id": "frandomstream",
+    "term": "FRandomStream",
+    "aliases": [
+      "random stream",
+      "seeded random"
+    ],
+    "category": "math",
+    "short": "A random number generator built from a seed, which gives the same sequence every time for that seed.",
+    "long": "FMath::FRandRange and its friends draw from the engine's shared generator, so their results depend on everything else that used it first and change from run to run. An FRandomStream built with a seed has its own sequence: FRandomStream Stream(Seed) followed by Stream.FRandRange(Min, Max), Stream.RandRange(Min, Max), or Stream.RandPointInBox(Box) gives the same numbers for the same seed every time. That lets a designer replay a layout by its seed, lets two clients agree on a layout from one number, and lets a test rely on random placement.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/FRandomStream?application_version=5.8",
+    "related": [
+      "fmath",
+      "fvector",
+      "spawnactor"
+    ],
+    "firstQuestId": "m4-spawning-with-care"
+  },
+  {
+    "id": "on-destroyed",
+    "term": "OnDestroyed",
+    "aliases": [
+      "OnDestroyed.AddDynamic",
+      "FActorDestroyedSignature",
+      "Event Destroyed"
+    ],
+    "category": "framework",
+    "short": "The actor event that tells every listener the actor has left play, whoever destroyed it.",
+    "long": "Every actor broadcasts OnDestroyed, a dynamic multicast delegate with the departing actor as its one parameter, when Destroy runs or its life span ends. The actor's own EndPlay has already run by then, and its location can still be read in the handler, but it is on its way out and must not be kept afterwards. A spawner that binds each new actor's OnDestroyed with AddDynamic, and removes it from its list in the handler, always knows exactly which of its actors are in play without checking them every frame.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/AActor?application_version=5.8",
+    "related": [
+      "destroy",
+      "endplay",
+      "adddynamic",
+      "dynamic-multicast-delegate",
+      "isvalid"
+    ],
+    "firstQuestId": "m4-hearing-it-go"
   },
   {
     "id": "createdefaultsubobject",
@@ -2274,7 +2355,8 @@
       "collision-channel",
       "collision-query-params",
       "world"
-    ]
+    ],
+    "firstQuestId": "m5-lines-and-hits"
   },
   {
     "id": "sweep",
@@ -2313,7 +2395,8 @@
       "line-trace",
       "sweep",
       "collision-channel"
-    ]
+    ],
+    "firstQuestId": "m5-lines-and-hits"
   },
   {
     "id": "collision-enabled",
@@ -4377,6 +4460,126 @@
       "enhanced-input-component"
     ],
     "firstQuestId": "m1-triggers-and-events"
+  },
+  {
+    "id": "debug-draw",
+    "term": "Debug Draw",
+    "aliases": [
+      "DrawDebugLine",
+      "DrawDebugSphere",
+      "DrawDebugBox",
+      "DrawDebugPoint",
+      "DrawDebugHelpers"
+    ],
+    "category": "debugging",
+    "short": "Helper functions that draw lines, spheres, boxes, and points into the world so you can see what code is doing.",
+    "long": "Include DrawDebugHelpers.h and call DrawDebugLine(World, Start, End, Color, bPersistent, LifeTime) to draw a line, with DrawDebugSphere, DrawDebugBox, and DrawDebugPoint for other marks. A positive lifetime keeps the drawing on screen for that many seconds, and a persistent drawing stays until the level is reset. Colouring by result, green for a hit and red for a miss, turns a trace from an invisible guess into something you can read at a glance. The helpers are compiled out of shipping builds, so they are safe to leave in while developing; wrap them in a bool toggle so they can be switched off.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/traces-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "line-trace",
+      "sweep",
+      "fhitresult",
+      "on-screen-debug-message"
+    ],
+    "firstQuestId": "m5-lines-and-hits"
+  },
+  {
+    "id": "multi-trace",
+    "term": "Multi Trace",
+    "aliases": [
+      "SweepMultiByChannel",
+      "multi line trace"
+    ],
+    "category": "collision",
+    "short": "A trace that returns an array of everything along its path, nearest first, up to the first thing that blocks.",
+    "long": "LineTraceMultiByChannel fills a TArray of FHitResult instead of a single one. The array is ordered by distance, and objects whose response is Overlap appear as hits with bBlockingHit false. If something responds Block, it is the last element and nothing beyond it is tested. The function returns true only when a blocking hit was found, so loop over the array and decide what each entry means. A shot that passes through glass and stops at a wall is the classic use.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/traces-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "line-trace",
+      "fhitresult",
+      "sweep",
+      "collision-channel"
+    ],
+    "firstQuestId": "m5-shapes-and-queries"
+  },
+  {
+    "id": "collision-shape",
+    "term": "Collision Shape",
+    "aliases": [
+      "MakeSphere",
+      "MakeBox",
+      "MakeCapsule"
+    ],
+    "category": "collision",
+    "short": "A small struct describing the sphere, box, or capsule that a sweep or overlap query carries through the world.",
+    "long": "Build one with FCollisionShape::MakeSphere(Radius), MakeBox(HalfExtent), or MakeCapsule(Radius, HalfHeight) and hand it to SweepSingleByChannel or OverlapMultiByChannel along with an FQuat rotation. Box and capsule sizes are half sizes measured from the centre outward, which is an easy thing to get wrong by a factor of two. The shape is only the question being asked; it is not an object in the level and nothing is drawn unless you draw it. Match it to the thing you care about, such as the footprint of a door or the width of a character.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/traces-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "sweep",
+      "line-trace",
+      "fquat",
+      "fvector"
+    ],
+    "firstQuestId": "m5-shapes-and-queries"
+  },
+  {
+    "id": "object-type-query",
+    "term": "Object Type Query",
+    "aliases": [
+      "AddObjectTypesToQuery",
+      "ByObjectType"
+    ],
+    "category": "collision",
+    "short": "A trace or overlap that asks what an object is, by its object type, instead of how it responds to a channel.",
+    "long": "A by-channel trace asks which objects block a kind of question. A by-object-type query lists the object types you care about in an FCollisionObjectQueryParams, for example AddObjectTypesToQuery(ECC_Pawn), and matches objects whose own type is on that list. LineTraceSingleByObjectType and its sweep and overlap relatives take that struct in place of a channel. Choose it for questions like is there a pawn here, and a channel for questions like what blocks my sight.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/using-a-single-line-trace-raycast-by-object-in-unreal-engine?application_version=5.8",
+    "related": [
+      "line-trace",
+      "collision-query-params",
+      "collision-channel",
+      "sweep"
+    ],
+    "firstQuestId": "m5-shapes-and-queries"
+  },
+  {
+    "id": "dot-product",
+    "term": "Dot Product",
+    "aliases": [
+      "dot",
+      "FVector::DotProduct",
+      "DotProduct"
+    ],
+    "category": "math",
+    "short": "A single number from two vectors that tells how closely they point the same way.",
+    "long": "For two unit vectors, the dot product is the cosine of the angle between them: 1 when they point the same way, 0 when they are at right angles, and -1 when they are opposite. FVector::DotProduct(A, B) computes it, and the vectors must be normalised first for that reading to hold. Comparing the result with a threshold is the cheap way to ask whether something is inside a viewing cone or in front of you, with no angle function needed. Dot a direction with a surface normal and the sign tells which side faces you.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TVector?application_version=5.8",
+    "related": [
+      "fvector",
+      "fmath",
+      "line-trace"
+    ],
+    "firstQuestId": "m5-lines-and-hits"
+  },
+  {
+    "id": "reflection-vector",
+    "term": "Reflection Vector",
+    "aliases": [
+      "GetReflectionVector",
+      "MirrorByVector",
+      "reflect",
+      "bounce direction"
+    ],
+    "category": "math",
+    "short": "The direction an incoming heading takes after bouncing off a surface, found by mirroring it about the surface normal.",
+    "long": "Given a heading and the ImpactNormal from a hit, FMath::GetReflectionVector(Heading, Normal) or Heading.MirrorByVector(Normal) returns the heading after a perfect bounce, with the angle out equal to the angle in. A laser that bounces between walls traces, reflects, starts the next segment at the impact point, and repeats up to a limit. Start the next trace just off the surface or ignore the surface hit, so the new line does not immediately strike the wall it left.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/FMath?application_version=5.8",
+    "related": [
+      "fvector",
+      "fmath",
+      "fhitresult",
+      "line-trace"
+    ],
+    "firstQuestId": "m5-shapes-and-queries"
   },
   {
     "id": "stack-machine",

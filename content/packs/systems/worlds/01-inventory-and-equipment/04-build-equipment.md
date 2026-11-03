@@ -26,7 +26,7 @@ Compiles against earlier quests: s1-bag (`Quests/s1-bag/DojoS1InventoryComponent
 The class declaration is given, and so is a ready-made listener, `UDojoS1EquipmentSpy`. Every function body in `DojoS1EquipmentComponent.cpp` is yours:
 
 - `UseBag` chooses the bag that items come from and go back to.
-- `Equip` wears one of the item from the bag; the item goes in the slot named by its `EquipSlot`, and whatever was worn there goes back into the bag. It returns whether the item was worn. Items with no slot, items the bag does not hold, and a missing bag all give false.
+- `Equip` wears one item from the bag; the item goes in the slot named by its `EquipSlot`, and whatever was worn there goes back into the bag. It returns whether the item was worn. Items with no slot, items the bag does not hold, and a missing bag all give false.
 - `Unequip` moves the item worn in a slot back into the bag and returns whether it did.
 - `GetEquipped` answers what is worn in a slot, and `GetTotalPower` adds up the power bonus of everything worn.
 - `OnEquipmentChanged` is broadcast once for each change.
@@ -39,7 +39,7 @@ This is the third piece of the Expedition Pack boss.
 
 ## See it in the editor
 
-Make a Blueprint actor `BP_Carrier` with a `DojoS1InventoryComponent` and a `DojoS1EquipmentComponent`, and place one in the level. In the level Blueprint, with it selected, get its two components with Get Component by Class. On BeginPlay call Use Bag on the equipment with the bag, then Add `DA_Sword` and `DA_Dagger` to the bag. On the 1 key call Equip with `DA_Sword` and print Get Total Power; on the 2 key do the same with `DA_Dagger`. Press Play: 1 prints 7, 2 prints 3, and Get Slots on the bag shows the sword back in it.
+Make a Blueprint actor `BP_Carrier` with a `DojoS1InventoryComponent` and a `DojoS1EquipmentComponent`, and place one in the level. Make `DA_Dagger` the same way as `DA_Sword` (Weight 2, Equip Slot Hand, Power Bonus 3). In the level Blueprint, with it selected, get its two components with Get Component by Class. On BeginPlay call Use Bag on the equipment with the bag, then Add `DA_Sword` and `DA_Dagger` to the bag. On the 1 key call Equip with `DA_Sword` and print Get Total Power; on the 2 key do the same with `DA_Dagger`. Press Play: 1 prints 7, 2 prints 3, and Count Of `DA_Sword` on the bag, printed after the 2 key, reads 1 because the sword went back into the bag.
 
 # Files
 
@@ -375,7 +375,7 @@ bool FDojo_S1_Equipment_TightBags::RunTest(const FString& Parameters)
 	TestTrue(TEXT("With 4 less weight the same swap works"), Heavy.Equipment->Equip(Dagger));
 	TestTrue(TEXT("The dagger is in the hand"), Heavy.Equipment->GetEquipped(EDojoS1EquipSlot::EES_Hand) == Dagger);
 	TestEqual(TEXT("The sword is in the bag"), Heavy.Bag->CountOf(Sword), 1);
-	TestEqual(TEXT("Exactly one sword and one dagger exist"), Heavy.Bag->CountOf(Sword) + Heavy.Bag->CountOf(Dagger), 1);
+	TestEqual(TEXT("The bag holds the sword and not the dagger"), Heavy.Bag->CountOf(Sword) + Heavy.Bag->CountOf(Dagger), 1);
 
 	// Taking an item off when it would not fit back in the bag, by weight.
 	FWearer ByWeight = MakeWearer(TestWorld, 4, 20);
@@ -433,7 +433,7 @@ bool FDojo_S1_Equipment_TightBags::RunTest(const FString& Parameters)
 
 - Run the first failing test and read its message: it names an item that should be in one place and is somewhere else, or nowhere.
 - Equip changes two places, the bag and the slot. Ask what has to be true of the world if the second change cannot happen after the first one has, and what a failed call should leave behind.
-- `TMap::Add` replaces the value for a key that already exists, `TMap::Find` returns a pointer or null, and `UDojoS1InventoryComponent::GetRoomFor` tells you whether an item would fit, but only for the bag as it is at the moment you ask.
+- `UDojoS1InventoryComponent::GetRoomFor` tells you whether an item would fit, but only for the bag as it is at the moment you ask.
 
 # Rubric
 
