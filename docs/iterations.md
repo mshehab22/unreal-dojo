@@ -2280,3 +2280,17 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Tester: fresh tester PASS at 70004fb: verifier no problems and 12 warnings; `--pack mechanics` no problems; typecheck clean; npm test 1321 passed and 32 skipped; every build and boss quest has its solution folder; no em dashes; the new test uses only public members. No UI changed, so no Playwright run.
 - Not done or left for later: unverified on macOS (A75). The boss's R key is called directly in the headless tests (no player controller).
 - Decisions made: A1400 to A1407 under "Awaiting Mohammad's review" (prerequisite, shape, boss, seeded stream, deliberate failure, reuse of World 3 and World 2 actors, glossary claims, the next-tick end check).
+
+## M4.P2.23 Pack 2 World 23, Combos (content-patterns, author-patterns)
+- What changed: the last Patterns world, "Patterns that have to share a room", with a framing concept, three breakdowns, and three bosses that each join finished build quests from earlier worlds with a director that owns no rules. A fair's stalls (Component, Observer, Event Queue), the arena's instant replay (Command, Game Loop, Double Buffer), and the castle's siege wall (Subclass Sandbox, State) are planned first; then the arena night, the ghost drill, and the trap hall are built from the merged pieces of Worlds 4 to 9. Combinations are structured from the research's Part 4, with new scenarios, numbers, and text (A1806).
+- The quests and their observables:
+  - Three patterns, one room (concept): the seams between pieces (who calls whom, what is handed over, and when), a director that owns no rules, and signs of too much structure.
+  - Breakdowns, each with two reference plans: the fair's stalls, the instant replay, and the siege wall (A1803).
+  - Boss, the arena night: four fighters on two teams, a script of blows over six turns, loot dropped once, knockouts heard together at the end of the frame, TEAM 2 WINS in night 1 and TEAM 1 WINS in night 2. Four tests.
+  - Boss, the ghost drill: a live run of 50 fixed steps recorded as commands and replayed on a ghost dummy through the same clock, identical at 30, 60, and 144 frames a second, two pads scoring 50 and then 30. Four tests.
+  - Boss, the trap hall: a spike trap, a new frost vent, and a ballista with modes; the ballista is shown a target, ordered to fire, and its bolts hit the nearest fighter, three bolts and CLEARED in round 1 and four bolts and HELD in round 2. Three tests.
+- Also: no new glossary entries and no change to the pattern cards. A follow-up list of the later patterns each boss should add is in A1805.
+- Proof so far:
+  - Content verifier: no problems.
+  - Engine proof: not run. The task did not allow the engine, so nothing in this world has been compiled (A1809). Queued for the Lead: the three boss folders and the mutation copies.
+- Not done: the engine proof and the mutation run. No screenshots. Decisions A1799 to A1809.

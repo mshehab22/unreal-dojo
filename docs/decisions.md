@@ -4,6 +4,53 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1809 2026-11-03 World 23 was written without the engine; the proof is the Lead's (author-patterns, M4.P2.23)
+The task said no engine, so every C++ file and test in the three boss folders was written and read but never compiled. It uses only long-stable calls (`SpawnActorDeferred` and `FinishSpawning`, `NewObject` with `AddInstanceComponent` and `RegisterComponent`, dynamic and native multicast delegates, `FindComponentByClass`, `SetTimer` with a first delay, `TActorIterator` through the trap base, `InputComponent->BindKey`), copied in shape from the merged solutions. The bosses compile against the merged build quests of Worlds 4 to 9 (their headers were read, not run). Expect the first engine run to find any compile slip. Reverse cost: none.
+
+### A1808 2026-11-03 Prerequisites: the first quest requires World 13's boss, each breakdown requires the pattern worlds it combines (author-patterns, M4.P2.23)
+Worlds 14 to 22 are in the engine queue or still being written, so `p23-patterns-together` requires `p13-boss-modded-vault`, the last quest of the last merged world. Each breakdown also requires the when-not quest of every pattern world it combines (Worlds 1, 2, 4, 5, 6, 7, 8, and 9) so a learner reaches a combination only after the parts, and each boss requires its breakdown and the two build quests it compiles against. The chain across the world is linear. When Worlds 14 to 22 merge the Lead may point the first quest at World 22's last quest. Reverse cost: one line.
+
+### A1807 2026-11-03 Shape of the world: one framing concept and three breakdown-then-boss pairs (author-patterns, M4.P2.23)
+Folder `23-combos`, world id `combos`, quest ids `p23-<slug>`, classes `DojoP23<Name>`, tests `Dojo.P23.<Boss>.<Case>`. Seven quests: the framing concept (seams, a director that owns no rules), then for each of three combinations a breakdown with two reference plans followed by a boss that integrates two finished build quests unchanged. The task asked for two or three bosses of two or three patterns each; three bosses of three, three, and two patterns. Reverse cost: medium.
+
+### A1806 2026-11-03 Which combinations from Part 4, and which were left out (author-patterns, M4.P2.23)
+Chosen from the research's Part 4, as structure only, with new scenarios, numbers, and text:
+- Arena night, from "Modular interactables" (Component, Observer, Event Queue). Command was dropped because the Command boss follows, and Event Queue took its place so the three are Worlds 1, 6, and 9. The scenario is a scripted fight, not world objects.
+- Ghost drill, from "Replay and ghost racer" (Command, Game Loop, Double Buffer), with a drill dummy for a car.
+- Trap hall, from "Ability kit with cooldown UI" (Subclass Sandbox, State), with Observer and Object Pool left out (Observer is already used in the arena night, Object Pool is World 16's).
+Left out because they need a pattern that has not merged: Undo-able base builder (Object Pool, Dirty Flag), Stealth sense system (Spatial Partition), Bullet-hell core (Object Pool, Data Locality), Living economy board (Dirty Flag, Service Locator), Crowd festival (Data Locality, Spatial Partition), and Audio director (Service Locator, Dirty Flag). Left out because World 13's boss already combines it: Moddable spell workshop (Bytecode, Type Object, Subclass Sandbox). Reverse cost: low.
+
+### A1805 2026-11-03 Follow-up: what each boss should add once Worlds 14 to 22 merge (author-patterns, M4.P2.23)
+Not a blocker; for the Lead to schedule as extension work or a second combos world.
+- Arena night: Object Pool for the fighters and the loot drops (a night rebuilds four fighters each time), Dirty Flag for the score and standing counts the label reads, and Service Locator so the fighters find the herald without being given it.
+- Ghost drill: Object Pool for the recorded commands, Data Locality for the recording as a packed array, and Dirty Flag for the pad scores the label shows.
+- Trap hall: Strategy (World 20) for the bolt's target rule, so nearest, weakest, and farthest are chosen in Details instead of being fixed, Spatial Partition for finding the fighters in reach, and Object Pool for the bolts.
+- The six Part 4 combinations that need unmerged patterns (A1806) are a natural second combos world once those merge.
+
+### A1804 2026-11-03 The bosses reuse their pieces unchanged, so there are no extended copies (author-patterns, M4.P2.23)
+Each boss compiles against two merged build quests and adds only its own director, plan structs, and (in the trap hall) one new trap class. None ships a subfolder of extended piece files, so a mutation edits one copy of the boss folder and never two. Every mutation copy holds the three boss folders as they are, with one edit in one boss file. Reverse cost: none.
+
+### A1803 2026-11-03 Each breakdown plans a different system with the same three-pattern shape (author-patterns, M4.P2.23)
+The breakdowns are the fair's stalls (Component, Observer, Event Queue), the arena's instant replay (Command, Game Loop, Double Buffer), and the castle's siege wall (Subclass Sandbox, State). If a breakdown planned the boss's own system it would repeat the boss's Required Pieces and Reference Plans; a different system lets the learner transfer the structure, and the boss then confirms it with real pieces. The replay breakdown requires the arena night boss and the siege wall breakdown requires the ghost drill boss, so the world is one chain. Reverse cost: low.
+
+### A1802 2026-11-03 Seam choices in the directors (author-patterns, M4.P2.23)
+- Arena night: the director calls `KnockOut` itself after `ApplyDamage` when `IsDepleted` is true, and does not send the fighter out from the health part's `OnDepleted`. Dynamic multicast delegates do not promise a listener order, and a fighter destroyed before the loot part heard the health run out could lose its drop. The score is credited when the herald announces the knockout, with the winner's team read from a roster copy made at the start of the night, because the fighter may be gone by then.
+- Ghost drill: moves are taken at fixed-step boundaries and recorded with their step, and the replay runs them through the same `Perform` function. The round is scored by a timer at 10.5 seconds, not at the last step, because the pad counts a hit in the frame after it is made and a score read at the step could differ by one hit.
+- Trap hall: the director shows the ballista a target and takes it away, and never changes its mode. A bolt is turned into a hit only when the ballista's bolt count rose after the order, so orders in other modes cost nothing.
+Reverse cost: low.
+
+### A1801 2026-11-03 No deliberate failure in this world (author-patterns, M4.P2.23)
+The rule of one deliberate failure for each world is for build quests. This world has no build quest: it has breakdowns and bosses, and the lesson is the seams, which the framing concept names openly. The surprises a learner meets are in the integration (a loot drop cut short, a score a frame late, a replay that differs at 144 frames a second), and the rubrics and tests catch each. Reverse cost: low.
+
+### A1800 2026-11-03 The boss numbers, worked by hand (author-patterns, M4.P2.23)
+- Arena night: the turn timer fires at 1 to 6 seconds, the night ends at 6.5. In the reference night Cedar falls on turn 2, Ash and Birch on turn 3 (announced in the same frame, in that order), Dune is left. Loot is 5 Coin and 1 Bandage, team 2 has two knockouts and team 1 has one, so TEAM 2 WINS. With the changed script in night 2, Cedar and Dune fall by turn 2, the purse is 3 Coin and 2 Bandage, and TEAM 1 WINS. The tests check at least half a second away from each timer.
+- Ghost drill: with a 0.1 second step, moves pressed at 0.55, 1.25, 2.35 (twice), and 3.85 seconds run on steps 6, 13, 24, 24, and 39 at 30, 60, and 144 frames a second, because each press lands in the middle of a step and the slowest frame is shorter than half a step. The lane ends at 2 with 2 blocks and 50 points on each pad. Night 2 records `11R 16R 50B` and ends with 30 points on each pad, and a press at 5.05 is ignored.
+- Trap hall: the spike trap springs at 0.5, 2.5, 4.5, and so on (a rest of 1.5 seconds), the frost vent likewise, the ballista aims from 0.25, shoots bolts at 2, 5, 8, and 11 seconds (aim 1 second, reload 1.5), and the bolts and traps leave Ava down at 4.5 and Bo down at 8.5, so round 1 shoots 3 bolts and is CLEARED. With 200 health for Bo in round 2 it shoots 4 and Bo has 65 left, so the hall is HELD.
+The first round of each test starts its timers one frame late, as in Worlds 17 and 20. Reverse cost: none.
+
+### A1799 2026-11-03 What the headless tests cannot reach (author-patterns, M4.P2.23)
+The key bindings are untested because the test world has no player controller (as in Worlds 13, 17, and 20). The label text of the pieces' own actors is not asserted. The trap hall's `TActorIterator` finds every fighter in the world, so a test world must hold only one hall. Reverse cost: none.
+
 ### A1407 2026-11-03 The yard ends a round one frame after the last blast (author-mechanics, M4.P3.4)
 A bomb's `OnDestroyed` has two listeners in the boss, the chain that lights the neighbors and the yard that counts, and UE does not promise the order in which a dynamic multicast delegate calls its listeners. Options: let the chain report the end; check in the yard's own handler; check one frame later. Chosen: the yard's handler counts the blast and sets `SetTimerForNextTick`, and the next-tick check ends the round when no bomb is lit. Why: by then every listener of that blast has run, so a spark lit by the chain is always seen; it also gives `SetTimerForNextTick` a real job. The breakdown's alternative note names the wrong version (deciding inside the same listener). In UE 5.8 the dynamic multicast delegate happens to call listeners in bind order, and the yard's own chain binds before the yard, so the round tests alone would let a yard that ends inside its own handler pass; the engine mutation run confirmed it (yard-ends-in-handler survived). `LateSparksKeepItBurning` closes that gap: it sets the yard's reach to 0 and binds a second chain to the bombs after the yard, so the only sparks come from a listener that runs after the yard's, and a yard that decides inside its handler ends after the first blast. Reverse cost: low.
 
