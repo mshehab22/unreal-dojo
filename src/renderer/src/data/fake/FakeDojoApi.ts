@@ -42,8 +42,10 @@ import { daysFromNow } from "./fixtures/fakeClock";
 import {
 	blockedSandboxFolderFixture,
 	enginesFixture,
+	folderNotEmptyFixture,
 	manualEngineFixture,
 	missingEngineFixture,
+	missingSandboxFixture,
 	missingToolchainFixture,
 	saveNoticeFixture,
 	reviewProvidersFixture,
@@ -116,6 +118,12 @@ interface FakeState
 	/** True when the next sandbox folder pick answers with a blocker: the folder sits inside the engine folder. */
 	blockNextFolder: boolean;
 
+	/** Sandbox folders that hold a copy of the template, so a second create there is refused as main refuses it (the one in settings, unless it is gone). */
+	copiedSandboxes: string[];
+
+	/** True while the sandbox folder in settings no longer holds the project (`sandbox-deleted`): the environment says not ready and a rebuild is refused, until a new sandbox is created. */
+	sandboxGone: boolean;
+
 	/** The packs, worlds, and stages this scenario's map shows. */
 	map: PackFixture[];
 }
@@ -144,6 +152,8 @@ function initialState(scenario: FakeScenario): FakeState
 		quietNextBuild: scenario === "first-build-goes-quiet",
 		explainNextBuildFailure: scenario === "sandbox-setup-fails",
 		blockNextFolder: scenario === "folder-blocked",
+		sandboxGone: scenario === "sandbox-deleted",
+		copiedSandboxes: isFresh || scenario === "sandbox-deleted" ? [] : [sandboxPathIn(sandboxFolderFixture().path)],
 		map: scenario === "quests" || scenario === "economy" ? questFlowMapFixture() : MAP_FIXTURE,
 	};
 }
@@ -272,11 +282,22 @@ export class FakeDojoApi implements DojoClient
 		return answer(sandboxFolderFixture());
 	}
 
-	/** Simulates copying the template and the first full build, then remembers the sandbox path on a pass, as the sandbox service does. Fails once in the first-build-fails scenario. */
+	/**
+	 * Simulates copying the template and the first full build. As the sandbox service does, it refuses a folder that already holds a copy
+	 * (a sandbox made earlier, or one whose build failed or was cancelled) and remembers the new sandbox before building, which also replaces
+	 * a deleted one. Fails once in the first-build-fails scenario.
+	 */
 	async createSandbox(request: SandboxSetupRequest): Promise<SandboxSetupResult>
 	{
 		const engine = [...enginesFixture(), manualEngineFixture()].find((candidate) => candidate.path === request.enginePath);
 		const sandboxPath = sandboxPathIn(request.folder);
+
+		if (this.state.copiedSandboxes.includes(sandboxPath)) return Promise.reject<SandboxSetupResult>(folderNotEmptyFixture(sandboxPath));
+
+		this.state.copiedSandboxes.push(sandboxPath);
+		this.state.settings = { ...this.state.settings, sandboxPath };
+		this.state.sandboxGone = false;
+
 		const shouldFail = this.state.failNextBuild;
 		const goesQuiet = this.state.quietNextBuild;
 		const failure = shouldFail && this.state.explainNextBuildFailure ? sandboxSetupFailureFixture() : undefined;
@@ -289,8 +310,6 @@ export class FakeDojoApi implements DojoClient
 		{
 			const end = await this.simulateBuild(request.runId, engine?.version ?? "5.8.3", shouldFail, goesQuiet);
 
-			if (end.ok) this.state.settings = { ...this.state.settings, sandboxPath };
-
 			if (end.ok) return { ok: true, sandboxPath, durationMs: end.durationMs, compilerOutput: "" };
 
 			return { ok: false, sandboxPath, durationMs: end.durationMs, compilerOutput: failure?.detail ?? FAILED_BUILD_OUTPUT, ...(failure ? { failure } : {}) };
@@ -302,14 +321,16 @@ export class FakeDojoApi implements DojoClient
 		return result;
 	}
 
-	/** Simulates a clean rebuild of the existing sandbox. */
+	/** Simulates a clean rebuild of the existing sandbox. A sandbox that is gone is refused the way main's preflight refuses it. */
 	async rebuildSandbox(runId: string): Promise<SandboxSetupResult>
 	{
 		const sandboxPath = this.state.settings.sandboxPath;
 
+		if (sandboxPath && this.state.sandboxGone) return Promise.reject<SandboxSetupResult>(missingSandboxFixture(sandboxPath));
+
 		if (!sandboxPath)
 		{
-			return Promise.reject<SandboxSetupResult>({ code: "sandbox-not-ready", message: "There is no sandbox to rebuild yet.", suggestedAction: "Run first-run setup to create it." } satisfies AppError);
+			return Promise.reject<SandboxSetupResult>({ code: "sandbox-not-ready", message: "There is no sandbox to rebuild yet.", suggestedAction: "Use Set up the sandbox again to create it." } satisfies AppError);
 		}
 
 		return this.rememberAnswer(runId, async () =>
@@ -699,7 +720,7 @@ export class FakeDojoApi implements DojoClient
 
 		return {
 			engine,
-			sandbox: { path: this.state.settings.sandboxPath, ready: this.state.settings.sandboxPath !== null },
+			sandbox: { path: this.state.settings.sandboxPath, ready: this.state.settings.sandboxPath !== null && !this.state.sandboxGone },
 			reviewProvider,
 			loopMode: this.state.settings.loopMode,
 			editorConnected: this.state.editorConnected,

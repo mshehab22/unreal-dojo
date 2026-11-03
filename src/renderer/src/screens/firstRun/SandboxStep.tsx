@@ -1,4 +1,4 @@
-// Setup step 2: choose the folder the practice project is created in, with warnings, and the reasons a folder cannot be used when it cannot.
+// Setup step 2: choose the folder the practice project is created in, with warnings, and the reasons a folder cannot be used when it cannot. Settings reuses it to set the sandbox up again (M5.1k).
 import { FolderOpenIcon, TriangleAlertIcon } from "lucide-react";
 
 import type { SandboxFolderChoice } from "@shared/types/engine";
@@ -16,10 +16,13 @@ interface SandboxStepProps
 	readonly onChoose: (folder: SandboxFolderChoice) => void;
 	readonly onBack: () => void;
 	readonly onNext: () => void;
+
+	/** The words on the back button: "Back" in first-run, "Cancel" where the step opens on its own. */
+	readonly backLabel?: string;
 }
 
 /** Folder picker for the sandbox project, showing the chosen path and any warnings. */
-export function SandboxStep({ folder, onChoose, onBack, onNext }: SandboxStepProps)
+export function SandboxStep({ folder, onChoose, onBack, onNext, backLabel = "Back" }: SandboxStepProps)
 {
 	const pick = useDojoAction((client) => client.pickSandboxFolder());
 	const blockers = folder?.blockers ?? [];
@@ -40,7 +43,7 @@ export function SandboxStep({ folder, onChoose, onBack, onNext }: SandboxStepPro
 			footer={
 				<>
 					<Button variant="ghost" onClick={onBack}>
-						Back
+						{backLabel}
 					</Button>
 					<Button variant="pack" onClick={onNext} disabled={!folder || blockers.length > 0}>
 						Use this folder
