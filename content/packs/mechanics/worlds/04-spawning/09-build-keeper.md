@@ -18,7 +18,7 @@ concepts:
 
 # Brief
 
-When you place a keeper with three slots and press Play, a lit bomb appears in the first slot at once and another every half second until all three slots hold one; each bomb blows when its fuse runs out, its slot is free again, and the next refill puts a new bomb there, so there are never more than three in play and they keep coming until the keeper is stopped.
+When you place a keeper with three slots and press Play, a lit bomb appears in the first slot right away and another every half second until all three slots hold one; each bomb blows when its fuse runs out, its slot is free again, and the next refill puts a new bomb there, so there are never more than three in play and they keep coming until the keeper is stopped.
 
 Write `ADojoM4Keeper` from nothing. It has a scene root and never ticks. From `BeginPlay` it refills every `RefillSeconds`, the first time on the next frame. A refill does nothing when there is no class or no free slot; otherwise it spawns one bomb in the lowest free slot, lit with `Fuse` from its first frame, and counts it as made. Slot `i` stands `Spacing` times `i` along the keeper's own right. A bomb leaving play, by any means, frees its slot. `Stop` ends the refills, and so does `EndPlay`, which also stops listening to the bombs.
 
@@ -105,7 +105,7 @@ namespace DojoM4KeeperTest
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M4_Keeper_KeepsTheBudget, "Dojo.M4.Keeper.KeepsTheBudget", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Runs a three slot keeper for 3 seconds and checks it fills at once, never holds more than three, and refills freed slots lowest first. */
+/** Runs a three slot keeper for 3 seconds and checks it starts filling right away, never holds more than three, and refills freed slots lowest first. */
 bool FDojo_M4_Keeper_KeepsTheBudget::RunTest(const FString& Parameters)
 {
 	using namespace DojoM4KeeperTest;
