@@ -2172,3 +2172,5 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 ### Fix round 1
 - What the reviewer asked for: the smoke check read only whether GPU compositing was off, and a GPU crash turns it off too, so the check passed without the fix.
 - What changed: the check now asks Electron whether hardware acceleration is enabled (false only with the fix, even after a crash), with the compositing check beside it.
+- Review: PASS after fix round 1. With the fix taken out, the reviewer saw the GPU process crash on every launch and the new smoke check fail ("Expected: false, Received: true"), so the machine was under the original load.
+- Tester (fresh agent, 86aaa36, main efd4986 merged in): `npm run typecheck` passes; `npm test` 100 files passed, 6 skipped, 1290 tests passed, 32 skipped; verify-content no problems; build passes; two full `npx playwright test` runs in a row: 50 passed, 0 failed, 1 skipped each (14.0 and 14.1 min), with 0 "Unable to capture screenshot" and 0 "GPU process exited".
