@@ -140,6 +140,10 @@ bool FDojo_P23_TrapHall_TwoRoundsOfTrapsAndBolts::RunTest(const FString& Paramet
 	TickUntil(TestWorld, Start + 10.f);
 	TestTrue(TEXT("Then it goes idle"), InMode(Hall, UDojoP7BallistaIdle::StaticClass()));
 
+	TickUntil(TestWorld, Start + 11.5f);
+	TestTrue(TEXT("The round is still running at 11.5"), Hall->IsRunning());
+	TestEqual(TEXT("The order at 11 seconds, to an idle ballista, shot nothing"), Hall->GetBolts(), 3);
+
 	TickUntil(TestWorld, Start + 12.5f);
 	TestFalse(TEXT("The round is over at 12 seconds"), Hall->IsRunning());
 	TestEqual(TEXT("Orders to fire at an idle ballista shot nothing"), Hall->GetBolts(), 3);
@@ -161,7 +165,12 @@ bool FDojo_P23_TrapHall_TwoRoundsOfTrapsAndBolts::RunTest(const FString& Paramet
 	Hall->PressNextRound();
 	TestEqual(TEXT("R does nothing while a round runs"), Hall->GetRoundNumber(), 2);
 
+	TickUntil(TestWorld, SecondStart + 11.5f);
+	TestTrue(TEXT("Round 2 is still running at 11.5"), Hall->IsRunning());
+	TestEqual(TEXT("The order at 11 seconds shot the fourth bolt"), Hall->GetBolts(), 4);
+
 	TickUntil(TestWorld, SecondStart + 12.5f);
+	TestFalse(TEXT("Round 2 is over at 12"), Hall->IsRunning());
 	TestEqual(TEXT("With a target in reach all round, the ballista shot four bolts"), Hall->GetBolts(), 4);
 	TestEqual(TEXT("Ava is down"), HealthOf(Hall, 0), 0.f);
 	TestEqual(TEXT("Six frost bursts and three bolts left Bo with 65"), HealthOf(Hall, 1), 65.f);

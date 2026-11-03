@@ -91,16 +91,16 @@ Acceptance:
   title: A looping timer at the tick rate, with snapshots tagged by a sequence number
   pieces:
     - { id: moves, kind: data, label: "A Blueprint struct of duelist, move, and tick number, kept in an array variable", covers: [moves] }
-    - { id: clock, kind: step, label: "A looping Set Timer by Event at 0.05 seconds; the timer manager runs a missed tick again inside a long frame, so every tick still runs once", covers: [clock] }
+    - { id: clock, kind: step, label: "A looping Set Timer by Event at 0.05 seconds; the timer manager runs a missed tick again inside a long frame, so the event counts the ticks it has run in the current frame and ignores any beyond a limit", covers: [clock] }
     - { id: recorder, kind: class, label: "An array that removes every move older than 200 ticks each time a tick is recorded", covers: [recorder] }
-    - { id: replay-run, kind: step, label: "A second looping timer for the replay, applying the moves tagged with the current replay tick to the replay copies", covers: [replay-run] }
-    - { id: controls, kind: step, label: "Pause clears the replay timer, half speed sets it to 0.1 seconds, and a step calls the tick event once by hand", covers: [controls] }
+    - { id: replay-run, kind: step, label: "The same tick event also advances the replay while one is running, applying the moves tagged with the replay tick to the replay copies", covers: [replay-run] }
+    - { id: controls, kind: step, label: "Pause skips the replay's part of each tick, half speed runs it on every second tick, and a step runs it once by hand", covers: [controls] }
     - { id: snapshot, kind: data, label: "Two struct arrays of places and a sequence number written last in each; the screen shows the array whose number is the larger and finished", covers: [snapshot] }
     - { id: swap, kind: step, label: "The simulation finishes writing one array, sets its sequence number, and writes the other one next", covers: [swap] }
   edges:
     - { from: moves, to: recorder, label: "what is kept" }
-    - { from: clock, to: replay-run, label: "the replay timer mirrors the clock" }
-    - { from: controls, to: replay-run, label: "changes the timer" }
+    - { from: clock, to: replay-run, label: "the replay advances on the same tick" }
+    - { from: controls, to: replay-run, label: "changes how many ticks it gets" }
     - { from: replay-run, to: snapshot, label: "writes the other array" }
     - { from: swap, to: snapshot, label: "the sequence number marks it finished" }
 ```

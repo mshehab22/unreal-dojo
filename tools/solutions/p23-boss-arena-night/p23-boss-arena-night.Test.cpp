@@ -116,8 +116,12 @@ bool FDojo_P23_ArenaNight_TwoNightsOfBlowsAndKnockouts::RunTest(const FString& P
 	TestEqual(TEXT("Blows from fighters who are out do nothing"), HealthOf(Night, TEXT("Dune")), 25.f);
 	TestEqual(TEXT("And announce nothing"), Night->GetAnnouncements().Num(), 3);
 
+	TickUntil(TestWorld, Start + 6.2f);
+	TestTrue(TEXT("The night is still running after the sixth turn"), Night->IsRunning());
+	TestTrue(TEXT("With no result yet"), Night->GetResult().IsEmpty());
+
 	TickUntil(TestWorld, Start + 7.f);
-	TestFalse(TEXT("The night is over"), Night->IsRunning());
+	TestFalse(TEXT("The night is over half a second after the sixth turn"), Night->IsRunning());
 	TestEqual(TEXT("Team 2 has more knockouts"), Night->GetResult(), FString(TEXT("TEAM 2 WINS")));
 	TestEqual(TEXT("The label shows the result"), Night->Label->Text.ToString(), FString(TEXT("Night 1  Team 1: 1  Team 2: 2  Standing 1  TEAM 2 WINS")));
 

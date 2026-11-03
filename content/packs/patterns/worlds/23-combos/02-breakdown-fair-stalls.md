@@ -101,7 +101,7 @@ Acceptance:
   title: Parts with dynamic delegates and a mailbox for each stall
   pieces:
     - { id: parts, kind: component, label: "Three UActorComponent subclasses marked BlueprintSpawnableComponent so designers add them in a Blueprint", covers: [parts] }
-    - { id: assembly, kind: step, label: "Each stall kind is a Blueprint with its parts added in the Components panel; the fair spawns the Blueprint class", covers: [assembly] }
+    - { id: assembly, kind: step, label: "Each stall kind is a data table row listing part classes; the fair spawns one plain stall Blueprint and adds a component of each listed class with Add Component by Class", covers: [assembly] }
     - { id: part-events, kind: event, label: "The shelf owns a dynamic multicast delegate with BlueprintAssignable, and the board binds with Bind Event to On Emptied", covers: [part-events] }
     - { id: request, kind: data, label: "A Blueprint struct with a request type enum, the visitor name, and the time it was posted", covers: [request] }
     - { id: mailbox, kind: data, label: "An array variable on each stall, so a stall that is removed takes its own waiting requests with it", covers: [mailbox] }
@@ -109,7 +109,7 @@ Acceptance:
     - { id: closing, kind: step, label: "A stall that closes empties its own mailbox and answers every waiting request with closed", covers: [closing] }
     - { id: board, kind: class, label: "A Blueprint actor that binds to each shelf in its Begin Play and sets a Text variable when it fires", covers: [board] }
   edges:
-    - { from: assembly, to: parts, label: "adds the parts in the editor" }
+    - { from: assembly, to: parts, label: "adds the parts a row lists" }
     - { from: parts, to: part-events, label: "announce what happened" }
     - { from: part-events, to: board, label: "the board binds in Blueprint" }
     - { from: request, to: mailbox, label: "requests wait in the stall's own array" }
@@ -128,4 +128,4 @@ Acceptance:
 
 # Alternative Note
 
-Both plans pass. One mailbox for the whole fair makes the arrival order across stalls exact and puts the settling in one place, but it holds pointers-by-name that must be looked up. A mailbox for each stall removes the lookup and lets a removed stall take its requests with it, but the order across stalls is only as good as the till's visit order. Native delegates are cheaper and keep listeners in C++; dynamic delegates let a designer bind in a Blueprint, at some cost per broadcast.
+Both plans pass. One mailbox for the whole fair makes the arrival order across stalls exact and puts the settling in one place, but a request names its stall, and the name must be looked up. A mailbox for each stall removes the lookup and lets a removed stall take its requests with it, but the order across stalls is only as good as the till's visit order. Native delegates are cheaper and keep listeners in C++; dynamic delegates let a designer bind in a Blueprint, at some cost per broadcast.

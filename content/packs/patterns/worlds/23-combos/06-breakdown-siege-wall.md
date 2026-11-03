@@ -96,7 +96,7 @@ Acceptance:
     - { id: modes, kind: data, label: "The enum plus one float for the seconds the current mode has left, set again on every change of mode", covers: [modes] }
     - { id: transitions, kind: step, label: "A data table of from-mode, input, and to-mode rows that one function reads, with Break matching every from-mode", covers: [transitions] }
     - { id: orders, kind: event, label: "Fire and Repair look the input up in the table for the current mode, and do nothing when there is no row", covers: [orders] }
-    - { id: alarm, kind: class, label: "A dynamic multicast delegate OnModeChanged that the alarm binds to and filters for the broken mode", covers: [alarm] }
+    - { id: alarm, kind: class, label: "A dynamic multicast delegate OnModeChanged that carries the old and the new mode, and the alarm keeps a count of engines in the broken mode", covers: [alarm] }
   edges:
     - { from: engine-base, to: modes, label: "owns the current mode" }
     - { from: engine-kinds, to: tools, label: "uses only these" }

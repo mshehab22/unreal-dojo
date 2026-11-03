@@ -4,6 +4,15 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1798 2026-11-03 World 23 fix round 1 (author-patterns, M4.P2.23)
+The reviewer's verdict was FIXES NEEDED with one blocker and no wrong number in any hand trace. Changed:
+- The ghost drill's long-frame test asked a world tick for a five second frame, but the engine clamps a frame to 0.4 seconds (`MaxUndilatedFrameTime`), so the director would have been handed 0.4 and run four steps. The test now ticks a 0.4 second frame (four steps), hands a five second stall straight to `Tick` (eight steps, the limit), and then ticks an ordinary frame (two steps, none of the debt). With default World Settings a real frame therefore never reaches the eight step limit; it is there for a hand-called `Tick`, a different World Settings value, and a Blueprint that calls it.
+- The three second reference plans claimed Blueprint operations that the unchanged pieces do not expose (the trap base's protected tools, the ballista's and fighter's editable-only numbers, `CarryOut`, and the herald's native delegate). They are now second C++ plans with a different design (a ticked turn clock and a ledger; a clock object and a recorder object; one quarter-second heartbeat), and say so. The Blueprint wording remains only where the pieces do expose it, in the breakdowns.
+- Four breakdown plans that contradicted their own rubric were corrected (a step limit in the timer clock, the replay on the same tick, stall kinds as data and not a class each, an alarm that counts broken engines).
+- The arena night and the trap hall tests now pin the round end (running at 6.2 and 11.5, over at 7 and 12.5), and round 2 of the trap hall checks the fourth bolt before the end.
+- One struct per file: the announcement and the recorded command moved to their own headers, and the trap and fighter plans are separate files.
+Reverse cost: low.
+
 ### A1809 2026-11-03 World 23 was written without the engine; the proof is the Lead's (author-patterns, M4.P2.23)
 The task said no engine, so every C++ file and test in the three boss folders was written and read but never compiled. It uses only long-stable calls (`SpawnActorDeferred` and `FinishSpawning`, `NewObject` with `AddInstanceComponent` and `RegisterComponent`, dynamic and native multicast delegates, `FindComponentByClass`, `SetTimer` with a first delay, `TActorIterator` through the trap base, `InputComponent->BindKey`), copied in shape from the merged solutions. The bosses compile against the merged build quests of Worlds 4 to 9 (their headers were read, not run). Expect the first engine run to find any compile slip. Reverse cost: none.
 

@@ -24,7 +24,7 @@ pieces:
 
 The director runs a ghost drill. A round has two halves of equal length. In the first, the player drills a live dummy by pressing moves, and every move is recorded. In the second, a ghost dummy runs the recording, and at the end the two dummies and their pads are compared. The earlier quests supply the rules: a drill dummy that steps between three lanes and blocks, an order that carries a move out on a dummy as a plain value, and a drum pad that counts hits from one finished snapshot for each frame.
 
-The director owns a clock. Real time collects frame by frame, and the clock runs whole fixed steps of 0.1 seconds from it, however long a frame was, at most 8 steps in one frame. A frame that owes more steps than are allowed forgets the rest instead of catching up later. A round has 100 steps in all: steps 1 to 50 are the live run and steps 51 to 100 are the replay.
+The director owns a clock. Real time collects frame by frame, and the clock runs whole fixed steps of 0.1 seconds from it, however long a frame was, at most 8 steps in one frame. A frame that owes more steps than are allowed forgets the rest instead of catching up later. The engine itself caps a frame at 0.4 seconds, which is four steps, so the limit guards against a stall that other code hands straight to the clock. A round has 100 steps in all: steps 1 to 50 are the live run and steps 51 to 100 are the replay.
 
 During the live run, A is a step left, D a step right, and Space a block. A press does nothing at any other time. A pressed move waits until the next fixed step and then runs on the live dummy, in the order pressed, and is recorded with the number of that step. Each time a move runs, in either half, the director hits the pad lane that the dummy is in after the move. In the replay, the commands recorded on step N run on the ghost dummy on step 50 plus N, the same way, and hit the ghost's pad.
 
@@ -104,17 +104,17 @@ Feel: tune the step length so that a rapid pair of presses reads as two moves in
     - { from: replay-run, to: pads, label: "hits the ghost pad" }
     - { from: pads, to: scoring, label: "scores are compared" }
     - { from: director, to: round, label: "start and end" }
-- id: blueprint-drill
-  title: A Blueprint director with a looping timer for the clock
+- id: cpp-objects
+  title: A C++ director that gives the clock and the recording to small objects of their own
   pieces:
-    - { id: director, kind: class, label: "BP_GhostDrill actor with a Text Render component, variables for the two dummies and two pads, and variables for the step length and live steps", covers: [director] }
-    - { id: moves, kind: data, label: "A Blueprint struct of a step integer and the earlier quest's drill move enum, in an array variable", covers: [moves] }
-    - { id: clock, kind: step, label: "A looping Set Timer by Event of 0.1 seconds whose event is one fixed step; the timer manager runs a missed step again inside a long frame, and the step counter stops the clock after 100 steps", covers: [clock] }
-    - { id: live-run, kind: step, label: "Input events add to a pending array behind a Branch on the step counter being under 50; the step event runs the pending moves, appends each to the recording with the step counter, and clears the array", covers: [live-run] }
-    - { id: replay-run, kind: step, label: "The step event, for later steps, loops the recording and calls the Perform function for entries whose step equals the counter minus 50", covers: [replay-run] }
-    - { id: pads, kind: data, label: "Perform makes an order with Make DojoP5DrillOrder, calls Carry Out, then calls Hit on the matching pad with Get Lane", covers: [pads] }
-    - { id: scoring, kind: step, label: "A 10.5 second Set Timer by Event compares the dummies and pads and sets the result string", covers: [scoring] }
-    - { id: round, kind: step, label: "The R event calls Start Round behind a Branch on Running; Start Round destroys the old actors, spawns new ones, clears the arrays and the counter, and restarts the timers", covers: [round] }
+    - { id: director, kind: class, label: "ADojoP23GhostDrill with a text label as its root, tick enabled, TObjectPtr members for the two dummies and two pads, and a clock object and a recorder object made in its constructor", covers: [director] }
+    - { id: moves, kind: data, label: "A plain struct of an int for the step and the earlier quest's EDojoP5DrillMove enum, kept in the recorder object's TArray", covers: [moves] }
+    - { id: clock, kind: step, label: "A clock object whose Advance takes DeltaSeconds, adds it to a double accumulator, and returns how many whole steps to run, at most the limit, forgetting the rest of a long frame", covers: [clock] }
+    - { id: live-run, kind: step, label: "PressMove adds to a pending TArray only while the live run is on, and the director's step function, for steps up to 50, runs each pending move, hands it to the recorder with the step, and clears the array", covers: [live-run] }
+    - { id: replay-run, kind: step, label: "The step function, for later steps, asks the recorder for the commands of step minus 50 and runs them through the same Perform function that the live run used", covers: [replay-run] }
+    - { id: pads, kind: data, label: "Perform builds a FDojoP5DrillOrder for the dummy and calls CarryOut, then calls Hit on that dummy's pad with the dummy's lane", covers: [pads] }
+    - { id: scoring, kind: step, label: "A non-looping timer of 10.5 seconds compares GetLane, GetBlocks, and GetScore on both sides and sets the result", covers: [scoring] }
+    - { id: round, kind: step, label: "PressNextRound starts a round only while stopped; a new round destroys the old dummies and pads, spawns new ones, and resets the clock object and the recorder object", covers: [round] }
   edges:
     - { from: clock, to: live-run, label: "runs the live steps" }
     - { from: clock, to: replay-run, label: "runs the replay steps" }

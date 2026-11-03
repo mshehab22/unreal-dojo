@@ -107,18 +107,18 @@ Feel: tune the damage of the blows so that a turn in which two fighters are stru
     - { from: knockout, to: score, label: "heard at the end of the frame" }
     - { from: score, to: result, label: "the counts decide" }
     - { from: director, to: night, label: "start and end" }
-- id: blueprint-night
-  title: A Blueprint director that builds the fighters through Blueprint nodes
+- id: cpp-ledger
+  title: A C++ director that ticks the turns itself and keeps a ledger
   pieces:
-    - { id: director, kind: class, label: "BP_ArenaNight actor with a Text Render component, a variable for the herald, a map variable of fighters by name, and variables for the turn length and count", covers: [director] }
-    - { id: plans, kind: data, label: "Two Blueprint structs, a fighter plan and a strike, in array variables on the director", covers: [plans] }
-    - { id: fighters, kind: component, label: "Spawn Actor from Class for the fighter, then Add Component by Class for the health and loot parts, with their values set before Register, and a call to Listen To on the loot part", covers: [fighters] }
-    - { id: blow, kind: step, label: "A Strike function that looks up both fighters in the map, branches on Is Valid, calls Apply Damage, and calls Knock Out only when Is Depleted is true", covers: [blow] }
-    - { id: loot, kind: event, label: "Bind Event to On Loot Dropped on each loot part, adding the item and count to a map variable", covers: [loot] }
-    - { id: knockout, kind: event, label: "Bind Event to the herald's announcement, appending an entry with the fallen name, winner name, and Get Game Time in Seconds to a log array", covers: [knockout] }
-    - { id: score, kind: step, label: "The announcement event finds the winner in the roster array and adds one to that team's integer variable", covers: [score] }
-    - { id: night, kind: step, label: "A looping Set Timer by Event for the turns and a single 6.5 second timer for the end; the R event calls Start Round behind a Branch on Running, and Start Round destroys the old fighters first", covers: [night] }
-    - { id: result, kind: step, label: "The end event compares the two team variables and sets a result string", covers: [result] }
+    - { id: director, kind: class, label: "ADojoP23ArenaNight with tick enabled, a text label as its root, a TObjectPtr to the herald, a TMap of fighters by name, and a ledger struct for the score, the purse, and the log", covers: [director] }
+    - { id: plans, kind: data, label: "Two USTRUCTs, a fighter plan and a scripted strike, in TArrays on the director, copied into the night's roster at the start", covers: [plans] }
+    - { id: fighters, kind: component, label: "BuildFighter spawns the fighter actor deferred, sets its name, team, and herald, then adds a health component and a loot component with NewObject, AddInstanceComponent, and RegisterComponent, and calls ListenTo", covers: [fighters] }
+    - { id: blow, kind: step, label: "ApplyStrike looks both fighters up by name, calls ApplyDamage on the health component, and calls KnockOut on the target only when IsDepleted is true", covers: [blow] }
+    - { id: loot, kind: event, label: "AddDynamic binds a UFUNCTION on the director to each loot component's OnLootDropped, which adds the item and count to the ledger's purse", covers: [loot] }
+    - { id: knockout, kind: event, label: "AddUObject binds a handler to the herald's native OnKnockoutAnnounced, which appends the fallen name, the winner name, and the world time to the ledger's log", covers: [knockout] }
+    - { id: score, kind: step, label: "The same handler looks the winner up in the roster copy and adds one to that team's count in the ledger", covers: [score] }
+    - { id: night, kind: step, label: "Tick adds DeltaSeconds to an accumulator and plays a turn each time it holds a whole turn, and the night ends when the accumulator passes the turn count plus a half turn; PressNextRound starts a night only while stopped, and a new night clears the ledger and the fighters", covers: [night] }
+    - { id: result, kind: step, label: "EndRound compares the two teams' counts in the ledger and sets the result string", covers: [result] }
   edges:
     - { from: plans, to: fighters, label: "each plan builds one fighter" }
     - { from: fighters, to: loot, label: "the loot part reports its drop" }

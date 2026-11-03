@@ -1,7 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "DojoP23HallPlans.h"
+#include "DojoP23HallFighterPlan.h"
+#include "DojoP23TrapPlan.h"
 #include "GameFramework/Actor.h"
 #include "InputCoreTypes.h"
 #include "DojoP23TrapHall.generated.h"

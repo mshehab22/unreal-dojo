@@ -155,7 +155,7 @@ bool FDojo_P23_GhostDrill_FrameRateDoesNotChangeTheRun::RunTest(const FString& P
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P23_GhostDrill_ALongFrameCannotStartASpiral, "Dojo.P23.GhostDrill.ALongFrameCannotStartASpiral", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** A frame of five seconds runs only the most steps allowed and forgets the rest, so the next ordinary frame runs just its own. */
+/** A stall of five seconds, handed straight to Tick because the engine caps a real frame at 0.4 seconds, runs only the most steps allowed and forgets the rest, so the next ordinary frame runs just its own. */
 bool FDojo_P23_GhostDrill_ALongFrameCannotStartASpiral::RunTest(const FString& Parameters)
 {
 	FDojoTestWorld TestWorld;
@@ -163,11 +163,14 @@ bool FDojo_P23_GhostDrill_ALongFrameCannotStartASpiral::RunTest(const FString& P
 	ADojoP23GhostDrill* Drill = TestWorld.SpawnActor<ADojoP23GhostDrill>();
 	if (!TestNotNull(TEXT("Drill spawned"), Drill)) return false;
 
-	TestWorld.Tick(1, 5.f);
-	TestEqual(TEXT("Five seconds is fifty steps, but only eight may run in a frame"), Drill->GetStepCount(), 8);
+	TestWorld.Tick(1, 0.4f);
+	TestEqual(TEXT("The longest frame the engine delivers, 0.4 seconds, runs four steps"), Drill->GetStepCount(), 4);
+
+	Drill->Tick(5.f);
+	TestEqual(TEXT("A stall of five seconds is fifty steps, but only eight may run in a frame"), Drill->GetStepCount(), 12);
 
 	TestWorld.Tick(1, 0.15f);
-	TestEqual(TEXT("The next frame runs the two steps it holds and none of the debt"), Drill->GetStepCount(), 10);
+	TestEqual(TEXT("The next frame runs the two steps it holds and none of the debt"), Drill->GetStepCount(), 14);
 
 	return true;
 }

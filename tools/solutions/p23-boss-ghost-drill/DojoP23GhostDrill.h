@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "DojoP23RecordedCommand.h"
 #include "GameFramework/Actor.h"
 #include "InputCoreTypes.h"
 #include "Quests/p5-drill-orders/DojoP5DrillSergeant.h"
@@ -9,16 +10,6 @@
 class ADojoP4DrumPad;
 class ADojoP5DrillDummy;
 class UTextRenderComponent;
-
-/** One command of the live run as it was recorded: the fixed step it ran on and the move it was. */
-struct FDojoP23RecordedCommand
-{
-	/** The fixed step the command ran on, counting from 1. */
-	int32 Step = 0;
-
-	/** The move the command asked for. */
-	EDojoP5DrillMove Move = EDojoP5DrillMove::EDM_Block;
-};
 
 /** Runs a ghost drill: the player's moves run on a live dummy one fixed step at a time and are recorded, then the same recording runs again on a ghost dummy through the same step loop, and the two runs are compared. It steps no dummy and scores no hit itself. Command, Game Loop, and Double Buffer patterns. */
 UCLASS()

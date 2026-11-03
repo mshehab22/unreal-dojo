@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "DojoP23Announcement.h"
+#include "DojoP23Announcement.h"
 #include "DojoP23FighterPlan.h"
 #include "DojoP23ScriptedStrike.h"
 #include "GameFramework/Actor.h"
@@ -10,19 +12,6 @@
 
 class ADojoP6Fighter;
 class UTextRenderComponent;
-
-/** One knockout as the director heard it from the herald: who went down, who landed the blow, and when the herald announced it. */
-struct FDojoP23Announcement
-{
-	/** The fighter who went down. */
-	FName Fallen = NAME_None;
-
-	/** The fighter who landed the blow. */
-	FName Winner = NAME_None;
-
-	/** The world time of the announcement. */
-	double Seconds = 0.0;
-};
 
 /** Runs an arena night: it builds the fighters from parts, plays out a script of blows one turn at a time, and keeps the score, the loot, and the log from what the parts and the herald tell it. It works out no damage, no loot, and no announcement itself. Component, Observer, and Event Queue patterns. */
 UCLASS()

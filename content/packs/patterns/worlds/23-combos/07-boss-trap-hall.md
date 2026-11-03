@@ -102,17 +102,17 @@ Feel: tune the traps' rests and the ballista's reload so that the traps and the 
     - { from: targeting, to: firing, label: "the ballista only fires with a target" }
     - { from: firing, to: round, label: "the fighters left decide" }
     - { from: director, to: round, label: "start and end" }
-- id: blueprint-hall
-  title: A Blueprint director that drives the actors through their Blueprint functions
+- id: cpp-heartbeat
+  title: A C++ director with one quarter-second heartbeat that counts out the springs, the looks, and the orders
   pieces:
-    - { id: director, kind: class, label: "BP_TrapHall actor with a Text Render component, variables for the ballista, an array of traps, an array of fighters, and the numbers", covers: [director] }
-    - { id: plans, kind: data, label: "Two Blueprint structs, a trap plan with a class variable, a vector, and a float, and a fighter plan with a vector and a float, in array variables", covers: [plans] }
-    - { id: new-trap, kind: class, label: "BP_FrostVent as a Blueprint child of the trap base that overrides the Trigger event, calling Play Cue and Damage Fighters in Radius", covers: [new-trap] }
-    - { id: build, kind: step, label: "A Start Round event destroys the old actors, then Spawn Actor from Class for the ballista, for every trap class that passes a class-is-not-abstract check, and for every fighter, setting their numbers", covers: [build] }
-    - { id: springing, kind: step, label: "A looping Set Timer by Event with a 0.5 second start delay calling Spring on each trap in a For Each loop", covers: [springing] }
-    - { id: targeting, kind: step, label: "A looping Set Timer by Event with a 0.25 second start delay: a For Each over the fighters finding the nearest standing one within reach, then Spot Target or Lose Target behind a Branch on Has Target", covers: [targeting] }
-    - { id: firing, kind: step, label: "A looping Set Timer by Event with a 1 second start delay: store Get Bolts Fired, call Fire, and when it rose call Take Hit on the nearest standing fighter in reach", covers: [firing] }
-    - { id: round, kind: step, label: "A 12 second Set Timer by Event clears the other timers and sets the result string by counting fighters with health above 0; the R event calls Start Round behind a Branch on Running", covers: [round] }
+    - { id: director, kind: class, label: "ADojoP23TrapHall with a text label as its root, a TObjectPtr to the ballista, TArrays of TObjectPtr to the traps and the fighters, and the reach, damage, aim, reload, and round length in Details", covers: [director] }
+    - { id: plans, kind: data, label: "Two USTRUCTs, a trap plan with a TSubclassOf of the trap base, a place, and a rest, and a fighter plan with a place and a health, held in TArrays on the director", covers: [plans] }
+    - { id: new-trap, kind: class, label: "ADojoP23FrostVent derives from ADojoP8TrapBase and overrides the protected Trigger to call PlayCue and DamageFightersInRadius with its own radius and damage properties", covers: [new-trap] }
+    - { id: build, kind: step, label: "StartRound destroys the old actors, spawns the ballista and sets its aim and reload in C++, spawns each non-abstract trap class and sets its CooldownSeconds, and spawns each fighter deferred with its health set before FinishSpawning", covers: [build] }
+    - { id: springing, kind: step, label: "On heartbeat counts 2, 6, 10 and so on the heartbeat calls Spring on every trap", covers: [springing] }
+    - { id: targeting, kind: step, label: "On the odd heartbeat counts, with the first at a quarter second, it finds the nearest standing fighter in reach and calls SpotTarget or LoseTarget by comparing the answer with HasTarget", covers: [targeting] }
+    - { id: firing, kind: step, label: "On heartbeat counts 4, 8, 12 and so on it calls Fire, compares GetBoltsFired before and after, and calls TakeHit with the bolt damage on the nearest standing fighter in reach when it rose", covers: [firing] }
+    - { id: round, kind: step, label: "One looping timer of a quarter second drives the heartbeat and a non-looping 12 second timer clears it and sets CLEARED or HELD; PressNextRound calls StartRound only while stopped", covers: [round] }
   edges:
     - { from: plans, to: build, label: "each plan builds one actor" }
     - { from: new-trap, to: springing, label: "springs like any trap" }
