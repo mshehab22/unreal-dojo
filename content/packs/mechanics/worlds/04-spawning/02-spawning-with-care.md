@@ -102,8 +102,8 @@ ADojoCannonball* ADojoCannon::Fire(float Speed)
   type: multiple-choice
   prompt: "Why would a scatterer take a seed and use FRandomStream instead of FMath::FRandRange?"
   choices:
-    - FRandomStream is faster than the shared generator is
-    - FMath::FRandRange cannot return negative numbers at all
+    - FRandomStream runs faster than the shared global generator does
+    - FMath::FRandRange cannot return a negative number in any range
     - The same seed gives the same points, so a layout can replay
   answerIndex: 2
   explanation: A stream's sequence depends only on its seed; the shared generator depends on everything else that used it first.

@@ -110,7 +110,7 @@ void ADojoSentry::Look()
   choices:
     - True means the trace itself failed, so it must be run a second time
     - True is only ever returned when the thing it hit is a pawn
-    - True says something blocked the line, maybe a wall, so check the hit actor
+    - True says something blocked the line, so check which actor it hit
   answerIndex: 2
   explanation: The return value reports a blocker of any kind. The hit result says which one, and only a hit whose actor is the player means it is seen.
 - id: toggle-why
@@ -118,7 +118,7 @@ void ADojoSentry::Look()
   prompt: "Why make bDrawDebug an editable property instead of leaving the draw calls in unconditionally?"
   choices:
     - Draw calls do not compile unless a property controls them
-    - You can switch the drawing off in the editor, and back on when something breaks
+    - You can switch drawing off in the editor and back on to debug
     - A property makes the trace itself run faster than a constant would
   answerIndex: 1
   explanation: A toggle keeps the debugging aid available without leaving it on screen all the time, and it needs no code change to flip.
@@ -126,9 +126,9 @@ void ADojoSentry::Look()
   type: multiple-choice
   prompt: "A level needs hundreds of traces in one frame. Which tool exists for that?"
   choices:
-    - Asynchronous traces such as AsyncLineTraceByChannel, answered by a delegate
-    - Setting bTraceComplex to true on every query in the level
-    - Drawing the traces with a longer debug lifetime
+    - Async traces such as AsyncLineTraceByChannel, answered by a delegate
+    - Setting bTraceComplex to true on every single query in the whole level
+    - Drawing every one of those traces with a much longer debug lifetime
   answerIndex: 0
   explanation: Asynchronous traces spread the work out and report back through a delegate instead of stopping the frame for each query.
 - id: explain-rate

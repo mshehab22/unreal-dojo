@@ -317,17 +317,15 @@ Tracing by a custom channel is the other usual answer: add a channel in Project 
 
 ```yaml
 - id: eye-trace
-  prompt: Put the object-type look in order. The object types come first, then the query params that leave the eye out, then the trace and its verdict; the hit result is already declared.
+  prompt: Put the object-type look in order. The object types come first, then the trace and its verdict; the hit result and the query params that leave the eye out are already declared.
   lines:
     - "FCollisionObjectQueryParams Objects(ECC_WorldStatic);"
     - "Objects.AddObjectTypesToQuery(ECC_Pawn);"
-    - "FCollisionQueryParams Params;"
-    - "Params.AddIgnoredActor(this);"
     - "const bool bBlocked = GetWorld()->LineTraceSingleByObjectType(Hit, Start, Goal, Objects, Params);"
     - "const bool bSeen = bBlocked && Hit.GetActor() == Candidate;"
   distractors:
     - line: "const bool bSeen = bBlocked;"
       mistake: Any blocker would count as seeing the hero, so a pillar in the way would not hide it.
-    - line: "Params.AddIgnoredActor(Candidate);"
-      mistake: A candidate that is left out of the trace can never be the first thing the ray meets, so it would never be seen.
+    - line: "FCollisionObjectQueryParams Objects(ECC_Visibility);"
+      mistake: Visibility is a trace channel, not an object type, so a by-object-type look built on it matches nothing.
 ```

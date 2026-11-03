@@ -104,9 +104,9 @@ int32 ADojoProbe::CountInside(const FVector& Centre, float Radius) const
   type: multiple-choice
   prompt: "A sphere of radius 50 sweeps head-on into a flat wall and is stopped. How do Hit.Location and Hit.ImpactPoint compare?"
   choices:
-    - Location is the ball's centre, 50 short of the wall; ImpactPoint is on the wall
-    - They are the same point, on the wall's face, right where the ball is stopped
-    - Location is on the wall and ImpactPoint is the ball's centre, 50 short
+    - Location is the sphere's centre, 50 short of the wall; ImpactPoint is on the wall
+    - They are the same point, on the wall's face, right where the sphere is stopped
+    - Location is on the wall and ImpactPoint is the sphere's centre, 50 short
     - Location is where the sweep started and ImpactPoint is where it ended
   answerIndex: 0
   explanation: For a sweep, Location is where the shape's centre came to rest and ImpactPoint is where the shape touched the surface, so a head-on sphere stops one radius short of the wall.

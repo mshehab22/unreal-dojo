@@ -292,13 +292,12 @@ A single trace in a loop would do the same job: trace, note what overlapped, and
 
 ```yaml
 - id: piercer-walk
-  prompt: Put the walk through the hits in order. A blocking hit names the stopper first and then takes the shot's length.
+  prompt: Put the walk through the hits in order. A blocking hit takes the shot's length and ends the walk.
   lines:
     - "for (const FHitResult& Hit : Hits)"
     - "{"
     - "	if (Hit.bBlockingHit)"
     - "	{"
-    - "		StoppedBy = Hit.GetActor();"
     - "		ShotLength = Hit.Distance;"
     - "		break;"
     - "	}"

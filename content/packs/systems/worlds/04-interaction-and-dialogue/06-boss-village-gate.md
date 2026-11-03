@@ -48,7 +48,7 @@ Extensions, in order of importance:
 2. A quest that reads the flags: "learn the password" completes when `knows-password` is set, with the Pack 3 quest tracker.
 3. Dialogue portraits and a typewriter effect on the line, as a listener of the conversation events.
 
-Feel: once the core round passes, change the reach in the interactor's Details on the hero and move the placed actors until the road feels like a short walk with a decision at every stop, not a corridor. The submission gives the values it tried and one sentence on why.
+Feel: once the core round passes, change the reach (the Sphere Radius of the interactor on the hero, in Details) and move the placed actors until the road feels like a short walk with a decision at every stop, not a corridor. The submission gives the values it tried and one sentence on why.
 
 # Required Pieces
 
