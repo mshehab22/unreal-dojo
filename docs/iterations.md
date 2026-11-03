@@ -2194,3 +2194,19 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Tester (fresh agent, clean worktree at 304866d, no engine): the verifier, no problems and 12 warnings, none in World 3; `--pack mechanics`, no problems; `npm run typecheck` clean; `npm test` 1238 passed and 29 skipped; it confirmed the engine baseline from the run's log (all 11 World 3 files ok, the only failures other worlds' missing solutions in the scratch folder) and each mutation's failing test from its log; no dashes; every cross-quest include is declared. PASS.
 - Not done or left for later: unverified on macOS. Physics-simulated hits are taught in text only (A1338). No custom object channel in a build quest (A1339).
 - Decisions made: A1330 to A1339 under "Awaiting Mohammad's review" (prerequisite, shape and pruning, boss, deliberate failure, test stand-ins, glossary claims and corrections, gate opening to Overlap, reuse of World 2's ball and wall, physics hits in text only, no custom channel).
+
+## M4.P3.7 Pack 3 World 7: Mechanic Maker (content-mechanics, m3-3-economy-ui)
+- What changed: a new world where the learner takes two ready mechanics from plan to build. First the pressure plate door: plan it, learn the maker's method (pitch it in a sentence, break it into pieces, map each piece to the world that taught it, decide what to reuse, spike the unknown), build a plate that announces when it is pressed and released, learn tuning knobs and acceptance criteria first, and build a gate that rises only while every plate is held. Then the key and locked door: plan it, build a key ring with a pickup, and build a locked door that opens for the right key. The boss joins both into a shrine: two crates on two plates open a gate, the key behind it opens the shrine door, and the room resets for the next visitor two seconds later.
+- Quests and what each one shows:
+  - Plan a pressure plate door (breakdown): two reference plans, seven required pieces.
+  - Pitch it, break it, map it (concept): the reuse audit of the World 3 plate as its worked example.
+  - A plate that announces itself (worked): a lamp lights on the first arrival and hears one release only when the last thing leaves.
+  - Tuning knobs and acceptance first (concept): ClampMin as a hard limit, UIMin as a soft one.
+  - A gate that waits for every plate (faded): with one of two plates pressed the gate stays shut; with both it is fully open at 300 cm after 0.8 s; the world's deliberate failure lives here.
+  - Plan a key and a locked door (breakdown).
+  - A key ring and a pickup (stub): a runner with a ring takes the key and the pickup disappears; one without a ring leaves it.
+  - A locked door (blank): Locked and a counted try without the key, Open and one unlock event with it.
+  - Boss, the shrine gate: two full rounds with the reset in between.
+- Proof so far: two review rounds (fixes in A1546, A1547 and a parameter rename against MSVC shadowing); a fresh tester on 0b2bedb: typecheck passes; `npm test` 1290 passed, 32 skipped; verify-content 239 files, no problems; build passes; full e2e 50 passed, 1 skipped; starters match their solutions outside the gaps; LF line endings and no em dashes. The engine proof (`--pack mechanics --engine`) and 11 single-edit mutations are prepared and wait for an engine slot.
+- Decisions made: A1540 to A1547.
+- Not done: the engine proof and the mutations; macOS.
