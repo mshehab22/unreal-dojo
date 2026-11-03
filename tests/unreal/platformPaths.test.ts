@@ -1,15 +1,18 @@
 // Checks every path both platform objects produce, and the factory that picks one from process.platform.
 import { describe, expect, it } from "vitest";
 
+import { ClangSnippetSyntaxChecker } from "../../src/main/services/unreal/ClangSnippetSyntaxChecker";
 import { createUnrealPlatform } from "../../src/main/services/unreal/createUnrealPlatform";
 import { MacPlatformPaths } from "../../src/main/services/unreal/MacPlatformPaths";
 import { MacToolchainChecker } from "../../src/main/services/unreal/MacToolchainChecker";
+import { MsvcSnippetSyntaxChecker } from "../../src/main/services/unreal/MsvcSnippetSyntaxChecker";
 import { PosixProcessTreeKiller } from "../../src/main/services/unreal/PosixProcessTreeKiller";
 import { WindowsEngineRegistry } from "../../src/main/services/unreal/WindowsEngineRegistry";
 import { WindowsPlatformPaths } from "../../src/main/services/unreal/WindowsPlatformPaths";
 import { WindowsProcessTreeKiller } from "../../src/main/services/unreal/WindowsProcessTreeKiller";
 import { WindowsToolchainChecker } from "../../src/main/services/unreal/WindowsToolchainChecker";
 import { FakeCommandRunner } from "./FakeCommandRunner";
+import { FakeSandboxFileSystem } from "./FakeSandboxFileSystem";
 
 describe("WindowsPlatformPaths", () =>
 {
@@ -125,6 +128,7 @@ describe("createUnrealPlatform", () =>
 		expect(platform?.toolchainChecker).toBeInstanceOf(WindowsToolchainChecker);
 		expect(platform?.engineRegistry).toBeInstanceOf(WindowsEngineRegistry);
 		expect(platform?.processTreeKiller).toBeInstanceOf(WindowsProcessTreeKiller);
+		expect(platform?.createSnippetChecker(new FakeSandboxFileSystem())).toBeInstanceOf(MsvcSnippetSyntaxChecker);
 	});
 
 	it("returns the Mac objects on darwin, with no registry", () =>
@@ -135,6 +139,7 @@ describe("createUnrealPlatform", () =>
 		expect(platform?.toolchainChecker).toBeInstanceOf(MacToolchainChecker);
 		expect(platform?.engineRegistry).toBeNull();
 		expect(platform?.processTreeKiller).toBeInstanceOf(PosixProcessTreeKiller);
+		expect(platform?.createSnippetChecker(new FakeSandboxFileSystem())).toBeInstanceOf(ClangSnippetSyntaxChecker);
 	});
 
 	it("returns null on any other platform", () =>

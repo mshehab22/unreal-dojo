@@ -197,7 +197,8 @@
       "sphere-component",
       "collision-preset",
       "root-component"
-    ]
+    ],
+    "firstQuestId": "m3-channels-and-responses"
   },
   {
     "id": "box-component",
@@ -217,7 +218,8 @@
       "overlap-event",
       "collision-preset",
       "primitive-component"
-    ]
+    ],
+    "firstQuestId": "m3-channels-and-responses"
   },
   {
     "id": "sphere-component",
@@ -235,7 +237,8 @@
       "capsule-component",
       "overlap-event",
       "projectile-movement-component"
-    ]
+    ],
+    "firstQuestId": "m3-channels-and-responses"
   },
   {
     "id": "camera-component",
@@ -2139,7 +2142,8 @@
       "collision-preset",
       "line-trace",
       "collision-query-params"
-    ]
+    ],
+    "firstQuestId": "m3-channels-and-responses"
   },
   {
     "id": "collision-response",
@@ -2157,7 +2161,8 @@
       "collision-preset",
       "overlap-event",
       "hit-event"
-    ]
+    ],
+    "firstQuestId": "m3-channels-and-responses"
   },
   {
     "id": "collision-preset",
@@ -2173,14 +2178,15 @@
     ],
     "category": "collision",
     "short": "A named, reusable bundle of collision settings, such as BlockAll, OverlapAllDynamic, Pawn, or NoCollision.",
-    "long": "Instead of ticking dozens of response boxes per component, you pick a preset. NoCollision turns collision off, BlockAll blocks everything, OverlapAll overlaps everything, OverlapAllDynamic overlaps only moving things, Pawn is set up for character capsules, and Custom lets you set each response by hand. A pickup's trigger sphere is often OverlapAllDynamic, while a character's mesh is often NoCollision because the capsule already handles it. You can define your own presets in Project Settings.",
+    "long": "Instead of ticking dozens of response boxes per component, you pick a preset, which sets the object type, whether collision is on, and every response at once. NoCollision turns collision off, BlockAll and BlockAllDynamic block everything as a WorldStatic or a WorldDynamic object, OverlapAllDynamic is a query-only WorldDynamic that overlaps everything (every box, sphere, and capsule starts with it), Pawn is set up for character capsules, and Custom lets you set each response by hand. Read a preset's whole table before trusting its name: OverlapOnlyPawn overlaps pawns but leaves most other channels at Block. You can define your own presets in Project Settings.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/collision-response-reference-in-unreal-engine?application_version=5.8",
     "related": [
       "collision-response",
       "collision-channel",
       "generate-overlap-events",
       "capsule-component"
-    ]
+    ],
+    "firstQuestId": "m3-channels-and-responses"
   },
   {
     "id": "generate-overlap-events",
@@ -2200,7 +2206,8 @@
       "hit-event",
       "collision-preset",
       "collision-response"
-    ]
+    ],
+    "firstQuestId": "m3-overlap-and-hit"
   },
   {
     "id": "overlap-event",
@@ -2222,7 +2229,8 @@
       "adddynamic",
       "box-component",
       "cast"
-    ]
+    ],
+    "firstQuestId": "m3-overlap-and-hit"
   },
   {
     "id": "hit-event",
@@ -2235,7 +2243,7 @@
     ],
     "category": "collision",
     "short": "An event fired when a moving component runs into something that blocks it.",
-    "long": "Hits are for solid contact: a projectile striking a wall, a car crashing into a barrier. OnComponentHit gives you the component that was hit, the other actor and component, the impulse, and an FHitResult with the impact point and normal. Movement done with sweeps, such as by the projectile or character movement components, produces hits automatically; physics-simulated bodies also need Simulation Generates Hit Events turned on. A pressure plate that should not block players belongs on overlaps instead.",
+    "long": "Hits are for solid contact: a projectile striking a wall, a car crashing into a barrier. OnComponentHit gives you the component that was hit, the other actor and component, the impulse, and an FHitResult with the impact point and normal. A move made with a sweep fires a hit on the mover and on the shape it ran into whenever it is stopped, with no extra switch and with a zero impulse; bodies moved by the physics simulation also need Simulation Generates Hit Events turned on, and only they report a real impulse. A pressure plate that should not block players belongs on overlaps instead.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/collision-in-unreal-engine---overview?application_version=5.8",
     "related": [
       "overlap-event",
@@ -2243,7 +2251,8 @@
       "generate-overlap-events",
       "projectile-movement-component",
       "sweep"
-    ]
+    ],
+    "firstQuestId": "m3-overlap-and-hit"
   },
   {
     "id": "line-trace",
@@ -2307,6 +2316,48 @@
     ]
   },
   {
+    "id": "collision-enabled",
+    "term": "Collision Enabled",
+    "aliases": [
+      "ECollisionEnabled",
+      "SetCollisionEnabled",
+      "QueryOnly",
+      "QueryAndPhysics"
+    ],
+    "category": "collision",
+    "short": "The per-shape switch that says whether a shape takes part in queries, in physics, in both, or in neither.",
+    "long": "Collision Enabled is the first of a shape's three collision settings, before its object type and its responses. NoCollision takes part in nothing; QueryOnly answers sweeps, traces, and overlap checks but never pushes or is pushed, which suits triggers; PhysicsOnly lets simulated bodies push it without being found by queries; QueryAndPhysics does both, for solid things. SetCollisionEnabled changes it while the game runs, which is how a breakable wall stops being solid: its overlaps end and swept movers pass through. It is a different tool from changing one response, which lets one kind of thing through and keeps stopping the rest.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/collision-response-reference-in-unreal-engine?application_version=5.8",
+    "related": [
+      "collision-response",
+      "collision-preset",
+      "collision-channel",
+      "primitive-component"
+    ],
+    "firstQuestId": "m3-channels-and-responses"
+  },
+  {
+    "id": "get-overlapping-actors",
+    "term": "GetOverlappingActors",
+    "aliases": [
+      "GetOverlappingActors()",
+      "GetOverlappingComponents",
+      "IsOverlappingActor",
+      "IsOverlappingComponent"
+    ],
+    "category": "collision",
+    "short": "Asks a shape which actors are overlapping it right now, instead of waiting for an overlap event.",
+    "long": "Overlap events tell you the moment something arrives or leaves; GetOverlappingActors answers what is there now. It fills a TArray of actors from the list the shape keeps of its current overlaps, optionally filtered to one class, and GetOverlappingComponents does the same for the other shapes. IsOverlappingActor and IsOverlappingComponent check one candidate. They read the same list the events maintain, so they also need Generate Overlap Events on both sides. Use them when a decision depends on the present, such as a gate checking its doorway before it shuts.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UPrimitiveComponent?application_version=5.8",
+    "related": [
+      "overlap-event",
+      "generate-overlap-events",
+      "primitive-component",
+      "box-component"
+    ],
+    "firstQuestId": "m3-overlap-and-hit"
+  },
+  {
     "id": "physics-simulation",
     "term": "Physics Simulation",
     "aliases": [
@@ -2326,7 +2377,8 @@
       "hit-event",
       "generate-overlap-events",
       "tick-groups"
-    ]
+    ],
+    "firstQuestId": "m3-shapes-and-actors"
   },
   {
     "id": "physics-substepping",
@@ -3593,7 +3645,8 @@
       "fname",
       "savegame",
       "build-cs"
-    ]
+    ],
+    "firstQuestId": "s2-gameplay-tags"
   },
   {
     "id": "gas",
@@ -4006,6 +4059,27 @@
     "firstQuestId": "p8-many-kinds-one-toolbox"
   },
   {
+    "id": "instanced-subobjects",
+    "term": "Instanced subobjects",
+    "aliases": [
+      "EditInlineNew",
+      "DefaultToInstanced",
+      "UPROPERTY(Instanced)",
+      "Instanced specifier"
+    ],
+    "category": "reflection",
+    "short": "Objects created and tuned right inside another object's Details panel, owned by it and saved with it.",
+    "long": "Mark a UObject class EditInlineNew and a pointer property to it Instanced, and the Details panel stops offering a picker for existing objects: it offers a dropdown of classes, creates a new object whose outer is the owner, and shows that object's settings inline. The new object is saved in the owner's file and copied when the owner is duplicated, which makes it a good home for small configurable pieces such as the effects listed in an ability asset. DefaultToInstanced on the class makes every property of its type instanced, the way components behave. Because an asset is shared by everyone who loads it, the objects inside it are shared as well, so they should hold settings and keep no state that changes while the game runs.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "uproperty",
+      "abstract-specifier",
+      "data-asset",
+      "tsubclassof"
+    ],
+    "firstQuestId": "p13-bytecode-card"
+  },
+  {
     "id": "blueprint-protected",
     "term": "BlueprintProtected",
     "aliases": [
@@ -4282,5 +4356,87 @@
       "enhanced-input-component"
     ],
     "firstQuestId": "m1-triggers-and-events"
+  },
+  {
+    "id": "stack-machine",
+    "term": "Stack machine",
+    "aliases": [
+      "stack machines",
+      "value stack",
+      "stack-based machine",
+      "stack-based virtual machine"
+    ],
+    "category": "cpp idiom",
+    "short": "A small interpreter whose instructions take their inputs from the top of a stack of values and put their answer back on top.",
+    "long": "Each instruction of a stack machine names what to do, not where its inputs are: an add takes the two values on top of the stack and puts their sum back. Because the order of the instructions already says what is worked out first, a formula with brackets becomes a flat list, and each instruction stays tiny. In a game the stack has a fixed size, and an instruction that needs more values than the stack holds, or would overfill it, is refused rather than trusted. Unreal's own script interpreter keeps its place in a running Blueprint function in an FFrame.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/FFrame?application_version=5.8",
+    "related": [
+      "blueprint-vm",
+      "tarray",
+      "uenum",
+      "ustruct"
+    ],
+    "firstQuestId": "p13-behavior-as-data"
+  },
+  {
+    "id": "blueprint-vm",
+    "term": "Blueprint script interpreter",
+    "aliases": [
+      "Blueprint VM",
+      "Blueprint virtual machine",
+      "Kismet VM",
+      "EExprToken",
+      "FFrame",
+      "UStruct::Script"
+    ],
+    "category": "reflection",
+    "short": "The part of the engine that runs compiled Blueprint graphs by reading their script bytes one token at a time.",
+    "long": "When a Blueprint compiles, each graph becomes a byte array of script tokens (the EExprToken values, such as EX_Jump and EX_IntConst) stored in the Script array of its UFunction. While the game runs, the engine walks those bytes with an FFrame that remembers where it is, calling native functions and reading properties through reflection. Jumps check a runaway counter, so a loop that never ends is stopped with an error once it passes the engine's MaximumLoopIterationCount. It is why Blueprint changes need no C++ compile, and also why a tight Blueprint loop costs more than the same loop in C++.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/EExprToken?application_version=5.8",
+    "related": [
+      "blueprint-class",
+      "ufunction",
+      "reflection",
+      "stack-machine",
+      "blueprint-vs-cpp"
+    ],
+    "firstQuestId": "p13-behavior-as-data"
+  },
+  {
+    "id": "edit-condition",
+    "term": "EditCondition",
+    "aliases": [
+      "EditConditionHides",
+      "edit condition"
+    ],
+    "category": "reflection",
+    "short": "A meta specifier that lets a property be edited in the Details panel only while a condition on other properties holds.",
+    "long": "meta = (EditCondition = \"Op == EMyOp::EMO_PushNumber\") greys out the property unless the condition is true, and adding EditConditionHides hides it instead. The condition can name a bool, compare an enum property with one of its values, and combine tests with && and ||. On a struct shown as a row of an array, each row checks its own fields, so a list of steps shows a number only on the rows that push one. It changes only the editor: the property still exists and can still be set from code.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/metadata-specifiers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "meta-specifier",
+      "uproperty",
+      "editanywhere",
+      "uenum"
+    ],
+    "firstQuestId": "p13-behavior-as-data"
+  },
+  {
+    "id": "uparam-ref",
+    "term": "UPARAM(ref)",
+    "aliases": [
+      "UPARAM",
+      "by-reference pin"
+    ],
+    "category": "reflection",
+    "short": "A parameter specifier that makes a non-const reference parameter of a Blueprint function an input that comes back changed, instead of an output only.",
+    "long": "A BlueprintCallable function that takes a struct as a plain non-const reference shows it in Blueprint as an output pin only, because the engine assumes the function fills it in. Writing UPARAM(ref) before the parameter marks it as passed by reference (the CPF_ReferenceParm flag), so the node gets one pin that takes the caller's variable in, and the function's changes land in that variable. Use it when a function changes something the caller already has, such as a set of stats a potion adjusts.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/EPropertyFlags?application_version=5.8",
+    "related": [
+      "ufunction",
+      "blueprintcallable",
+      "ustruct"
+    ],
+    "firstQuestId": "p13-behavior-as-data"
   }
 ]
