@@ -25,6 +25,13 @@ export interface DojoSession
 /** The start of the line main writes when the content load took 2 s or more. */
 const SLOW_CONTENT_LOAD_MARKER = "[content] slow load";
 
+/**
+ * Chromium switches added to a hidden launch on Windows. A hidden window there gets one frame a second (requestAnimationFrame gaps of 1004 ms, with
+ * or without `backgroundThrottling: false`), and Playwright's click check waits for two frames and a screenshot waits for frames, so a long flow spent
+ * most of its time waiting. Lifting the frame rate limit gives 17 ms frames again (A1810). Not tried on macOS, whose hidden window is proven without it (A970).
+ */
+const HIDDEN_WINDOW_FRAME_SWITCHES = process.platform === "win32" ? ["--disable-frame-rate-limit"] : [];
+
 /** Marks main's IPC lines in the runner's console, so they are easy to find in a CI job log. */
 const MAIN_IPC_LINE_PREFIX = "[dojo main]";
 
@@ -76,7 +83,7 @@ export async function launchDojo(existingUserDataFolder?: string): Promise<DojoS
 		// On macOS a background copy of Electron.app keeps the launch itself off the desktop (A973).
 		const executablePath = backgroundElectronExecutable(process.env["DOJO_TEST_SHOW_WINDOW"] === "1");
 		electronApp = await electron.launch({
-			args: [resolve("."), `--user-data-dir=${userDataFolder}`],
+			args: [resolve("."), `--user-data-dir=${userDataFolder}`, ...HIDDEN_WINDOW_FRAME_SWITCHES],
 			env: { ...process.env, DOJO_TEST_HIDDEN_WINDOW: "1" },
 			...(executablePath === undefined ? {} : { executablePath }),
 		});
