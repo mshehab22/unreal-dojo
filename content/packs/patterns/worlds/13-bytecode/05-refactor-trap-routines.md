@@ -37,7 +37,7 @@ Two of the four tests pass on the starter and must pass after; two do not. Read 
 
 ## See it in the editor
 
-In the Content Browser, right-click, choose Miscellaneous, then Data Asset, pick `DojoP13TrapRoutine`, and name it `DA_SteadyRhythm`. Give it three steps: Fire, Wait (Seconds 0.5), Jump (Target 0). Before the refactor each step is an object you pick from a class list; after it, each step is a plain row. Duplicate the asset as `DA_SteadyRhythmOwn`. Place three `DojoP13DartTrap` actors set to `DA_SteadyRhythm` and a fourth set to `DA_SteadyRhythmOwn`. Press Play, wait ten seconds, press F8, and select each trap in turn: Shots Fired is in its Details. Before the refactor the three sharing traps disagree with the fourth, which has its routine to itself; after it, all four read the same, about 20.
+In the Content Browser, right-click, choose Miscellaneous, then Data Asset, pick `DojoP13TrapRoutine`, and name it `DA_SteadyRhythm`. Give it three steps: Fire, Wait (Seconds 0.5), Jump (Target 0). Before the refactor each step is an object you pick from a class list; after it, each step is a plain row. Duplicate the asset as `DA_SteadyRhythmOwn`. Place three `DojoP13DartTrap` actors set to `DA_SteadyRhythm` and a fourth set to `DA_SteadyRhythmOwn`. Press Play, wait ten seconds, press F8, and click each trap's name in the World Outliner in turn: Shots Fired is in its Details. Before the refactor the three sharing traps disagree with the fourth, which has its routine to itself; after it, all four read the same, about 20.
 
 # Files
 

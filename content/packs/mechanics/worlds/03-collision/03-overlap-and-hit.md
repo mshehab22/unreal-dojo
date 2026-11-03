@@ -23,10 +23,10 @@ type: multiple-choice
 prompt: "Guess, no penalty: a trigger box overlaps pawns, and a runner's body overlaps the trigger's object type, so their responses work out to Overlap. The runner has Generate Overlap Events on, the trigger has it off, and a handler is bound to the trigger's OnComponentBeginOverlap. The runner walks into the trigger. What happens?"
 choices:
   - The handler runs, because the runner asked for overlap events
-  - Nothing, because both shapes must have Generate Overlap Events on
-  - The runner is stopped at the trigger's edge
-  - The handler runs once the runner stops moving
-answerIndex: 1
+  - The runner is stopped at the trigger's edge like a wall
+  - The handler runs once the runner stops moving inside
+  - Nothing, because overlap events need both shapes' flag on
+answerIndex: 3
 explanation: The engine only starts an overlap between two shapes when both have the flag on and their responses work out to Overlap. With the trigger's flag off, no event fires on either side.
 ```
 
@@ -38,7 +38,7 @@ An **overlap** is something passing into or out of a shape that does not stop it
 
 A **hit** is solid contact: a move with the sweep flag on is stopped by a shape that blocks it. `OnComponentHit` fires on the moving shape and on the shape it ran into, and the `FHitResult` says where and which way the surface faced. A swept move needs no extra switch for this. The **Simulation Generates Hit Events** flag is only for bodies that the physics simulation moves, and only those fill in the `NormalImpulse` parameter; for a swept move it is zero. A teleport never hits anything, because it never checks the path.
 
-Each event is a dynamic multicast delegate on the component. You listen with `AddDynamic`, usually in `BeginPlay`, and the engine finds your function by name through reflection, so the handler must be a `UFUNCTION()` with exactly the delegate's parameters:
+Each event is a dynamic multicast delegate on the component. You listen with `AddDynamic`, usually in `BeginPlay`, and the engine looks the function up by its name, so the handler must be a `UFUNCTION()` with exactly the delegate's parameters:
 
 ```cpp
 UFUNCTION()
@@ -86,11 +86,11 @@ void ADojoAlarmPad::HandlePadHit(UPrimitiveComponent* HitComponent, AActor* Othe
   type: multiple-choice
   prompt: "A ball moves with the sweep flag on and is stopped by a wall that blocks it. Which event fires on the wall's box?"
   choices:
-    - OnComponentBeginOverlap
     - OnComponentHit
+    - OnComponentBeginOverlap
     - Neither, because the wall did not move
     - OnComponentHit, but only if Simulation Generates Hit Events is on
-  answerIndex: 1
+  answerIndex: 0
   explanation: A swept move that is stopped fires a hit on both shapes, the mover and the one it ran into. The simulation flag is only for bodies moved by physics.
 - id: missing-ufunction
   type: spot-the-bug
@@ -116,18 +116,18 @@ void ADojoAlarmPad::HandlePadHit(UPrimitiveComponent* HitComponent, AActor* Othe
   type: multiple-choice
   prompt: "Code calls SetActorLocation with no sweep and puts a runner straight inside a trigger. Does the trigger's begin overlap fire?"
   choices:
-    - No, only swept moves start overlaps
-    - Yes, overlaps are brought up to date after every move, swept or not
-    - Only on the next frame's Tick
-  answerIndex: 1
+    - No, only moves with the sweep flag on start overlaps
+    - Only on the next frame's Tick, once physics has run
+    - Yes, every move updates overlaps, swept or not
+  answerIndex: 2
   explanation: A teleport skips the path, so it cannot hit anything on the way, but the overlaps at the new place are still updated.
 - id: impulse
   type: multiple-choice
   prompt: "In an OnComponentHit handler fired by a swept move, what is NormalImpulse?"
   choices:
     - The speed of the mover along the surface normal
-    - Zero, because only bodies moved by the physics simulation fill it in
-    - The same as Hit.ImpactNormal
+    - Zero, since only physics-simulated bodies fill it in
+    - The surface's normal, copied from Hit.ImpactNormal
   answerIndex: 1
   explanation: Impulse is a physics quantity. A swept move is moved by code, so the engine passes a zero vector.
 - id: explain-overlap

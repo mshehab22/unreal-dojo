@@ -337,9 +337,9 @@ bool FDojo_M1_PauseContext_NoPlayerNoPause::RunTest(const FString& Parameters)
 
 # Hints
 
-- Open, Close, and Toggle share one rule: only change anything when the state would actually change. The subsystem is the one thing both need, so write the lookup once in `FindSubsystem` and use it from both.
-- A first local player's controller is one call on the world. A local player's subsystem is reached with the static `ULocalPlayer::GetSubsystem` template and the controller's local player. In `BuildContext`, `UInputAction` has a `ValueType` and a `bConsumeInput`; `UInputMappingContext::MapKey` takes an action and a key.
-- Make the action once and the context every time, because the list of blocked keys may have changed since the last open. `NewObject` with a fixed name cannot be used twice for one object, so leave the name out for the context. `AddMappingContext` takes the context and the priority; `RemoveMappingContext` takes the context.
+- Open, Close, and Toggle share one rule, only change anything when the state would actually change, and the subsystem lookup is written once in `FindSubsystem`.
+- The subsystem belongs to the first local player, which you reach through the world's first player controller.
+- Make the action once and the context every time, and leave the context's name out because a fixed name cannot be reused for a second object.
 
 # Rubric
 

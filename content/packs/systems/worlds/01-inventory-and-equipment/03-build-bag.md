@@ -34,7 +34,7 @@ This is the second piece of the Expedition Pack boss.
 
 ## See it in the editor
 
-Make a Blueprint actor `BP_Carrier` with a `DojoS1InventoryComponent`, set Slot Count 4 and Max Weight 20 in Details, and place one in the level. In the level Blueprint, with it selected, get the component with Get Component by Class. On BeginPlay bind a custom event to the component's On Inventory Changed that prints Get Total Weight, and on the 1 key call Add with `DA_Potion` and 3. Press Play and press the key seven times: the weight rises by 3 per press up to 18, the seventh press adds only 2 to reach the limit of 20, and further presses add nothing. Print the Get Slots array to see the piles.
+Make a Blueprint actor `BP_Carrier` with a `DojoS1InventoryComponent`, set Slot Count 4 and Max Weight 20 in Details, and place one in the level. In the level Blueprint, with it selected, get the component with Get Component by Class. On BeginPlay bind a custom event to the component's On Inventory Changed that prints Get Total Weight, and on the 1 key call Add with `DA_Potion` and 3. Press Play and press the key seven times: the weight rises by 3 per press up to 18, the seventh press adds only 2 to reach the limit of 20, and further presses add nothing. Print Count Of for `DA_Potion` after each press to see the total, and the Length of Get Slots to see how many piles it fills.
 
 # Files
 
@@ -447,9 +447,9 @@ bool FDojo_S1_Bag_AnnouncesAfterChange::RunTest(const FString& Parameters)
 
 # Hints
 
-- Add walks the slots forward, topping up piles of the right item, and then opens new slots for what is left; Remove walks backward from the last slot, and a slot that empties is removed from the array.
-- Removing from an array while walking it is safe when you walk backward by index and do not touch the removed element again. `TArray::RemoveAt` is the call.
-- The delegate's `Broadcast` goes after the last change to the slots, and the bag may only announce when at least one item moved.
+- Decide which end of the slot list each call starts from, since Add and Remove walk in opposite directions.
+- Removing from an array while walking it is safe only when you walk backward by index, and `TArray::RemoveAt` takes the empty pile out.
+- The delegate's `Broadcast` goes once after the last change to the slots, and only when at least one item moved.
 
 # Rubric
 
@@ -473,8 +473,7 @@ The bag could keep a `TMap` from item to count and ignore slots. That makes coun
     - "{"
     - "	if (Slots[Index].Item != Item) continue;"
     - "	const int32 Taken = FMath::Min(Left, Slots[Index].Count);"
-    - "	Slots[Index].Count -= Taken;"
-    - "	Left -= Taken;"
+    - "	Slots[Index].Count -= Taken; Left -= Taken;"
     - "	if (Slots[Index].Count == 0) Slots.RemoveAt(Index);"
     - "}"
   distractors:

@@ -22,11 +22,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: a crate has a solid body and a grab handle, and both overlap a trigger box. The crate is set down inside the trigger. How many times do the trigger's OnComponentBeginOverlap and its actor's OnActorBeginOverlap fire?"
 choices:
-  - Once each
-  - Twice for the component event, once for the actor event
-  - Twice each
+  - Once for each of the two events
   - Once for the component event, twice for the actor event
-answerIndex: 1
+  - Twice for the component event, once for the actor event
+  - Twice for each of the two events
+answerIndex: 2
 explanation: The component event fires for every pair of shapes that start overlapping, and the crate brings two shapes. The actor event fires only when the first shape of one actor starts touching another actor.
 ```
 
@@ -63,10 +63,10 @@ void ADojoTallyZone::HandleZoneBeginOverlap(UPrimitiveComponent* OverlappedCompo
   type: multiple-choice
   prompt: "A runner has a body sphere and a feet box, both overlapping a trigger, and nothing else touches it. What does the trigger's GetOverlappingActors fill its array with?"
   choices:
-    - Two entries, one per shape
     - One entry, the runner
+    - Two entries, one per shape
     - Nothing, because the runner is not a pawn class
-  answerIndex: 1
+  answerIndex: 0
   explanation: The array lists overlapping actors, each once, however many of their shapes overlap.
 - id: counting-bug
   type: spot-the-bug
@@ -84,10 +84,10 @@ void ADojoTallyZone::HandleZoneBeginOverlap(UPrimitiveComponent* OverlappedCompo
   type: multiple-choice
   prompt: "A crate standing in a trigger is destroyed. Does the trigger's OnComponentEndOverlap run?"
   choices:
-    - No, a destroyed actor fires no events
-    - Yes, destroying the crate's shapes ends their overlaps with end events
-    - Only if the crate was moving
-  answerIndex: 1
+    - No, a destroyed actor never fires any events
+    - Only if the crate was moving when it died
+    - Yes, destroying its shapes ends their overlaps
+  answerIndex: 2
   explanation: A destroyed shape ends every overlap it had and notifies the other side, so counts built from events stay right.
 - id: fill-actor-event
   type: fill-blank
@@ -98,9 +98,9 @@ void ADojoTallyZone::HandleZoneBeginOverlap(UPrimitiveComponent* OverlappedCompo
   type: multiple-choice
   prompt: "A crate should crack only when it lands hard. Which setup gives its hit handler a NormalImpulse that is not zero?"
   choices:
-    - Moving it with AddActorWorldOffset and the sweep flag on
-    - Letting the physics simulation move it, with Simulation Generates Hit Events on
-    - Turning Generate Overlap Events on
+    - Moving it by code with AddActorWorldOffset and the sweep flag on
+    - Letting physics move it, with Simulation Generates Hit Events on
+    - Turning Generate Overlap Events on for both the crate and the floor
   answerIndex: 1
   explanation: Only physics contacts carry an impulse; swept moves made by code pass a zero vector.
 - id: explain-pairs
