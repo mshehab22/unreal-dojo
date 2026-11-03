@@ -4385,5 +4385,65 @@
     ],
     "linkMode": "code-only",
     "firstQuestId": "p13-bytecode-card"
+  },
+  {
+    "id": "static-variable",
+    "term": "Static variable",
+    "aliases": [
+      "static member variable",
+      "static local variable",
+      "function-local static",
+      "static data member"
+    ],
+    "category": "cpp idiom",
+    "short": "A variable that exists once for the whole program, instead of once per object, per call, or per world.",
+    "long": "A static member or a static local in C++ is made once and lives until the program closes, shared by every caller. In the Unreal editor the program is the editor itself, so a static holds its value across every Play In Editor session and is shared by every world running at the same time. A static pointer to a UObject is also invisible to the garbage collector: unless the object is rooted it can be destroyed while the pointer still holds its address, and if it is rooted it lives until the program ends. Keep statics for values that truly belong to the whole program, such as constants.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-object-handling-in-unreal-engine?application_version=5.8",
+    "related": [
+      "garbage-collection",
+      "add-to-root",
+      "play-in-editor",
+      "world-subsystem"
+    ],
+    "firstQuestId": "p14-reachable-from-anywhere"
+  },
+  {
+    "id": "add-to-root",
+    "term": "AddToRoot",
+    "aliases": [
+      "RemoveFromRoot",
+      "root set"
+    ],
+    "category": "memory",
+    "short": "Puts a UObject in the root set, so the garbage collector never destroys it until RemoveFromRoot is called.",
+    "long": "The garbage collector keeps every object it can reach from the root set and destroys the rest. AddToRoot adds an object to that set directly, which keeps it alive even when nothing else points at it through a UPROPERTY. It is meant for a few long-lived engine objects; in gameplay code it usually patches a static pointer, and it turns that object into one that outlives every level and play session unless something remembers to call RemoveFromRoot.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/UObjectBaseUtility/AddToRoot?application_version=5.8",
+    "related": [
+      "garbage-collection",
+      "uproperty",
+      "static-variable",
+      "uobject"
+    ],
+    "firstQuestId": "p14-reachable-from-anywhere"
+  },
+  {
+    "id": "dependency-injection",
+    "term": "Dependency injection",
+    "aliases": [
+      "injected dependency",
+      "injecting a dependency",
+      "constructor injection"
+    ],
+    "category": "cpp idiom",
+    "short": "Handing an object the things it depends on, instead of letting it reach out and find them itself.",
+    "long": "A class that is given its collaborators, through a function such as an Init or Use call, a constructor argument, or a property its owner sets, shows its dependencies in its interface and can be given a different one at any time: a practice log instead of the ranked log, or a test double in an automation test. The cost is wiring: whoever builds the object must make or find the dependency and pass it along. In Unreal, the owner that does the wiring is often a game mode, a director actor, or a subsystem that the engine creates with a known lifetime.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
+    "related": [
+      "world-subsystem",
+      "subsystem",
+      "uproperty",
+      "static-variable"
+    ],
+    "firstQuestId": "p14-reachable-from-anywhere"
   }
 ]
