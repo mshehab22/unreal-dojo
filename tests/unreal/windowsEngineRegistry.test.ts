@@ -39,6 +39,18 @@ describe("WindowsEngineRegistry", () =>
 		expect(await new WindowsEngineRegistry(runner).engineFolders()).toEqual([]);
 	});
 
+	it("reads the 32-bit view only when the 64-bit view lists no launcher engine (A1314)", async () =>
+	{
+		// Recorded on the Windows desktop: the 32-bit view holds an old launcher entry (the locator drops engines older than 5.4 later).
+		const output32 = ["", "HKEY_LOCAL_MACHINE\\SOFTWARE\\EpicGames\\Unreal Engine\\4.0", "    InstalledDirectory    REG_SZ    C:\\Program Files (x86)\\Epic Games\\4.0\\", "", "End of search: 1 match(es) found.", ""].join("\r\n");
+		const empty64 = new FakeCommandRunner({ [LAUNCHER_QUERY]: { exitCode: 1 }, [`${LAUNCHER_QUERY} /reg:32`]: { stdout: output32 }, [SOURCE_QUERY]: { stdout: SOURCE_OUTPUT } });
+		const found64 = new FakeCommandRunner({ [LAUNCHER_QUERY]: { stdout: LAUNCHER_OUTPUT }, [`${LAUNCHER_QUERY} /reg:32`]: { stdout: output32 }, [SOURCE_QUERY]: { exitCode: 1 } });
+
+		expect(await new WindowsEngineRegistry(empty64).engineFolders()).toEqual(["C:\\Program Files (x86)\\Epic Games\\4.0\\", "D:/Source/UnrealEngine"]);
+		expect(await new WindowsEngineRegistry(found64).engineFolders()).toEqual(["C:\\Program Files\\Epic Games\\UE_5.6", "D:\\Epic Games\\UE_5.8"]);
+		expect(found64.commandLines).not.toContain(`${LAUNCHER_QUERY} /reg:32`);
+	});
+
 	it("answers an empty list when reg cannot be started", async () =>
 	{
 		expect(await new WindowsEngineRegistry(new FakeCommandRunner({})).engineFolders()).toEqual([]);
