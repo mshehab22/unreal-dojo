@@ -121,7 +121,7 @@ protected:
 private:
 	/** Runs when one of the gate's plates is pressed or released, and once for each plate when the plates are bound; decides whether the gate wants to be open. */
 	UFUNCTION()
-	void HandlePlateChanged(ADojoM7SignalPlate* Plate);
+	void HandlePlateChanged(ADojoM7SignalPlate* ChangedPlate);
 
 	/** The panel's height one frame later: a steady OpenHeight / OpenSeconds cm per second toward TargetHeight, landing exactly on it. */
 	float StepHeight(float Height, float TargetHeight, float DeltaSeconds) const;
@@ -190,7 +190,7 @@ bool ADojoM7PlateGate::IsOpen() const
 	return GetOpenFraction() >= 1.f;
 }
 
-void ADojoM7PlateGate::HandlePlateChanged(ADojoM7SignalPlate* Plate)
+void ADojoM7PlateGate::HandlePlateChanged(ADojoM7SignalPlate* ChangedPlate)
 {
 	// Your code: decide whether the gate wants to be open now, and keep it in bWantsOpen.
 }
@@ -442,7 +442,7 @@ bool FDojo_M7_PlateGate_KnobsSetTheTrip::RunTest(const FString& Parameters)
 
 - Four small jobs: `BindPlates` connects the plates, the handler runs whenever a plate changes, `StepHeight` works out one frame of movement, and `Tick` moves the panel toward where `bWantsOpen` points. `Tick` never looks at a plate.
 - The handler is told which plate changed, but the plate it receives is only one of the gate's plates, and the gate's answer is about the gate. `AddUniqueDynamic` ignores a binding that is already there, and one handler can be bound to both events because both carry the same one parameter. `FMath::FInterpConstantTo` moves a value toward a target by at most speed times the frame's duration, and the speed here is the height over the time.
-- With two plates and one pressed, the plate the handler receives says pressed while the other plate is still empty, so the answer has to come from every entry in `Plates`, skipping empty slots with `IsValid`. The panel's height is the Z of `GetRelativeLocation` on the panel, written back with `SetRelativeLocation`; `IsValid` skips an empty slot in the plate list; `FMath::IsNearlyEqual` decides that the panel has arrived. All of them come through `CoreMinimal.h` and `Components/SceneComponent.h`.
+- With two plates and one pressed, the plate the handler receives says pressed while the other plate is still empty, so the answer has to come from every entry in `Plates`, skipping empty slots with `IsValid`. The panel's height is the Z of `GetRelativeLocation` on the panel, written back with `SetRelativeLocation`; `FMath::IsNearlyEqual` decides that the panel has arrived. All of them come through `CoreMinimal.h` and `Components/SceneComponent.h`.
 
 # Rubric
 

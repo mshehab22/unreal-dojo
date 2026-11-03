@@ -57,13 +57,13 @@ bool ADojoM7PlateGate::IsOpen() const
 	return GetOpenFraction() >= 1.f;
 }
 
-void ADojoM7PlateGate::HandlePlateChanged(ADojoM7SignalPlate* Plate)
+void ADojoM7PlateGate::HandlePlateChanged(ADojoM7SignalPlate* ChangedPlate)
 {
 	bWantsOpen = false;
-	for (const ADojoM7SignalPlate* GatePlate : Plates)
+	for (const ADojoM7SignalPlate* Plate : Plates)
 	{
-		if (!IsValid(GatePlate)) continue;
-		bWantsOpen = GatePlate->IsPressed();
+		if (!IsValid(Plate)) continue;
+		bWantsOpen = Plate->IsPressed();
 		if (!bWantsOpen) return;
 	}
 }

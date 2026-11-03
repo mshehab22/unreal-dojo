@@ -75,7 +75,7 @@ protected:
 private:
 	/** Runs when one of the gate's plates is pressed or released, and once for each plate when the plates are bound; decides whether the gate wants to be open. */
 	UFUNCTION()
-	void HandlePlateChanged(ADojoM7SignalPlate* Plate);
+	void HandlePlateChanged(ADojoM7SignalPlate* ChangedPlate);
 
 	/** The panel's height one frame later: a steady OpenHeight / OpenSeconds cm per second toward TargetHeight, landing exactly on it. */
 	float StepHeight(float Height, float TargetHeight, float DeltaSeconds) const;
