@@ -80,9 +80,11 @@ export function BuildStep({ engine, folder, onBack, onNext, context = "first-run
 				</p>
 			)}
 			{build.status === "succeeded" && build.result && (
-				<p data-testid="build-succeeded" className="flex items-center gap-2 text-sm text-paper">
-					<CircleCheckIcon className="size-4 text-pass" />
-					The sandbox built in {formatElapsed(build.result.durationMs)}. It lives in <span className="font-mono text-xs break-all text-paper-muted">{build.result.sandboxPath}</span>
+				<p data-testid="build-succeeded" className="flex items-start gap-2 text-sm text-paper">
+					<CircleCheckIcon className="mt-0.5 size-4 shrink-0 text-pass" />
+					<span className="min-w-0">
+						The sandbox built in {formatElapsed(build.result.durationMs)}. It lives in <span className="font-mono text-xs break-all text-paper-muted">{build.result.sandboxPath}</span>
+					</span>
 				</p>
 			)}
 			{build.status === "failed" && build.result && (
