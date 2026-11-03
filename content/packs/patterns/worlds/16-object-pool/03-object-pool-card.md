@@ -1,0 +1,142 @@
+---
+id: p16-object-pool-card
+title: A fixed set, lent out and taken back
+order: 3
+kind: concept
+difficulty: 3
+patterns: [object-pool]
+skills: [object-pool, performance]
+terms: [object-pool, free-list, niagara-component-pool, tarray, world-subsystem, spawnactor]
+prerequisites: [p16-rocket-rack]
+xp: 25
+estimatedMinutes: 10
+concepts:
+  - Object Pool makes a fixed set of objects up front and reuses them, instead of creating and destroying one for every use
+  - Every pool answers four questions, which ones are free, how one goes into use, how it comes back, and what happens when none is free
+  - Whatever a use changed, the next use must not see, so the pool has one clear reset that every loan goes through
+  - A pool that is full refuses, recycles the oldest, or grows within a limit, and each choice shows in the game
+  - In Unreal the cost a pool saves is mostly spawning and destroying actors, and Niagara already pools its own components
+---
+
+# Predict
+
+```yaml
+id: predict
+type: multiple-choice
+prompt: "Guess, no penalty: the rack holds 4 rockets and all 4 are in the air when the music calls for a fifth. Which of these could a rack reasonably do?"
+choices:
+  - Only crash, because a fixed set cannot be exceeded
+  - Skip the shot, take back the oldest rocket still flying and use it, or spawn one more up to some limit, and each is a design choice
+  - Spawn a new rocket and destroy it right away
+  - Wait inside Acquire until a rocket comes back
+answerIndex: 1
+explanation: Every fixed set reaches its limit sometime. Skipping, recycling the oldest, and growing a little are all fair answers with different costs, so the rack's designer picks one on purpose. Waiting inside a function would freeze the game.
+```
+
+# Card
+
+The rocket rack from the last quest is the **Object Pool** pattern: make a fixed set of objects once, lend one out when it is needed, and take it back when it is done, instead of creating and destroying one for every use. The objects are the same ones all show long; only who is using them changes.
+
+**Four questions every pool answers.**
+
+- *Which ones are free?* The rack keeps two lists, resting and lent. A pool can also ask each object, such as a ripple that knows its time is up, or keep one flag per slot.
+- *How does one go into use?* Take a free one, reset it, and bring it into play.
+- *How does it come back?* Take it out of play and mark it free, once. A second return of the same object would let two users share it.
+- *What happens when none is free?* Decided on purpose, below.
+
+**Finding a free one fast.** Searching every slot for a free one gets slower as the pool grows. A **free list** chains the free slots together so the next one is always at hand: each free slot remembers the next free slot, and the pool remembers the first. The rack's resting array, used from its end with `Pop` and `Add`, does the same job for a handful of actors.
+
+**The reset is the whole contract.** A reused object is the same object as last time, so every field its last use changed is still changed. A pool has one reset that every loan goes through, and the reset covers everything a use can change: its position, its speed, whether it already burst. Forgetting one field gives a bug that looks almost right, such as a rocket lent with its last burst still marked, so the show counts a burst nobody saw.
+
+**When the pool is full.** Size it so the common case never runs out. For the rare peak, choose:
+
+- Refuse: no rocket this beat. Fine for things nobody misses, like one spark in a shower.
+- Recycle the oldest: take back the one that has been out longest and use it now. Right when a vanishing old effect is less noticeable than a missing new one.
+- Grow, within a limit: spawn one more and keep it. Without a limit, a long fight grows the pool forever and brings back the spawning it was meant to avoid.
+
+**In Unreal.** The work a pool saves is mostly spawning and destroying actors, so pools of actors are the common case: projectiles, impact effects, pickups, enemies in waves. Hold the pool in a manager actor or a `UWorldSubsystem`, so it belongs to the world it serves, and keep its actors in `UPROPERTY` arrays, so the garbage collector can see them. Effects made with Niagara already have a pool: spawn them with an `ENCPoolMethod` of `AutoRelease` and the engine reuses their components for you.
+
+**Not a Flyweight.** Flyweight shares one piece of data among many objects that exist at the same time. A pool reuses whole objects one after another over time. Five hundred rockets on screen at once that share one look are a Flyweight question; three hundred rockets fired one after another from eight actors are a pool.
+
+# Example
+
+```cpp
+// A pool that refuses when full: the caller decides what a missing rocket means.
+ADojoRocket* UDojoRocketPool::Acquire(const FVector& Where)
+{
+	if (Resting.Num() == 0) return nullptr;
+
+	ADojoRocket* Rocket = Resting.Pop();
+	Lent.Add(Rocket);
+	Rocket->ResetForLaunch(); // Every loan goes through the one reset.
+	Rocket->SetActorLocation(Where);
+	Rocket->SetActorHiddenInGame(false);
+	Rocket->SetActorEnableCollision(true);
+	Rocket->SetActorTickEnabled(true);
+	return Rocket;
+}
+```
+
+# Questions
+
+```yaml
+- id: pool-intent
+  type: multiple-choice
+  prompt: "What does the Object Pool pattern do?"
+  choices:
+    - Shares one copy of data among many objects at the same time
+    - Makes a fixed set of objects up front and reuses them instead of creating and destroying one per use
+    - Makes sure only one object of a class exists
+    - Delays work until a value is needed
+  answerIndex: 1
+  explanation: A pool trades memory held up front for no creation and destruction during play.
+- id: full-policy
+  type: multiple-choice
+  prompt: "Hit sparks come from a pool of 20. In a big fight a 21st spark is needed. Which choice usually suits sparks best?"
+  choices:
+    - Grow the pool without limit
+    - Stop the game until a spark returns
+    - Refuse the new spark or recycle the oldest one, since one spark more or less goes unnoticed
+    - Destroy the whole pool and make a new one
+  answerIndex: 2
+  explanation: Sparks are many and brief, so losing or recycling one is invisible. Growing without a limit brings back the spawning the pool exists to avoid.
+- id: fill-free-list
+  type: fill-blank
+  prompt: "A ___ chains the free slots of a pool together, so taking a free one never needs a search."
+  acceptedAnswers: [free list, free-list]
+  explanation: Each free slot holds the next free slot, and the pool keeps the first one, so taking and returning both take one step.
+- id: spot-double-return
+  type: spot-the-bug
+  prompt: A pool takes rockets back. Which line lets the same rocket be lent to two users at once?
+  code: |
+    void UDojoRocketPool::Release(ADojoRocket* Rocket)
+    {
+    	if (!IsValid(Rocket)) return;
+    	Lent.Remove(Rocket);
+    	Rocket->SetActorHiddenInGame(true);
+    	Rocket->SetActorEnableCollision(false);
+    	Rocket->SetActorTickEnabled(false);
+    	Resting.Add(Rocket);
+    }
+  bugLine: 3
+  fix: Refuse any rocket that is not on the lent list, with if (!Lent.Contains(Rocket)) return; so a second return of the same rocket changes nothing.
+  explanation: Checking only that the rocket is valid lets a rocket that already came back be added to the resting list again, so the pool hands it out twice.
+- id: not-flyweight
+  type: multiple-choice
+  prompt: "Ten thousand floor tiles exist at the same time and share a few tile definitions. Is that an Object Pool?"
+  choices:
+    - Yes, because there are many small objects
+    - No, it is a Flyweight, because the tiles exist together and share data; a pool reuses objects over time
+    - Yes, because the tiles never move
+    - No, it is a Singleton
+  answerIndex: 1
+  explanation: Sharing at one moment is Flyweight. Reusing one after another is a pool.
+- id: explain-niagara
+  type: explain-in-one-sentence
+  prompt: In one sentence, say why you would not write your own pool for a Niagara hit effect.
+  modelAnswer: Niagara already pools its components, so spawning the effect with the AutoRelease pooling method reuses components from the engine's pool and gives them back when the effect finishes.
+  rubric:
+    - Says Niagara already has its own pool
+    - Names the pooling method, such as AutoRelease, or says the engine returns the component itself
+  explanation: Use the engine's pool where it exists, and write your own for actors the engine does not pool.
+```
