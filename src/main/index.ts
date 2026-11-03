@@ -37,7 +37,7 @@ import { RunRegistry } from "./services/unreal/RunRegistry";
 import { stopEngineWorkBeforeQuit } from "./services/unreal/stopEngineWorkBeforeQuit";
 import { createMainWindow } from "./window/createMainWindow";
 import { keepTestRunOffDesktop } from "./window/keepTestRunOffDesktop";
-import { isHiddenTestWindow } from "./window/testWindowMode";
+import { isHiddenTestWindow, isTestLaunch } from "./window/testWindowMode";
 
 /** Opens the native folder picker over the focused window. Resolves null when the learner cancels. */
 async function pickFolder(title: string): Promise<string | null>
@@ -68,6 +68,9 @@ async function start(): Promise<void>
 {
 	// Before anything else, so a hidden e2e run never shows a Dock icon, takes the menu bar, or switches apps on macOS, not even while starting (A970, A972).
 	if (isHiddenTestWindow(process.env, app.isPackaged)) keepTestRunOffDesktop();
+
+	// An e2e launch renders in software, so a GPU busy with other work (an Unreal build, a dozen test windows) cannot crash it; must run before ready (A1470).
+	if (isTestLaunch(process.env, app.isPackaged)) app.disableHardwareAcceleration();
 
 	await app.whenReady();
 
