@@ -1,11 +1,13 @@
-// Checks for Visual Studio with the C++ game workload through vswhere.
+// Checks for Visual Studio with the C++ game workload through vswhere, and for a new enough Windows SDK.
 import type { ToolchainCheck, ToolchainProblem } from "@shared/types/engine";
 
 import type { CommandRunner } from "./CommandRunner";
+import { compareDottedVersions } from "./compareDottedVersions";
 import type { ToolchainChecker } from "./ToolchainChecker";
 import { toolchainCheckResult } from "./toolchainCheckResult";
-import { visualStudioMissing, visualStudioTooOld, visualStudioWorkloadMissing } from "./unrealErrors";
+import { visualStudioMissing, visualStudioTooOld, visualStudioWorkloadMissing, windowsSdkMissing } from "./unrealErrors";
 import { vswhereLocation } from "./vswhereLocation";
+import type { WindowsSdkFinder } from "./WindowsSdkFinder";
 
 /** The "Game development with C++" workload and the MSVC x64 compiler component. */
 const REQUIRED_COMPONENTS = ["Microsoft.VisualStudio.Workload.NativeGame", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64"];
@@ -13,6 +15,9 @@ const REQUIRED_COMPONENTS = ["Microsoft.VisualStudio.Workload.NativeGame", "Micr
 /** UE 5.8 needs Visual Studio 2022 17.14 or later (research section 9.1). */
 const MINIMUM_MAJOR = 17;
 const MINIMUM_MINOR = 14;
+
+/** The oldest Windows SDK the toolchain check accepts (A1315). */
+const MINIMUM_WINDOWS_SDK = "10.0.22621.0";
 
 /** One Visual Studio install as vswhere's JSON describes it. */
 interface VisualStudioInstance
@@ -22,20 +27,22 @@ interface VisualStudioInstance
 	displayVersion: string;
 }
 
-/** ToolchainChecker for Windows. Asks vswhere for an install with the workload; when none has it, asks again without the filter to tell "no Visual Studio" from "no workload". */
+/** ToolchainChecker for Windows. Asks vswhere for an install with the workload; when none has it, asks again without the filter to tell "no Visual Studio" from "no workload". With Visual Studio found, also needs a Windows SDK of 10.0.22621.0 or newer. */
 export class WindowsToolchainChecker implements ToolchainChecker
 {
 	private readonly commandRunner: CommandRunner;
 	private readonly vswherePath: string;
+	private readonly sdkFinder: WindowsSdkFinder;
 
-	/** Takes the runner and `%ProgramFiles(x86)%`, where the Visual Studio Installer keeps vswhere. */
-	constructor(commandRunner: CommandRunner, programFilesX86: string | undefined)
+	/** Takes the runner, `%ProgramFiles(x86)%` (where the Visual Studio Installer keeps vswhere), and the Windows SDK search. */
+	constructor(commandRunner: CommandRunner, programFilesX86: string | undefined, sdkFinder: WindowsSdkFinder)
 	{
 		this.commandRunner = commandRunner;
 		this.vswherePath = vswhereLocation(programFilesX86);
+		this.sdkFinder = sdkFinder;
 	}
 
-	/** Runs the vswhere checks. */
+	/** Runs the vswhere checks, then the Windows SDK check. */
 	async check(): Promise<ToolchainCheck>
 	{
 		const withWorkload = await this.findInstances(["-requires", ...REQUIRED_COMPONENTS]);
@@ -57,7 +64,12 @@ export class WindowsToolchainChecker implements ToolchainChecker
 
 		if (major < MINIMUM_MAJOR || (major === MINIMUM_MAJOR && minor < MINIMUM_MINOR)) problems.push({ error: visualStudioTooOld(newest.displayName, newest.displayVersion), blocksBuild: true });
 
-		return toolchainCheckResult("vswhere", `${newest.displayName} ${newest.displayVersion} has the Game development with C++ workload.`, newest.displayVersion, problems);
+		// Without a new enough SDK every build fails inside UBT; saying so here gives the learner the fix before the first build.
+		const sdkVersion = await this.sdkFinder.newestVersion();
+
+		if (sdkVersion === null || compareDottedVersions(sdkVersion, MINIMUM_WINDOWS_SDK) < 0) problems.push({ error: windowsSdkMissing(MINIMUM_WINDOWS_SDK, sdkVersion), blocksBuild: true });
+
+		return toolchainCheckResult("vswhere", `${newest.displayName} ${newest.displayVersion} has the Game development with C++ workload, and Windows SDK ${sdkVersion ?? ""} is installed.`, newest.displayVersion, problems);
 	}
 
 	/** Shortcut for a result with problems and no healthy message. */
@@ -110,19 +122,4 @@ function parseVswhereJson(text: string): VisualStudioInstance[]
 	}
 
 	return instances;
-}
-
-/** Compares `17.14.36301.6` style versions part by part. */
-function compareDottedVersions(left: string, right: string): number
-{
-	const leftParts = left.split(".").map(Number);
-	const rightParts = right.split(".").map(Number);
-
-	for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index++)
-	{
-		const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
-		if (difference !== 0) return difference;
-	}
-
-	return 0;
 }

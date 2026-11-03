@@ -50,10 +50,12 @@ Everything below lives in `src/main/services/unreal/`. Every file system, regist
 | `createUnrealPlatform.ts` | Picks paths, toolchain checker, and registry from `process.platform`; null on anything but `win32` and `darwin` |
 | `FileSystemReader.ts`, `NodeFileSystemReader.ts` | Read a text file (byte order mark stripped) or list child folders; missing paths answer null or an empty list |
 | `CommandRunner.ts`, `NodeCommandRunner.ts` | Run a short command without a shell, stdin closed, 20 second timeout; never throws |
-| `EngineRegistry.ts`, `WindowsEngineRegistry.ts` | Engine folders from the Windows registry through `reg query` |
+| `EngineRegistry.ts`, `WindowsEngineRegistry.ts` | Engine folders from the Windows registry through `reg query`. The launcher key is read in the 64-bit view, and in the 32-bit view (`/reg:32`) only when the 64-bit view lists no engine (A1314) |
+| `registryValues.ts` | The string values out of `reg query` output, shared by the registry reader and the SDK search |
 | `ToolchainChecker.ts` | The interface for the platform toolchain check |
-| `WindowsToolchainChecker.ts` | vswhere: Visual Studio with `Microsoft.VisualStudio.Workload.NativeGame` and the MSVC x64 tools, version 17.14 or later |
-| `vswhereLocation.ts` | Where vswhere lives, shared by the toolchain check and the MSVC compiler search |
+| `WindowsToolchainChecker.ts` | vswhere: Visual Studio with `Microsoft.VisualStudio.Workload.NativeGame` and the MSVC x64 tools, version 17.14 or later; then a Windows SDK of 10.0.22621.0 or newer (A1315) |
+| `WindowsSdkFinder.ts` | The newest Windows SDK: the `KitsRoot10` folder from `reg query` (64-bit view, then 32-bit), then `%ProgramFiles(x86)%\Windows Kits\10`; a `10.0.x.y` folder under `Include` counts only with its `um` headers in it (A1315) |
+| `vswhereLocation.ts`, `compareDottedVersions.ts` | Where vswhere lives, and dotted version order, shared by the toolchain check, the SDK search, and the MSVC compiler search |
 | `MacToolchainChecker.ts` | `xcode-select -p` (full Xcode, not only the Command Line Tools), `xcodebuild -version` (license accepted), `xcrun metal --version` (Metal toolchain) |
 | `toolchainCheckResult.ts` | Turns a list of problems into a `ToolchainCheck` the same way on both platforms |
 | `EngineVersion.ts` | Parses `Build.version`; minimum 5.4 (D10); fast loop from 5.8 (D09) |
@@ -64,7 +66,7 @@ Everything below lives in `src/main/services/unreal/`. Every file system, regist
 
 How engines are found, in order: the launcher list, then the registry (Windows only), then `UE_*` folders in the default roots (`%ProgramFiles%\Epic Games` on Windows; `/Users/Shared/Epic Games` and `~/Applications` on macOS). Each folder is listed once, with the first source that found it. Folders without a readable `Build.version` and engines older than 5.4 are left out. The list is newest first. A manual pick accepts the engine root or its `Engine` folder and explains a wrong folder (`engine-not-found`) or an old engine (`engine-version-unsupported`).
 
-Toolchain problems: each is an `AppError` with code `toolchain-missing` and a `blocksBuild` flag. Blocking: no Visual Studio, no C++ game workload, Visual Studio older than 17.14, Xcode not selected, only the Command Line Tools selected, Xcode license not accepted, Xcode not answering. Not blocking: the Metal toolchain missing (builds and headless tests work; the editor window does not open).
+Toolchain problems: each is an `AppError` with code `toolchain-missing` and a `blocksBuild` flag. Blocking: no Visual Studio, no C++ game workload, Visual Studio older than 17.14, no Windows SDK of 10.0.22621.0 or newer (checked only once Visual Studio is found), Xcode not selected, only the Command Line Tools selected, Xcode license not accepted, Xcode not answering. Not blocking: the Metal toolchain missing (builds and headless tests work; the editor window does not open).
 
 IPC: `detectEngines` and `checkToolchain` answer from the locator. `pickEngineFolder` is still a stub because it needs Electron's folder dialog (follow-up).
 

@@ -3,8 +3,10 @@ import { spawn } from "node:child_process";
 
 import type { CommandRunner } from "./CommandRunner";
 import type { EngineRegistry } from "./EngineRegistry";
+import type { FileSystemReader } from "./FileSystemReader";
 import { MacPlatformPaths } from "./MacPlatformPaths";
 import { MacToolchainChecker } from "./MacToolchainChecker";
+import { NodeFileSystemReader } from "./NodeFileSystemReader";
 import type { PlatformPaths } from "./PlatformPaths";
 import { PosixProcessTreeKiller } from "./PosixProcessTreeKiller";
 import type { ProcessTreeKiller } from "./ProcessTreeKiller";
@@ -12,6 +14,7 @@ import type { ToolchainChecker } from "./ToolchainChecker";
 import { WindowsEngineRegistry } from "./WindowsEngineRegistry";
 import { WindowsPlatformPaths } from "./WindowsPlatformPaths";
 import { WindowsProcessTreeKiller } from "./WindowsProcessTreeKiller";
+import { WindowsSdkFinder } from "./WindowsSdkFinder";
 import { WindowsToolchainChecker } from "./WindowsToolchainChecker";
 
 /** The platform-specific pieces the Unreal services are built from. */
@@ -44,6 +47,9 @@ export interface UnrealPlatformInputs
 
 	/** Spawns registry and toolchain queries. */
 	commandRunner: CommandRunner;
+
+	/** Lists the Windows SDK folders for the toolchain check; the real disk when left out. */
+	fileSystemReader?: FileSystemReader;
 }
 
 /** Returns the Windows objects on `win32`, the Mac objects on `darwin`, and null anywhere else. */
@@ -54,10 +60,12 @@ export function createUnrealPlatform(inputs: UnrealPlatformInputs): UnrealPlatfo
 	if (platform === "win32")
 	{
 		const paths = new WindowsPlatformPaths({ programFiles: environment.ProgramFiles, programData: environment.ProgramData });
+		const programFilesX86 = environment["ProgramFiles(x86)"];
+		const fileSystemReader = inputs.fileSystemReader ?? new NodeFileSystemReader();
 
 		return {
 			paths,
-			toolchainChecker: new WindowsToolchainChecker(commandRunner, environment["ProgramFiles(x86)"]),
+			toolchainChecker: new WindowsToolchainChecker(commandRunner, programFilesX86, new WindowsSdkFinder(commandRunner, fileSystemReader, programFilesX86)),
 			engineRegistry: new WindowsEngineRegistry(commandRunner),
 			processTreeKiller: createProcessTreeKiller(platform),
 			commandRunner,

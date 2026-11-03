@@ -2,12 +2,30 @@
 import { describe, expect, it } from "vitest";
 
 import { MacToolchainChecker } from "../../src/main/services/unreal/MacToolchainChecker";
+import { WindowsSdkFinder } from "../../src/main/services/unreal/WindowsSdkFinder";
 import { WindowsToolchainChecker } from "../../src/main/services/unreal/WindowsToolchainChecker";
 import { FakeCommandRunner } from "./FakeCommandRunner";
+import { FakeFileSystemReader } from "./FakeFileSystemReader";
 
 const VSWHERE = "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe";
 const WITH_WORKLOAD = `${VSWHERE} -products * -requires Microsoft.VisualStudio.Workload.NativeGame Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -format json -utf8`;
 const ANY_INSTALL = `${VSWHERE} -products * -format json -utf8`;
+
+/** The default Windows Kits include folder, where the finder looks when the registry has no root. */
+const KITS_INCLUDE = "C:\\Program Files (x86)\\Windows Kits\\10\\Include";
+
+/** An SDK search over a disk with these SDK versions, each with its Windows headers. */
+function sdkFinderWith(versions: string[]): WindowsSdkFinder
+{
+	const folders: Record<string, string[]> = { [KITS_INCLUDE]: versions };
+
+	for (const version of versions) folders[`${KITS_INCLUDE}\\${version}`] = ["shared", "ucrt", "um", "winrt"];
+
+	return new WindowsSdkFinder(new FakeCommandRunner({}), new FakeFileSystemReader({}, folders), undefined);
+}
+
+/** A disk with the oldest accepted SDK and a newer one. */
+const HEALTHY_SDKS = sdkFinderWith(["10.0.22621.0", "10.0.26100.0"]);
 
 /** vswhere JSON for one install. */
 function vswhereJson(displayName: string, installationVersion: string, productDisplayVersion: string): string
@@ -19,7 +37,7 @@ describe("WindowsToolchainChecker", () =>
 {
 	it("reports Visual Studio missing when vswhere is not installed", async () =>
 	{
-		const check = await new WindowsToolchainChecker(new FakeCommandRunner({}), undefined).check();
+		const check = await new WindowsToolchainChecker(new FakeCommandRunner({}), undefined, HEALTHY_SDKS).check();
 
 		expect(check.ok).toBe(false);
 		expect(check.tool).toBe("vswhere");
@@ -32,7 +50,7 @@ describe("WindowsToolchainChecker", () =>
 	it("reports Visual Studio missing when vswhere finds no install at all", async () =>
 	{
 		const runner = new FakeCommandRunner({ [WITH_WORKLOAD]: { stdout: "[]" }, [ANY_INSTALL]: { stdout: "[]" } });
-		const check = await new WindowsToolchainChecker(runner, undefined).check();
+		const check = await new WindowsToolchainChecker(runner, undefined, HEALTHY_SDKS).check();
 
 		expect(check.ok).toBe(false);
 		expect(check.message).toMatch(/Visual Studio is not installed/);
@@ -41,7 +59,7 @@ describe("WindowsToolchainChecker", () =>
 	it("reports the workload missing when Visual Studio is installed without it", async () =>
 	{
 		const runner = new FakeCommandRunner({ [WITH_WORKLOAD]: { stdout: "[]" }, [ANY_INSTALL]: { stdout: vswhereJson("Visual Studio Community 2026", "18.0.11205.157", "18.0.1") } });
-		const check = await new WindowsToolchainChecker(runner, undefined).check();
+		const check = await new WindowsToolchainChecker(runner, undefined, HEALTHY_SDKS).check();
 
 		expect(check.ok).toBe(false);
 		expect(check.message).toBe("Visual Studio Community 2026 is installed, but without the \"Game development with C++\" workload Unreal needs.");
@@ -51,7 +69,7 @@ describe("WindowsToolchainChecker", () =>
 	it("reports a Visual Studio 2022 older than 17.14", async () =>
 	{
 		const runner = new FakeCommandRunner({ [WITH_WORKLOAD]: { stdout: vswhereJson("Visual Studio Community 2022", "17.10.35013.160", "17.10.3") } });
-		const check = await new WindowsToolchainChecker(runner, undefined).check();
+		const check = await new WindowsToolchainChecker(runner, undefined, HEALTHY_SDKS).check();
 
 		expect(check.ok).toBe(false);
 		expect(check.toolVersion).toBe("17.10.3");
@@ -65,9 +83,37 @@ describe("WindowsToolchainChecker", () =>
 			{ displayName: "Visual Studio Community 2026", installationVersion: "18.0.11205.157", catalog: { productDisplayVersion: "18.0.1" } },
 		]);
 		const runner = new FakeCommandRunner({ [`D:\\x86\\Microsoft Visual Studio\\Installer\\vswhere.exe -products * -requires ${WITH_WORKLOAD.split("-requires ")[1]}`]: { stdout: twoInstalls } });
-		const check = await new WindowsToolchainChecker(runner, "D:\\x86").check();
+		const check = await new WindowsToolchainChecker(runner, "D:\\x86", HEALTHY_SDKS).check();
 
-		expect(check).toEqual({ ok: true, tool: "vswhere", message: "Visual Studio Community 2026 18.0.1 has the Game development with C++ workload.", toolVersion: "18.0.1", problems: [] });
+		expect(check).toEqual({ ok: true, tool: "vswhere", message: "Visual Studio Community 2026 18.0.1 has the Game development with C++ workload, and Windows SDK 10.0.26100.0 is installed.", toolVersion: "18.0.1", problems: [] });
+	});
+
+	it("reports a missing Windows SDK with the installer step that fixes it (A1315)", async () =>
+	{
+		const runner = new FakeCommandRunner({ [WITH_WORKLOAD]: { stdout: vswhereJson("Visual Studio Community 2026", "18.0.11205.157", "18.0.1") } });
+		const check = await new WindowsToolchainChecker(runner, undefined, sdkFinderWith([])).check();
+
+		expect(check.ok).toBe(false);
+		expect(check.message).toBe("No Windows SDK is installed. Unreal needs one (10.0.22621.0 or newer) to compile C++ on Windows.");
+		expect(check.suggestedAction).toBe("Open the Visual Studio Installer, choose Modify, open Individual components, tick a Windows 11 SDK (10.0.22621.0 or newer), and install.");
+		expect(check.problems).toEqual([expect.objectContaining({ blocksBuild: true, error: expect.objectContaining({ code: "toolchain-missing" }) })]);
+	});
+
+	it("reports a Windows SDK older than 10.0.22621.0, naming the newest one found", async () =>
+	{
+		const runner = new FakeCommandRunner({ [WITH_WORKLOAD]: { stdout: vswhereJson("Visual Studio Community 2026", "18.0.11205.157", "18.0.1") } });
+		const check = await new WindowsToolchainChecker(runner, undefined, sdkFinderWith(["10.0.18362.0", "10.0.19041.0"])).check();
+
+		expect(check.ok).toBe(false);
+		expect(check.message).toBe("The newest Windows SDK on this computer is 10.0.19041.0, which is older than Unreal needs (10.0.22621.0 or newer).");
+	});
+
+	it("does not look for an SDK when Visual Studio itself is missing", async () =>
+	{
+		const check = await new WindowsToolchainChecker(new FakeCommandRunner({}), undefined, sdkFinderWith([])).check();
+
+		expect(check.problems).toHaveLength(1);
+		expect(check.message).toMatch(/Visual Studio is not installed/);
 	});
 });
 

@@ -63,6 +63,18 @@ export function visualStudioTooOld(displayName: string, version: string): AppErr
 	};
 }
 
+/** No Windows SDK new enough for Unreal: none installed, or only older ones (A1315). */
+export function windowsSdkMissing(minimumVersion: string, newestFound: string | null): AppError
+{
+	return {
+		code: "toolchain-missing",
+		message: newestFound
+			? `The newest Windows SDK on this computer is ${newestFound}, which is older than Unreal needs (${minimumVersion} or newer).`
+			: `No Windows SDK is installed. Unreal needs one (${minimumVersion} or newer) to compile C++ on Windows.`,
+		suggestedAction: `Open the Visual Studio Installer, choose Modify, open Individual components, tick a Windows 11 SDK (${minimumVersion} or newer), and install.`,
+	};
+}
+
 /** `xcode-select -p` failed: no developer folder is selected. */
 export function xcodeNotSelected(): AppError
 {
