@@ -48,7 +48,7 @@ What you built for the guard rating is the **Dirty Flag** pattern. Some data is 
 
 - **When the value is asked for.** Work is never done for a value nobody reads. The read that follows a change pays for the refresh, and a heavy refresh can be felt as a hitch.
 - **At a checkpoint.** Refresh at a loading screen, between rounds, or when a menu opens. A moment the player already expects to wait covers the cost, but nothing promises one arrives before the next read.
-- **On a timer, in the background.** The frequency is tunable, but the timer may redo work on data that barely changed and needs care when something changes during the refresh.
+- **On a timer, in the background.** You choose how often it runs, but it may refresh data that has hardly changed, and a change that lands in the middle of a refresh needs handling.
 
 **How fine the flag is.** One flag for the whole value is cheap in memory and wasteful when a small part changes. One flag for each piece processes only what changed, at the price of more flags and more bookkeeping for each.
 

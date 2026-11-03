@@ -41,7 +41,7 @@ A flag is a way to avoid recomputing, and it has a price. Leave it out in these 
 
 **When the value is cheap.** Adding two numbers costs less than keeping a stored copy, a flag, and every function that sets it. A flag also adds a bug path. Measure before caching something that takes a few instructions.
 
-**A value built on another remembered value.** If a joint's position is remembered, and a child's position is built from it, then a flag on the joint that moved is not enough: the child's remembered position is old too, and so is everything built on the child. Mark everything that depends on a changed piece, or have the read check the piece it is built on. A flag for each piece, set only on the piece that changed, leaves everything above it quietly out of date.
+**A value built on another remembered value.** If a joint's position is remembered, and a child's position is built from it, then a flag on the joint that moved is not enough: the child's remembered position is old too, and so is everything built on the child. Mark everything that depends on a changed piece, or have the read check the piece it is built on. A flag for each piece, set only on the piece that changed, leaves everything built on it quietly out of date.
 
 **A path that forgets.** Each function that changes the data has to set the flag. One direct write to a field, or a second way to change it such as a timer that expires a buff, leaves a stale answer. Keep the data private and change it only through a few functions that set the flag.
 
@@ -51,7 +51,7 @@ A flag is a way to avoid recomputing, and it has a price. Leave it out in these 
 
 **When deferring costs too much.** The read after a change pays for the work, which can be a visible hitch if the work is heavy and the moment is bad. Another thread that reads the remembered value while the game thread refreshes it can see half an update. And when the flag stands for unsaved work, as a dirty package does, a crash before the refresh loses it.
 
-**When memory is the scarcer thing.** The remembered answer takes room. If the answer is large and the time is cheap, work it out again.
+**When memory is tighter than time.** The remembered answer takes room. If the answer is large and the time is cheap, work it out again.
 
 # Example
 
@@ -85,7 +85,7 @@ void ADojoCart::Load(int32 Crates)
     - Only the joint that is read next
     - Every joint in the world
   answerIndex: 1
-  explanation: A joint's kept position is built from its parent's, so everything beneath the base is old once the base moves. Marking only the base leaves its children reporting the old place.
+  explanation: A joint's kept position is built from its parent's, so everything built on the base is old once the base moves. Marking only the base leaves its children reporting the old place.
 - id: spot-flag-every-update
   type: spot-the-bug
   prompt: A screen shows the guard rating each frame. Which line defeats the flag?

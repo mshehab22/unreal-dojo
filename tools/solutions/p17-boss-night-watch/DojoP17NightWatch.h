@@ -143,7 +143,7 @@ private:
 	TArray<int32> ActiveBuffIds;
 
 	/** The world time each active oil buff wears off. */
-	TArray<float> ActiveBuffExpiry;
+	TArray<double> ActiveBuffExpiry;
 
 	/** Number of the current or last round. */
 	int32 RoundNumber = 0;

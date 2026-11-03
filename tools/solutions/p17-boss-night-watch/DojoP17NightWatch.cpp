@@ -146,7 +146,7 @@ void ADojoP17NightWatch::EndRound()
 void ADojoP17NightWatch::UpdateLabel()
 {
 	const FVector Lantern = IsValid(Rig) ? Rig->GetPosition(LanternJoint) : FVector::ZeroVector;
-	FString Text = FString::Printf(TEXT("Round %d  Guard %d  Lantern %d,%d,%d  Shaky %d"), RoundNumber, Guard->GetGuard(), FMath::RoundToInt(Lantern.X), FMath::RoundToInt(Lantern.Y), FMath::RoundToInt(Lantern.Z), ShakyChecks);
+	FString Text = FString::Printf(TEXT("Round %d  Guard %d  Lantern %d,%d,%d  Shaky %d"), RoundNumber, Guard->GetGuard(), FMath::RoundToInt32(Lantern.X), FMath::RoundToInt32(Lantern.Y), FMath::RoundToInt32(Lantern.Z), ShakyChecks);
 	if (!Result.IsEmpty()) Text += TEXT("  ") + Result;
 
 	Label->SetText(FText::FromString(Text));
@@ -156,7 +156,7 @@ void ADojoP17NightWatch::HandleCheck()
 {
 	if (!bRunning) return;
 
-	const float Now = GetWorld()->GetTimeSeconds();
+	const double Now = GetWorld()->GetTimeSeconds();
 	for (int32 Index = ActiveBuffIds.Num() - 1; Index >= 0; Index--)
 	{
 		if (ActiveBuffExpiry[Index] > Now) continue;

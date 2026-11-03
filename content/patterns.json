@@ -2112,7 +2112,7 @@
     "intent": "When an expensive result (a guard rating, a ladder rating, a tower joint's position) depends on inputs that change now and then, raise a flag on each change and do the real recompute once, the next time someone asks for the result.",
     "problem": "A fighter's guard rating depends on a base guard, the worn items, and the active buffs, and the screen, the damage code, and the enemy all read it every frame. Recomputing on every read repeats a sum whose answer cannot have changed, and recomputing on every change repeats it for answers nobody reads when several changes land together.",
     "unrealForm": "Dirty flags run all through the engine: a scene component keeps its component-to-world transform ready and refreshes it after a change, MarkRenderStateDirty has the renderer pick up new data later, packages carry an unsaved bit, Slate widgets invalidate, and push-model replication marks properties. In gameplay code you keep a bStatsDirty bool, set it in every setter, and recompute inside the getter when it is set.",
-    "whenNot": "When adding or subtracting one value keeps a running total correct, keep the total. When the value is cheap to work out, or when deferring could lose work or cause a hitch at a bad moment, compute eagerly. The risks are a mutation path that forgets the flag and a value built on another remembered value that is left old, so route every change through a small set of functions.",
+    "whenNot": "When adding or subtracting one value keeps a running total correct, keep the total. When the value is cheap to work out, or when deferring could lose work or cause a hitch at a bad moment, compute eagerly. The main risk is a mutation path that forgets the flag, so route every change through a small set of functions.",
     "useCaseQuestIds": [
       "p17-guard-rating",
       "p17-tower-rig"
@@ -2254,7 +2254,7 @@
             "why": "There is no reader and writer racing over one value."
           }
         ],
-        "explanation": "Keep each joint's position, mark it old when the tower moves, and work it out when it is read."
+        "explanation": "Keep each joint's position and work it out when it is read, instead of on every frame for every follower."
       },
       {
         "id": "dirty-flag-scenario-4",

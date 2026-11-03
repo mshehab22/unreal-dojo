@@ -28,7 +28,7 @@ Most of the code is written. Every function that changes a part is given, and ea
 
 ## See it in the editor
 
-Make an actor Blueprint, BP_Fighter, with the parent class Actor, and add the component Dojo P17 Guard Stats in its Components panel. On Begin Play, call Equip with Item Helm and Bonus 5, Equip with Item Plate and Bonus 15, and Add Buff with Amount 10. Then, in a loop of ten, print Get Guard: 60 each time. After the loop, print Get Recompute Count: 1. Call Unequip with Item Helm, print Get Guard (55), and print Get Recompute Count again: 2.
+Make an actor Blueprint, BP_Fighter, with the parent class Actor, add the component Dojo P17 Guard Stats in its Components panel, and drag BP_Fighter into the level. On Begin Play, call Equip with Item Helm and Bonus 5, Equip with Item Plate and Bonus 15, and Add Buff with Amount 10. Then, in a loop of ten, print Get Guard: 60 each time. After the loop, print Get Recompute Count: 1. Call Unequip with Item Helm, print Get Guard (55), and print Get Recompute Count again: 2.
 
 # Files
 

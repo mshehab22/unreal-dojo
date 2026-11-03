@@ -2254,9 +2254,9 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
   - A tower of joints that answers where each one is (build, stub): the learner writes `GetPosition` and `SetLocalOffset`. Reading an untouched tower works each joint out once, moving the lantern works only the lantern out, and moving the base moves everything below it. Its deliberate failure: a flag on each joint that only the moved joint sets (A1673).
   - A ladder that re-sorts on every score (refactor): `AddScore` and `RemoveScore` stop working the best-three rating out, and `GetRating` does it once after any number of changes.
   - When a flag costs more than the sum (concept): running totals, cheap values, a value built on another remembered value, missed and constant flags, and deferred work.
-  - Boss, the night watch: a 36 second round with armour, lantern oil that wears off, and gusts that push a tower, a check every second, and counts that prove the guard is worked out 4 and 5 times and the tower 24 times in two rounds (A1676).
+  - Boss, the night watch: a 36 second round with armour, lantern oil that wears off, and gusts that push a tower, a check every second, and counts that prove the guard is worked out 4 and 5 times and the tower 24 times in two rounds, and eight tests in all (A1676, A1680).
 - Also: new glossary entries `mutable-member` and `render-state-dirty`, and the Dirty Flag card audit (A1677).
 - Proof so far:
   - Content verifier: no problems. Originality: no 6-word or 5-word match against the research's Dirty Flag section in the quests, solutions, glossary entries, or card. The check against the book is pending because the PDF is gone.
   - Engine proof: not run. The task did not allow the engine, so nothing in this world has been compiled (A1679). Queued for the Lead: the four solution folders, the starters, and the mutation copies.
-- Not done: the engine proof, the mutation run, and the source n-gram check. No screenshots. Decisions A1670 to A1679.
+- Not done: the engine proof, the mutation run, and the source n-gram check. No screenshots. Decisions A1670 to A1680.

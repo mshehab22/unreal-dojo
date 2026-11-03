@@ -4,6 +4,17 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1680 2026-11-03 World 17 fix round 1 (author-patterns, M4.P2.17)
+The reviewer's verdict was FIXES NEEDED with no compile error found. Changed:
+- The deliberate failure (a child left old when its parent moves) was hinted in the world's summary, the card's when-not field, the quest 4 rubric ("depend on it"), and a concept bullet ("unrelated joints"). All reworded; the first place that says it is now quest 4's hint ladder and quest 6.
+- `FMath::RoundToInt` on a double returns `int64` in 5.8 and was printed with `%d`; the director uses `RoundToInt32`, and the oil expiry times are `double`.
+- Boss tests the review showed to be missing: the whole label at three moments (so `Shaky` is checked), a guard of exactly 40 being steady, oil removed before the guard is read, the oil's length, drinks that stack, a drink still working when the round ends, a rig the watch is given, and the first gust's time. The boss now has eight tests.
+- The quest 4 test rig has a sixth joint whose parent index is not lower than its own, so that rubric bullet is tested.
+- The reference game is now the character sheet of a Diablo-style action role-playing game; the RimWorld claim about when it recalculates mood could not be verified.
+- Smaller wording: "above" and "beneath" became "built on", one paraphrase of the research was reworded, the boss feel no longer asks for a gust to be tuned, a stale boss term was removed, and the editor steps say to place the Blueprint and print vectors as X=, Y=, Z=.
+- Left: the key bindings are untested because the test world has no player controller (as in World 13), and a gust timing between 2 and 3 seconds is pinned only loosely.
+Reverse cost: low.
+
 ### A1679 2026-11-03 World 17 was written without the engine; the proof is the Lead's (author-patterns, M4.P2.17)
 The task said no engine, so every C++ file, test, starter, and mutation copy was written and read but never compiled. It uses only long-stable calls (`UActorComponent`, `TMap`/`TArray` loops and `IndexOfByPredicate`, `mutable` members, `SetTimer` with a first delay, `SpawnActorDeferred`, `InputComponent->BindKey`, `FVector::Equals`), copied in shape from the merged Pack 2 solutions. Expect the first engine run to find any compile slip. Reverse cost: none.
 
@@ -50,7 +61,7 @@ Reverse cost: low.
 Reverse cost: medium once learners have progress saved.
 
 ### A1670 2026-11-03 Decision block A1670 to A1689 from the Lead (author-patterns, M4.P2.17)
-Assigned under A71; this world uses A1670 to A1679. Reverse cost: none.
+Assigned under A71; this world uses A1670 to A1680. Reverse cost: none.
 
 ### A1623 2026-11-03 The "fails on purpose" sentence is house style, so it is a Note and not a leak (qa, M4.y spot-check 2)
 The Pack 4 World 1 reviewer called "This one fails on purpose the first time for most people" in the equipment brief a leak, since the authoring rule says the failure is revealed only after the failing step. The same sentence is in 22 quests across the packs and in `content/examples/05-build-blank-proximity-lantern.md`, and the first spot-check did not flag it. Options: flag all 22 as Should fix; record it as a Note and leave the call to the Lead. Chose the Note: it warns that a trap exists without saying what it is, and a mass edit is the Lead's decision. If the Lead wants the rule applied, the sentence comes out of every one of them in one pass.

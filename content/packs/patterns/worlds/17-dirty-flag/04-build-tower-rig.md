@@ -15,7 +15,7 @@ concepts:
   - A joint's position is its parent's position plus its own offset, and a root's position is its offset
   - Positions are kept and worked out again only after something has moved
   - The counters say how many times each joint's position has really been worked out
-  - Moving a joint, or setting it to where it already is, leaves unrelated joints alone
+  - Moving a joint, or setting it to where it already is, does no work until a position is read
 ---
 
 # Brief
@@ -35,7 +35,7 @@ Write the obvious version first and run the tests. One of them fails on purpose 
 
 ## See it in the editor
 
-Place a `DojoP17TowerRig`. In Details, add three Nodes: Base (Parent Index -1, Local Offset 0, 0, 0), Platform (Parent Index 0, Local Offset 0, 0, 300), and Lantern (Parent Index 1, Local Offset 0, 0, 100). In the Level Blueprint, on Begin Play, print Get Position for index 2 three times: (0, 0, 400) each time. Then print Get Recompute Count for indices 0, 1, and 2: 1 each. Call Set Local Offset with index 2 and (0, 0, 150), print Get Position for index 2 (0, 0, 450) and the three counters again: 1, 1, and 2.
+Place a `DojoP17TowerRig`. In Details, add three Nodes: Base (Parent Index -1, Local Offset 0, 0, 0), Platform (Parent Index 0, Local Offset 0, 0, 300), and Lantern (Parent Index 1, Local Offset 0, 0, 100). In the Level Blueprint, on Begin Play, print Get Position for index 2 three times: X=0.000 Y=0.000 Z=400.000 each time. Then print Get Recompute Count for indices 0, 1, and 2: 1 each. Call Set Local Offset with index 2 and (0, 0, 150), print Get Position for index 2 (X=0.000 Y=0.000 Z=450.000) and the three counters again: 1, 1, and 2.
 
 # Files
 
@@ -205,7 +205,7 @@ namespace DojoP17RigTest
 		return Result;
 	}
 
-	/** Spawns a rig of five joints: Base (0), Platform (1) and Lantern (2) in a chain, and a second root, Flag (3), with a Pennant (4) on it. */
+	/** Spawns a rig of six joints: Base (0), Platform (1) and Lantern (2) in a chain, a second root, Flag (3), with a Pennant (4) on it, and a Stray (5) whose parent index is not lower than its own. */
 	ADojoP17TowerRig* SpawnRig(FDojoTestWorld& TestWorld)
 	{
 		ADojoP17TowerRig* Rig = TestWorld.GetWorld()->SpawnActorDeferred<ADojoP17TowerRig>(ADojoP17TowerRig::StaticClass(), FTransform::Identity);
@@ -217,6 +217,7 @@ namespace DojoP17RigTest
 				MakeNode(TEXT("Lantern"), 1, FVector(0.f, 0.f, 100.f)),
 				MakeNode(TEXT("Flag"), INDEX_NONE, FVector(500.f, 0.f, 0.f)),
 				MakeNode(TEXT("Pennant"), 3, FVector(0.f, 0.f, 50.f)),
+				MakeNode(TEXT("Stray"), 7, FVector(7.f, 0.f, 0.f)),
 			};
 			Rig->FinishSpawning(FTransform::Identity);
 		}
@@ -241,6 +242,7 @@ bool FDojo_P17_TowerRig_PositionsAddUp::RunTest(const FString& Parameters)
 	TestEqual(TEXT("The lantern is 100 above the platform"), Rig->GetPosition(2), FVector(0.f, 0.f, 400.f));
 	TestEqual(TEXT("The flag is a second root"), Rig->GetPosition(3), FVector(500.f, 0.f, 0.f));
 	TestEqual(TEXT("The pennant is 50 above the flag"), Rig->GetPosition(4), FVector(500.f, 0.f, 50.f));
+	TestEqual(TEXT("A parent index that is not lower than the joint's own means no parent"), Rig->GetPosition(5), FVector(7.f, 0.f, 0.f));
 
 	TestEqual(TEXT("A joint that does not exist is at zero"), Rig->GetPosition(9), FVector::ZeroVector);
 	TestFalse(TEXT("A joint that does not exist cannot be moved"), Rig->SetLocalOffset(9, FVector(1.f, 1.f, 1.f)));
@@ -358,7 +360,7 @@ bool FDojo_P17_TowerRig_ChildrenFollowTheirParent::RunTest(const FString& Parame
 
 - A joint's position is its parent's position plus its own offset, and a root's is its offset, however the tower has been moved.
 - Positions are kept, and a position is worked out again only when it has to be: reading an untouched tower works each joint out exactly once.
-- Moving a joint makes only the joints that depend on it get worked out again, and each of them once, however many moves came before the read.
+- After any number of moves, every position that is read is the sum of its chain, and no joint is worked out more than once for the moves made since it was last read.
 - Setting the offset a joint already has changes nothing and works nothing out.
 - A missing joint reads as zero and cannot be moved, and a parent index that is not lower than the joint's own is treated as no parent.
 - Every counter goes up by one each time its joint's position is worked out, and by nothing else.
