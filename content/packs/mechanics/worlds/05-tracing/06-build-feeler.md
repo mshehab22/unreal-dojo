@@ -228,6 +228,7 @@ bool FDojo_M5_Feeler_OnlyANarrowBallFitsTheGap::RunTest(const FString& Parameter
 
 	Feeler->Radius = 1.f;
 	TestTrue(TEXT("A ball almost as thin as a line goes through"), Feeler->Probe());
+	TestNull(TEXT("A clear probe names no blocker, whatever the last probe hit"), Feeler->GetBlocker());
 
 	return true;
 }
