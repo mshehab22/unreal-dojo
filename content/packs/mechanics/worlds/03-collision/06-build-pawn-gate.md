@@ -189,6 +189,7 @@ void ADojoM3Gate::RefreshLabel()
 
 #if WITH_AUTOMATION_TESTS
 
+#include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Quests/m2-bumper/DojoM2Bumper.h"
