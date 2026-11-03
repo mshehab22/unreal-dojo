@@ -530,14 +530,14 @@ bool FDojo_S4_Interactor_FollowsTheHero::RunTest(const FString& Parameters)
 
 	FDojoTestWorld TestWorld;
 
-	ADojoTestActor* Early = TestWorld.SpawnActor<ADojoTestActor>();
-	Early->SetActorLocation(Home);
-	ADojoS4Sign* Waiting = PlaceBeside<ADojoS4Sign>(TestWorld, FVector(80.f, 0.f, 0.f));
-	TestWorld.Tick(2);
+	// The interactor is registered before its owner begins play, so it is in the world but not listening yet when the sign arrives.
+	ADojoTestActor* Early = TestWorld.GetWorld()->SpawnActorDeferred<ADojoTestActor>(ADojoTestActor::StaticClass(), FTransform(Home));
 	UDojoS4Interactor* Late = NewObject<UDojoS4Interactor>(Early);
 	Late->SetupAttachment(Early->GetRootComponent());
 	Early->AddInstanceComponent(Late);
 	Late->RegisterComponent();
+	ADojoS4Sign* Waiting = PlaceBeside<ADojoS4Sign>(TestWorld, FVector(80.f, 0.f, 0.f));
+	Early->FinishSpawning(FTransform(Home));
 	TestWorld.Tick(2);
 	TestTrue(TEXT("A sign that was already in reach when the interactor started is found"), Late->GetFocus() == Waiting);
 	Late->DestroyComponent();
