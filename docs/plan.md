@@ -50,7 +50,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 ### M3 Patterns, mechanics, economy
 - [x] M3.1 content-patterns: Pack 2 lesson zero (architecture lens) and the Observer mini-arc (predict and card, recognize, two use cases, refactor, when-not). Proof: verifier green with `--engine`.
 - [ ] M3.2 content-mechanics: Pack 3 World 6 (delegates) with the Quest System boss (two reference breakdowns, pieces, integration rubric). Proof: verifier green with `--engine`.
-- [ ] M3.3 progress-and-rules + ui: daily quest with chests, Seer Stone flow, spree and armor display, streak celebrations, test-out drill per world. Proof: unit tests plus Playwright screenshots.
+- [x] M3.3 progress-and-rules + ui: daily quest with chests, Seer Stone flow, spree and armor display, streak celebrations, test-out drill per world. Proof: unit tests plus Playwright screenshots.
 - [x] M3.4 ai-review: alternative-after-pass surfacing, free "why is this a finding" follow-up, reflection question answer flow. Proof: Playwright.
 
 ### M4 Full curriculum (content sessions run in parallel, one world per task, alternating packs)
@@ -180,8 +180,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.P3.3 Pack 3 World 3 (Collision), then World 4 | content-mechanics | author-mechanics (session "p3-world3-collision") | p3-world3-collision | building | A1330 to A1349; World 4 A1400 to A1419 |
 | M4.P4.2 Pack 4 World 2, then World 3 | content-systems | author-systems (session "p4-world2") | p4-world2 | building | A1350 to A1369; World 3 A1420 to A1439 |
 | M4.P2.13 Pack 2 World 13 (Bytecode), then World 14 | content-patterns | author-patterns (session "p2-world13-bytecode") | p2-world13-bytecode | building | D13 book check owed (PDF not on this PC); A1370 to A1389; World 14 A1440 to A1459 |
-| M3.3 Daily quest, Seer Stone, spree, streak, test-out (audit then finish) | progress-and-rules and ui | session "m3-3-economy-ui" | m3-3-economy-ui | building | A1390 to A1399 |
-| M3.3 Economy on screen: daily quest with chests, Seer Stone flow, spree and armor, streak celebrations, test-out per world | progress-and-rules and ui (ui-core, ui-quests) | session "m3-3-economy-ui" | claude/m3-3-economy-ui-df965b | reviewed PASS after fix round 1; tester: typecheck, 1268 unit tests, verify-content, build, economy e2e 3 of 3 pass; full e2e blocked by this machine's GPU crash (problems.md, fails on main too) | `viewSolution` IPC and the Seer Stone dialog; daily Start, today's chest kept, drill offer only when due; spree stake on Build, armor kept on a spree of 0; milestone celebration and opening chest on loot and drill; skip marks after a test-out; fake scenario `economy`, e2e `economy.spec.ts`. Cross-owner lines logged in A1390. A1390 to A1399 |
+| M3.3 Economy on screen: daily quest with chests, Seer Stone flow, spree and armor, streak celebrations, test-out per world | progress-and-rules and ui (ui-core, ui-quests) | session "m3-3-economy-ui" | merged b0ea4e9 | merged (Lead merge run: typecheck, 1268 unit tests, verify-content, build, e2e 47 passed with the real-engine flow skipped) | `viewSolution` IPC and the Seer Stone dialog; daily Start, today's chest kept, drill offer only when due; spree stake on Build, armor kept on a spree of 0; milestone celebration and opening chest on loot and drill; skip marks after a test-out; fake scenario `economy`, e2e `economy.spec.ts`. Cross-owner lines logged in A1390. A1390 to A1399 |
 | M5.1l Content load stall on a Windows runner (16 s) | content-engine and ui-core | m5-1 lead | claude/m5-1-friendly-errors-d07d32 | reviewed PASS after fix round 1, tested (typecheck, 1207 unit tests, verify-content, build, e2e 43 of 43 run) | Cause is not the loader (44 ms for 150 quests warm, 77 to 109 ms on a fresh copy); added a slow-load warning that names disk versus a blocked main process, and raised the data wait limit from 15 s to 45 s (A1260 to A1262). |
 | M5.1m run-errors e2e fails on macOS CI (run 40488859958) | qa, ui-quests | m5-1 lead | claude/m5-1m-mac-run-errors-fix | review | Two causes: `insertAtTop` pressed Control+Home, which Monaco ignores on a Mac (A1263); and `QuestTitleRow` wrapped at 1100 wide while "Unsaved changes" showed, moving the Run button between mouse down and up (A1264). Both reproduced on Windows; the Mac run is unverified until CI. |
 
@@ -236,7 +235,7 @@ Note: earlier dev runs saved `dojo.dataSource = fake:returning` in the app's rea
 
 (What Mohammad can try now, with exact steps. Nothing waits on this.)
 
-### The economy with sample data (M3.3, branch claude/m3-3-economy-ui-df965b, not merged yet)
+### The economy with sample data (M3.3, merged b0ea4e9)
 What is new: the daily quest can be started and pays a chest you see open, the 7, 30, and 100 day streaks are celebrated, the Build screen says what your first try is worth to your spree and whether armor covers a miss, the Seer Stone lets you read a stuck quest's solution (with a stone, or with that quest's XP), and a world's test-out marks the quests you may skip.
 1. In the project folder: `npm install`, then `VITE_DOJO_FAKE=economy npm run dev`.
 2. Studio: in "Daily quest" press "Pick this one" on the concept card, then "Start today's pick". Pass the quest; the loot shows the 7 day streak and the chest opening with a Seer Stone. Back in the Studio the chest stays open and the day says "Done today".
