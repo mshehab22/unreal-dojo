@@ -1936,16 +1936,19 @@
   {
     "id": "service-locator",
     "title": "Service Locator",
-    "intent": "Let code ask a central registry for \"the audio service\" or \"the analytics service\" by interface and get back whichever implementation was registered (real, silent, or a test double), without knowing which class that is.",
-    "problem": "Audio, analytics, and haptics are needed from all over the codebase. Passing them through every function is tedious, and a singleton welds callers to one concrete class, which blocks swapping in a silent or logging version for tests or a different platform.",
-    "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem can hold a provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's literal locator for plugin features. Always provide a null provider so callers never check for nullptr.",
+    "intent": "Let code ask one place for \"the announcer\" or \"the scoreboard\" by interface and get back whichever provider was set up (loud, recording, or silent), without knowing which class that is.",
+    "problem": "The gong, the bout timer, and the score screen all need to announce lines. Passing an announcer through every function is tedious, and letting each create its own welds them to one concrete class, which blocks swapping in a silent or recording version for tests or a different build.",
+    "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem may keep its current provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's own registry for plugin features, and you ask whether a feature exists before asking for it. Provide a null provider so callers never check for nullptr.",
     "whenNot": "If the dependency can be passed in through a constructor or function parameter, do that; it stays visible. Do not use a locator for something that should only be reachable in one context or phase, because a global lookup cannot enforce that.",
-    "useCaseQuestIds": [],
+    "useCaseQuestIds": [
+      "p15-announcer-desk",
+      "p15-crier-trace"
+    ],
     "recall": [
       {
         "id": "service-locator-recall-1",
         "type": "multiple-choice",
-        "prompt": "What does a null service provide?",
+        "prompt": "What is the point of a null provider in a located service?",
         "choices": [
           "A crash when used, to catch bugs",
           "A cached copy of the last service",
@@ -1975,6 +1978,28 @@
           "Contrasts with a single concrete class"
         ],
         "explanation": "Same global reach, but the concrete class is no longer baked in."
+      },
+      {
+        "id": "service-locator-recall-4",
+        "type": "fill-blank",
+        "prompt": "A subsystem found with GetWorld()->GetSubsystem<T>() lives as long as its ___.",
+        "acceptedAnswers": [
+          "world"
+        ],
+        "explanation": "A world subsystem is created and destroyed with its world. A game instance subsystem lives as long as the game instance."
+      },
+      {
+        "id": "service-locator-recall-5",
+        "type": "multiple-choice",
+        "prompt": "Which of these is a service locator's three-part shape?",
+        "choices": [
+          "A base class, a component, and a delegate",
+          "A service interface, providers behind it, and a place that hands out the provider in use",
+          "A factory, a prototype, and a pool",
+          "A header, a source file, and a build file"
+        ],
+        "answerIndex": 1,
+        "explanation": "Callers use the interface, providers implement it, and the locator hands out whichever is in place."
       }
     ],
     "scenarios": [
@@ -2008,15 +2033,55 @@
       {
         "id": "service-locator-scenario-2",
         "type": "multiple-choice",
-        "prompt": "A trap is spawned by a spawner that already holds a reference to the audio subsystem. The trap needs audio. What is the better choice than having the trap look the service up globally?",
+        "prompt": "A bell is spawned by a bout director that already holds a reference to the announcer desk. The bell needs to announce. What is the better choice than having the bell look the service up globally?",
         "choices": [
-          "Have the spawner pass the audio interface to the trap when it spawns it",
-          "Make the audio subsystem a static singleton",
-          "Broadcast a delegate asking someone to play the sound",
-          "Queue the sound request for the next frame"
+          "Have the director pass the announcer interface to the bell when it spawns it",
+          "Make the announcer desk a static singleton",
+          "Broadcast a delegate asking someone to speak the line",
+          "Queue the line for the next frame"
         ],
         "answerIndex": 0,
         "explanation": "When a caller already has the dependency, passing it in keeps it visible in the trap's interface. A locator is the fallback when passing in is impractical, not the default."
+      },
+      {
+        "id": "service-locator-scenario-3",
+        "type": "which-pattern",
+        "prompt": "Automated bout tests must run without sound and must be able to read back every line the bouts announce. The gong, the timer, and the score screen all announce. Which pattern?",
+        "choices": [
+          "strategy",
+          "singleton",
+          "service-locator",
+          "observer"
+        ],
+        "answer": "service-locator",
+        "distractorNotes": [
+          {
+            "choice": "singleton",
+            "why": "A singleton gives one concrete announcer, and the test needs a recording one in its place."
+          },
+          {
+            "choice": "strategy",
+            "why": "A strategy swaps one algorithm inside one object; here many callers share one swappable service."
+          },
+          {
+            "choice": "observer",
+            "why": "Subscribing the tests to every source works, but every source would have to be wired, where a located announcer needs one provide call."
+          }
+        ],
+        "explanation": "The callers use an announcer interface, and the test provides a recording announcer once."
+      },
+      {
+        "id": "service-locator-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A rival's strike needs the health of the one fighter it is hitting. Is a service locator the right way to reach it?",
+        "choices": [
+          "Yes; anything many classes need belongs in a locator",
+          "No; the target is part of this one strike, so pass it in or reach its health through it",
+          "Yes, but only through a game instance subsystem",
+          "No; health should be a console variable"
+        ],
+        "answerIndex": 1,
+        "explanation": "A locator is for a few cross-cutting services. A dependency that belongs to one relationship should stay visible in the code that uses it."
       }
     ]
   },

@@ -4438,5 +4438,43 @@
       "ustruct"
     ],
     "firstQuestId": "p13-behavior-as-data"
+  },
+  {
+    "id": "null-object",
+    "term": "Null Object",
+    "aliases": [
+      "null provider",
+      "null service",
+      "do-nothing provider"
+    ],
+    "category": "cpp idiom",
+    "short": "A do-nothing implementation of an interface that stands in when no real one has been provided.",
+    "long": "When a service might not have been set up yet, the usual answers are to return nullptr and make every caller check, or to assert and stop the game. A null object is a third answer: a real implementation of the same interface that quietly does nothing, such as an announcer that drops every line. Whoever asks always receives something callable, and a feature is switched off by providing nothing. The price is that a mistake can hide, so a good null object counts or logs what it drops.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/interfaces-in-unreal-engine?application_version=5.8",
+    "related": [
+      "uinterface",
+      "iinterface",
+      "subsystem",
+      "isvalid"
+    ],
+    "firstQuestId": "p15-who-do-i-call"
+  },
+  {
+    "id": "tscriptinterface",
+    "term": "TScriptInterface",
+    "aliases": [
+      "TScriptInterface<T>"
+    ],
+    "category": "object model",
+    "short": "A pointer to a UObject that is known to implement a given interface, usable as a UPROPERTY.",
+    "long": "A plain pointer to an interface class cannot be a UPROPERTY, and a plain UObject pointer does not say which interface its object promises. TScriptInterface holds the object together with its interface pointer, so a property can say TScriptInterface<IDojoAnnouncer> and the garbage collector still sees the object. You call functions through it with the arrow operator, and a locator can store its current provider this way. A common alternative is to keep a UObject pointer and cast it to the interface when needed.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/TScriptInterface?application_version=5.8",
+    "related": [
+      "uinterface",
+      "iinterface",
+      "tobjectptr",
+      "cast"
+    ],
+    "firstQuestId": "p15-service-locator-card"
   }
 ]
