@@ -31,7 +31,7 @@ This sled is the first piece of the Clockwork Hall boss, where it rolls as a bou
 
 ## See it in the editor
 
-Place a `DojoM2Sled` and turn it 90 degrees about Z in Details (Rotation Z = 90); its arrow now points along Y. Press Play: it glides along Y. Stop, untick Local Space, and press Play again: it glides along X while the arrow still points along Y. Then open the console with the backtick key and type `t.MaxFPS 30`, then `t.MaxFPS 120`, and watch that it reaches the same spot after the same number of seconds both times. In the level Blueprint, on the 1 key, add a Print String of the sled's Get Distance Travelled to read the distance.
+Place a `DojoM2Sled` and turn it 90 degrees about Z in Details (Rotation Z = 90); its arrow now points along Y. The sled is only a scene root and an arrow, and the arrow is hidden in game, so you read its movement from numbers. Press Play, press F8 to eject, select the sled in the World Outliner, and watch Location in Details: the Y value climbs by 200 each second while X stays put. Stop, untick Local Space, and press Play again: now X climbs while Y stays put, though the arrow still points along Y. To read the distance without ejecting, select the sled, right-click in the level Blueprint and choose Create a Reference to Selected Actor, then on the 1 key add a Print String of its Get Distance Travelled. Then open the console with the backtick key and type `t.MaxFPS 30`, then `t.MaxFPS 120`, and press 1 after the same number of seconds both times: the distance reads the same.
 
 # Files
 
@@ -249,8 +249,14 @@ The sled could keep its start position and set its location every frame from the
     - "{"
     - "	Super::Tick(DeltaSeconds);"
     - "	const FVector Step = Direction.GetSafeNormal() * Speed * DeltaSeconds;"
-    - "	if (bLocalSpace) AddActorLocalOffset(Step);"
-    - "	else AddActorWorldOffset(Step);"
+    - "	if (bLocalSpace)"
+    - "	{"
+    - "		AddActorLocalOffset(Step);"
+    - "	}"
+    - "	else"
+    - "	{"
+    - "		AddActorWorldOffset(Step);"
+    - "	}"
     - "	DistanceTravelled += Step.Size();"
     - "}"
   distractors:

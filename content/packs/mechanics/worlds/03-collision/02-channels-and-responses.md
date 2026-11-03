@@ -23,10 +23,10 @@ type: multiple-choice
 prompt: "Guess, no penalty: a wall is set to Block the Pawn channel. A runner's body has the Pawn object type and is set to Overlap the WorldStatic channel, and the wall's object type is WorldStatic. The runner moves into the wall with a sweep. What happens?"
 choices:
   - The runner stops, because the wall blocks pawns
-  - The runner passes through, and the two shapes overlap
-  - The runner stops only if it is moving fast
+  - The runner stops only if it is moving fast enough
+  - The runner passes through and overlaps the wall
   - Nothing at all, as if neither shape existed
-answerIndex: 1
+answerIndex: 2
 explanation: Each shape looks up its response to the other's object type, and the weaker of the two wins. The wall says Block and the runner says Overlap, so they overlap.
 ```
 
@@ -79,10 +79,10 @@ ADojoTrapDoor::ADojoTrapDoor()
   type: multiple-choice
   prompt: "A crate blocks everything. A trigger box overlaps everything. The crate is moved into the trigger with a sweep. What happens?"
   choices:
-    - The crate stops at the trigger's edge
     - The crate passes in and the two overlap
+    - The crate stops at the trigger's edge
     - The crate is ignored by the trigger
-  answerIndex: 1
+  answerIndex: 0
   explanation: Block against Overlap is an overlap, because the weaker response wins. A trigger that overlaps everything never stops anything.
 - id: fill-channel
   type: fill-blank
@@ -104,19 +104,19 @@ ADojoTrapDoor::ADojoTrapDoor()
   type: multiple-choice
   prompt: "Which Collision Enabled setting suits a pickup's trigger sphere?"
   choices:
-    - QueryAndPhysics, so it is solid
-    - QueryOnly, so overlap checks find it but nothing is pushed by it
-    - NoCollision, because triggers do not collide
-    - PhysicsOnly, so the engine moves it
-  answerIndex: 1
+    - QueryAndPhysics, so it is solid and shoves things
+    - NoCollision, because triggers never collide
+    - PhysicsOnly, so the physics engine can move it
+    - QueryOnly, so it answers overlaps and pushes nothing
+  answerIndex: 3
   explanation: A trigger has to answer overlap queries and must not push anything. NoCollision would stop it noticing anything at all.
 - id: object-type-not-class
   type: multiple-choice
   prompt: "A plain AActor, not a pawn, has a sphere component set to the Pawn profile. A trigger set to overlap only the Pawn channel is placed around it. Does the trigger notice it?"
   choices:
-    - No, only APawn subclasses count as pawns
-    - Yes, because the object type is a setting on the shape, not the class of its actor
-    - Only if the actor is possessed by a controller
+    - No, because only APawn subclasses ever count as pawns
+    - Yes, the object type belongs to the shape, not the actor's class
+    - Only if a controller has possessed the actor first
   answerIndex: 1
   explanation: Collision compares components, and each component's object type is its own setting.
 - id: explain-weaker

@@ -387,7 +387,9 @@
     "whenNot": "Inside one small feature where both ends live in the same class, a direct call is easier to read and debug. Avoid it when the sender needs an answer back, when the listener must run later (use Event Queue), or in tight loops where broadcasting to many listeners per element costs too much.",
     "useCaseQuestIds": [
       "p1-bounty-board",
-      "p1-tutorial-sign"
+      "p1-tutorial-sign",
+      "s2-energy",
+      "s2-ability-component"
     ],
     "recall": [
       {
@@ -904,7 +906,8 @@
     "whenNot": "When the variants differ only in numbers, use data (Type Object) instead of a class per variant. When the base class keeps growing tools for every new subclass, move single-use tools back into their subclass and group related tools into a helper object before the base becomes a dumping ground. When the capability must mix across unrelated actors, use components.",
     "useCaseQuestIds": [
       "p8-trap-family",
-      "p8-interactables"
+      "p8-interactables",
+      "s2-effects"
     ],
     "recall": [
       {
@@ -1021,6 +1024,33 @@
         ],
         "answerIndex": 1,
         "explanation": "A base for two members is a guess at what they share; with a third member the real shared tools become clear."
+      },
+      {
+        "id": "subclass-sandbox-scenario-4",
+        "type": "which-pattern",
+        "prompt": "An ability asset lists what a move does: move the user ahead, push nearby targets away, refill energy. Each kind has its own small piece of logic, and every kind needs the same helpers to find targets and to move an actor. Which pattern shapes the kinds?",
+        "choices": [
+          "type-object",
+          "subclass-sandbox",
+          "strategy",
+          "component"
+        ],
+        "answer": "subclass-sandbox",
+        "distractorNotes": [
+          {
+            "choice": "type-object",
+            "why": "The ability asset around the effects is a type object, but the effect kinds differ in logic, not only in numbers."
+          },
+          {
+            "choice": "strategy",
+            "why": "Strategy swaps one algorithm behind an interface; the point here is the protected toolbox every kind shares."
+          },
+          {
+            "choice": "component",
+            "why": "Components add capabilities to an actor; effects are behaviors run on an actor, not parts it carries."
+          }
+        ],
+        "explanation": "An abstract effect base with a public Apply, one protected hook, and protected tools; each kind overrides only the hook."
       }
     ]
   },
@@ -1033,7 +1063,9 @@
     "whenNot": "A small actor with one job does not need its job split into parts. If parts constantly reach into each other, the split is in the wrong place. Something that must outlive its owner or has its own place and lifetime in the level, such as a dropped pouch or a turret that can be knocked off a wall, is an actor, not a component.",
     "useCaseQuestIds": [
       "p9-arena-parts",
-      "p9-sprint-parts"
+      "p9-sprint-parts",
+      "s2-energy",
+      "s2-ability-component"
     ],
     "recall": [
       {
@@ -1178,7 +1210,8 @@
     "whenNot": "If kinds mostly differ in behavior rather than numbers, data cannot express it without growing into a scripting system. With a few kinds that never change and nobody tunes, plain code is simpler. If every object really needs its own numbers, there is no kind to share.",
     "useCaseQuestIds": [
       "p10-weapon-kinds",
-      "p10-quiver-kinds"
+      "p10-quiver-kinds",
+      "s2-ability-data"
     ],
     "recall": [
       {
@@ -1227,6 +1260,19 @@
         ],
         "answerIndex": 1,
         "explanation": "The row is shared by every quiver of that kind; what changes per quiver, arrows left, lives on the quiver."
+      },
+      {
+        "id": "type-object-recall-5",
+        "type": "multiple-choice",
+        "prompt": "A Dash ability is a data asset with a cost, a cooldown, and the tags that block it, and two heroes are granted the same asset. Where does each hero's time left on the cooldown live?",
+        "choices": [
+          "In the asset, as a field next to Cooldown",
+          "In each hero's ability component",
+          "In a static variable on the asset class",
+          "In the effect object listed inside the asset"
+        ],
+        "answerIndex": 1,
+        "explanation": "The asset is the shared type object and holds only what every user has in common; what changes for one user, such as the time left, lives with that user."
       }
     ],
     "scenarios": [
@@ -1551,7 +1597,7 @@
       {
         "id": "prototype-scenario-2",
         "type": "which-pattern",
-        "prompt": "Designers want sixty blade kinds that differ only in numbers, edited side by side in a spreadsheet view. A teammate proposes sixty hidden template blades in the level. Which pattern is the better fit?",
+        "prompt": "Designers want thirty-five blade kinds that differ only in numbers, edited side by side in a spreadsheet view. A teammate proposes thirty-five hidden template blades in the level. Which pattern is the better fit?",
         "choices": [
           "flyweight",
           "prototype",
@@ -1578,7 +1624,7 @@
       {
         "id": "prototype-scenario-3",
         "type": "which-pattern",
-        "prompt": "The trial book has forty trials, each written as the basic trial plus one or two changes. The designers want to retune the basic trial and have all forty follow. Which pattern?",
+        "prompt": "Every trial in the hall's book starts from the Basic trial's time limit and reward and sets only its own blade count. The designers want to raise the Basic reward and have every other trial follow. Which pattern?",
         "choices": [
           "flyweight",
           "command",
@@ -1620,11 +1666,14 @@
   {
     "id": "bytecode",
     "title": "Bytecode",
-    "intent": "Let designers or modders write behavior as a short list of small instructions stored in an asset, and run that list with a tiny interpreter inside the game, so new behavior ships without a C++ compile and cannot reach past what the instructions allow.",
-    "problem": "Some behavior changes too often, or comes from people who should not touch C++: spell effects, card rules, modder scripts. Compiling native code for each change is slow, and running untrusted native code is unsafe.",
-    "unrealForm": "Blueprint is a bytecode virtual machine: the Blueprint compiler turns graphs into instructions the engine interprets. Niagara compiles module graphs to its own VM, and materials compile to shaders. You would write your own only for a narrow domain such as card effects or item formulas, often as a TArray of instruction structs authored in a data asset, with a stack-based interpreter and hard limits on stack size and instruction count.",
-    "whenNot": "Hot engine paths where interpretation is too slow, and any project without time to build authoring and debugging tools, since you lose the C++ debugger inside the VM. If Blueprint already serves designers, a custom VM is rarely worth it.",
-    "useCaseQuestIds": [],
+    "intent": "Write behavior that changes often, or that comes from modders, as a short list of small steps stored as data, such as a vault potion's recipe or a door's rule, and run the list with a tiny machine inside the game, so new behavior ships without a compile and can do nothing the machine does not allow.",
+    "problem": "The vault ships new potions, door rules, and trap rhythms every week, and modders want to share their own. As C++ each one waits for a programmer and a compile, and native code from strangers can do anything. A tree of step objects is clear but heavy, and its steps are tempted to keep state that breaks when many actors share one program.",
+    "unrealForm": "Blueprint is Unreal's own: graphs compile to script bytes stored on each UFunction, and the engine's interpreter walks them with FFrame and stops runaway loops. Niagara runs module graphs on its own vector machine. Your own is a USTRUCT step with a UENUM op, kept in a UPROPERTY TArray or a Data Asset and edited in the Details panel with EditCondition hiding unused fields, run by a small loop with a fixed-size stack, a budget of steps, and its place in the program kept by whoever runs it.",
+    "whenNot": "When only numbers vary per kind, use a Data Asset or a Data Table. When the authors are on the team and have the editor, Blueprint is already the machine, with a debugger. Keep hot paths that run thousands of times a frame in C++. Skip it when nobody will build a front end and a way to see what a program did, and keep the instruction set to the one job it was made for.",
+    "useCaseQuestIds": [
+      "p13-potion-recipes",
+      "p13-door-conditions"
+    ],
     "recall": [
       {
         "id": "bytecode-recall-1",
@@ -1651,14 +1700,40 @@
       {
         "id": "bytecode-recall-3",
         "type": "explain-in-one-sentence",
-        "prompt": "In one sentence, why is a bytecode VM safer than letting mods load native DLLs?",
-        "modelAnswer": "The VM only exposes the instructions you define, so scripts cannot touch memory or call engine functions you did not allow.",
+        "prompt": "In one sentence, why is a small step machine safer for modders' scripts than letting mods load native code?",
+        "modelAnswer": "The machine only does what its instructions do, with a bounded stack and a step budget, so a script cannot touch memory or call engine functions you did not expose, while native code can do anything.",
         "rubric": [
           "Mentions a limited instruction set",
           "Mentions sandboxing or restricted access",
           "Contrasts with full native access"
         ],
         "explanation": "The instruction set is the security boundary."
+      },
+      {
+        "id": "bytecode-recall-4",
+        "type": "multiple-choice",
+        "prompt": "Which three limits keep a modder's program inside a small machine's sandbox?",
+        "choices": [
+          "A UPROPERTY on the program, a Data Asset, and a Blueprint child",
+          "Instructions that reach only what you allow, a fixed-size stack, and a budget of steps",
+          "check on every step, a crash dump, and a log",
+          "Replication, garbage collection, and ticking"
+        ],
+        "answerIndex": 1,
+        "explanation": "The machine decides what a program can touch, how much memory it can use, and how long it can run."
+      },
+      {
+        "id": "bytecode-recall-5",
+        "type": "multiple-choice",
+        "prompt": "Many dart traps run one routine asset. Where should each trap's next step and the time its current wait has lasted live?",
+        "choices": [
+          "On the trap, because they are its run state; the routine stays read-only",
+          "On each step of the routine",
+          "In the routine's class default object",
+          "In a global variable shared by every trap"
+        ],
+        "answerIndex": 0,
+        "explanation": "The program is shared data; where a runner has got to in it belongs to the runner, so sharing the program shares nothing else."
       }
     ],
     "scenarios": [
@@ -1715,6 +1790,46 @@
           }
         ],
         "explanation": "Reach for Bytecode only when behavior, not data, must be authored."
+      },
+      {
+        "id": "bytecode-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A quest giver's dialogue options appear only when rules like 'quest stage at least 3 and no key yet' hold. Writers add new rules in every patch, and the rules must ship as data with no compile. Which pattern?",
+        "choices": [
+          "bytecode",
+          "state",
+          "observer",
+          "type-object"
+        ],
+        "answer": "bytecode",
+        "distractorNotes": [
+          {
+            "choice": "state",
+            "why": "The quest giver may well have states, but the rules are composed conditions that writers keep adding, not modes to switch between."
+          },
+          {
+            "choice": "observer",
+            "why": "Listening for stage changes tells you when to check, not how to describe the rule that is checked."
+          },
+          {
+            "choice": "type-object",
+            "why": "A data record per option holds numbers, but a rule that combines a comparison with a not and an and is logic, which plain fields cannot express."
+          }
+        ],
+        "explanation": "Each rule is a short list of compare and logic steps that a small machine judges, the way the vault's doors were."
+      },
+      {
+        "id": "bytecode-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "Ten thousand particles each move by a formula every frame, and a teammate wants the formula to be steps run by your own machine so artists can edit it. Is that the right tool?",
+        "choices": [
+          "Yes; behavior should always be data",
+          "No; each step costs a loop, a switch, and the stack, which is far too much at that scale; use C++ or Niagara's own optimized machine",
+          "Yes, if the stack holds sixteen values",
+          "No; particles cannot be data driven at all"
+        ],
+        "answerIndex": 1,
+        "explanation": "Interpreting steps costs a little each time; on a hot path that little is multiplied by every particle every frame."
       }
     ]
   },

@@ -367,7 +367,7 @@ bool FDojo_P12_BladeCopies_PlainSpawnsUseDefaults::RunTest(const FString& Parame
 
 # Hints
 
-- `FActorSpawnParameters` has a field that names an actor to start from instead of the class defaults. Which world function takes those parameters, and which class does it need? The tuned blade knows its own class.
+- `FActorSpawnParameters` has a field that names an actor to start from instead of the class defaults. Which world function takes those parameters, and which class does it need?
 - A copy takes the template's property values, and that includes where its root component sits. If the tuned blade stands somewhere other than the origin, a copy can end up offset by that place from where you laid it. What can you do to the new blade after it exists?
 - The tuned blade is parked, and parked is just two more property values. What does a copy of a parked blade start as?
 
