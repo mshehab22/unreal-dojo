@@ -1285,6 +1285,88 @@
     "firstQuestId": "f2-tsubclassof-and-spawning"
   },
   {
+    "id": "spawn-collision-handling",
+    "term": "Spawn Collision Handling",
+    "aliases": [
+      "ESpawnActorCollisionHandlingMethod",
+      "SpawnCollisionHandlingOverride",
+      "DontSpawnIfColliding",
+      "AdjustIfPossibleButDontSpawnIfColliding"
+    ],
+    "category": "framework",
+    "short": "The spawn setting that says what to do when a new actor's shapes would sit inside something they block.",
+    "long": "Every spawn decides what to do at a blocked spot. AlwaysSpawn, the usual default, places the actor anyway, inside a wall if need be; the two Adjust methods look for a nearby free spot and then either spawn regardless or give up; DontSpawnIfColliding gives up at once. Set it per spawn with FActorSpawnParameters::SpawnCollisionHandlingOverride, or per class with the actor's SpawnCollisionHandlingMethod. When a spawn gives up, SpawnActor returns nullptr, so a scatterer must check the result before counting or using it. The check uses the new actor's own shapes and responses, so a trigger that only overlaps can appear anywhere.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/ESpawnActorCollisionHandlingMethod?application_version=5.8",
+    "related": [
+      "spawnactor",
+      "spawn-actor-deferred",
+      "collision-response",
+      "isvalid"
+    ],
+    "firstQuestId": "m4-spawning-with-care"
+  },
+  {
+    "id": "spawn-actor-deferred",
+    "term": "SpawnActorDeferred",
+    "aliases": [
+      "SpawnActorDeferred()",
+      "FinishSpawning",
+      "deferred spawn",
+      "deferred spawning"
+    ],
+    "category": "framework",
+    "short": "A spawn that hands you the new actor before its construction and BeginPlay run, so you can set it up first.",
+    "long": "SpawnActor runs the whole start of an actor's life, construction script and BeginPlay included, before it returns, so anything BeginPlay reads must be set before that. GetWorld()->SpawnActorDeferred<T>(Class, Transform) stops just short: you get the actor, set its properties, and then call FinishSpawning(Transform) to run construction and BeginPlay with your values in place. A rack that loads bombs already burning, or a projectile told its speed before it starts moving, needs it. Every deferred spawn must be finished, or the actor never begins play.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UWorld?application_version=5.8",
+    "related": [
+      "spawnactor",
+      "beginplay",
+      "spawn-collision-handling",
+      "on-construction"
+    ],
+    "firstQuestId": "m4-spawning-with-care"
+  },
+  {
+    "id": "frandomstream",
+    "term": "FRandomStream",
+    "aliases": [
+      "random stream",
+      "seeded random",
+      "RandPointInBox"
+    ],
+    "category": "math",
+    "short": "A random number generator built from a seed, which gives the same sequence every time for that seed.",
+    "long": "FMath::FRandRange and its friends draw from the engine's shared generator, so their results depend on everything else that used it first and change from run to run. An FRandomStream built with a seed has its own sequence: FRandomStream Stream(Seed) followed by Stream.FRandRange(Min, Max), Stream.RandRange(Min, Max), or Stream.RandPointInBox(Box) gives the same numbers for the same seed every time. That lets a designer replay a layout by its seed, lets two clients agree on a layout from one number, and lets a test rely on random placement.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/FRandomStream?application_version=5.8",
+    "related": [
+      "fmath",
+      "fvector",
+      "spawnactor"
+    ],
+    "firstQuestId": "m4-spawning-with-care"
+  },
+  {
+    "id": "on-destroyed",
+    "term": "OnDestroyed",
+    "aliases": [
+      "OnDestroyed.AddDynamic",
+      "FActorDestroyedSignature",
+      "Event Destroyed"
+    ],
+    "category": "framework",
+    "short": "The actor event that tells every listener the actor has left play, whoever destroyed it.",
+    "long": "Every actor broadcasts OnDestroyed, a dynamic multicast delegate with the departing actor as its one parameter, when Destroy runs or its life span ends. The actor's own EndPlay has already run by then, and its location can still be read in the handler, but it is on its way out and must not be kept afterwards. A spawner that binds each new actor's OnDestroyed with AddDynamic, and removes it from its list in the handler, always knows exactly which of its actors are in play without checking them every frame.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/AActor?application_version=5.8",
+    "related": [
+      "destroy",
+      "endplay",
+      "adddynamic",
+      "dynamic-multicast-delegate",
+      "isvalid"
+    ],
+    "firstQuestId": "m4-hearing-it-go"
+  },
+  {
     "id": "createdefaultsubobject",
     "term": "CreateDefaultSubobject",
     "aliases": [
