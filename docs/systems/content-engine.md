@@ -145,7 +145,16 @@ Windows desktop, 2026-10-28 (W14, A1285), persistent workspace `%USERPROFILE%\.u
 | Run 2 (same pack again) | 1192 s | first build 95.8 s, solution tests 19.1 s, starter checks 1075.5 s |
 | Only World 1's solutions (3 quests judged, the rest reported missing) | 113 s, exit 1 | first build 13.5 s |
 
-`%TEMP%` held no `dojo-*` entry before, during or after any of them. Quest files are rewritten every run, so the Dojo module's quests recompile each time.
+`%TEMP%` held no `dojo-*` entry before, during or after any of them. Quest files are rewritten every run, so the Dojo module's quests recompile each time (before W16).
+
+Windows desktop, 2026-11-03 (W16, A1323), UE 5.8.4, code before W16, `--pack foundations --engine` (30 quests judged, 93 solutions installed), workspace `C:/dojo-w16/ws-before`, heavy load (Mohammad's BadBoys automation tests in UnrealEditor-Cmd and other sessions' e2e runs):
+
+| Run | Time | Notes |
+| --- | --- | --- |
+| Cold (workspace created) | about 2541 s | first build 534 s, solution tests 236.5 s, starter checks 1769.1 s; no problems |
+| Warm 1 | about 5194 s | first build 390.2 s, solution tests 260.6 s, starter checks 4540.8 s; no problems, three "inconclusive" starter warnings in World 6 from the load |
+
+The same runs with W16, and the mutation series that measures A1325 (World 1 scratch folders, two mutants of `f1-score-keeper`, before and after), have not run yet: see A1323.
 
 Starter checks dominate. For a full pack, M2 or later can cut this with one batched starter build, falling back to one quest at a time only when that build fails (see A208).
 
