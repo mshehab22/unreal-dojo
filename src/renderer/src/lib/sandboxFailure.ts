@@ -52,9 +52,22 @@ export function explainSandboxFailure(compilerOutput: string, context: SandboxBu
 		: { message: "The first build of the sandbox did not finish.", suggestedAction: "Try again. The compiler's last lines are below if it keeps failing." };
 }
 
-/** The error to show for a failed setup: the AppError the main process sent when there is one (it knows the cause), otherwise the guess from the compiler output. */
+/**
+ * What to do about a sandbox path too long for Windows, where the learner is: main's advice ("Open Settings, choose Set up the sandbox again")
+ * fits a quest run, but on a setup step the way out is the folder step just behind it, and in Settings the button is right there (M5.1k).
+ */
+function shortFolderAction(context: SandboxBuildContext): string
+{
+	return context === "rebuild"
+		? "Use Set up the sandbox again and choose a short folder such as C:\\Dojo."
+		: "Go back, choose a short folder such as C:\\Dojo, then start the build again.";
+}
+
+/** The error to show for a failed setup: the AppError the main process sent when there is one (it knows the cause, though a path too long gets advice for this screen), otherwise the guess from the compiler output. */
 export function describeSandboxFailure(result: Pick<SandboxSetupResult, "compilerOutput" | "failure">, context: SandboxBuildContext): AppError
 {
+	if (result.failure?.code === "sandbox-path-too-long") return { ...result.failure, suggestedAction: shortFolderAction(context) };
+
 	if (result.failure) return result.failure;
 
 	return { code: "sandbox-not-ready", ...explainSandboxFailure(result.compilerOutput, context) };
@@ -68,4 +81,12 @@ export function describeRebuildFailure(result: Pick<SandboxSetupResult, "compile
 	const uniqueParts = detailParts.filter((part, index) => detailParts.indexOf(part) === index);
 
 	return uniqueParts.length > 0 ? { ...error, detail: uniqueParts.join("\n\n") } : error;
+}
+
+/** A Rebuild sandbox refused in Settings because the sandbox is gone: main's words send the learner to Settings, where they already are, so the advice names the button beside Rebuild (M5.1k). Any other error is unchanged. */
+export function describeRebuildRefusal(error: AppError): AppError
+{
+	if (error.code !== "sandbox-not-ready") return error;
+
+	return { ...error, suggestedAction: "Put the folder back where it was (or reconnect its drive), or use Set up the sandbox again to create a new one. Your progress is kept." };
 }

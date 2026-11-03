@@ -12,7 +12,7 @@ import type { AppError } from "@shared/types/errors";
 
 import { dismissNotice, isNoticeDismissed } from "../../src/renderer/src/lib/dismissedNotices";
 import { engineChipState, toolchainChipState } from "../../src/renderer/src/lib/environmentChipStates";
-import { describeRebuildFailure, describeSandboxFailure, explainSandboxFailure } from "../../src/renderer/src/lib/sandboxFailure";
+import { describeRebuildFailure, describeRebuildRefusal, describeSandboxFailure, explainSandboxFailure } from "../../src/renderer/src/lib/sandboxFailure";
 import { groupSkills, skillPrefix } from "../../src/renderer/src/lib/skillGroups";
 import { skillGroupName, skillLabel } from "../../src/renderer/src/lib/skillNames";
 import { searchGlossary } from "../../src/renderer/src/lib/searchGlossary";
@@ -182,6 +182,32 @@ ${rawLine}`, context).message).toContain("another Unreal editor with Live Coding
 		expect(templateError.suggestedAction).not.toContain("step 1");
 		expect(general.message).toBe("The first build of the sandbox did not finish.");
 		expect(describeSandboxFailure({ compilerOutput: output }, "setup-again").code).toBe("sandbox-not-ready");
+	});
+
+	it("advises a path too long for Windows by where the learner is: the folder step behind a setup build, the button beside a rebuild (M5.1k)", () =>
+	{
+		const failure = { code: "sandbox-path-too-long" as const, message: "The build failed because a file path in the sandbox is too long for Windows.", suggestedAction: "Open Settings, choose Set up the sandbox again, and pick a short folder.", detail: "raw line" };
+
+		for (const context of ["first-run", "setup-again"] as const)
+		{
+			const shown = describeSandboxFailure({ compilerOutput: "", failure }, context);
+
+			expect(shown.suggestedAction, context).toMatch(/^Go back, choose a short folder/);
+			expect(shown.suggestedAction, context).not.toContain("Settings");
+			expect(shown).toMatchObject({ code: "sandbox-path-too-long", message: failure.message, detail: "raw line" });
+		}
+
+		expect(describeRebuildFailure({ compilerOutput: "", failure }).suggestedAction).toMatch(/^Use Set up the sandbox again and choose a short folder/);
+	});
+
+	it("words a rebuild refused for a gone sandbox for Settings, and leaves any other error as main sent it (M5.1k)", () =>
+	{
+		const gone = { code: "sandbox-not-ready" as const, message: "The sandbox project could not be found at C:\Dojo\DojoSandbox.", suggestedAction: "Put the folder back, or open Settings and choose Set up the sandbox again.", detail: "C:\Dojo\DojoSandbox" };
+		const other = { code: "engine-not-found" as const, message: "The Unreal Engine folder is gone.", suggestedAction: "Pick the engine folder again in Settings." };
+
+		expect(describeRebuildRefusal(gone)).toMatchObject({ message: gone.message, detail: gone.detail, suggestedAction: expect.stringContaining("use Set up the sandbox again") });
+		expect(describeRebuildRefusal(gone).suggestedAction).not.toContain("open Settings");
+		expect(describeRebuildRefusal(other)).toBe(other);
 	});
 });
 

@@ -59,7 +59,8 @@ describe("FakeDojoApi", () =>
 		if (!engine) throw new Error("the fake must detect an engine");
 
 		const failed = await fake.createSandbox({ runId: "run-1", enginePath: engine.path, folder: "/tmp/dojo" });
-		const passed = await fake.createSandbox({ runId: "run-2", enginePath: engine.path, folder: "/tmp/dojo" });
+		// The failed build left its copy in the folder, so the retry rebuilds it, as the build step does.
+		const passed = await fake.rebuildSandbox("run-2");
 
 		expect(failed.ok).toBe(false);
 		expect(failed.compilerOutput).toContain("error");
@@ -125,7 +126,8 @@ describe("FakeDojoApi", () =>
 		if (!engine) throw new Error("the fake must detect an engine");
 
 		const failed = await fake.createSandbox({ runId: "run-1", enginePath: engine.path, folder: "/tmp/dojo" });
-		const passed = await fake.createSandbox({ runId: "run-2", enginePath: engine.path, folder: "/tmp/dojo" });
+		// The failed build left its copy in the folder, so the retry rebuilds it, as the build step does.
+		const passed = await fake.rebuildSandbox("run-2");
 
 		expect(failed.ok).toBe(false);
 		expect(failed.failure?.code).toBe("build-environment-failed");
@@ -182,5 +184,20 @@ describe("FakeDojoApi", () =>
 		expect(created.ok).toBe(true);
 		expect((await fake.getEnvironmentStatus()).sandbox).toEqual({ path: created.sandboxPath, ready: true });
 		expect((await fake.rebuildSandbox("rebuild-2")).ok).toBe(true);
+	}, 30_000);
+
+	it("refuses a second create into a folder that already holds a copy, as main does, so a failed first build is retried by a rebuild (M5.1k)", async () =>
+	{
+		const fake = new FakeDojoApi("first-build-fails");
+		const engine = (await fake.detectEngines())[0];
+
+		if (!engine) throw new Error("the fake must detect an engine");
+
+		const failed = await fake.createSandbox({ runId: "run-1", enginePath: engine.path, folder: "/tmp/dojo" });
+
+		expect(failed.ok).toBe(false);
+		expect((await fake.getSettings()).sandboxPath).toBe(failed.sandboxPath);
+		await expect(fake.createSandbox({ runId: "run-2", enginePath: engine.path, folder: "/tmp/dojo" })).rejects.toMatchObject({ code: "sandbox-copy-failed", message: "The sandbox folder already has files in it." });
+		expect((await fake.rebuildSandbox("run-3")).ok).toBe(true);
 	}, 30_000);
 });

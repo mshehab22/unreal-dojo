@@ -2,7 +2,7 @@
 import { FolderPlusIcon, HammerIcon, SquareIcon } from "lucide-react";
 import { useState } from "react";
 
-import type { EnvironmentStatus } from "@shared/types/engine";
+import type { EngineInstall, EnvironmentStatus } from "@shared/types/engine";
 import type { Settings } from "@shared/types/settings";
 
 import { AppErrorView } from "@/components/AppErrorView";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useSandboxBuild } from "@/data/useSandboxBuild";
 import { buildOutcome } from "@/lib/buildOutcome";
 import { formatElapsed } from "@/lib/formatting";
-import { describeRebuildFailure } from "@/lib/sandboxFailure";
+import { describeRebuildFailure, describeRebuildRefusal } from "@/lib/sandboxFailure";
 import { sandboxLooksMissing, setupAgainBlocker } from "@/lib/sandboxSetupAgain";
 
 import { SandboxSetupAgain } from "./SandboxSetupAgain";
@@ -30,11 +30,12 @@ interface SandboxRowProps
 export function SandboxRow({ settings, environment }: SandboxRowProps)
 {
 	const rebuild = useSandboxBuild((client, runId) => client.rebuildSandbox(runId), "rebuild");
-	const [isSettingUpAgain, setSettingUpAgain] = useState(false);
+	// The engine is captured when the steps open, so a refreshed environment that loses the engine cannot close them mid-build.
+	const [setupEngine, setSetupEngine] = useState<EngineInstall | null>(null);
 	const [showsRebuild, setShowsRebuild] = useState(true);
+	const isSettingUpAgain = setupEngine !== null;
 	const isRebuilding = rebuild.status === "running";
 	const blocker = setupAgainBlocker(environment);
-	const engine = environment?.engine ?? null;
 
 	/** Starts a rebuild and shows its progress. */
 	const startRebuild = (): void =>
@@ -46,8 +47,10 @@ export function SandboxRow({ settings, environment }: SandboxRowProps)
 	/** Opens the setup steps and hides the last rebuild's outcome, which is about the sandbox being replaced. */
 	const openSetupAgain = (): void =>
 	{
+		if (!environment?.engine) return;
+
 		setShowsRebuild(false);
-		setSettingUpAgain(true);
+		setSetupEngine(environment.engine);
 	};
 
 	return (
@@ -87,11 +90,11 @@ export function SandboxRow({ settings, environment }: SandboxRowProps)
 					{rebuild.status === "failed" && rebuild.result && <AppErrorView error={describeRebuildFailure(rebuild.result)} onRetry={startRebuild} />}
 					{rebuild.status === "errored" && rebuild.error && (
 						// A sandbox that is gone cannot be rebuilt, so its error offers no retry; its advice names Set up the sandbox again.
-						<AppErrorView error={rebuild.error} onRetry={rebuild.error.code === "sandbox-not-ready" ? undefined : startRebuild} />
+						<AppErrorView error={describeRebuildRefusal(rebuild.error)} onRetry={rebuild.error.code === "sandbox-not-ready" ? undefined : startRebuild} />
 					)}
 				</>
 			)}
-			{isSettingUpAgain && engine !== null && <SandboxSetupAgain engine={engine} previousSandboxPath={settings.sandboxPath} onClose={() => setSettingUpAgain(false)} />}
+			{setupEngine !== null && <SandboxSetupAgain engine={setupEngine} previousSandboxPath={settings.sandboxPath} onClose={() => setSetupEngine(null)} />}
 		</SettingRow>
 	);
 }

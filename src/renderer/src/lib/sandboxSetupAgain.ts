@@ -18,13 +18,15 @@ export function sandboxLooksMissing(settings: Pick<Settings, "sandboxPath">, env
 	return settings.sandboxPath !== null && environment !== undefined && !environment.sandbox.ready;
 }
 
-/** The folder that holds a sandbox folder (the one the learner picked at setup), or null for a path with no parent. Works with both slash styles. */
+/** The folder that holds a sandbox folder (the one the learner picked at setup), or null for a bare name with no separator. Works with both slash styles; a folder right under the POSIX root has `/` as its parent. */
 export function parentFolderOf(sandboxPath: string): string | null
 {
 	const trimmed = sandboxPath.replace(/[\\/]+$/, "");
 	const lastSeparator = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
 
-	if (lastSeparator <= 0) return null;
+	if (lastSeparator < 0) return null;
+
+	if (lastSeparator === 0) return trimmed[0] === "/" ? "/" : null;
 
 	const parent = trimmed.slice(0, lastSeparator);
 

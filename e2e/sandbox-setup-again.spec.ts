@@ -92,7 +92,8 @@ test("a deleted sandbox is set up again from Settings with first-run's steps, an
 		// Rebuild is refused with the preflight's words, which point at the new button, and there is no retry that cannot work.
 		await row.getByRole("button", { name: "Rebuild sandbox" }).click();
 		await expect(row.getByTestId("app-error")).toContainText(MISSING_MESSAGE);
-		await expect(row.getByTestId("app-error")).toContainText(`open Settings and choose ${SETUP_AGAIN}`);
+		await expect(row.getByTestId("app-error")).toContainText(`or use ${SETUP_AGAIN} to create a new one`);
+		await expect(row.getByTestId("app-error")).not.toContainText("open Settings");
 		await expect(row.getByTestId("app-error")).toHaveAttribute("data-error-code", "sandbox-not-ready");
 		await expect(row.getByTestId("app-error").getByRole("button", { name: "Try again" })).toHaveCount(0);
 		await expectNoSidewaysScroll(window, `rebuild refused ${label}`);
@@ -147,4 +148,28 @@ test("Cancel on the folder step closes Set up the sandbox again without changing
 	await expect(row.getByRole("button", { name: SETUP_AGAIN })).toBeEnabled();
 	await expect(row.getByRole("button", { name: "Rebuild sandbox" })).toBeEnabled();
 	expect(await row.textContent()).toBe(pathBefore);
+});
+
+test("a set up again build that is cancelled starts again from the copy it made, instead of being refused for a folder that is not empty", async ({ dojo }) =>
+{
+	const { window } = dojo;
+
+	await openSettingsWithDeletedSandbox(window);
+	const row = window.getByTestId("settings-sandbox");
+
+	await row.getByRole("button", { name: SETUP_AGAIN }).click();
+	const flow = row.getByTestId("sandbox-setup-again");
+	await flow.getByRole("button", { name: "Choose a folder" }).click();
+	await flow.getByRole("button", { name: "Use this folder" }).click();
+	await flow.getByRole("button", { name: "Start the build" }).click();
+	await expect(flow.getByTestId("build-progress")).toHaveAttribute("data-phase", "building", { timeout: FAKE_BUILD_TIMEOUT_MS });
+	await flow.getByRole("button", { name: "Cancel" }).click();
+	await expect(flow.getByTestId("build-cancelled")).toBeVisible();
+
+	// The folder now holds the copy, as in main: starting again rebuilds it, so no "already has files" refusal appears.
+	await flow.getByRole("button", { name: "Start again" }).click();
+	await expect(flow.getByTestId("build-succeeded")).toBeVisible({ timeout: FAKE_BUILD_TIMEOUT_MS });
+	await expect(flow.getByTestId("app-error")).toHaveCount(0);
+	await flow.getByRole("button", { name: "Continue" }).click();
+	await expect(row).toContainText("Ready");
 });

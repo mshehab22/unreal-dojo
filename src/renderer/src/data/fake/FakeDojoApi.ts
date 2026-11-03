@@ -41,6 +41,7 @@ import { daysFromNow } from "./fixtures/fakeClock";
 import {
 	blockedSandboxFolderFixture,
 	enginesFixture,
+	folderNotEmptyFixture,
 	manualEngineFixture,
 	missingEngineFixture,
 	missingSandboxFixture,
@@ -114,6 +115,9 @@ interface FakeState
 	/** True when the next sandbox folder pick answers with a blocker: the folder sits inside the engine folder. */
 	blockNextFolder: boolean;
 
+	/** Sandbox folders that hold a copy of the template, so a second create there is refused as main refuses it (the one in settings, unless it is gone). */
+	copiedSandboxes: string[];
+
 	/** True while the sandbox folder in settings no longer holds the project (`sandbox-deleted`): the environment says not ready and a rebuild is refused, until a new sandbox is created. */
 	sandboxGone: boolean;
 
@@ -146,6 +150,7 @@ function initialState(scenario: FakeScenario): FakeState
 		explainNextBuildFailure: scenario === "sandbox-setup-fails",
 		blockNextFolder: scenario === "folder-blocked",
 		sandboxGone: scenario === "sandbox-deleted",
+		copiedSandboxes: isFresh || scenario === "sandbox-deleted" ? [] : [sandboxPathIn(sandboxFolderFixture().path)],
 		map: scenario === "quests" ? questFlowMapFixture() : MAP_FIXTURE,
 	};
 }
@@ -274,11 +279,22 @@ export class FakeDojoApi implements DojoClient
 		return answer(sandboxFolderFixture());
 	}
 
-	/** Simulates copying the template and the first full build, then remembers the sandbox path on a pass, as the sandbox service does. Fails once in the first-build-fails scenario. A pass replaces a deleted sandbox. */
+	/**
+	 * Simulates copying the template and the first full build. As the sandbox service does, it refuses a folder that already holds a copy
+	 * (a sandbox made earlier, or one whose build failed or was cancelled) and remembers the new sandbox before building, which also replaces
+	 * a deleted one. Fails once in the first-build-fails scenario.
+	 */
 	async createSandbox(request: SandboxSetupRequest): Promise<SandboxSetupResult>
 	{
 		const engine = [...enginesFixture(), manualEngineFixture()].find((candidate) => candidate.path === request.enginePath);
 		const sandboxPath = sandboxPathIn(request.folder);
+
+		if (this.state.copiedSandboxes.includes(sandboxPath)) return Promise.reject<SandboxSetupResult>(folderNotEmptyFixture(sandboxPath));
+
+		this.state.copiedSandboxes.push(sandboxPath);
+		this.state.settings = { ...this.state.settings, sandboxPath };
+		this.state.sandboxGone = false;
+
 		const shouldFail = this.state.failNextBuild;
 		const goesQuiet = this.state.quietNextBuild;
 		const failure = shouldFail && this.state.explainNextBuildFailure ? sandboxSetupFailureFixture() : undefined;
@@ -290,12 +306,6 @@ export class FakeDojoApi implements DojoClient
 		const result = await this.rememberAnswer(request.runId, async () =>
 		{
 			const end = await this.simulateBuild(request.runId, engine?.version ?? "5.8.3", shouldFail, goesQuiet);
-
-			if (end.ok)
-			{
-				this.state.settings = { ...this.state.settings, sandboxPath };
-				this.state.sandboxGone = false;
-			}
 
 			if (end.ok) return { ok: true, sandboxPath, durationMs: end.durationMs, compilerOutput: "" };
 

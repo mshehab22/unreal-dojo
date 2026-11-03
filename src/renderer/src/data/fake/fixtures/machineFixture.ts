@@ -92,6 +92,17 @@ export function missingSandboxFixture(sandboxPath: string): AppError
 	};
 }
 
+/** Main's refusal of a sandbox folder that already holds a copy (`sandboxFolderNotEmpty`). */
+export function folderNotEmptyFixture(sandboxPath: string): AppError
+{
+	return {
+		code: "sandbox-copy-failed",
+		message: "The sandbox folder already has files in it.",
+		suggestedAction: "Choose another folder, or move the files out of this one first. To rebuild the sandbox you already have, use Rebuild sandbox in Settings instead.",
+		detail: sandboxPath,
+	};
+}
+
 /** The reason a sandbox setup fails when the build tools, not the template, are at fault (the `sandbox-setup-fails` scenario). */
 export function sandboxSetupFailureFixture(): AppError
 {

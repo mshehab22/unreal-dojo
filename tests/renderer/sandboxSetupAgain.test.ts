@@ -55,10 +55,10 @@ describe("parentFolderOf", () =>
 		expect(parentFolderOf("/Users/learner/Dojo/DojoSandbox/")).toBe("/Users/learner/Dojo");
 	});
 
-	it("keeps a Windows drive root as C:\\ and has no parent for a bare root", () =>
+	it("keeps a Windows drive root as C:\\ and the POSIX root as /, and has no parent for a bare name", () =>
 	{
 		expect(parentFolderOf("C:\\DojoSandbox")).toBe("C:\\");
-		expect(parentFolderOf("/DojoSandbox")).toBeNull();
+		expect(parentFolderOf("/DojoSandbox")).toBe("/");
 		expect(parentFolderOf("DojoSandbox")).toBeNull();
 	});
 });

@@ -1,6 +1,6 @@
 // Setup step 3: copy the template and run the first full build, with phase, elapsed time, cancel, plain-English failures (the main process's own explanation first), and retry. Settings reuses it to set the sandbox up again (M5.1k).
 import { CircleCheckIcon, PlayIcon, SquareIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { EngineInstall, SandboxFolderChoice } from "@shared/types/engine";
 
@@ -30,7 +30,15 @@ interface BuildStepProps
 /** Starts and follows the first sandbox build. */
 export function BuildStep({ engine, folder, onBack, onNext, context = "first-run" }: BuildStepProps)
 {
-	const build = useSandboxBuild((client, runId) => client.createSandbox({ runId, enginePath: engine.path, folder: folder.path }), context);
+	// A failed or cancelled build leaves the copy in the folder and Settings already names it, so a second create would be refused
+	// (`sandbox-folder-not-empty`): every later start here rebuilds that copy instead (M5.1k review).
+	const hasCopyReference = useRef(false);
+	const build = useSandboxBuild((client, runId) => hasCopyReference.current ? client.rebuildSandbox(runId) : client.createSandbox({ runId, enginePath: engine.path, folder: folder.path }), context);
+
+	useEffect(() =>
+	{
+		if (build.status === "failed" || build.status === "cancelled") hasCopyReference.current = true;
+	}, [build.status]);
 	const [showOutput, setShowOutput] = useState(false);
 	const isRunning = build.status === "running";
 
