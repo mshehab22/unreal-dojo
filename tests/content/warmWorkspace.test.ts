@@ -187,6 +187,9 @@ interface FakeEngine
 
 	/** Per build, the quest folder names present. */
 	questFoldersAtBuild: string[][];
+
+	/** Per build, every file under `Quests` as `<quest-id>/<file>`. */
+	questFilesAtBuild: string[][];
 }
 
 /** Every file under `folder`, as `/`-separated paths relative to it. */
@@ -216,7 +219,7 @@ function fakeEngine(): FakeEngine
 {
 	const paths = new MacPlatformPaths("/home");
 	const objects = new Map<string, CompiledObject>();
-	const engine: FakeEngine = { target: undefined as unknown as EngineTarget, compiledAtBuild: [], questFoldersAtBuild: [] };
+	const engine: FakeEngine = { target: undefined as unknown as EngineTarget, compiledAtBuild: [], questFoldersAtBuild: [], questFilesAtBuild: [] };
 	const builder = {
 		build: async (request: { projectFile: string }) =>
 		{
@@ -224,6 +227,7 @@ function fakeEngine(): FakeEngine
 			const compiled: string[] = [];
 
 			engine.questFoldersAtBuild.push((await readdir(join(source, "Quests"))).sort());
+			engine.questFilesAtBuild.push((await filesUnder(join(source, "Quests"))).sort());
 
 			for (const path of await filesUnder(source))
 			{
@@ -394,6 +398,33 @@ describe("EngineVerifier on a warm workspace", () =>
 		expect(engine.questFoldersAtBuild[firstRunBuilds]).toEqual(["b", "c", "sample-health"]);
 		expect(await readdir(join(sourceFolder(), "Tests"))).not.toContain("a.Test.cpp");
 		expect(await readdir(join(workspaceRoot, "5.8", "Saved", "VerifierParked")).catch(() => [])).not.toContain("a");
+	}, 30_000);
+
+	it("adds a file a kept quest gained and drops one it lost, also when the lost one waits in the parked copy", async () =>
+	{
+		const engine = fakeEngine();
+		const withOld = quest("a", { files: [{ name: "a.cpp", starter: "STARTER" }, { name: "Old.h", starter: "// old starter" }] });
+		const withNew = quest("a", { files: [{ name: "a.cpp", starter: "STARTER" }, { name: "New.h", starter: "// new starter" }] });
+
+		await writeSolutions({ a: "SOLUTION", b: "SOLUTION" });
+		await writeFile(join(solutionsFolder, "a", "Old.h"), "// old");
+		await verify(engine, [withOld, quest("b")]);
+
+		// b's starter check parked a, Old.h included.
+		expect((await readdir(join(workspaceRoot, "5.8", "Saved", "VerifierParked", "a", "Quest"))).sort()).toEqual(["Old.h", "a.cpp"]);
+
+		await rm(join(solutionsFolder, "a", "Old.h"));
+		await writeFile(join(solutionsFolder, "a", "New.h"), "// new");
+
+		const firstRunBuilds = engine.compiledAtBuild.length;
+		const report = await verify(engine, [withNew, quest("b")]);
+
+		expect(report.problems).toEqual([]);
+		expect(engine.compiledAtBuild[firstRunBuilds]).toEqual(["Quests/a/New.h", "Quests/a/a.cpp", "Quests/b/b.cpp"]);
+		expect(engine.questFilesAtBuild[firstRunBuilds]?.filter((path) => path.startsWith("a/"))).toEqual(["a/New.h", "a/a.cpp"]);
+
+		// This run ended by parking a again, with its new file list.
+		expect((await readdir(join(workspaceRoot, "5.8", "Saved", "VerifierParked", "a", "Quest"))).sort()).toEqual(["New.h", "a.cpp"]);
 	}, 30_000);
 
 	it("keeps every quest folder through the starter checks, so the module's include paths never change within a run", async () =>
