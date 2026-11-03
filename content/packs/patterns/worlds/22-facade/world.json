@@ -1,0 +1,5 @@
+{
+	"id": "facade",
+	"title": "One front for many systems",
+	"summary": "The training gauntlet's turrets, traps, and dummies all need a hit to sound, spark, and show the same way, and its gates all need to save the same checkpoints. Learn to put a few task-named calls in front of several systems so the rest of the game never learns their rules, and to stop before that front swallows the game."
+}
