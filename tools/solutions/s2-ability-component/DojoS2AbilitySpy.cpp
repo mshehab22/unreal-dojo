@@ -1,6 +1,8 @@
 #include "DojoS2AbilitySpy.h"
 
 #include "DojoS2AbilityComponent.h"
+#include "GameFramework/Actor.h"
+#include "Quests/s2-energy/DojoS2EnergyComponent.h"
 
 void UDojoS2AbilitySpy::Watch(UDojoS2AbilityComponent* Abilities)
 {
@@ -38,6 +40,11 @@ FGameplayTagContainer UDojoS2AbilitySpy::GetTagsAtLastStart() const
 	return TagsAtLastStart;
 }
 
+int32 UDojoS2AbilitySpy::GetEnergyAtLastStart() const
+{
+	return EnergyAtLastStart;
+}
+
 bool UDojoS2AbilitySpy::WasCoolingAtLastCooldownNotice() const
 {
 	return bWasCoolingAtLastCooldownNotice;
@@ -49,6 +56,9 @@ void UDojoS2AbilitySpy::HandleStarted(UDojoS2AbilityComponent* Abilities, UDojoS
 	LastStarted = Ability;
 	bWasCoolingAtLastStart = Abilities->IsOnCooldown(Ability);
 	TagsAtLastStart = Abilities->GetActiveTags();
+
+	const UDojoS2EnergyComponent* Pool = Abilities->GetOwner() != nullptr ? Abilities->GetOwner()->FindComponentByClass<UDojoS2EnergyComponent>() : nullptr;
+	EnergyAtLastStart = Pool != nullptr ? Pool->GetEnergy() : -1;
 }
 
 void UDojoS2AbilitySpy::HandleCooldown(UDojoS2AbilityComponent* Abilities, UDojoS2AbilityData* Ability)

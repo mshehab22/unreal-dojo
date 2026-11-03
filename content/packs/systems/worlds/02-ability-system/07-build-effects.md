@@ -25,13 +25,15 @@ Write the effect family from nothing: an abstract base and two kinds. The tests 
 
 - `UDojoS2Effect`, a `UObject` marked `Abstract`, `EditInlineNew`, and `BlueprintType`, so designers can create its children inside an asset and in a Blueprint graph, and never the base itself.
   - `UPROPERTY(EditAnywhere) FName TargetTag`, defaulting to `Target`: only actors whose actor tags include it are targets.
-  - `bool Apply(AActor* User)`: the one public entry. It does nothing and returns false when `User` is null or not a live actor in a world; otherwise it runs the kind's hook and returns true.
-  - A protected virtual hook that each kind overrides, which runs only with a live user.
-  - Protected tools for the hooks: one that moves an actor by an offset in world space, and one that finds every live actor carrying `TargetTag` within a radius of a point, leaving out one actor (the user).
+  - `UFUNCTION(BlueprintCallable) bool Apply(AActor* User)`: the one public entry. It does nothing and returns false when `User` is null or not a live actor in a world; otherwise it runs the kind's hook and returns true.
+  - `virtual void OnApply(AActor* User)`, protected: the hook each kind overrides, which runs only with a live user. The base's version does nothing.
+  - Protected tools for the hooks: `void MoveActor(AActor* Target, const FVector& Offset) const` moves an actor by an offset in world space, and `TArray<AActor*> FindTargetsNear(const FVector& Center, float Radius, const AActor* Ignore) const` finds every live actor carrying `TargetTag` within `Radius` of `Center`, leaving out `Ignore` (the user).
 - `UDojoS2DashEffect` with `UPROPERTY(EditAnywhere) float Distance = 300.f`: moves the user `Distance` along the way it faces.
 - `UDojoS2PushEffect` with `UPROPERTY(EditAnywhere) float Radius = 400.f` and `float Distance = 300.f`: every target within `Radius` of the user moves `Distance` straight away from the user, measured flat (ignore height when choosing the direction). A target standing exactly on the user goes the way the user faces.
 
 The kinds use only the base's tools: neither one searches the world or moves an actor on its own. An effect keeps nothing between uses.
+
+Dependency direction: an effect is handed its user and finds its targets by their actor tag. Neither the user nor the targets know that effects exist, and an effect holds no pointer to either after `Apply` returns.
 
 Each class gets its own header and `.cpp`, named after the class: `DojoS2Effect`, `DojoS2DashEffect`, `DojoS2PushEffect`.
 
@@ -197,6 +199,15 @@ bool FDojo_S2_Effects_FamilyShape::RunTest(const FString& Parameters)
 	UClass* Base = UDojoS2Effect::StaticClass();
 	TestTrue(TEXT("The base is abstract"), Base->HasAnyClassFlags(CLASS_Abstract));
 	TestTrue(TEXT("The base can be created inside an asset"), Base->HasAnyClassFlags(CLASS_EditInlineNew));
+#if WITH_METADATA
+	TestTrue(TEXT("The family can be used in Blueprint graphs"), Base->GetBoolMetaDataHierarchical(TEXT("BlueprintType")));
+#endif
+
+	const UFunction* ApplyFunction = Base->FindFunctionByName(TEXT("Apply"));
+	if (TestNotNull(TEXT("Apply is a UFUNCTION"), ApplyFunction))
+	{
+		TestTrue(TEXT("Apply can be called from Blueprint"), ApplyFunction->HasAnyFunctionFlags(FUNC_BlueprintCallable));
+	}
 
 	for (UClass* Kind : { UDojoS2DashEffect::StaticClass(), UDojoS2PushEffect::StaticClass() })
 	{
@@ -244,7 +255,7 @@ bool FDojo_S2_Effects_FamilyShape::RunTest(const FString& Parameters)
 - Each kind overrides only the hook and uses only the base's tools; neither kind searches the world or moves an actor by itself.
 - The dash moves the user along its facing by its distance.
 - The push moves each tagged target within its radius straight away from the user, flat, leaves the user and everything else alone, and handles a target standing on the user.
-- The effects keep no state between uses, and every setting is editable.
+- The effects keep no state between uses and hold no pointer to the user or the targets, which know nothing about effects; every setting is editable.
 
 # Alternative
 

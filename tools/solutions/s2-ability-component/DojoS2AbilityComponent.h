@@ -66,7 +66,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	bool IsRunning(UDojoS2AbilityData* Ability) const;
 
-	/** The tags the user carries now, from every ability that is running. */
+	/** The tags the user carries now. */
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	FGameplayTagContainer GetActiveTags() const;
 
@@ -82,7 +82,7 @@ private:
 	/** The cooldown of one ability is over. */
 	void EndCooldown(UDojoS2AbilityData* Ability);
 
-	/** The run of one ability is over, so its tags leave the user. */
+	/** The run of one ability is over. */
 	void EndRun(UDojoS2AbilityData* Ability);
 
 	UPROPERTY()

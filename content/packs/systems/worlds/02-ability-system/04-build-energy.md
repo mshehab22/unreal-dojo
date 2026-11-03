@@ -450,7 +450,7 @@ bool FDojo_S2_Energy_Refill::RunTest(const FString& Parameters)
 
 - Spend has three jobs after the check, and the order matters for listeners: a listener that reads the pool when the notice arrives must see the new value.
 - `FTimerManager::SetTimer` with looping set to true calls a function again and again until `ClearTimer`; `IsTimerActive` tells you whether a handle's timer is running. Setting a timer on a handle that is already running replaces it and starts its wait from zero.
-- `FMath::Min` keeps the refill from passing `MaxEnergy`. In `RegenStep`, `GetWorld()->GetTimerManager().ClearTimer(RegenTimer)` stops the loop once the pool is full.
+- `FMath::Min` keeps the refill from passing `MaxEnergy`. `ClearTimer` on the world's timer manager, given the regen handle, stops the loop once the pool is full.
 
 # Rubric
 

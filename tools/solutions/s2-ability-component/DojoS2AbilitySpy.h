@@ -39,12 +39,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ability Spy")
 	FGameplayTagContainer GetTagsAtLastStart() const;
 
+	/** The energy in the owner's pool when the last start notice arrived, or -1 when the owner has no pool. */
+	UFUNCTION(BlueprintPure, Category = "Ability Spy")
+	int32 GetEnergyAtLastStart() const;
+
 	/** Whether the ability named by the last cooldown notice was cooling down when that notice arrived. */
 	UFUNCTION(BlueprintPure, Category = "Ability Spy")
 	bool WasCoolingAtLastCooldownNotice() const;
 
 private:
-	/** Counts the start and reads the component's state for that ability. */
+	/** Counts the start and reads the component's state for that ability and the owner's energy. */
 	UFUNCTION()
 	void HandleStarted(UDojoS2AbilityComponent* Abilities, UDojoS2AbilityData* Ability);
 
@@ -58,6 +62,7 @@ private:
 	FGameplayTagContainer TagsAtLastStart;
 	int32 StartCount = 0;
 	int32 CooldownNoticeCount = 0;
+	int32 EnergyAtLastStart = -1;
 	bool bWasCoolingAtLastStart = false;
 	bool bWasCoolingAtLastCooldownNotice = false;
 };

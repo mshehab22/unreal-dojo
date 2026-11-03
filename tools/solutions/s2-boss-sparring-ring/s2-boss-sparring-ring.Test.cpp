@@ -300,6 +300,29 @@ bool FDojo_S2_SparringRing_NothingAfterTheFinale::RunTest(const FString& Paramet
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S2_SparringRing_OutIsMeasuredFlat, "Dojo.S2.SparringRing.OutIsMeasuredFlat", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** A dummy raised high above the ring but within 600 of the middle on the ground is still in. */
+bool FDojo_S2_SparringRing_OutIsMeasuredFlat::RunTest(const FString& Parameters)
+{
+	using namespace DojoS2RingTest;
+
+	FDojoTestWorld TestWorld;
+	FRing Ring = MakeRing(TestWorld);
+	if (!TestNotNull(TEXT("Director spawned"), Ring.Director)) return false;
+
+	Ring.Dummies[0]->SetActorLocation(FVector(800.f, 0.f, 0.f));
+	Ring.Dummies[1]->SetActorLocation(FVector(0.f, 800.f, 0.f));
+	Ring.Dummies[2]->SetActorLocation(FVector(-800.f, 0.f, 0.f));
+	Ring.Dummies[3]->SetActorLocation(FVector(0.f, -550.f, 400.f));
+
+	Begin(Ring);
+	TestEqual(TEXT("Three are out"), Ring.Director->CountOut(), 3);
+	TestTrue(TEXT("The raised dummy, 550 away on the ground, keeps the round running"), Ring.Director->IsRunning());
+
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S2_SparringRing_EffectsComeFromTheAsset, "Dojo.S2.SparringRing.EffectsComeFromTheAsset", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
 /** Swapping the effects inside an asset changes what its key does, with no change to the director. */

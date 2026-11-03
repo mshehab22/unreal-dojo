@@ -28,11 +28,11 @@ The class declaration is given, and so is a ready-made listener, `UDojoS2Ability
 - `UseEnergy` chooses the pool that costs are paid from, and `Grant` gives the user an ability (false for null or one it already has).
 - `CanActivate` is true when the ability is granted, not cooling down, not running, not blocked by the tags the user carries now, and affordable. An ability that costs energy needs a pool that can pay; a free one needs no pool at all.
 - `TryActivate` starts the ability when `CanActivate` allows it: it pays the cost, starts the cooldown if the ability has one, and puts the ability's `GrantedTags` on the user for its `Duration` if it has one. Then it announces `OnCooldownChanged` (when a cooldown started) and `OnAbilityActivated`, after everything is in place. It returns whether the ability started.
-- When a cooldown ends, `OnCooldownChanged` fires again, and a listener asking `IsOnCooldown` at that moment hears false. When a run ends, that ability's tags leave the user.
+- When a cooldown ends, `OnCooldownChanged` fires again, and a listener asking `IsOnCooldown` at that moment hears false. The user carries an ability's granted tags exactly while that ability runs.
 - `IsOnCooldown`, `GetCooldownRemaining`, `IsRunning`, and `GetActiveTags` answer about the present.
 - `ResetAll` ends every cooldown and every run at once, for a new round, announcing each cooldown that ended; none of the timers it ended may fire later. `EndPlay` stops every timer.
 
-A timer can call a function with an argument: `FTimerDelegate::CreateUObject(this, &UDojoS2AbilityComponent::EndCooldown, Ability)` builds a delegate that remembers which ability it is for, and `SetTimer` takes it with a handle, a time, and false for no loop. The maps in the header keep one handle per ability.
+A timer can call a function with an argument: `FTimerDelegate::CreateUObject(this, &UDojoS2AbilityComponent::EndCooldown, Ability)` builds a delegate that remembers which ability it is for, and `SetTimer` takes it with a handle, a time, and false for no loop. The maps in the header keep one handle per ability. One engine fact matters here: inside the function a timer calls, `IsTimerActive` still answers true for that same timer's handle, because the timer manager counts a timer that is running its function as active. So forget the handle before you announce or ask about that ability.
 
 Dependency direction: the ability component holds the pointer to the energy pool and reads the ability assets. The pool and the assets know nothing about it, and listeners subscribe to its two events.
 
@@ -42,7 +42,7 @@ This is the third piece of the Sparring Ring boss.
 
 ## See it in the editor
 
-Give `BP_Sparrer` a `DojoS2AbilityComponent` next to its energy component, and make `DA_Shockwave` (Energy Cost 40, Cooldown 3, Duration 1, Granted Tags `DojoS2.State.Rooted`). In the level Blueprint, get both components with Get Component by Class; on BeginPlay call Use Energy, then Grant with `DA_Dash` and `DA_Shockwave`, and bind a custom event to On Cooldown Changed that prints the ability's Display Name and Is On Cooldown. On the 1 key call Try Activate with `DA_Dash` and print the result; on the 2 key the same with `DA_Shockwave`. Press Play: 1 prints true and then the cooldown line, a quick second 1 prints false, and the ready line follows a second later; press 2 and then 1 at once, and the dash prints false until the shockwave's second is over.
+Give `BP_Sparrer` a `DojoS2AbilityComponent` next to its energy component, and make `DA_Shockwave` (Energy Cost 40, Cooldown 3, Duration 1, Granted Tags `DojoS2.State.Rooted`). In the level Blueprint, get both components with Get Component by Class; on BeginPlay call Use Energy, then Grant with `DA_Dash` and `DA_Shockwave`, and bind a custom event to On Cooldown Changed that prints the ability's Display Name and Is On Cooldown. On the 1 key call Try Activate with `DA_Dash` and print the result; on the 2 key the same with `DA_Shockwave`. Press Play: 1 prints the cooldown line and then true, a quick second 1 prints false, and the ready line follows a second later; press 2 and then 1 at once, and the dash prints false until the shockwave's second is over.
 
 # Files
 
@@ -117,7 +117,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	bool IsRunning(UDojoS2AbilityData* Ability) const;
 
-	/** The tags the user carries now, from every ability that is running. */
+	/** The tags the user carries now. */
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	FGameplayTagContainer GetActiveTags() const;
 
@@ -133,7 +133,7 @@ private:
 	/** The cooldown of one ability is over. */
 	void EndCooldown(UDojoS2AbilityData* Ability);
 
-	/** The run of one ability is over, so its tags leave the user. */
+	/** The run of one ability is over. */
 	void EndRun(UDojoS2AbilityData* Ability);
 
 	UPROPERTY()
@@ -157,6 +157,8 @@ private:
 
 ```cpp
 #include "DojoS2AbilityComponent.h"
+#include "GameFramework/Actor.h"
+#include "Quests/s2-energy/DojoS2EnergyComponent.h"
 
 #include "Engine/World.h"
 #include "Quests/s2-ability-data/DojoS2AbilityData.h"
@@ -287,12 +289,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ability Spy")
 	FGameplayTagContainer GetTagsAtLastStart() const;
 
+	/** The energy in the owner's pool when the last start notice arrived, or -1 when the owner has no pool. */
+	UFUNCTION(BlueprintPure, Category = "Ability Spy")
+	int32 GetEnergyAtLastStart() const;
+
 	/** Whether the ability named by the last cooldown notice was cooling down when that notice arrived. */
 	UFUNCTION(BlueprintPure, Category = "Ability Spy")
 	bool WasCoolingAtLastCooldownNotice() const;
 
 private:
-	/** Counts the start and reads the component's state for that ability. */
+	/** Counts the start and reads the component's state for that ability and the owner's energy. */
 	UFUNCTION()
 	void HandleStarted(UDojoS2AbilityComponent* Abilities, UDojoS2AbilityData* Ability);
 
@@ -306,6 +312,7 @@ private:
 	FGameplayTagContainer TagsAtLastStart;
 	int32 StartCount = 0;
 	int32 CooldownNoticeCount = 0;
+	int32 EnergyAtLastStart = -1;
 	bool bWasCoolingAtLastStart = false;
 	bool bWasCoolingAtLastCooldownNotice = false;
 };
@@ -317,6 +324,8 @@ private:
 #include "DojoS2AbilitySpy.h"
 
 #include "DojoS2AbilityComponent.h"
+#include "GameFramework/Actor.h"
+#include "Quests/s2-energy/DojoS2EnergyComponent.h"
 
 void UDojoS2AbilitySpy::Watch(UDojoS2AbilityComponent* Abilities)
 {
@@ -354,6 +363,11 @@ FGameplayTagContainer UDojoS2AbilitySpy::GetTagsAtLastStart() const
 	return TagsAtLastStart;
 }
 
+int32 UDojoS2AbilitySpy::GetEnergyAtLastStart() const
+{
+	return EnergyAtLastStart;
+}
+
 bool UDojoS2AbilitySpy::WasCoolingAtLastCooldownNotice() const
 {
 	return bWasCoolingAtLastCooldownNotice;
@@ -365,6 +379,9 @@ void UDojoS2AbilitySpy::HandleStarted(UDojoS2AbilityComponent* Abilities, UDojoS
 	LastStarted = Ability;
 	bWasCoolingAtLastStart = Abilities->IsOnCooldown(Ability);
 	TagsAtLastStart = Abilities->GetActiveTags();
+
+	const UDojoS2EnergyComponent* Pool = Abilities->GetOwner() != nullptr ? Abilities->GetOwner()->FindComponentByClass<UDojoS2EnergyComponent>() : nullptr;
+	EnergyAtLastStart = Pool != nullptr ? Pool->GetEnergy() : -1;
 }
 
 void UDojoS2AbilitySpy::HandleCooldown(UDojoS2AbilityComponent* Abilities, UDojoS2AbilityData* Ability)
@@ -464,6 +481,7 @@ bool FDojo_S2_AbilityComponent_GrantsAndStarts::RunTest(const FString& Parameter
 	TestEqual(TEXT("One start notice"), Spy->GetStartCount(), 1);
 	TestTrue(TEXT("The notice names Dash"), Spy->GetLastStarted() == Dash);
 	TestTrue(TEXT("The cooldown was running when the start was announced"), Spy->WasCoolingAtLastStart());
+	TestEqual(TEXT("The cost was paid when the start was announced"), Spy->GetEnergyAtLastStart(), 80);
 	TestEqual(TEXT("One cooldown notice for the start of the wait"), Spy->GetCooldownNoticeCount(), 1);
 	TestTrue(TEXT("At that notice Dash was already cooling"), Spy->WasCoolingAtLastCooldownNotice());
 
@@ -599,6 +617,39 @@ bool FDojo_S2_AbilityComponent_FocusAfterShockwave::RunTest(const FString& Param
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S2_AbilityComponent_NoRestartWhileRunning, "Dojo.S2.AbilityComponent.NoRestartWhileRunning", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** An ability with no cooldown but a run of 1 second cannot start again until its run is over. */
+bool FDojo_S2_AbilityComponent_NoRestartWhileRunning::RunTest(const FString& Parameters)
+{
+	using namespace DojoS2AbilityComponentTest;
+
+	FDojoTestWorld TestWorld;
+	FUser User = MakeUser(TestWorld);
+	if (!TestNotNull(TEXT("User created"), User.Abilities)) return false;
+
+	TStrongObjectPtr<UDojoS2AbilitySpy> Spy(NewObject<UDojoS2AbilitySpy>());
+	Spy->Watch(User.Abilities);
+
+	UDojoS2AbilityData* Brace = MakeAbility(TEXT("Brace"), 10, 0.f, 1.f);
+	User.Abilities->Grant(Brace);
+
+	TestTrue(TEXT("Brace starts"), User.Abilities->TryActivate(Brace));
+	TestFalse(TEXT("Brace has no cooldown"), User.Abilities->IsOnCooldown(Brace));
+	TestTrue(TEXT("Brace is running"), User.Abilities->IsRunning(Brace));
+	TestFalse(TEXT("A running Brace cannot start"), User.Abilities->CanActivate(Brace));
+	TestFalse(TEXT("A running Brace does not start"), User.Abilities->TryActivate(Brace));
+	TestEqual(TEXT("The refused start costs nothing"), User.Energy->GetEnergy(), 90);
+	TestEqual(TEXT("And announces nothing"), Spy->GetStartCount(), 1);
+
+	Wait(TestWorld, 1.1f);
+	TestFalse(TEXT("The run is over"), User.Abilities->IsRunning(Brace));
+	TestTrue(TEXT("Brace starts again"), User.Abilities->TryActivate(Brace));
+	TestEqual(TEXT("And pays again"), User.Energy->GetEnergy(), 80);
+
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_S2_AbilityComponent_ResetAll, "Dojo.S2.AbilityComponent.ResetAll", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
 /** ResetAll ends every cooldown and run at once, announces each ended cooldown, and leaves no timer behind. */
@@ -687,7 +738,7 @@ bool FDojo_S2_AbilityComponent_FreeAndInstant::RunTest(const FString& Parameters
 - An ability's cooldown and run end on timers, each remembering which ability it belongs to, and nothing counts time in Tick.
 - `OnCooldownChanged` fires when a cooldown starts and when it ends, and `OnAbilityActivated` fires once per start, after the cost, the cooldown, and the tags are in place.
 - The user carries an ability's granted tags exactly while that ability runs.
-- `ResetAll` and `EndPlay` leave no timer behind.
+- `ResetAll` leaves no timer behind: nothing it ended announces anything later.
 - The component holds the pointer to the pool; the pool and the assets know nothing about the component.
 
 # Alternative
