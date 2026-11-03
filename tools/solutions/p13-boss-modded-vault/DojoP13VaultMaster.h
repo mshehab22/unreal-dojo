@@ -14,8 +14,10 @@ class UTextRenderComponent;
 UENUM(BlueprintType)
 enum class EDojoP13StationKind : uint8
 {
-	Potion,
-	Door
+	/** A potion with a recipe. */
+	ESK_Potion UMETA(DisplayName = "Potion"),
+	/** A door with a condition. */
+	ESK_Door UMETA(DisplayName = "Door")
 };
 
 /** One station of a vault mod: a potion with its recipe or a door with its condition, at a spot. */
@@ -30,18 +32,18 @@ struct FDojoP13ModEntry
 
 	/** Whether this entry builds a potion or a door. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mod")
-	EDojoP13StationKind Kind = EDojoP13StationKind::Potion;
+	EDojoP13StationKind Kind = EDojoP13StationKind::ESK_Potion;
 
 	/** Where the station stands. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mod")
 	FVector Spot = FVector::ZeroVector;
 
 	/** A potion's recipe. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mod", meta = (EditCondition = "Kind == EDojoP13StationKind::Potion", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mod", meta = (EditCondition = "Kind == EDojoP13StationKind::ESK_Potion", EditConditionHides))
 	TArray<FDojoP13Instruction> Recipe;
 
 	/** A door's condition. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mod", meta = (EditCondition = "Kind == EDojoP13StationKind::Door", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mod", meta = (EditCondition = "Kind == EDojoP13StationKind::ESK_Door", EditConditionHides))
 	TArray<FDojoP13CheckStep> Condition;
 };
 

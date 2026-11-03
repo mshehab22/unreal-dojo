@@ -9,15 +9,15 @@ UENUM(BlueprintType)
 enum class EDojoP13Op : uint8
 {
 	/** Puts Number on top of the stack. */
-	PushNumber,
+	EO_PushNumber UMETA(DisplayName = "Push Number"),
 	/** Puts the value of Stat on top of the stack. */
-	ReadStat,
+	EO_ReadStat UMETA(DisplayName = "Read Stat"),
 	/** Takes the top value off the stack and stores it in Stat. */
-	WriteStat,
+	EO_WriteStat UMETA(DisplayName = "Write Stat"),
 	/** Takes two values off the stack and puts back their sum. */
-	Add,
+	EO_Add UMETA(DisplayName = "Add"),
 	/** Takes two values off the stack and puts back their product. */
-	Multiply
+	EO_Multiply UMETA(DisplayName = "Multiply")
 };
 
 /** One step of a potion recipe, edited as a row in the Details panel. */
@@ -28,13 +28,13 @@ struct FDojoP13Instruction
 
 	/** What this step does. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recipe")
-	EDojoP13Op Op = EDojoP13Op::PushNumber;
+	EDojoP13Op Op = EDojoP13Op::EO_PushNumber;
 
 	/** The number PushNumber puts on the stack. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recipe", meta = (EditCondition = "Op == EDojoP13Op::PushNumber", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recipe", meta = (EditCondition = "Op == EDojoP13Op::EO_PushNumber", EditConditionHides))
 	int32 Number = 0;
 
 	/** The stat ReadStat and WriteStat use. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recipe", meta = (EditCondition = "Op == EDojoP13Op::ReadStat || Op == EDojoP13Op::WriteStat", EditConditionHides))
-	EDojoP13Stat Stat = EDojoP13Stat::Health;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recipe", meta = (EditCondition = "Op == EDojoP13Op::EO_ReadStat || Op == EDojoP13Op::EO_WriteStat", EditConditionHides))
+	EDojoP13Stat Stat = EDojoP13Stat::ES_Health;
 };

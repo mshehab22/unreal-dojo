@@ -51,10 +51,10 @@ Place a `DojoP13Potion`. In Details, add six rows to its Recipe: Read Stat (Heal
 UENUM(BlueprintType)
 enum class EDojoP13Stat : uint8
 {
-	Health,
-	Stamina,
-	Gold,
-	Keys
+	ES_Health UMETA(DisplayName = "Health"),
+	ES_Stamina UMETA(DisplayName = "Stamina"),
+	ES_Gold UMETA(DisplayName = "Gold"),
+	ES_Keys UMETA(DisplayName = "Keys")
 };
 
 /** An adventurer's numbers in the vault, reachable by name so a script can pick one. */
@@ -84,10 +84,10 @@ struct FDojoP13Stats
 	{
 		switch (Which)
 		{
-		case EDojoP13Stat::Health: return Health;
-		case EDojoP13Stat::Stamina: return Stamina;
-		case EDojoP13Stat::Gold: return Gold;
-		case EDojoP13Stat::Keys: return Keys;
+		case EDojoP13Stat::ES_Health: return Health;
+		case EDojoP13Stat::ES_Stamina: return Stamina;
+		case EDojoP13Stat::ES_Gold: return Gold;
+		case EDojoP13Stat::ES_Keys: return Keys;
 		}
 		return 0;
 	}
@@ -97,10 +97,10 @@ struct FDojoP13Stats
 	{
 		switch (Which)
 		{
-		case EDojoP13Stat::Health: Health = Value; break;
-		case EDojoP13Stat::Stamina: Stamina = Value; break;
-		case EDojoP13Stat::Gold: Gold = Value; break;
-		case EDojoP13Stat::Keys: Keys = Value; break;
+		case EDojoP13Stat::ES_Health: Health = Value; break;
+		case EDojoP13Stat::ES_Stamina: Stamina = Value; break;
+		case EDojoP13Stat::ES_Gold: Gold = Value; break;
+		case EDojoP13Stat::ES_Keys: Keys = Value; break;
 		}
 	}
 };
@@ -120,15 +120,15 @@ UENUM(BlueprintType)
 enum class EDojoP13Op : uint8
 {
 	/** Puts Number on top of the stack. */
-	PushNumber,
+	EO_PushNumber UMETA(DisplayName = "Push Number"),
 	/** Puts the value of Stat on top of the stack. */
-	ReadStat,
+	EO_ReadStat UMETA(DisplayName = "Read Stat"),
 	/** Takes the top value off the stack and stores it in Stat. */
-	WriteStat,
+	EO_WriteStat UMETA(DisplayName = "Write Stat"),
 	/** Takes two values off the stack and puts back their sum. */
-	Add,
+	EO_Add UMETA(DisplayName = "Add"),
 	/** Takes two values off the stack and puts back their product. */
-	Multiply
+	EO_Multiply UMETA(DisplayName = "Multiply")
 };
 
 /** One step of a potion recipe, edited as a row in the Details panel. */
@@ -139,15 +139,15 @@ struct FDojoP13Instruction
 
 	/** What this step does. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recipe")
-	EDojoP13Op Op = EDojoP13Op::PushNumber;
+	EDojoP13Op Op = EDojoP13Op::EO_PushNumber;
 
 	/** The number PushNumber puts on the stack. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recipe", meta = (EditCondition = "Op == EDojoP13Op::PushNumber", EditConditionHides)) // @explain: The panel shows Number only on push rows, so a designer is offered only the fields the chosen op uses.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recipe", meta = (EditCondition = "Op == EDojoP13Op::EO_PushNumber", EditConditionHides)) // @explain: The panel shows Number only on push rows, so a designer is offered only the fields the chosen op uses.
 	int32 Number = 0;
 
 	/** The stat ReadStat and WriteStat use. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recipe", meta = (EditCondition = "Op == EDojoP13Op::ReadStat || Op == EDojoP13Op::WriteStat", EditConditionHides))
-	EDojoP13Stat Stat = EDojoP13Stat::Health;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recipe", meta = (EditCondition = "Op == EDojoP13Op::EO_ReadStat || Op == EDojoP13Op::EO_WriteStat", EditConditionHides))
+	EDojoP13Stat Stat = EDojoP13Stat::ES_Health;
 };
 ```
 
@@ -199,13 +199,13 @@ bool FDojoP13RecipeMachine::Execute(const FDojoP13Instruction& Instruction, FDoj
 {
 	switch (Instruction.Op)
 	{
-	case EDojoP13Op::PushNumber:
+	case EDojoP13Op::EO_PushNumber:
 		return Push(Instruction.Number);
 
-	case EDojoP13Op::ReadStat:
+	case EDojoP13Op::EO_ReadStat:
 		return Push(Stats.Get(Instruction.Stat));
 
-	case EDojoP13Op::WriteStat:
+	case EDojoP13Op::EO_WriteStat:
 	{
 		int32 Value = 0;
 		if (!Pop(Value)) return false;
@@ -214,14 +214,14 @@ bool FDojoP13RecipeMachine::Execute(const FDojoP13Instruction& Instruction, FDoj
 		return true;
 	}
 
-	case EDojoP13Op::Add:
-	case EDojoP13Op::Multiply:
+	case EDojoP13Op::EO_Add:
+	case EDojoP13Op::EO_Multiply:
 	{
 		int32 Top = 0;
 		int32 Under = 0;
 		if (!Pop(Top) || !Pop(Under)) return false; // @explain: A step that needs two values when the stack holds fewer is refused with false, so a broken recipe stops the machine instead of crashing the game.
 
-		return Push(Instruction.Op == EDojoP13Op::Add ? Top + Under : Top * Under);
+		return Push(Instruction.Op == EDojoP13Op::EO_Add ? Top + Under : Top * Under);
 	}
 	}
 
@@ -272,7 +272,7 @@ public:
 
 	/** Runs the recipe on Stats; false, with Stats unchanged, when the recipe is broken. */
 	UFUNCTION(BlueprintCallable, Category = "Potion")
-	bool Drink(UPARAM(ref) FDojoP13Stats& Stats) const; // @explain: UPARAM(ref) gives the Blueprint node one stats pin that goes in and comes back changed, instead of an output pin only.
+	bool Drink(UPARAM(ref) FDojoP13Stats& Stats); // @explain: UPARAM(ref) gives the Blueprint node one stats pin that goes in and comes back changed, instead of an output pin only; the function is not const, because a const BlueprintCallable function with an output becomes a pure node with no exec pins.
 };
 ```
 
@@ -291,7 +291,7 @@ ADojoP13Potion::ADojoP13Potion()
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
-bool ADojoP13Potion::Drink(FDojoP13Stats& Stats) const
+bool ADojoP13Potion::Drink(FDojoP13Stats& Stats)
 {
 	FDojoP13RecipeMachine Machine;
 	return Machine.Run(Recipe, Stats);
@@ -324,7 +324,7 @@ namespace DojoP13PotionTest
 	/** A step that pushes Number. */
 	FDojoP13Instruction PushStep(int32 Number)
 	{
-		FDojoP13Instruction Result = Step(EDojoP13Op::PushNumber);
+		FDojoP13Instruction Result = Step(EDojoP13Op::EO_PushNumber);
 		Result.Number = Number;
 		return Result;
 	}
@@ -350,12 +350,12 @@ namespace DojoP13PotionTest
 	TArray<FDojoP13Instruction> SecondWind()
 	{
 		return {
-			StatStep(EDojoP13Op::ReadStat, EDojoP13Stat::Health),
-			StatStep(EDojoP13Op::ReadStat, EDojoP13Stat::Stamina),
+			StatStep(EDojoP13Op::EO_ReadStat, EDojoP13Stat::ES_Health),
+			StatStep(EDojoP13Op::EO_ReadStat, EDojoP13Stat::ES_Stamina),
 			PushStep(2),
-			Step(EDojoP13Op::Multiply),
-			Step(EDojoP13Op::Add),
-			StatStep(EDojoP13Op::WriteStat, EDojoP13Stat::Health),
+			Step(EDojoP13Op::EO_Multiply),
+			Step(EDojoP13Op::EO_Add),
+			StatStep(EDojoP13Op::EO_WriteStat, EDojoP13Stat::ES_Health),
 		};
 	}
 
@@ -405,15 +405,15 @@ bool FDojo_P13_PotionRecipes_StepsRunInOrder::RunTest(const FString& Parameters)
 	Stats.Gold = 4;
 	Stats.Keys = 3;
 	const TArray<FDojoP13Instruction> AddThenMultiply = {
-		StatStep(EDojoP13Op::ReadStat, EDojoP13Stat::Gold), PushStep(3), Step(EDojoP13Op::Add),
-		StatStep(EDojoP13Op::ReadStat, EDojoP13Stat::Keys), Step(EDojoP13Op::Multiply),
-		StatStep(EDojoP13Op::WriteStat, EDojoP13Stat::Gold) };
+		StatStep(EDojoP13Op::EO_ReadStat, EDojoP13Stat::ES_Gold), PushStep(3), Step(EDojoP13Op::EO_Add),
+		StatStep(EDojoP13Op::EO_ReadStat, EDojoP13Stat::ES_Keys), Step(EDojoP13Op::EO_Multiply),
+		StatStep(EDojoP13Op::EO_WriteStat, EDojoP13Stat::ES_Gold) };
 	TestTrue(TEXT("(Gold + 3) * Keys runs"), Machine.Run(AddThenMultiply, Stats));
 	TestEqual(TEXT("Gold is (4 + 3) * 3"), Stats.Gold, 21);
 
 	const TArray<FDojoP13Instruction> TwoWrites = {
-		PushStep(7), StatStep(EDojoP13Op::WriteStat, EDojoP13Stat::Keys),
-		PushStep(100), StatStep(EDojoP13Op::WriteStat, EDojoP13Stat::Health) };
+		PushStep(7), StatStep(EDojoP13Op::EO_WriteStat, EDojoP13Stat::ES_Keys),
+		PushStep(100), StatStep(EDojoP13Op::EO_WriteStat, EDojoP13Stat::ES_Health) };
 	TestTrue(TEXT("A recipe that writes two stats runs"), Machine.Run(TwoWrites, Stats));
 	TestEqual(TEXT("Keys is 7"), Stats.Keys, 7);
 	TestEqual(TEXT("Health is 100"), Stats.Health, 100);
@@ -439,12 +439,12 @@ bool FDojo_P13_PotionRecipes_BrokenRecipeChangesNothing::RunTest(const FString& 
 	const FDojoP13Stats Start = Fresh();
 
 	FDojoP13Stats Stats = Start;
-	const TArray<FDojoP13Instruction> WritesThenFails = { PushStep(5), StatStep(EDojoP13Op::WriteStat, EDojoP13Stat::Gold), Step(EDojoP13Op::Add) };
+	const TArray<FDojoP13Instruction> WritesThenFails = { PushStep(5), StatStep(EDojoP13Op::EO_WriteStat, EDojoP13Stat::ES_Gold), Step(EDojoP13Op::EO_Add) };
 	TestFalse(TEXT("Add with nothing on the stack is refused"), Machine.Run(WritesThenFails, Stats));
 	TestEqual(TEXT("The gold written before the failure is not kept"), Stats.Gold, 0);
 	TestTrue(TEXT("Every stat is as it was"), SameStats(Stats, Start));
 
-	TestFalse(TEXT("Writing with nothing on the stack is refused"), Machine.Run({ StatStep(EDojoP13Op::WriteStat, EDojoP13Stat::Health) }, Stats));
+	TestFalse(TEXT("Writing with nothing on the stack is refused"), Machine.Run({ StatStep(EDojoP13Op::EO_WriteStat, EDojoP13Stat::ES_Health) }, Stats));
 	TestTrue(TEXT("Still as it was"), SameStats(Stats, Start));
 
 	TArray<FDojoP13Instruction> EightPushes;
@@ -453,7 +453,7 @@ bool FDojo_P13_PotionRecipes_BrokenRecipeChangesNothing::RunTest(const FString& 
 
 	TArray<FDojoP13Instruction> NinePushes = EightPushes;
 	NinePushes.Add(PushStep(9));
-	NinePushes.Add(StatStep(EDojoP13Op::WriteStat, EDojoP13Stat::Keys));
+	NinePushes.Add(StatStep(EDojoP13Op::EO_WriteStat, EDojoP13Stat::ES_Keys));
 	TestFalse(TEXT("A ninth value overfills the stack and is refused"), Machine.Run(NinePushes, Stats));
 	TestTrue(TEXT("And changes nothing"), SameStats(Stats, Start));
 
@@ -501,13 +501,13 @@ bool FDojo_P13_PotionRecipes_MachineRunsAgainAfterAFault::RunTest(const FString&
 
 # Alternative
 
-The steps could write straight into the stats and undo what they wrote when a later step fails. That saves one copy of four numbers, but every step that writes needs an undo, and a crash part way leaves the stats half changed; with four small integers, the copy costs nothing worth saving. A heavier alternative is a potion class per effect in C++ or a Blueprint child per potion: each is easier to debug with breakpoints, but each new potion is a compile or an asset made by someone with the editor, and modders cannot add one safely.
+The steps could write straight into the stats and undo what they wrote when a later step fails. That saves one copy of four numbers, but every step that writes needs an undo, and a crash part way leaves the stats half changed; with four small integers, the copy costs nothing worth saving. A heavier alternative is a potion class per effect in C++ or a Blueprint child per potion: each is easier to debug with breakpoints, but each new potion is a compile or an asset made by someone with the editor, and modders cannot add one safely. One limit this machine leaves open: a hostile recipe can multiply numbers past the range of an `int32`. A machine that takes untrusted recipes would clamp each result, or do the arithmetic in `int64` and refuse anything out of range.
 
 # Parsons
 
 ```yaml
 - id: run-recipe
-  prompt: Put Run in order.
+  prompt: Put Run in order. Its first line inside the braces empties the stack.
   lines:
     - "bool FDojoP13RecipeMachine::Run(const TArray<FDojoP13Instruction>& Program, FDojoP13Stats& Stats)"
     - "{"

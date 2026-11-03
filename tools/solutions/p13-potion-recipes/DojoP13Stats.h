@@ -7,10 +7,10 @@
 UENUM(BlueprintType)
 enum class EDojoP13Stat : uint8
 {
-	Health,
-	Stamina,
-	Gold,
-	Keys
+	ES_Health UMETA(DisplayName = "Health"),
+	ES_Stamina UMETA(DisplayName = "Stamina"),
+	ES_Gold UMETA(DisplayName = "Gold"),
+	ES_Keys UMETA(DisplayName = "Keys")
 };
 
 /** An adventurer's numbers in the vault, reachable by name so a script can pick one. */
@@ -40,10 +40,10 @@ struct FDojoP13Stats
 	{
 		switch (Which)
 		{
-		case EDojoP13Stat::Health: return Health;
-		case EDojoP13Stat::Stamina: return Stamina;
-		case EDojoP13Stat::Gold: return Gold;
-		case EDojoP13Stat::Keys: return Keys;
+		case EDojoP13Stat::ES_Health: return Health;
+		case EDojoP13Stat::ES_Stamina: return Stamina;
+		case EDojoP13Stat::ES_Gold: return Gold;
+		case EDojoP13Stat::ES_Keys: return Keys;
 		}
 		return 0;
 	}
@@ -53,10 +53,10 @@ struct FDojoP13Stats
 	{
 		switch (Which)
 		{
-		case EDojoP13Stat::Health: Health = Value; break;
-		case EDojoP13Stat::Stamina: Stamina = Value; break;
-		case EDojoP13Stat::Gold: Gold = Value; break;
-		case EDojoP13Stat::Keys: Keys = Value; break;
+		case EDojoP13Stat::ES_Health: Health = Value; break;
+		case EDojoP13Stat::ES_Stamina: Stamina = Value; break;
+		case EDojoP13Stat::ES_Gold: Gold = Value; break;
+		case EDojoP13Stat::ES_Keys: Keys = Value; break;
 		}
 	}
 };

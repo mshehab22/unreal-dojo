@@ -22,12 +22,12 @@ void ADojoP13DartTrap::Tick(float DeltaSeconds)
 		const FDojoP13TrapStep& Step = Routine->Steps[StepIndex];
 		switch (Step.Kind)
 		{
-		case EDojoP13TrapStepKind::Fire:
+		case EDojoP13TrapStepKind::ETSK_Fire:
 			ShotsFired++;
 			StepIndex++;
 			break;
 
-		case EDojoP13TrapStepKind::Wait:
+		case EDojoP13TrapStepKind::ETSK_Wait:
 			WaitedSeconds += DeltaSeconds;
 			if (WaitedSeconds >= Step.Seconds)
 			{
@@ -36,7 +36,7 @@ void ADojoP13DartTrap::Tick(float DeltaSeconds)
 			}
 			return;
 
-		case EDojoP13TrapStepKind::Jump:
+		case EDojoP13TrapStepKind::ETSK_Jump:
 			if (!Routine->Steps.IsValidIndex(Step.Target))
 			{
 				bJammed = true;

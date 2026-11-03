@@ -10,7 +10,7 @@ ADojoP13Potion::ADojoP13Potion()
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
-bool ADojoP13Potion::Drink(FDojoP13Stats& Stats) const
+bool ADojoP13Potion::Drink(FDojoP13Stats& Stats)
 {
 	FDojoP13RecipeMachine Machine;
 	return Machine.Run(Recipe, Stats);

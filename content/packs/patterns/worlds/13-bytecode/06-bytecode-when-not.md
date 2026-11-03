@@ -45,7 +45,7 @@ A small machine is the most work any pattern in this course asks for: an instruc
 
 **Nobody will build the tools.** The C++ debugger cannot step through a list of steps. Without a way to print a program and to log the steps it ran, a broken script fails silently and someone stares at numbers. If there is no time for a front end and those aids, the machine moves bugs to where nobody can see them.
 
-**The instruction set keeps growing.** Every request ("can a potion also play a sound, branch, call another potion") adds an op and a case. Unchecked, that becomes a second programming language with no documentation and one maintainer. Decide what the machine is for and say no to the rest.
+**The instruction set keeps growing.** Every request ("can a potion also give an item, branch, start a timer, call another potion") adds an op and a case. Unchecked, that becomes a second programming language with no documentation and one maintainer. Decide what the machine is for and say no to the rest.
 
 # Example
 
@@ -117,7 +117,7 @@ struct FDartTrapKind : public FTableRowBase
 - id: explain-when-not
   type: explain-in-one-sentence
   prompt: In one sentence, say when writing your own step machine is the wrong choice.
-  modelAnswer: When only numbers vary, when Blueprint already serves authors who are on the team, when the code is a hot path, or when nobody will build the front end and debugging tools, data, Blueprint, or C++ is the better choice.
+  modelAnswer: When only numbers vary, when Blueprint already serves authors who are on the team, when the code is a hot path, or when nobody will build a way to write programs and to see what they did, data, Blueprint, or C++ is the better choice.
   rubric:
     - Names a case such as numbers only, Blueprint already fitting, a hot path, or no tools
     - Names a better alternative such as data, Blueprint, or C++

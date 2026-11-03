@@ -22,5 +22,5 @@ public:
 
 	/** Runs the recipe on Stats; false, with Stats unchanged, when the recipe is broken. */
 	UFUNCTION(BlueprintCallable, Category = "Potion")
-	bool Drink(UPARAM(ref) FDojoP13Stats& Stats) const;
+	bool Drink(UPARAM(ref) FDojoP13Stats& Stats);
 };

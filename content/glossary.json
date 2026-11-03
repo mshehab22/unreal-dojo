@@ -4337,7 +4337,7 @@
     ],
     "category": "reflection",
     "short": "A meta specifier that lets a property be edited in the Details panel only while a condition on other properties holds.",
-    "long": "meta = (EditCondition = \"Op == EMyOp::PushNumber\") greys out the property unless the condition is true, and adding EditConditionHides hides it instead. The condition can name a bool, compare an enum property with one of its values, and combine tests with && and ||. On a struct shown as a row of an array, each row checks its own fields, so a list of steps shows a number only on the rows that push one. It changes only the editor: the property still exists and can still be set from code.",
+    "long": "meta = (EditCondition = \"Op == EMyOp::EMO_PushNumber\") greys out the property unless the condition is true, and adding EditConditionHides hides it instead. The condition can name a bool, compare an enum property with one of its values, and combine tests with && and ||. On a struct shown as a row of an array, each row checks its own fields, so a list of steps shows a number only on the rows that push one. It changes only the editor: the property still exists and can still be set from code.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/metadata-specifiers-in-unreal-engine?application_version=5.8",
     "related": [
       "meta-specifier",

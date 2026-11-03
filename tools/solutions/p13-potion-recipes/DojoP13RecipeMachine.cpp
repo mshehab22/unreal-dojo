@@ -18,13 +18,13 @@ bool FDojoP13RecipeMachine::Execute(const FDojoP13Instruction& Instruction, FDoj
 {
 	switch (Instruction.Op)
 	{
-	case EDojoP13Op::PushNumber:
+	case EDojoP13Op::EO_PushNumber:
 		return Push(Instruction.Number);
 
-	case EDojoP13Op::ReadStat:
+	case EDojoP13Op::EO_ReadStat:
 		return Push(Stats.Get(Instruction.Stat));
 
-	case EDojoP13Op::WriteStat:
+	case EDojoP13Op::EO_WriteStat:
 	{
 		int32 Value = 0;
 		if (!Pop(Value)) return false;
@@ -33,14 +33,14 @@ bool FDojoP13RecipeMachine::Execute(const FDojoP13Instruction& Instruction, FDoj
 		return true;
 	}
 
-	case EDojoP13Op::Add:
-	case EDojoP13Op::Multiply:
+	case EDojoP13Op::EO_Add:
+	case EDojoP13Op::EO_Multiply:
 	{
 		int32 Top = 0;
 		int32 Under = 0;
 		if (!Pop(Top) || !Pop(Under)) return false;
 
-		return Push(Instruction.Op == EDojoP13Op::Add ? Top + Under : Top * Under);
+		return Push(Instruction.Op == EDojoP13Op::EO_Add ? Top + Under : Top * Under);
 	}
 	}
 

@@ -65,7 +65,7 @@ void ADojoP13VaultMaster::PressUse()
 
 	if (Nearest == INDEX_NONE) return;
 
-	if (const ADojoP13Potion* Potion = Cast<ADojoP13Potion>(Stations[Nearest]))
+	if (ADojoP13Potion* Potion = Cast<ADojoP13Potion>(Stations[Nearest]))
 	{
 		Used[Nearest] = true;
 		if (!Potion->Drink(ChampionStats)) FizzleCount++;
@@ -144,7 +144,7 @@ void ADojoP13VaultMaster::StartRound()
 	for (const FDojoP13ModEntry& Entry : Mod)
 	{
 		Stations.Add(BuildStation(Entry));
-		if (Entry.Kind == EDojoP13StationKind::Door) DoorCount++;
+		if (Entry.Kind == EDojoP13StationKind::ESK_Door) DoorCount++;
 	}
 	Used.Init(false, Stations.Num());
 
@@ -171,7 +171,7 @@ AActor* ADojoP13VaultMaster::BuildStation(const FDojoP13ModEntry& Entry)
 	UWorld* LevelWorld = GetWorld();
 	if (!LevelWorld) return nullptr;
 
-	if (Entry.Kind == EDojoP13StationKind::Potion)
+	if (Entry.Kind == EDojoP13StationKind::ESK_Potion)
 	{
 		ADojoP13Potion* Potion = LevelWorld->SpawnActor<ADojoP13Potion>(Entry.Spot, FRotator::ZeroRotator);
 		if (Potion) Potion->Recipe = Entry.Recipe;

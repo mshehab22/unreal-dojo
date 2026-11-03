@@ -11,11 +11,11 @@ UENUM(BlueprintType)
 enum class EDojoP13Verdict : uint8
 {
 	/** The condition holds: the door may open. */
-	Open,
+	EV_Open UMETA(DisplayName = "Open"),
 	/** The condition does not hold: the door stays shut. */
-	Shut,
+	EV_Shut UMETA(DisplayName = "Shut"),
 	/** The condition is not a well-formed script: the door stays shut whatever the stats. */
-	Broken
+	EV_Broken UMETA(DisplayName = "Broken")
 };
 
 /** A vault door that opens only for an adventurer whose stats pass a condition a designer writes in the Details panel. Bytecode pattern. */

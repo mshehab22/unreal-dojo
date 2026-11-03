@@ -55,21 +55,21 @@ UENUM(BlueprintType)
 enum class EDojoP13CheckOp : uint8
 {
 	/** Puts Number on top of the stack. */
-	PushNumber,
+	ECO_PushNumber UMETA(DisplayName = "Push Number"),
 	/** Puts the value of Stat on top of the stack. */
-	ReadStat,
+	ECO_ReadStat UMETA(DisplayName = "Read Stat"),
 	/** Takes two values and puts back whether they are equal. */
-	Equal,
+	ECO_Equal UMETA(DisplayName = "Equal"),
 	/** Takes two values and puts back whether the first written is less than the second. */
-	Less,
+	ECO_Less UMETA(DisplayName = "Less"),
 	/** Takes two values and puts back whether the first written is greater than the second. */
-	Greater,
+	ECO_Greater UMETA(DisplayName = "Greater"),
 	/** Takes two values and puts back whether both are true. */
-	And,
+	ECO_And UMETA(DisplayName = "And"),
 	/** Takes two values and puts back whether either is true. */
-	Or,
+	ECO_Or UMETA(DisplayName = "Or"),
 	/** Takes one value and puts back its opposite. */
-	Not
+	ECO_Not UMETA(DisplayName = "Not")
 };
 
 /** One step of a door's condition, edited as a row in the Details panel. */
@@ -80,15 +80,15 @@ struct FDojoP13CheckStep
 
 	/** What this step does. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Condition")
-	EDojoP13CheckOp Op = EDojoP13CheckOp::PushNumber;
+	EDojoP13CheckOp Op = EDojoP13CheckOp::ECO_PushNumber;
 
 	/** The number PushNumber puts on the stack. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Condition", meta = (EditCondition = "Op == EDojoP13CheckOp::PushNumber", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Condition", meta = (EditCondition = "Op == EDojoP13CheckOp::ECO_PushNumber", EditConditionHides))
 	int32 Number = 0;
 
 	/** The stat ReadStat reads. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Condition", meta = (EditCondition = "Op == EDojoP13CheckOp::ReadStat", EditConditionHides))
-	EDojoP13Stat Stat = EDojoP13Stat::Health;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Condition", meta = (EditCondition = "Op == EDojoP13CheckOp::ECO_ReadStat", EditConditionHides))
+	EDojoP13Stat Stat = EDojoP13Stat::ES_Health;
 };
 ```
 
@@ -108,11 +108,11 @@ UENUM(BlueprintType)
 enum class EDojoP13Verdict : uint8
 {
 	/** The condition holds: the door may open. */
-	Open,
+	EV_Open UMETA(DisplayName = "Open"),
 	/** The condition does not hold: the door stays shut. */
-	Shut,
+	EV_Shut UMETA(DisplayName = "Shut"),
 	/** The condition is not a well-formed script: the door stays shut whatever the stats. */
-	Broken
+	EV_Broken UMETA(DisplayName = "Broken")
 };
 
 /** A vault door that opens only for an adventurer whose stats pass a condition a designer writes in the Details panel. Bytecode pattern. */
@@ -173,7 +173,7 @@ ADojoP13VaultDoor::ADojoP13VaultDoor()
 
 EDojoP13Verdict ADojoP13VaultDoor::Judge(const FDojoP13Stats& Stats) const
 {
-	return EDojoP13Verdict::Shut;
+	return EDojoP13Verdict::EV_Shut;
 }
 
 bool ADojoP13VaultDoor::ApplyStep(const FDojoP13CheckStep& Step, const FDojoP13Stats& Stats, TArray<int32>& Stack) const
@@ -183,7 +183,7 @@ bool ADojoP13VaultDoor::ApplyStep(const FDojoP13CheckStep& Step, const FDojoP13S
 
 bool ADojoP13VaultDoor::TryOpen(const FDojoP13Stats& Stats)
 {
-	if (Judge(Stats) == EDojoP13Verdict::Open)
+	if (Judge(Stats) == EDojoP13Verdict::EV_Open)
 	{
 		bOpen = true;
 		SetActorHiddenInGame(true);
@@ -230,7 +230,7 @@ namespace DojoP13DoorTest
 	/** A step that pushes Number. */
 	FDojoP13CheckStep PushStep(int32 Number)
 	{
-		FDojoP13CheckStep Result = Step(EDojoP13CheckOp::PushNumber);
+		FDojoP13CheckStep Result = Step(EDojoP13CheckOp::ECO_PushNumber);
 		Result.Number = Number;
 		return Result;
 	}
@@ -238,7 +238,7 @@ namespace DojoP13DoorTest
 	/** A step that reads Stat. */
 	FDojoP13CheckStep ReadStep(EDojoP13Stat Stat)
 	{
-		FDojoP13CheckStep Result = Step(EDojoP13CheckOp::ReadStat);
+		FDojoP13CheckStep Result = Step(EDojoP13CheckOp::ECO_ReadStat);
 		Result.Stat = Stat;
 		return Result;
 	}
@@ -267,9 +267,9 @@ namespace DojoP13DoorTest
 	{
 		switch (Verdict)
 		{
-		case EDojoP13Verdict::Open: return TEXT("Open");
-		case EDojoP13Verdict::Shut: return TEXT("Shut");
-		case EDojoP13Verdict::Broken: return TEXT("Broken");
+		case EDojoP13Verdict::EV_Open: return TEXT("Open");
+		case EDojoP13Verdict::EV_Shut: return TEXT("Shut");
+		case EDojoP13Verdict::EV_Broken: return TEXT("Broken");
 		}
 		return TEXT("?");
 	}
@@ -284,24 +284,24 @@ bool FDojo_P13_DoorConditions_EqualAndLogicDecide::RunTest(const FString& Parame
 
 	FDojoTestWorld TestWorld;
 
-	ADojoP13VaultDoor* KeyDoor = SpawnDoor(TestWorld, { ReadStep(EDojoP13Stat::Keys), PushStep(0), Step(EDojoP13CheckOp::Equal), Step(EDojoP13CheckOp::Not) });
+	ADojoP13VaultDoor* KeyDoor = SpawnDoor(TestWorld, { ReadStep(EDojoP13Stat::ES_Keys), PushStep(0), Step(EDojoP13CheckOp::ECO_Equal), Step(EDojoP13CheckOp::ECO_Not) });
 	if (!TestNotNull(TEXT("Key door spawned"), KeyDoor)) return false;
 	TestEqual(TEXT("Keys is not 0, with a key: Open"), Say(KeyDoor->Judge(MakeStats(50, 0, 1))), FString(TEXT("Open")));
 	TestEqual(TEXT("Keys is not 0, with no key: Shut"), Say(KeyDoor->Judge(MakeStats(50, 0, 0))), FString(TEXT("Shut")));
 
 	ADojoP13VaultDoor* EitherDoor = SpawnDoor(TestWorld, {
-		ReadStep(EDojoP13Stat::Keys), PushStep(2), Step(EDojoP13CheckOp::Equal),
-		ReadStep(EDojoP13Stat::Health), PushStep(100), Step(EDojoP13CheckOp::Equal),
-		Step(EDojoP13CheckOp::Or) });
+		ReadStep(EDojoP13Stat::ES_Keys), PushStep(2), Step(EDojoP13CheckOp::ECO_Equal),
+		ReadStep(EDojoP13Stat::ES_Health), PushStep(100), Step(EDojoP13CheckOp::ECO_Equal),
+		Step(EDojoP13CheckOp::ECO_Or) });
 	if (!TestNotNull(TEXT("Either door spawned"), EitherDoor)) return false;
 	TestEqual(TEXT("Two keys or full health, with two keys: Open"), Say(EitherDoor->Judge(MakeStats(50, 0, 2))), FString(TEXT("Open")));
 	TestEqual(TEXT("Two keys or full health, with full health: Open"), Say(EitherDoor->Judge(MakeStats(100, 0, 0))), FString(TEXT("Open")));
 	TestEqual(TEXT("Two keys or full health, with neither: Shut"), Say(EitherDoor->Judge(MakeStats(50, 0, 0))), FString(TEXT("Shut")));
 
 	ADojoP13VaultDoor* BothDoor = SpawnDoor(TestWorld, {
-		ReadStep(EDojoP13Stat::Gold), PushStep(5), Step(EDojoP13CheckOp::Equal),
-		PushStep(1), ReadStep(EDojoP13Stat::Keys), Step(EDojoP13CheckOp::Equal),
-		Step(EDojoP13CheckOp::And) });
+		ReadStep(EDojoP13Stat::ES_Gold), PushStep(5), Step(EDojoP13CheckOp::ECO_Equal),
+		PushStep(1), ReadStep(EDojoP13Stat::ES_Keys), Step(EDojoP13CheckOp::ECO_Equal),
+		Step(EDojoP13CheckOp::ECO_And) });
 	if (!TestNotNull(TEXT("Both door spawned"), BothDoor)) return false;
 	TestEqual(TEXT("Five gold and one key, with both: Open"), Say(BothDoor->Judge(MakeStats(50, 5, 1))), FString(TEXT("Open")));
 	TestEqual(TEXT("Five gold and one key, with no key: Shut"), Say(BothDoor->Judge(MakeStats(50, 5, 0))), FString(TEXT("Shut")));
@@ -311,6 +311,15 @@ bool FDojo_P13_DoorConditions_EqualAndLogicDecide::RunTest(const FString& Parame
 	if (!TestNotNull(TEXT("Always door spawned"), Always) || !TestNotNull(TEXT("Never door spawned"), Never)) return false;
 	TestEqual(TEXT("A lone 1 opens"), Say(Always->Judge(MakeStats(50, 0, 0))), FString(TEXT("Open")));
 	TestEqual(TEXT("A lone 0 stays shut"), Say(Never->Judge(MakeStats(50, 0, 0))), FString(TEXT("Shut")));
+
+	ADojoP13VaultDoor* BothSet = SpawnDoor(TestWorld, { ReadStep(EDojoP13Stat::ES_Gold), ReadStep(EDojoP13Stat::ES_Keys), Step(EDojoP13CheckOp::ECO_And) });
+	ADojoP13VaultDoor* NoGold = SpawnDoor(TestWorld, { ReadStep(EDojoP13Stat::ES_Gold), Step(EDojoP13CheckOp::ECO_Not) });
+	ADojoP13VaultDoor* EitherIsOne = SpawnDoor(TestWorld, { ReadStep(EDojoP13Stat::ES_Gold), ReadStep(EDojoP13Stat::ES_Keys), Step(EDojoP13CheckOp::ECO_Or), PushStep(1), Step(EDojoP13CheckOp::ECO_Equal) });
+	if (!TestNotNull(TEXT("Both-set door spawned"), BothSet) || !TestNotNull(TEXT("No-gold door spawned"), NoGold) || !TestNotNull(TEXT("Either door spawned"), EitherIsOne)) return false;
+	TestEqual(TEXT("Any value but 0 is true: 2 gold and 1 key joined by And open"), Say(BothSet->Judge(MakeStats(50, 2, 1))), FString(TEXT("Open")));
+	TestEqual(TEXT("Not of 12 gold is 0, so the door stays shut"), Say(NoGold->Judge(MakeStats(50, 12, 0))), FString(TEXT("Shut")));
+	TestEqual(TEXT("Not of 0 gold is 1, so the door opens"), Say(NoGold->Judge(MakeStats(50, 0, 0))), FString(TEXT("Open")));
+	TestEqual(TEXT("Or puts back exactly 1, even for 3 gold and 2 keys"), Say(EitherIsOne->Judge(MakeStats(50, 3, 2))), FString(TEXT("Open")));
 
 	TestFalse(TEXT("TryOpen with no key leaves the key door shut"), KeyDoor->TryOpen(MakeStats(50, 0, 0)));
 	TestFalse(TEXT("And shown"), KeyDoor->IsHidden());
@@ -336,10 +345,10 @@ bool FDojo_P13_DoorConditions_BrokenConditionsStayShut::RunTest(const FString& P
 	if (!TestNotNull(TEXT("Door spawned"), Door)) return false;
 	TestEqual(TEXT("An empty condition is Broken"), Say(Door->Judge(Rich)), FString(TEXT("Broken")));
 
-	Door->Condition = { Step(EDojoP13CheckOp::Not) };
+	Door->Condition = { Step(EDojoP13CheckOp::ECO_Not) };
 	TestEqual(TEXT("Not with nothing on the stack is Broken"), Say(Door->Judge(Rich)), FString(TEXT("Broken")));
 
-	Door->Condition = { PushStep(1), Step(EDojoP13CheckOp::And) };
+	Door->Condition = { PushStep(1), Step(EDojoP13CheckOp::ECO_And) };
 	TestEqual(TEXT("And with one value is Broken"), Say(Door->Judge(Rich)), FString(TEXT("Broken")));
 
 	Door->Condition = { PushStep(1), PushStep(1) };
@@ -348,13 +357,13 @@ bool FDojo_P13_DoorConditions_BrokenConditionsStayShut::RunTest(const FString& P
 	TArray<FDojoP13CheckStep> Eight;
 	for (int32 Index = 0; Index < ADojoP13VaultDoor::StackLimit; Index++) Eight.Add(PushStep(1));
 	TArray<FDojoP13CheckStep> EightAndJoined = Eight;
-	for (int32 Index = 1; Index < ADojoP13VaultDoor::StackLimit; Index++) EightAndJoined.Add(Step(EDojoP13CheckOp::And));
+	for (int32 Index = 1; Index < ADojoP13VaultDoor::StackLimit; Index++) EightAndJoined.Add(Step(EDojoP13CheckOp::ECO_And));
 	Door->Condition = EightAndJoined;
 	TestEqual(TEXT("Eight values joined by And fit and open"), Say(Door->Judge(Rich)), FString(TEXT("Open")));
 
 	TArray<FDojoP13CheckStep> NineAndJoined = Eight;
 	NineAndJoined.Add(PushStep(1));
-	for (int32 Index = 0; Index < ADojoP13VaultDoor::StackLimit; Index++) NineAndJoined.Add(Step(EDojoP13CheckOp::And));
+	for (int32 Index = 0; Index < ADojoP13VaultDoor::StackLimit; Index++) NineAndJoined.Add(Step(EDojoP13CheckOp::ECO_And));
 	Door->Condition = NineAndJoined;
 	TestEqual(TEXT("A ninth value overfills the stack: Broken"), Say(Door->Judge(Rich)), FString(TEXT("Broken")));
 
@@ -375,9 +384,9 @@ bool FDojo_P13_DoorConditions_GreaterAndLessReadAsWritten::RunTest(const FString
 	FDojoTestWorld TestWorld;
 
 	ADojoP13VaultDoor* Treasurer = SpawnDoor(TestWorld, {
-		ReadStep(EDojoP13Stat::Gold), PushStep(9), Step(EDojoP13CheckOp::Greater),
-		ReadStep(EDojoP13Stat::Keys), PushStep(0), Step(EDojoP13CheckOp::Equal), Step(EDojoP13CheckOp::Not),
-		Step(EDojoP13CheckOp::And) });
+		ReadStep(EDojoP13Stat::ES_Gold), PushStep(9), Step(EDojoP13CheckOp::ECO_Greater),
+		ReadStep(EDojoP13Stat::ES_Keys), PushStep(0), Step(EDojoP13CheckOp::ECO_Equal), Step(EDojoP13CheckOp::ECO_Not),
+		Step(EDojoP13CheckOp::ECO_And) });
 	if (!TestNotNull(TEXT("Treasurer's door spawned"), Treasurer)) return false;
 
 	TestEqual(TEXT("Gold 12 and a key: Gold > 9 holds, so Open"), Say(Treasurer->Judge(MakeStats(50, 12, 1))), FString(TEXT("Open")));
@@ -385,7 +394,7 @@ bool FDojo_P13_DoorConditions_GreaterAndLessReadAsWritten::RunTest(const FString
 	TestEqual(TEXT("Gold 5 and a key: Gold > 9 fails, so Shut"), Say(Treasurer->Judge(MakeStats(50, 5, 1))), FString(TEXT("Shut")));
 	TestEqual(TEXT("Gold 9 and a key: 9 is not greater than 9, so Shut"), Say(Treasurer->Judge(MakeStats(50, 9, 1))), FString(TEXT("Shut")));
 
-	ADojoP13VaultDoor* Mercy = SpawnDoor(TestWorld, { ReadStep(EDojoP13Stat::Health), PushStep(30), Step(EDojoP13CheckOp::Less) });
+	ADojoP13VaultDoor* Mercy = SpawnDoor(TestWorld, { ReadStep(EDojoP13Stat::ES_Health), PushStep(30), Step(EDojoP13CheckOp::ECO_Less) });
 	if (!TestNotNull(TEXT("Mercy door spawned"), Mercy)) return false;
 
 	TestEqual(TEXT("Health 10: Health < 30 holds, so Open"), Say(Mercy->Judge(MakeStats(10, 0, 0))), FString(TEXT("Open")));
@@ -428,10 +437,10 @@ Each door could instead be a Blueprint child with an overridable `CanOpen` funct
     - "	TArray<int32> Stack;"
     - "	for (const FDojoP13CheckStep& Step : Condition)"
     - "	{"
-    - "		if (!ApplyStep(Step, Stats, Stack)) return EDojoP13Verdict::Broken;"
+    - "		if (!ApplyStep(Step, Stats, Stack)) return EDojoP13Verdict::EV_Broken;"
     - "	}"
-    - "	if (Stack.Num() != 1) return EDojoP13Verdict::Broken;"
-    - "	return Stack[0] != 0 ? EDojoP13Verdict::Open : EDojoP13Verdict::Shut;"
+    - "	if (Stack.Num() != 1) return EDojoP13Verdict::EV_Broken;"
+    - "	return Stack[0] != 0 ? EDojoP13Verdict::EV_Open : EDojoP13Verdict::EV_Shut;"
     - "}"
   distractors:
     - line: "	check(Stack.Num() == 1);"

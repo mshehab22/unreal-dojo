@@ -12,7 +12,7 @@ xp: 25
 estimatedMinutes: 10
 concepts:
   - Behavior that changes often, or comes from people who do not write C++, can be stored as a list of small steps instead of compiled code
-  - A short loop reads the steps one at a time and does what each says, and it can only do what its steps allow
+  - A short loop reads the steps one at a time and does what each says, and nothing a step asks for happens unless the loop has code for it
   - Steps hand values to each other on a stack, so a formula with brackets becomes a flat list
   - In Unreal the steps are a TArray of USTRUCT rows with a UENUM saying what each row does, edited in the Details panel
   - Blueprint graphs already run this way, compiled to script bytes that the engine reads one token at a time
@@ -57,9 +57,9 @@ struct FPotionStep
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, Category = "Potion")
-	EPotionOp Op = EPotionOp::PushNumber;
+	EPotionOp Op = EPotionOp::EPO_PushNumber;
 
-	UPROPERTY(EditAnywhere, Category = "Potion", meta = (EditCondition = "Op == EPotionOp::PushNumber", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "Potion", meta = (EditCondition = "Op == EPotionOp::EPO_PushNumber", EditConditionHides))
 	int32 Number = 0;
 };
 
@@ -99,7 +99,7 @@ struct FPotionStep
   type: spot-the-bug
   prompt: A potion step loop handles a step that adds. Which line lets a modder's broken potion crash the game?
   code: |
-    case EPotionOp::Add:
+    case EPotionOp::EPO_Add:
     {
     	check(Stack.Num() >= 2);
     	const int32 Top = Stack.Pop();
@@ -112,7 +112,7 @@ struct FPotionStep
   explanation: check is for the programmer's own mistakes. A list of steps written by someone else is untrusted input, and it must be refused, not trusted to be right.
 - id: edit-condition-what
   type: multiple-choice
-  prompt: "On a step struct, what does meta = (EditCondition = \"Op == EPotionOp::PushNumber\", EditConditionHides) do to the Number field?"
+  prompt: "On a step struct, what does meta = (EditCondition = \"Op == EPotionOp::EPO_PushNumber\", EditConditionHides) do to the Number field?"
   choices:
     - It deletes Number from the struct when Op is not PushNumber
     - It shows Number in the Details panel only on rows whose Op is PushNumber

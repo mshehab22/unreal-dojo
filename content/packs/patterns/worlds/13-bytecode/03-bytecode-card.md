@@ -12,7 +12,7 @@ xp: 25
 estimatedMinutes: 10
 concepts:
   - Bytecode stores behavior as a flat list of small instructions that a tiny machine inside the game runs
-  - The machine is the sandbox, since a program can only do what its instructions do, with a bounded stack and a bounded number of steps
+  - The machine is the sandbox, because nothing outside its op list is reachable, its stack has a fixed size, and its steps are counted
   - The program is read-only data, and where the machine is in it belongs to whoever runs it
   - Blueprint, Niagara, and the engine's own script interpreter are Unreal's versions; you write your own only for a narrow job
   - The hard part is the front end that lets people write programs, and the tools to see what a program did
@@ -37,7 +37,7 @@ explanation: An object per step works and is easy to read, but a recipe becomes 
 
 What you built for the potions is the **Bytecode** pattern. Behavior is written as a flat list of small instructions, stored as data, and a tiny machine inside the game runs the list. New behavior is a new list, written by a designer or a modder, with no compile and no native code to trust.
 
-**Unreal's own versions.** Blueprint is one: the Blueprint compiler turns a graph into script bytes stored on a `UFunction`, and the engine's script interpreter steps through them with `FFrame` while the game runs, stopping a loop that runs away after a set number of passes. Niagara compiles module graphs to its own vector machine for particles. Behavior Trees and State Trees are data-driven behavior too, though they walk a tree of nodes rather than a flat list. You write your own machine only for a narrow job those are too large or too trusting for: modders' potions, card effects, door rules, a trap's rhythm.
+**Unreal's own versions.** Blueprint is one: the Blueprint compiler turns a graph into script bytes stored on a `UFunction`, and the engine's script interpreter steps through them with `FFrame` while the game runs, stopping a loop that runs away after a set number of passes. Niagara turns a particle system's modules into work for its own vector machine. Behavior Trees and State Trees also keep AI logic in assets rather than code, but they walk a tree of nodes rather than a flat list. You write your own machine only for a narrow job those are too large or too trusting for: modders' potions, card effects, door rules, a trap's rhythm.
 
 **Pieces of a machine.**
 
@@ -102,8 +102,8 @@ Machine.Run(Recipe, Stats);
     	while (true)
     	{
     		const FTrapStep& Step = Routine->Steps[StepIndex];
-    		if (Step.Kind == ETrapStepKind::Wait) return;
-    		StepIndex = Step.Kind == ETrapStepKind::Jump ? Step.Target : StepIndex + 1;
+    		if (Step.Kind == ETrapStepKind::ETSK_Wait) return;
+    		StepIndex = Step.Kind == ETrapStepKind::ETSK_Jump ? Step.Target : StepIndex + 1;
     	}
     }
   bugLine: 3

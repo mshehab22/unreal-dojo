@@ -4,6 +4,57 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1378 2026-11-03 World 13's engine proof (author-patterns, M4.P2.13)
+Pending; filled in when the run ends.
+
+### A1377 2026-11-03 Glossary and card changes for Bytecode (author-patterns, M4.P2.13)
+Five new glossary entries, each first taught by a World 13 concept quest (A72): `stack-machine` (cpp idiom), `blueprint-vm` (reflection; Blueprint's script bytes on `UStruct::Script`, `FFrame`, `EExprToken`, the runaway check against `MaximumLoopIterationCount`), `edit-condition` (reflection), and `uparam-ref` (reflection), all in `p13-behavior-as-data`; and `instanced-specifier` (reflection, `linkMode: code-only` because "Instanced" also starts the `instanced-static-mesh` term and is an ordinary word) in `p13-bytecode-card`. None of the hover texts used before the card names the pattern (A373). Docs links were checked against Epic's site: a "Blueprint compiler overview" page does not exist at 5.8's flat paths (it returns the 31 KB shell), so `blueprint-vm` links the `EExprToken` API page, `stack-machine` the `FFrame` API page, and `uparam-ref` the `EPropertyFlags` page (which lists `CPF_ReferenceParm`). Options for the links: Blueprint landing pages (they never mention the interpreter); the API pages (chosen, they name the exact types). The Bytecode card in `patterns.json` was audited item by item: `intent`, `problem`, `unrealForm`, and `whenNot` rewritten around the vault; `bytecode-recall-3` reworded (it said "native DLLs" and "touch memory"); added `bytecode-recall-4` (the three sandbox limits), `bytecode-recall-5` (program versus run state), `bytecode-scenario-3` (dialogue rules, a which-pattern with State, Observer, and Type Object as distractors), and `bytecode-scenario-4` (a multiple-choice when-not: a hot particle path). Use cases: `p13-potion-recipes` and `p13-door-conditions`. No card item mentions operand order (A1374). Reverse cost: low.
+
+### A1376 2026-11-03 The boss is the modded vault, with Minecraft adventure maps as the reference game (author-patterns, M4.P2.13)
+The patterns research names no Bytecode boss for World 13; its Part 4 "moddable spell workshop" belongs to the combos world and is built on spells, the source chapter's own example. Options: that workshop renamed; a card duel whose effects are programs; a vault whose potions and doors come from one mod list. Chosen: the vault, because its pieces are this world's two builds unchanged and it puts the sandbox in the round itself: the Cursed brew is a broken recipe that must fizzle without changing anything while the round goes on. Fixed numbers: use range 150, a 60 second round, starting stats Health 50, Stamina 20, Gold 0, Keys 0, and a six-entry standard mod. Tie rule: the earlier entry wins. A potion is used up even when it fizzles; a shut door can be tried again; every door open wins. Reference game: Minecraft adventure maps, where map makers script doors and rewards with command blocks inside the game's sandbox. The trap routine refactor is the first extension rather than a piece, because boss pieces must be build quests. The reference integration (A67) is the C++ plan; the Blueprint plan uses only the pieces' BlueprintCallable and BlueprintPure members. Reverse cost: low.
+
+### A1375 2026-11-03 The refactor moves run state out of shared step objects, and its sharing test compares twins frame by frame (author-patterns, M4.P2.13)
+`p13-trap-refactor` starts with a routine Data Asset of `Instanced` step objects (`UDojoP13TrapStep`, `EditInlineNew`, `DefaultToInstanced`), where a Wait step keeps `WaitedSeconds` on itself. Traps that share one routine asset then share that wait. The refactor turns the step into the plain struct `FDojoP13TrapStep` in the same header and keeps the step index and wait time on the trap. Options for the failing test: count shots of two sharing traps started together (rejected: the shared counter gets twice the time and hands completions to one trap or alternately, so for some float roundings the counts match a lone trap's); compare totals (rejected, totals match by construction). Chosen: `TrapsShareOneRoutine` starts the sharing traps ten frames apart beside two twins with routines of their own and compares every frame for 190 frames, so any shared state shows up as the first frame that differs, whatever the rounding; the reference is exact because each trap does the same float sums as its twin. A second failing test, `RoutineHoldsNoObjects`, walks the routine's own properties by reflection (`EFieldIteratorFlags::ExcludeSuper`, array inners included) and fails on any object property, so keeping step objects and moving only their state is caught too. `OneTrapKeepsItsRhythm` and `RunawayRoutineJams` pass before and after. Semantics kept from the starter: a finished wait ends the trap's frame, 16 steps in one frame jam it, a jump to a missing step jams it. Reverse cost: low.
+
+### A1374 2026-11-03 World 13's deliberate failure: comparisons read in the order written (author-patterns, M4.P2.13)
+Options:
+- A potion that changes the stats part way before failing: stated openly in the worked quest and tested there.
+- A runaway trap routine: a hang would stop the test run, and the budget is given in the refactor starter.
+- `Less` and `Greater` in the door quest written with the first value taken off the stack on the left.
+
+Chosen: the last. A stack gives back the value pushed last first, which is the right-hand side of `ReadStat Gold, PushNumber 9, Greater`. The natural first `ApplyStep` takes two values and compares them in the order taken, which is right for `Equal`, `And`, and `Or` and wrong for the comparisons, so only `GreaterAndLessReadAsWritten` fails (the treasurer's door opens for Gold 5 and not for Gold 12). The worked quest's machine names its operands `Top` and `Under` and only has `Add` and `Multiply`, which give the same answer either way round, so it neither shows the trap nor models a wrong habit. The brief states the requirement by example, as a requirement must be stated; the concepts, the rubric, the card, card items, and glossary entries never mention operand order; the hints carry the reasoning. Engine check: see A1378. Reverse cost: low.
+
+### A1373 2026-11-03 The machines are small on purpose (author-patterns, M4.P2.13)
+Choices, each with the option not taken:
+- Values are `int32` only (not a tagged union): every op stays one line, and stats are whole numbers.
+- A step is a `USTRUCT` with an op `UENUM` and its operand inline (`Number`, `Stat`), with `EditCondition` and `EditConditionHides` showing only the field an op uses (not the source chapter's design, where a stat is chosen by a value popped off the stack). The Details panel is the front end; a text assembler is the boss's second extension.
+- A fixed stack of 8 values (`TInlineAllocator<8>` in the potion machine, a local `TArray` checked against `StackLimit` in the door).
+- A broken program is refused with false or `Broken`, never `check`; the Parsons distractors in quests 02 and 04 are both `check` lines.
+- The potion machine runs on a copy of the stats and keeps it only on success, so a failed recipe changes nothing; the door's `Judge` is const and three-valued (`Open`, `Shut`, `Broken`), so a broken condition fails closed.
+- Potions and doors have no jumps, so they always end; control flow and the per-frame step budget come only with the trap routine.
+Reverse cost: medium once learners have saved progress.
+
+### A1372 2026-11-03 Bytecode arc, built away from the source's examples (author-patterns, M4.P2.13)
+Not used in briefs, cards, choices, distractors, or card items: wizards, spells or a duel, health/wisdom/agility stats, sound and particle instructions, the chapter's literal and add instruction names, its stat-by-popped-index design, or its remarks on the Interpreter pattern's object tree beyond the contrast every text on the subject makes. The setting is a vault of potions, doors, and dart traps written by designers and modders. The arc:
+- `p13-behavior-as-data` (concept, no pattern name; Blueprint's script interpreter is named only as "script bytes").
+- `p13-potion-recipes` (worked: the learner writes `Run`).
+- `p13-bytecode-card`.
+- `p13-door-conditions` (stub: the learner writes `Judge` and `ApplyStep`; deliberate failure A1374).
+- `p13-trap-refactor` (refactor, A1375).
+- `p13-bytecode-when-not`.
+- `p13-boss-modded-vault` (A1376), pieces `p13-potion-recipes` and `p13-door-conditions`.
+Originality: the book PDF is not on this machine (problems.md, 2026-10-26), so the 6 and 5 word check ran only against the research notes, which paraphrase the chapter; the direct book check (Bytecode chapter) is owed, as for Worlds 10 to 12. Reverse cost: low.
+
+### A1371 2026-11-03 Pack 2 World 13 ids (author-patterns, M4.P2.13)
+- Folder `13-bytecode`; world id `bytecode`, unique across packs (A73).
+- Quest ids `p13-<slug>`; classes `ADojoP13Potion`, `ADojoP13VaultDoor`, `ADojoP13DartTrap`, `ADojoP13VaultMaster`, `UDojoP13TrapRoutine`, the plain class `FDojoP13RecipeMachine`; structs `FDojoP13Stats`, `FDojoP13Instruction`, `FDojoP13CheckStep`, `FDojoP13TrapStep`, `FDojoP13ModEntry`; enums `EDojoP13Stat`, `EDojoP13Op`, `EDojoP13CheckOp`, `EDojoP13Verdict`, `EDojoP13TrapStepKind`, `EDojoP13StationKind`; tests `Dojo.P13.<Quest>.<Case>`.
+- `p13-behavior-as-data` requires `p12-prototype-when-not`; the research's "Bytecode requires Type Object and Command" is met through the chain. `p13-door-conditions` also requires `p13-potion-recipes`, whose stats header it includes (A268).
+- Locals and parameters avoid `AActor` and `UObject` member names (A1050, A1060): `Stats`, `Step`, `Stack`, `Working`, `Machine`, `Routine`, `Station`, `Entry`, `LevelWorld`.
+Reverse cost: medium once learners have progress saved.
+
+### A1370 2026-11-03 Decision block A1370 to A1389 from the Lead (author-patterns, M4.P2.13)
+Assigned under A71; this world uses A1370 to A1389. Reverse cost: none.
+
 ### A1290 2026-11-03 CI runs macOS only by hand or for a release tag (Lead)
 Mohammad said Windows is what matters now and the Mac version can wait. CI run 41495639538 on main failed only because GitHub never gave its macOS job a runner (cancelled after 15 minutes), which emails him a failure. Options: keep both platforms on every push; mark the macOS job allowed to fail; run macOS only on a manual run (`workflow_dispatch`) and for a release tag. Chosen: the third, in both `test` and `package` of `ci.yml`; `release.yml` still builds both installers for a tag. Why: a push to main now passes or fails on Windows alone, the macOS check is still one click away (`gh workflow run ci.yml`), and an allowed-to-fail job would still sit cancelled for 15 minutes on every push. The M5.1m macOS fix and the other macOS items stay under "Unverified on a platform" in problems.md. Reverse cost: low (one line in each matrix).
 

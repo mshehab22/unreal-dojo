@@ -37,7 +37,7 @@ Two of the four tests pass on the starter and must pass after; two do not. Read 
 
 ## See it in the editor
 
-In the Content Browser, right-click, choose Miscellaneous, then Data Asset, pick `DojoP13TrapRoutine`, and name it `DA_SteadyRhythm`. Give it three steps: Fire, Wait (Seconds 0.5), Jump (Target 0). Before the refactor each step is an object you pick from a class list; after it, each step is a plain row. Place three `DojoP13DartTrap` actors and set all three to the one routine. Press Play, wait ten seconds, press F8, and select each trap in turn: Shots Fired is in its Details. Before the refactor the three counts disagree with each other and with a trap that has a routine of its own; after it, they all read the same, about 20.
+In the Content Browser, right-click, choose Miscellaneous, then Data Asset, pick `DojoP13TrapRoutine`, and name it `DA_SteadyRhythm`. Give it three steps: Fire, Wait (Seconds 0.5), Jump (Target 0). Before the refactor each step is an object you pick from a class list; after it, each step is a plain row. Duplicate the asset as `DA_SteadyRhythmOwn`. Place three `DojoP13DartTrap` actors set to `DA_SteadyRhythm` and a fourth set to `DA_SteadyRhythmOwn`. Press Play, wait ten seconds, press F8, and select each trap in turn: Shots Fired is in its Details. Before the refactor the three sharing traps disagree with the fourth, which has its routine to itself; after it, all four read the same, about 20.
 
 # Files
 
@@ -55,11 +55,11 @@ UENUM(BlueprintType)
 enum class EDojoP13TrapStepKind : uint8
 {
 	/** Shoots one dart and goes on to the next step at once. */
-	Fire,
+	ETSK_Fire UMETA(DisplayName = "Fire"),
 	/** Lets Seconds of play pass, then goes on to the next step on the following frame. */
-	Wait,
+	ETSK_Wait UMETA(DisplayName = "Wait"),
 	/** Goes on from the step numbered Target. */
-	Jump
+	ETSK_Jump UMETA(DisplayName = "Jump")
 };
 
 /** One step of a dart trap's routine, kept as its own object inside the routine. */
@@ -71,14 +71,14 @@ class UDojoP13TrapStep : public UObject
 public:
 	/** What this step does. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Routine")
-	EDojoP13TrapStepKind Kind = EDojoP13TrapStepKind::Fire;
+	EDojoP13TrapStepKind Kind = EDojoP13TrapStepKind::ETSK_Fire;
 
 	/** How long a Wait step waits. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Routine", meta = (EditCondition = "Kind == EDojoP13TrapStepKind::Wait", EditConditionHides, ClampMin = "0.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Routine", meta = (EditCondition = "Kind == EDojoP13TrapStepKind::ETSK_Wait", EditConditionHides, ClampMin = "0.0"))
 	float Seconds = 0.5f;
 
 	/** The step a Jump step goes on from, counting from 0. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Routine", meta = (EditCondition = "Kind == EDojoP13TrapStepKind::Jump", EditConditionHides, ClampMin = "0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Routine", meta = (EditCondition = "Kind == EDojoP13TrapStepKind::ETSK_Jump", EditConditionHides, ClampMin = "0"))
 	int32 Target = 0;
 
 	/** How long this Wait step has waited so far. */
@@ -133,17 +133,17 @@ private:
 
 void UDojoP13TrapRoutine::AddFire()
 {
-	AddStep(EDojoP13TrapStepKind::Fire);
+	AddStep(EDojoP13TrapStepKind::ETSK_Fire);
 }
 
 void UDojoP13TrapRoutine::AddWait(float Seconds)
 {
-	AddStep(EDojoP13TrapStepKind::Wait)->Seconds = Seconds;
+	AddStep(EDojoP13TrapStepKind::ETSK_Wait)->Seconds = Seconds;
 }
 
 void UDojoP13TrapRoutine::AddJump(int32 Target)
 {
-	AddStep(EDojoP13TrapStepKind::Jump)->Target = Target;
+	AddStep(EDojoP13TrapStepKind::ETSK_Jump)->Target = Target;
 }
 
 UDojoP13TrapStep* UDojoP13TrapRoutine::AddStep(EDojoP13TrapStepKind Kind)
@@ -244,12 +244,12 @@ void ADojoP13DartTrap::Tick(float DeltaSeconds)
 
 		switch (Step->Kind)
 		{
-		case EDojoP13TrapStepKind::Fire:
+		case EDojoP13TrapStepKind::ETSK_Fire:
 			ShotsFired++;
 			StepIndex++;
 			break;
 
-		case EDojoP13TrapStepKind::Wait:
+		case EDojoP13TrapStepKind::ETSK_Wait:
 			Step->WaitedSeconds += DeltaSeconds;
 			if (Step->WaitedSeconds >= Step->Seconds)
 			{
@@ -258,7 +258,7 @@ void ADojoP13DartTrap::Tick(float DeltaSeconds)
 			}
 			return;
 
-		case EDojoP13TrapStepKind::Jump:
+		case EDojoP13TrapStepKind::ETSK_Jump:
 			if (!Routine->Steps.IsValidIndex(Step->Target))
 			{
 				bJammed = true;

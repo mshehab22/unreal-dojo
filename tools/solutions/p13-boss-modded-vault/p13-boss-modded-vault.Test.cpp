@@ -23,7 +23,7 @@ namespace DojoP13VaultTest
 	/** A recipe step that pushes Number. */
 	FDojoP13Instruction RecipeNumber(int32 Number)
 	{
-		FDojoP13Instruction Result = RecipeOp(EDojoP13Op::PushNumber);
+		FDojoP13Instruction Result = RecipeOp(EDojoP13Op::EO_PushNumber);
 		Result.Number = Number;
 		return Result;
 	}
@@ -47,7 +47,7 @@ namespace DojoP13VaultTest
 	/** A condition step that pushes Number. */
 	FDojoP13CheckStep CheckNumber(int32 Number)
 	{
-		FDojoP13CheckStep Result = CheckOp(EDojoP13CheckOp::PushNumber);
+		FDojoP13CheckStep Result = CheckOp(EDojoP13CheckOp::ECO_PushNumber);
 		Result.Number = Number;
 		return Result;
 	}
@@ -55,7 +55,7 @@ namespace DojoP13VaultTest
 	/** A condition step that reads Stat. */
 	FDojoP13CheckStep CheckStat(EDojoP13Stat Stat)
 	{
-		FDojoP13CheckStep Result = CheckOp(EDojoP13CheckOp::ReadStat);
+		FDojoP13CheckStep Result = CheckOp(EDojoP13CheckOp::ECO_ReadStat);
 		Result.Stat = Stat;
 		return Result;
 	}
@@ -65,7 +65,7 @@ namespace DojoP13VaultTest
 	{
 		FDojoP13ModEntry Entry;
 		Entry.Name = Name;
-		Entry.Kind = EDojoP13StationKind::Potion;
+		Entry.Kind = EDojoP13StationKind::ESK_Potion;
 		Entry.Spot = FVector(X, 0.f, 0.f);
 		Entry.Recipe = Recipe;
 		return Entry;
@@ -76,7 +76,7 @@ namespace DojoP13VaultTest
 	{
 		FDojoP13ModEntry Entry;
 		Entry.Name = Name;
-		Entry.Kind = EDojoP13StationKind::Door;
+		Entry.Kind = EDojoP13StationKind::ESK_Door;
 		Entry.Spot = FVector(X, 0.f, 0.f);
 		Entry.Condition = Condition;
 		return Entry;
@@ -88,25 +88,25 @@ namespace DojoP13VaultTest
 		TArray<FDojoP13ModEntry> Mod;
 
 		Mod.Add(PotionEntry(TEXT("Purse"), 100.f, {
-			RecipeStat(EDojoP13Op::ReadStat, EDojoP13Stat::Gold), RecipeNumber(12), RecipeOp(EDojoP13Op::Add), RecipeStat(EDojoP13Op::WriteStat, EDojoP13Stat::Gold) }));
+			RecipeStat(EDojoP13Op::EO_ReadStat, EDojoP13Stat::ES_Gold), RecipeNumber(12), RecipeOp(EDojoP13Op::EO_Add), RecipeStat(EDojoP13Op::EO_WriteStat, EDojoP13Stat::ES_Gold) }));
 
 		Mod.Add(PotionEntry(TEXT("Cursed brew"), 300.f, {
-			RecipeOp(EDojoP13Op::Add), RecipeStat(EDojoP13Op::WriteStat, EDojoP13Stat::Health) }));
+			RecipeOp(EDojoP13Op::EO_Add), RecipeStat(EDojoP13Op::EO_WriteStat, EDojoP13Stat::ES_Health) }));
 
 		Mod.Add(PotionEntry(TEXT("Key brew"), 500.f, {
-			RecipeStat(EDojoP13Op::ReadStat, EDojoP13Stat::Keys), RecipeNumber(1), RecipeOp(EDojoP13Op::Add), RecipeStat(EDojoP13Op::WriteStat, EDojoP13Stat::Keys) }));
+			RecipeStat(EDojoP13Op::EO_ReadStat, EDojoP13Stat::ES_Keys), RecipeNumber(1), RecipeOp(EDojoP13Op::EO_Add), RecipeStat(EDojoP13Op::EO_WriteStat, EDojoP13Stat::ES_Keys) }));
 
 		Mod.Add(DoorEntry(TEXT("Treasurer's door"), 700.f, {
-			CheckStat(EDojoP13Stat::Gold), CheckNumber(9), CheckOp(EDojoP13CheckOp::Greater),
-			CheckStat(EDojoP13Stat::Keys), CheckNumber(0), CheckOp(EDojoP13CheckOp::Equal), CheckOp(EDojoP13CheckOp::Not),
-			CheckOp(EDojoP13CheckOp::And) }));
+			CheckStat(EDojoP13Stat::ES_Gold), CheckNumber(9), CheckOp(EDojoP13CheckOp::ECO_Greater),
+			CheckStat(EDojoP13Stat::ES_Keys), CheckNumber(0), CheckOp(EDojoP13CheckOp::ECO_Equal), CheckOp(EDojoP13CheckOp::ECO_Not),
+			CheckOp(EDojoP13CheckOp::ECO_And) }));
 
 		Mod.Add(PotionEntry(TEXT("Second Wind"), 900.f, {
-			RecipeStat(EDojoP13Op::ReadStat, EDojoP13Stat::Health), RecipeStat(EDojoP13Op::ReadStat, EDojoP13Stat::Stamina), RecipeNumber(2),
-			RecipeOp(EDojoP13Op::Multiply), RecipeOp(EDojoP13Op::Add), RecipeStat(EDojoP13Op::WriteStat, EDojoP13Stat::Health) }));
+			RecipeStat(EDojoP13Op::EO_ReadStat, EDojoP13Stat::ES_Health), RecipeStat(EDojoP13Op::EO_ReadStat, EDojoP13Stat::ES_Stamina), RecipeNumber(2),
+			RecipeOp(EDojoP13Op::EO_Multiply), RecipeOp(EDojoP13Op::EO_Add), RecipeStat(EDojoP13Op::EO_WriteStat, EDojoP13Stat::ES_Health) }));
 
 		Mod.Add(DoorEntry(TEXT("Vault door"), 1100.f, {
-			CheckStat(EDojoP13Stat::Health), CheckNumber(80), CheckOp(EDojoP13CheckOp::Greater) }));
+			CheckStat(EDojoP13Stat::ES_Health), CheckNumber(80), CheckOp(EDojoP13CheckOp::ECO_Greater) }));
 
 		return Mod;
 	}
@@ -154,8 +154,8 @@ namespace DojoP13VaultTest
 		Test.TestTrue(Say(TEXT("The first station is a potion at its spot")), Stations.IsValidIndex(0) && Cast<ADojoP13Potion>(Stations[0]) && Stations[0]->GetActorLocation().Equals(FVector(100.f, 0.f, 0.f)));
 		Test.TestTrue(Say(TEXT("The fourth station is a door at its spot")), Stations.IsValidIndex(3) && Cast<ADojoP13VaultDoor>(Stations[3]) && Stations[3]->GetActorLocation().Equals(FVector(700.f, 0.f, 0.f)));
 
-		UseAt(Master, Champion, -500.f);
-		Test.TestEqual(Say(TEXT("Nothing in range: nothing changes")), Master->GetChampionStats().Gold, 0);
+		UseAt(Master, Champion, -51.f);
+		Test.TestEqual(Say(TEXT("The purse is 151 away, just out of the 150 range: nothing changes")), Master->GetChampionStats().Gold, 0);
 
 		UseAt(Master, Champion, 1100.f);
 		Test.TestEqual(Say(TEXT("The vault door stays shut at 50 health")), Master->GetOpenDoorCount(), 0);
@@ -167,6 +167,7 @@ namespace DojoP13VaultTest
 
 		UseAt(Master, Champion, 200.f);
 		Test.TestEqual(Say(TEXT("The drunk purse is skipped and the cursed brew fizzles")), Master->GetFizzleCount(), 1);
+		Test.TestTrue(Say(TEXT("The label counts the fizzle")), Master->Label->Text.ToString().Contains(TEXT("Fizzled 1")));
 		Test.TestEqual(Say(TEXT("The fizzle left health alone")), Master->GetChampionStats().Health, 50);
 		Test.TestEqual(Say(TEXT("And gold alone")), Master->GetChampionStats().Gold, 12);
 		Test.TestTrue(Say(TEXT("A fizzle does not stop the round")), Master->IsRunning());
@@ -199,6 +200,8 @@ namespace DojoP13VaultTest
 		Test.TestFalse(Say(TEXT("Every door open wins")), Master->IsRunning());
 		Test.TestTrue(Say(TEXT("The win took about a second")), Master->GetWinSeconds() > 0.5f && Master->GetWinSeconds() < 2.f);
 		Test.TestTrue(Say(TEXT("The label shows the win")), Master->Label->Text.ToString().StartsWith(TEXT("WIN")));
+		Test.TestTrue(Say(TEXT("With the champion's health")), Master->Label->Text.ToString().Contains(TEXT("Health 90")));
+		Test.TestTrue(Say(TEXT("And gold")), Master->Label->Text.ToString().Contains(TEXT("Gold 12")));
 	}
 }
 
@@ -224,6 +227,7 @@ bool FDojo_P13_ModdedVault_TwoRoundsPlayAlike::RunTest(const FString& Parameters
 	UseAt(Master, Champion, 100.f);
 	TestEqual(TEXT("Nothing is used between rounds"), Master->GetChampionStats().Gold, StatsBetweenRounds.Gold);
 
+	TestWorld.Tick(120);
 	Master->RestartRound();
 	for (AActor* Station : RoundOneStations) TestFalse(TEXT("Round 1's stations are gone"), IsValid(Station));
 
