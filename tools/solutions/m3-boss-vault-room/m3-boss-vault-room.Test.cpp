@@ -192,6 +192,11 @@ bool FDojo_M3_VaultRoom_CratesNeverReachTheVault::RunTest(const FString& Paramet
 
 	Crates[1]->SetActorLocation(FVector(1600.0, 0.0, 0.0));
 	TestTrue(TEXT("Even a crate dropped straight into the vault does not end the round"), Scene.Room->IsRunning());
+
+	ADojoM3Runner* Stranger = TestWorld.GetWorld()->SpawnActor<ADojoM3Runner>(FVector(-2000.0, 0.0, 0.0), FRotator::ZeroRotator);
+	if (!TestNotNull(TEXT("A second runner spawned"), Stranger)) return false;
+	Stranger->SetActorLocation(FVector(1600.0, 100.0, 0.0));
+	TestTrue(TEXT("Another pawn in the vault does not end the round either; only the room's runner does"), Scene.Room->IsRunning());
 	Crates[1]->SetActorLocation(FVector(900.0, -500.0, 0.0));
 	TestTrue(TEXT("A crate dropped in the pit goes back to the chute"), Crates[1]->GetActorLocation().Equals(FVector(300.0, 500.0, 0.0), 0.1));
 	TestEqual(TEXT("and is never a fall"), Scene.Room->GetFalls(), 0);
