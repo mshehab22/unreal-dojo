@@ -34,7 +34,7 @@ Two of the three tests pass on the starter and must pass after; one does not. Re
 
 ## See it in the editor
 
-Make a Blueprint function library or use the Level Blueprint. On Begin Play, Construct Object from Class with Class set to `DojoP12Kit`, set its Luck Bonus to 0.3 and its Health to 70, then call Clone on it and print the clone's Luck Bonus. Before the refactor it prints 0; after, 0.3. Compare the two kits' Charm with an Equal (Object) node: false, because the clone owns its own charm. Set Favor on the first kit only, before you call Clone, then compare the clone's Favor with the first kit's Favor: true, because the favor is shared.
+Use the Level Blueprint. On Begin Play, Construct Object from Class with Class set to `DojoP12Kit`, set its Luck Bonus to 0.3 and its Health to 70, then call Clone on it and print the clone's Luck Bonus. Before the refactor it prints 0; after, 0.3. Compare the two kits' Charm with an Equal (Object) node: false, because the clone owns its own charm. Set Favor on the first kit only, before you call Clone, to a new Construct Object from Class with Class set to `DojoP12Charm`, then compare the clone's Favor with the first kit's Favor: true, because the favor is shared.
 
 # Files
 
@@ -230,7 +230,7 @@ bool FDojo_P12_KitRefactor_CloneSharesTheFavor::RunTest(const FString& Parameter
 # Hints
 
 - `CloneKeepsEveryValue` walks the kit's properties and names the ones that differ. Which field is it, and where in `Clone` would you have had to add a line for it?
-- `DuplicateObject<UDojoP12Kit>(SourceObject, Outer)` returns the new kit. The source is `this`, and the kit's own outer is `GetOuter()`.
+- The engine function that copies an object takes the source and an outer, and the kit's own outer is what its `GetOuter` returns.
 - Delete every line that sets a field. The constructor that makes the kit's charm still runs for the copy, and the duplicate replaces its values with the source's.
 
 # Rubric

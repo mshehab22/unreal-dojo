@@ -1178,7 +1178,7 @@
     "category": "memory",
     "short": "A variable that holds a class rather than an object, limited to one base class and its children.",
     "long": "When a tower needs to know what to fire, you do not want an existing fireball; you want the fireball class so it can spawn new ones. UPROPERTY(EditAnywhere) TSubclassOf<ADojoProjectile> ProjectileClass; gives designers a dropdown that only lists projectile classes, including Blueprint children. You then pass it to SpawnActor. This is the clean replacement for hardcoding asset paths in a constructor, which breaks the moment someone renames or moves the Blueprint.",
-    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TSubclassOf?application_version=5.8",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/TSubclassOf?application_version=5.8",
     "related": [
       "spawnactor",
       "blueprint-class",

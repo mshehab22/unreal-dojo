@@ -7,7 +7,7 @@ difficulty: 3
 patterns: []
 skills: [reflection, data]
 terms: [instanced-subobjects, abstract-specifier, uproperty, tsubclassof, data-asset]
-prerequisites: [s2-ability-component]
+prerequisites: [s2-ability-component, p13-bytecode-card]
 xp: 30
 estimatedMinutes: 9
 concepts:
