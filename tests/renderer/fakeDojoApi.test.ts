@@ -163,4 +163,24 @@ describe("FakeDojoApi", () =>
 		expect((await new FakeDojoApi("screen-crash").getPatternCards())[0]).toBeNull();
 		expect((await new FakeDojoApi("returning").getPatternCards())[0]).toBeTruthy();
 	});
+
+	it("in sandbox-deleted, reports the sandbox not ready and refuses a rebuild with the preflight's words until a new sandbox is set up (M5.1k)", async () =>
+	{
+		const fake = new FakeDojoApi("sandbox-deleted");
+		const oldPath = (await fake.getSettings()).sandboxPath;
+		const engine = (await fake.getEnvironmentStatus()).engine;
+
+		if (!oldPath || !engine) throw new Error("the scenario must keep a sandbox path and a working engine");
+
+		expect((await fake.getEnvironmentStatus()).sandbox).toEqual({ path: oldPath, ready: false });
+		await expect(fake.rebuildSandbox("rebuild-1")).rejects.toMatchObject({ code: "sandbox-not-ready", suggestedAction: expect.stringContaining("Set up the sandbox again") });
+
+		const picked = await fake.pickSandboxFolder();
+		if (!picked) throw new Error("the fake picker must answer");
+		const created = await fake.createSandbox({ runId: "setup-1", enginePath: engine.path, folder: picked.path });
+
+		expect(created.ok).toBe(true);
+		expect((await fake.getEnvironmentStatus()).sandbox).toEqual({ path: created.sandboxPath, ready: true });
+		expect((await fake.rebuildSandbox("rebuild-2")).ok).toBe(true);
+	}, 30_000);
 });

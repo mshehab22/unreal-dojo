@@ -171,6 +171,18 @@ ${rawLine}`, context).message).toContain("another Unreal editor with Live Coding
 
 		expect(`${explanation.message} ${explanation.suggestedAction}`).not.toMatch(/step 1|not in anything you wrote/);
 	});
+
+	it("words a sandbox set up again from Settings as a first build, pointing at the engine above instead of a setup step (M5.1k)", () =>
+	{
+		const templateError = explainSandboxFailure(output, "setup-again");
+		const general = explainSandboxFailure("something else went wrong", "setup-again");
+
+		expect(templateError.message).toContain("not in anything you wrote");
+		expect(templateError.suggestedAction).toContain("pick another engine above");
+		expect(templateError.suggestedAction).not.toContain("step 1");
+		expect(general.message).toBe("The first build of the sandbox did not finish.");
+		expect(describeSandboxFailure({ compilerOutput: output }, "setup-again").code).toBe("sandbox-not-ready");
+	});
 });
 
 describe("path rows", () =>

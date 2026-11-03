@@ -81,6 +81,17 @@ export function missingEngineFixture(enginePath: string): AppError
 	};
 }
 
+/** The preflight's answer when the sandbox folder in settings no longer holds the project (the `sandbox-deleted` scenario), worded as main's `sandboxMovedOrDeleted`. */
+export function missingSandboxFixture(sandboxPath: string): AppError
+{
+	return {
+		code: "sandbox-not-ready",
+		message: `The sandbox project could not be found at ${sandboxPath}. The folder may have been moved, renamed or deleted, or its drive is not connected.`,
+		suggestedAction: "Put the folder back where it was (or reconnect its drive), or open Settings and choose Set up the sandbox again to create a new one. Your progress is kept. Then run again.",
+		detail: sandboxPath,
+	};
+}
+
 /** The reason a sandbox setup fails when the build tools, not the template, are at fault (the `sandbox-setup-fails` scenario). */
 export function sandboxSetupFailureFixture(): AppError
 {

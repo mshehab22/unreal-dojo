@@ -1,4 +1,4 @@
-// Setup step 3: copy the template and run the first full build, with phase, elapsed time, cancel, plain-English failures (the main process's own explanation first), and retry.
+// Setup step 3: copy the template and run the first full build, with phase, elapsed time, cancel, plain-English failures (the main process's own explanation first), and retry. Settings reuses it to set the sandbox up again (M5.1k).
 import { CircleCheckIcon, PlayIcon, SquareIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useSandboxBuild } from "@/data/useSandboxBuild";
 import { buildOutcome } from "@/lib/buildOutcome";
 import { formatElapsed } from "@/lib/formatting";
-import { describeSandboxFailure } from "@/lib/sandboxFailure";
+import { describeSandboxFailure, type SandboxBuildContext } from "@/lib/sandboxFailure";
 
 import { StepFrame } from "./StepFrame";
 
@@ -22,12 +22,15 @@ interface BuildStepProps
 	readonly folder: SandboxFolderChoice;
 	readonly onBack: () => void;
 	readonly onNext: () => void;
+
+	/** Where the step runs: first-run setup (the default) or Settings' Set up the sandbox again, which words failures and a lost run for that screen. */
+	readonly context?: Exclude<SandboxBuildContext, "rebuild">;
 }
 
 /** Starts and follows the first sandbox build. */
-export function BuildStep({ engine, folder, onBack, onNext }: BuildStepProps)
+export function BuildStep({ engine, folder, onBack, onNext, context = "first-run" }: BuildStepProps)
 {
-	const build = useSandboxBuild((client, runId) => client.createSandbox({ runId, enginePath: engine.path, folder: folder.path }), "first-run");
+	const build = useSandboxBuild((client, runId) => client.createSandbox({ runId, enginePath: engine.path, folder: folder.path }), context);
 	const [showOutput, setShowOutput] = useState(false);
 	const isRunning = build.status === "running";
 
@@ -76,7 +79,7 @@ export function BuildStep({ engine, folder, onBack, onNext }: BuildStepProps)
 			)}
 			{build.status === "failed" && build.result && (
 				<div data-testid="build-failed" className="flex flex-col gap-2">
-					<AppErrorView error={describeSandboxFailure(build.result, "first-run")} onRetry={build.start} retryLabel="Build again" />
+					<AppErrorView error={describeSandboxFailure(build.result, context)} onRetry={build.start} retryLabel="Build again" />
 					{build.result.compilerOutput && (
 						<button type="button" onClick={() => setShowOutput(!showOutput)} className="self-start text-xs text-paper-faint hover:text-paper-muted">
 							{showOutput ? "Hide the compiler output" : "Show the compiler output"}
