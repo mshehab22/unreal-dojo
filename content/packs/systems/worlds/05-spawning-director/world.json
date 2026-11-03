@@ -1,0 +1,5 @@
+{
+	"id": "spawning-director",
+	"title": "Spawning director",
+	"summary": "Clockwork beetles crawl out of the training pit's hatches. Plan a director that paces them, then build its parts: waves as data with a difficulty curve, hatches that only open out of sight, a pool that wakes beetles instead of spawning new ones, a director that counts a live budget and rests between waves, and a banner that only listens, all run as one night in the pit."
+}
