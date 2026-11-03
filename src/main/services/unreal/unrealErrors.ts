@@ -166,7 +166,7 @@ export function pathTooLongForBuild(detail: string): AppError
 	return {
 		code: "sandbox-path-too-long",
 		message: "The build failed because a file path in the sandbox is too long for Windows. This is not a problem in your code.",
-		suggestedAction: "Create the sandbox again in a short folder such as C:\\Dojo from Settings, then run again.",
+		suggestedAction: "Open Settings, choose Set up the sandbox again, and pick a short folder such as C:\\Dojo. Then run again.",
 		detail,
 	};
 }

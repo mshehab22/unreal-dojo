@@ -449,7 +449,7 @@ describe("PrerequisiteFiller through runQuest", () =>
 
 			const outcome = call(service);
 
-			await expect(outcome).rejects.toMatchObject({ appError: { code: "sandbox-not-ready", message: expect.stringMatching(/could not be found.*moved, renamed or deleted.*drive is not connected/), suggestedAction: expect.stringContaining("Put the folder back where it was") } });
+			await expect(outcome).rejects.toMatchObject({ appError: { code: "sandbox-not-ready", message: expect.stringMatching(/could not be found.*moved, renamed or deleted.*drive is not connected/), suggestedAction: expect.stringMatching(/Put the folder back where it was.*Set up the sandbox again/) } });
 			await expect(outcome).rejects.toMatchObject({ appError: { message: expect.stringContaining("/S") } });
 			expect(runs).toEqual([]);
 			expect(rebuilds).toEqual([]);
