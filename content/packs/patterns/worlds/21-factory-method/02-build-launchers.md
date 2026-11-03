@@ -28,7 +28,7 @@ Most of the code is written. First read the marked lines and say in a sentence w
 
 ## See it in the editor
 
-Place a `DojoP21EmberLauncher`, a `DojoP21FrostLauncher`, and a `DojoP21DudLauncher` in the level, a few hundred units apart, all facing the same way. In the Level Blueprint, on Begin Play call Fire on each launcher and print the Damage of the bolt it returns: 12 and 7, and the dud returns nothing, so print Is Valid for it: false. Then print `Shots Fired` on each launcher: 1, 1, and 0. Also print each returned bolt's `Shooter`, which names the launcher that made it, and its `Shooter Known At Begin Play`, which is true. Add a fourth kind by making a Blueprint child of `DojoP21EmberLauncher`, or a C++ subclass of `DojoP21Launcher` that overrides `CreateBolt`: nothing in the base class asks you to touch Fire.
+Place a `DojoP21EmberLauncher`, a `DojoP21FrostLauncher`, and a `DojoP21DudLauncher` in the level, a few hundred units apart, all facing the same way. In the Level Blueprint, on Begin Play call Fire on each launcher and print the Damage of the bolt it returns: 12 and 7, and the dud returns nothing, so print Is Valid for it: false. Then print `Shots Fired` on each launcher: 1, 1, and 0. Also print each returned bolt's `Shooter`, which names the launcher that made it, and its `Shooter Known At Begin Play`, which is true. Add a fourth kind with a C++ subclass of `DojoP21Launcher` that overrides `CreateBolt`: nothing in the base class asks you to touch Fire. (A Blueprint child of the ember launcher only changes its defaults, such as Muzzle Distance, because `CreateBolt` is not exposed to Blueprint.)
 
 # Files
 

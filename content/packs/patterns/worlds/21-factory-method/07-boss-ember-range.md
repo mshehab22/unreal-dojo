@@ -29,7 +29,7 @@ A bolt that is made hits the nearest living critter whose place is further along
 
 How rounds start: round 1 starts when play begins, and R starts the next round, only after one has ended. Starting a round destroys the last round's launchers, critters, and spawner and builds fresh ones from the data, so every count starts again. A C++ master receives keys only after `EnableInput` with the player controller.
 
-The launchers and the spawner are the pieces' own actors. The master asks a launcher to `Fire` and a spawner to `SpawnWave`; it never names a kind of launcher, bolt, or critter, so a new kind is a new entry in the master's lists, never a change to the master. The pieces need no changes.
+The launchers and the spawner are the pieces' own actors. The master asks a launcher to `Fire` and a spawner to `SpawnWave`; it never names a kind of launcher, bolt, or critter, so a new kind is a new entry in the master's lists, never a change to how the master treats a kind. The pieces need no changes.
 
 Compiles against earlier quests: p21-launchers (`Quests/p21-launchers/DojoP21Bolt.h`, `Quests/p21-launchers/DojoP21Launcher.h`, `Quests/p21-launchers/DojoP21EmberLauncher.h`, `Quests/p21-launchers/DojoP21FrostLauncher.h`) and p21-wave-spawner (`Quests/p21-wave-spawner/DojoP21Critter.h`, `Quests/p21-wave-spawner/DojoP21Slime.h`, `Quests/p21-wave-spawner/DojoP21Imp.h`, `Quests/p21-wave-spawner/DojoP21SpawnEntry.h`, `Quests/p21-wave-spawner/DojoP21Spawner.h`).
 
@@ -37,7 +37,7 @@ Core numbers are fixed: 8 shots per launcher, a 30 second round, 100 units betwe
 
 Extensions, in order of importance:
 
-1. A third kind of launcher added only through data: a launcher that overrides `CreateBolt` to make a fan of bolts, or a Blueprint child of an existing launcher class, with key 3 added to the key bindings as the only change to the master.
+1. A third kind of launcher added only through data: a C++ launcher subclass that overrides `CreateBolt` to make a fan of bolts, with key 3 added to the key bindings as the only change to the master.
 2. Critters that step 50 units toward the launchers every 3 seconds, and a round that is lost, with LOST on the label, when one reaches 200 units from the master.
 3. Bolts taken from a pool: a launcher subclass whose `CreateBolt` reuses a bolt the master has handed back after a hit.
 
