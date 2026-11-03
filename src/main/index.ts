@@ -23,6 +23,7 @@ import { NodeFileSystem } from "./services/progress/NodeFileSystem";
 import { ProgressContentService } from "./services/progress/ProgressContentService";
 import type { ProgressGraders } from "./services/progress/ProgressGraders";
 import { ProgressService } from "./services/progress/ProgressService";
+import { SolutionFolderReader } from "./services/progress/SolutionFolderReader";
 import { ProgressStore } from "./services/progress/ProgressStore";
 import { SystemClock } from "./services/progress/SystemClock";
 import { createReviewHandlers, type ReviewHandlers } from "./services/review/createReviewHandlers";
@@ -36,7 +37,7 @@ import { RunRegistry } from "./services/unreal/RunRegistry";
 import { stopEngineWorkBeforeQuit } from "./services/unreal/stopEngineWorkBeforeQuit";
 import { createMainWindow } from "./window/createMainWindow";
 import { keepTestRunOffDesktop } from "./window/keepTestRunOffDesktop";
-import { isHiddenTestWindow } from "./window/testWindowMode";
+import { isHiddenTestWindow, isTestLaunch } from "./window/testWindowMode";
 
 /** Opens the native folder picker over the focused window. Resolves null when the learner cancels. */
 async function pickFolder(title: string): Promise<string | null>
@@ -67,6 +68,9 @@ async function start(): Promise<void>
 {
 	// Before anything else, so a hidden e2e run never shows a Dock icon, takes the menu bar, or switches apps on macOS, not even while starting (A970, A972).
 	if (isHiddenTestWindow(process.env, app.isPackaged)) keepTestRunOffDesktop();
+
+	// An e2e launch renders in software, so a GPU busy with other work (an Unreal build, a dozen test windows) cannot crash it; must run before ready (A1470).
+	if (isTestLaunch(process.env, app.isPackaged)) app.disableHardwareAcceleration();
 
 	await app.whenReady();
 
@@ -100,7 +104,7 @@ async function start(): Promise<void>
 
 	let unrealServices: UnrealServices | null = null;
 
-	// Pending progress saves get up to 3 s to finish before quitting (A1211).
+	// Pending progress saves get up to 3 s to finish before each quit attempt, so a change made during the Unreal stop is saved too (A1211, A1460).
 	holdQuitForSaves(app, progressService);
 
 	// Runs, then the editor, before quitting; never builds the Unreal services just to quit (A530).
@@ -140,7 +144,9 @@ async function start(): Promise<void>
 
 	// Breakdowns and explain items are graded by the review service; it falls back to tests only on its own (replaces A318, A460).
 	const graders: ProgressGraders = { gradeExplain: (input) => getReviewService().gradeExplain(input), gradeBreakdown: (input) => getReviewService().gradeBreakdown(input) };
-	const progressContentService = new ProgressContentService(contentCatalog, progressService, graders, new MathRandomSource(), () => randomUUID());
+	// The Seer Stone flow reads the same reference solutions the prerequisite filler uses (A406, A1390).
+	const solutions = new SolutionFolderReader(appResourceFolder(["solutions"], ["tools", "solutions"]));
+	const progressContentService = new ProgressContentService(contentCatalog, progressService, graders, new MathRandomSource(), () => randomUUID(), solutions);
 
 	let reviewHandlers: ReviewHandlers | null = null;
 	const getReviewHandlers = (): ReviewHandlers =>

@@ -125,15 +125,17 @@ export class XpRules
 		return potionActive ? Math.round(DRILL_XP * (1 + XP_POTION.share)) : DRILL_XP;
 	}
 
-	/** First-pass XP after the multiplier: 50% on a rematch, 0 on a repeat or after an unpaid solution view. */
+	/**
+	 * First-pass XP after the multiplier: the full amount on a first pass with no unpaid solution view (a Seer Stone view keeps it, even after the
+	 * rematch date, A1391), else 50% on a rematch, else 0 (a repeat, or a pass before the rematch after a view paid with XP).
+	 */
 	private passXp(input: QuestXpInput, difficultyMultiplier: number): number
 	{
 		const full = Math.round(input.baseXp * difficultyMultiplier);
 
+		if (!input.previouslyPassed && !input.solutionViewedWithoutStone) return full;
 		if (input.isRematch) return Math.round(REMATCH_SHARE * full);
-		if (input.previouslyPassed) return 0;
-		if (input.solutionViewedWithoutStone) return 0;
 
-		return full;
+		return 0;
 	}
 }

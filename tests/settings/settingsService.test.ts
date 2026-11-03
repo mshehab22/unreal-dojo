@@ -225,6 +225,9 @@ describe("SettingsService first run", () =>
 		const refusal = (await rejectionOf(service.completeFirstRun())) as AppErrorException;
 
 		expect(refusal.appError).toMatchObject({ code: "sandbox-not-ready", detail: "no Dojo.uproject in /definitely/not/a/sandbox" });
+		// First run cannot be finished from Settings, so the advice names the Title screen's setup, not a Settings action (M5.1k).
+		expect(refusal.appError.suggestedAction).toContain("Set up your studio");
+		expect(refusal.appError.suggestedAction).not.toContain("Settings");
 		expect(service.current().firstRunCompletedAt).toBeNull();
 	});
 

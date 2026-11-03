@@ -1,6 +1,8 @@
-// Explains a failed sandbox build in plain English, for first-run setup or a Settings rebuild: the main process's own explanation when it sent one, else a guess from the compiler output.
+// Explains a failed sandbox build in plain English, for first-run setup, a Settings rebuild, or a sandbox set up again from Settings: the main process's own explanation when it sent one, else a guess from the compiler output.
 import type { SandboxSetupResult } from "@shared/types/engine";
 import type { AppError } from "@shared/types/errors";
+
+import type { SandboxBuildContext } from "../data/SandboxBuildTracker";
 
 /** A headline and what to do, chosen from what the compiler said. */
 export interface FailureExplanation
@@ -9,8 +11,7 @@ export interface FailureExplanation
 	suggestedAction: string;
 }
 
-/** Where the build was started: the first build of a new sandbox, or a clean rebuild of an existing one. */
-export type SandboxBuildContext = "first-run" | "rebuild";
+export type { SandboxBuildContext };
 
 /** Reads the compiler output for the common causes; anything else gets the general advice. The wording fits the context. */
 export function explainSandboxFailure(compilerOutput: string, context: SandboxBuildContext): FailureExplanation
@@ -30,25 +31,43 @@ export function explainSandboxFailure(compilerOutput: string, context: SandboxBu
 
 	if (output.includes("undeclared identifier") || output.includes("missing #include"))
 	{
-		return context === "first-run"
-			? {
-				message: "The first build stopped on a compile error inside the sandbox template, not in anything you wrote.",
-				suggestedAction: "Try the build again. If it fails the same way, pick a different engine version in step 1.",
-			}
-			: {
+		if (context === "rebuild")
+		{
+			return {
 				message: "The rebuild stopped on a compile error in the sandbox.",
 				suggestedAction: "If a quest's files are in the sandbox, reset that quest and rebuild. If it keeps failing, pick another engine above.",
 			};
+		}
+
+		return {
+			message: "The first build stopped on a compile error inside the sandbox template, not in anything you wrote.",
+			suggestedAction: context === "first-run"
+				? "Try the build again. If it fails the same way, pick a different engine version in step 1."
+				: "Try the build again. If it fails the same way, pick another engine above.",
+		};
 	}
 
-	return context === "first-run"
-		? { message: "The first build of the sandbox did not finish.", suggestedAction: "Try again. The compiler's last lines are below if it keeps failing." }
-		: { message: "The sandbox rebuild did not finish.", suggestedAction: "Try again. The details show the compiler's last lines if it keeps failing." };
+	return context === "rebuild"
+		? { message: "The sandbox rebuild did not finish.", suggestedAction: "Try again. The details show the compiler's last lines if it keeps failing." }
+		: { message: "The first build of the sandbox did not finish.", suggestedAction: "Try again. The compiler's last lines are below if it keeps failing." };
 }
 
-/** The error to show for a failed setup: the AppError the main process sent when there is one (it knows the cause), otherwise the guess from the compiler output. */
+/**
+ * What to do about a sandbox path too long for Windows, where the learner is: main's advice ("Open Settings, choose Set up the sandbox again")
+ * fits a quest run, but on a setup step the way out is the folder step just behind it, and in Settings the button is right there (M5.1k).
+ */
+function shortFolderAction(context: SandboxBuildContext): string
+{
+	return context === "rebuild"
+		? "Use Set up the sandbox again and choose a short folder such as C:\\Dojo."
+		: "Go back, choose a short folder such as C:\\Dojo, then start the build again.";
+}
+
+/** The error to show for a failed setup: the AppError the main process sent when there is one (it knows the cause, though a path too long gets advice for this screen), otherwise the guess from the compiler output. */
 export function describeSandboxFailure(result: Pick<SandboxSetupResult, "compilerOutput" | "failure">, context: SandboxBuildContext): AppError
 {
+	if (result.failure?.code === "sandbox-path-too-long") return { ...result.failure, suggestedAction: shortFolderAction(context) };
+
 	if (result.failure) return result.failure;
 
 	return { code: "sandbox-not-ready", ...explainSandboxFailure(result.compilerOutput, context) };
@@ -62,4 +81,12 @@ export function describeRebuildFailure(result: Pick<SandboxSetupResult, "compile
 	const uniqueParts = detailParts.filter((part, index) => detailParts.indexOf(part) === index);
 
 	return uniqueParts.length > 0 ? { ...error, detail: uniqueParts.join("\n\n") } : error;
+}
+
+/** A Rebuild sandbox refused in Settings because the sandbox is gone: main's words send the learner to Settings, where they already are, so the advice names the button beside Rebuild (M5.1k). Any other error is unchanged. */
+export function describeRebuildRefusal(error: AppError): AppError
+{
+	if (error.code !== "sandbox-not-ready") return error;
+
+	return { ...error, suggestedAction: "Put the folder back where it was (or reconnect its drive), or use Set up the sandbox again to create a new one. Your progress is kept." };
 }

@@ -1,23 +1,20 @@
-// Settings: the engine path, the build tools, and the sandbox, with the environment problems explained and a clean rebuild that shows its progress.
-import { FolderOpenIcon, HammerIcon, SquareIcon } from "lucide-react";
+// Settings: the engine path, the build tools, and the sandbox, with the environment problems explained; the sandbox row has a clean rebuild and Set up the sandbox again.
+import { FolderOpenIcon } from "lucide-react";
+import { useState } from "react";
 
-import type { EnvironmentStatus } from "@shared/types/engine";
+import type { EngineInstall, EnvironmentStatus } from "@shared/types/engine";
 import type { Settings } from "@shared/types/settings";
 
 import { AppErrorView } from "@/components/AppErrorView";
-import { BuildProgressView } from "@/components/BuildProgressView";
-import { QuietBuildNotice } from "@/components/QuietBuildNotice";
+import { DisabledWithReason } from "@/components/DisabledWithReason";
 import { Panel } from "@/components/Panel";
 import { SaveNoticeView } from "@/components/SaveNoticeView";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { QUERY_KEYS } from "@/data/queryKeys";
 import { useDojoAction } from "@/data/useDojoAction";
-import { useSandboxBuild } from "@/data/useSandboxBuild";
-import { buildOutcome } from "@/lib/buildOutcome";
-import { formatElapsed } from "@/lib/formatting";
-import { describeRebuildFailure } from "@/lib/sandboxFailure";
 
+import { SandboxRow } from "./SandboxRow";
 import { SettingRow } from "./SettingRow";
 import { ToolchainRow } from "./ToolchainRow";
 
@@ -39,7 +36,14 @@ export function EnginePanel({ settings, environment }: EnginePanelProps)
 
 		return picked;
 	}, [QUERY_KEYS.settings, QUERY_KEYS.environment]);
-	const rebuild = useSandboxBuild((client, runId) => client.rebuildSandbox(runId), "rebuild");
+	// The engine Set up the sandbox again builds with, or null while its steps are closed. A new engine picked meanwhile would be overwritten by that build, so picking waits (M5.1k).
+	const [setupEngine, setSetupEngine] = useState<EngineInstall | null>(null);
+	const pickButton = (
+		<Button variant="secondary" size="sm" className="self-start" onClick={() => void pickEngine.run()} disabled={pickEngine.isPending || setupEngine !== null}>
+			<FolderOpenIcon />
+			Pick another engine
+		</Button>
+	);
 
 	return (
 		<Panel title="Engine and sandbox" testId="settings-engine">
@@ -48,39 +52,13 @@ export function EnginePanel({ settings, environment }: EnginePanelProps)
 					{environment?.engine && <Badge variant="pass">UE {environment.engine.version}</Badge>}
 					<span className="min-w-0 font-mono text-xs break-all text-paper-muted">{settings.enginePath ?? "Not set"}</span>
 				</div>
-				<Button variant="secondary" size="sm" className="self-start" onClick={() => void pickEngine.run()} disabled={pickEngine.isPending}>
-					<FolderOpenIcon />
-					Pick another engine
-				</Button>
+				{setupEngine === null ? pickButton : <DisabledWithReason reason="Finish or cancel Set up the sandbox again first. The new sandbox is built with this engine.">{pickButton}</DisabledWithReason>}
 				{environment?.engineProblem && <AppErrorView error={environment.engineProblem} compact />}
 				{pickEngine.error && <AppErrorView error={pickEngine.error} compact />}
 				<SaveNoticeView notice={environment?.saveNotice} compact />
 			</SettingRow>
 			{environment?.toolchain && <ToolchainRow toolchain={environment.toolchain} />}
-			<SettingRow label="Sandbox" description="The practice project where your code is compiled and tested.">
-				<div className="flex flex-wrap items-center gap-2">
-					<Badge variant={environment?.sandbox.ready ? "pass" : "warn"}>{environment?.sandbox.ready ? "Ready" : "Not built"}</Badge>
-					<span className="min-w-0 font-mono text-xs break-all text-paper-muted">{settings.sandboxPath ?? "Not created yet"}</span>
-				</div>
-				<div className="flex items-center gap-2">
-					<Button variant="secondary" size="sm" onClick={rebuild.start} disabled={rebuild.status === "running" || !settings.sandboxPath}>
-						<HammerIcon />
-						Rebuild sandbox
-					</Button>
-					{rebuild.status === "running" && (
-						<Button variant="ghost" size="sm" onClick={rebuild.cancel}>
-							<SquareIcon />
-							Cancel
-						</Button>
-					)}
-				</div>
-				{rebuild.status !== "idle" && rebuild.status !== "errored" && <BuildProgressView event={rebuild.progress} outcome={buildOutcome(rebuild.status)} elapsedMs={rebuild.elapsedMs} />}
-				{rebuild.status === "running" && rebuild.isQuiet && <QuietBuildNotice build={rebuild} />}
-				{rebuild.status === "cancelled" && <p className="text-xs text-paper-muted">The rebuild was cancelled. The sandbox keeps its last good build.</p>}
-				{rebuild.status === "succeeded" && rebuild.result && <p className="text-xs text-pass">Rebuilt in {formatElapsed(rebuild.result.durationMs)}.</p>}
-				{rebuild.status === "failed" && rebuild.result && <AppErrorView error={describeRebuildFailure(rebuild.result)} onRetry={rebuild.start} />}
-				{rebuild.status === "errored" && rebuild.error && <AppErrorView error={rebuild.error} onRetry={rebuild.start} />}
-			</SettingRow>
+			<SandboxRow settings={settings} environment={environment} setupEngine={setupEngine} onSetupEngineChange={setSetupEngine} />
 		</Panel>
 	);
 }

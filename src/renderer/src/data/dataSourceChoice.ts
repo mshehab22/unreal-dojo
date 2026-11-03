@@ -17,6 +17,8 @@ export const FAKE_SCENARIOS = [
 	"folder-blocked",
 	"screen-crash",
 	"save-notice",
+	"sandbox-deleted",
+	"economy",
 ] as const;
 
 /**
@@ -25,7 +27,9 @@ export const FAKE_SCENARIOS = [
  * Environment scenarios (M5.1i): the engine in settings is gone (`engine-missing`), the build tools are missing (`toolchain-missing`, which a re-check does not fix, or `toolchain-recovers`, which the first re-check does),
  * the first sandbox setup fails and says why (`sandbox-setup-fails`), the first folder pick cannot be used (`folder-blocked`),
  * the Character screen throws while rendering so the screen error view can be seen (`screen-crash`),
- * and the save was restored from its backup, a notice the fake repeats on every read as the main process does (`save-notice`). They exist only in the fake, which a packaged build never loads (A251).
+ * the save was restored from its backup, a notice the fake repeats on every read as the main process does (`save-notice`),
+ * and a returning learner whose sandbox folder was deleted, so Rebuild sandbox is refused until Set up the sandbox again creates a new one (`sandbox-deleted`, M5.1k).
+ * The economy scenario (M3.3, A1399) is the quest-flow learner one day short of the 7 day streak milestone, with a spree, armor, a Seer Stone, unchosen daily offers, and World 1 ready to test out (`economy`). They exist only in the fake, which a packaged build never loads (A251).
  */
 export type FakeScenario = (typeof FAKE_SCENARIOS)[number];
 
