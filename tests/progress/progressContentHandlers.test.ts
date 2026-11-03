@@ -244,11 +244,21 @@ describe("submitBreakdown and reviseBreakdown", () =>
 
 describe("getDailyQuest", () =>
 {
-	it("offers a drill and an open concept quest; no short builds while content cannot say a quest adds no class", async () =>
+	it("offers an open concept quest; no short builds while content cannot say a quest adds no class; no drill while nothing is due (A1393)", async () =>
 	{
 		const { handlers } = setup();
 
-		expect((await handlers.getDailyQuest.handle()).offered).toEqual([{ kind: "drill" }, { kind: "concept", questId: "w1-concept" }]);
+		expect((await handlers.getDailyQuest.handle()).offered).toEqual([{ kind: "concept", questId: "w1-concept" }]);
+	});
+
+	it("offers the drill on a day an item is scheduled due", async () =>
+	{
+		const { handlers, clock } = setup();
+		await passConcept(handlers);
+
+		clock.advanceDays(1);
+
+		expect((await handlers.getDailyQuest.handle()).offered[0]).toEqual({ kind: "drill" });
 	});
 });
 

@@ -18,6 +18,7 @@ export const FAKE_SCENARIOS = [
 	"screen-crash",
 	"save-notice",
 	"sandbox-deleted",
+	"economy",
 ] as const;
 
 /**
@@ -27,7 +28,8 @@ export const FAKE_SCENARIOS = [
  * the first sandbox setup fails and says why (`sandbox-setup-fails`), the first folder pick cannot be used (`folder-blocked`),
  * the Character screen throws while rendering so the screen error view can be seen (`screen-crash`),
  * the save was restored from its backup, a notice the fake repeats on every read as the main process does (`save-notice`),
- * and a returning learner whose sandbox folder was deleted, so Rebuild sandbox is refused until Set up the sandbox again creates a new one (`sandbox-deleted`, M5.1k). They exist only in the fake, which a packaged build never loads (A251).
+ * and a returning learner whose sandbox folder was deleted, so Rebuild sandbox is refused until Set up the sandbox again creates a new one (`sandbox-deleted`, M5.1k).
+ * The economy scenario (M3.3, A1399) is the quest-flow learner one day short of the 7 day streak milestone, with a spree, armor, a Seer Stone, unchosen daily offers, and World 1 ready to test out (`economy`). They exist only in the fake, which a packaged build never loads (A251).
  */
 export type FakeScenario = (typeof FAKE_SCENARIOS)[number];
 

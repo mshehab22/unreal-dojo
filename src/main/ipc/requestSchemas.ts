@@ -72,6 +72,9 @@ export const apiKeySchema = z.string().trim().min(1).max(MAXIMUM_API_KEY_LENGTH)
 /** A hint spell index (0 to 2). */
 export const hintIndexSchema = z.int().min(0).max(2);
 
+/** Whether to spend a Seer Stone on viewing a solution. */
+export const useSeerStoneSchema = z.boolean();
+
 /** A daily offer index. */
 export const dailyOfferIndexSchema = z.int().min(0).max(DAILY_OFFER_COUNT - 1);
 

@@ -2104,3 +2104,60 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 ### Fix round 2
 - What the reviewer asked for: Pick another engine stayed on while the steps were open, and the build would save the old engine back; a path-too-long failure still offered Build again; two test strings lost their backslashes.
 - What changed: `EnginePanel` holds the captured engine and turns Pick another engine off with its reason; no Build again for a path too long; the strings are escaped. Re-review: PASS. Tester (fresh agent, 91830a5): typecheck, 1251 unit tests, verify-content, build, and e2e 47 passed with 1 skipped. Its one note, the build success line squeezed into a narrow column in Settings, was fixed after (6a4b2d4) and the three specs that show it pass.
+
+## M3.3 The economy on screen: daily quest with chests, Seer Stone, spree and armor, streak celebrations, test-out (progress-and-rules and ui, m3-3-economy-ui)
+- What changed: the rules for the game's rewards already existed but most of them had no screen, and the Seer Stone could not be used at all. Now the Studio's daily quest has a Start button for the chosen offer, shows what today's chest held, and counts the days of the month. A chest you earn opens on the loot or drill screen, and 7, 30, and 100 day streaks get a short celebration. The Build screen says what your first try is worth to your spree and whether armor covers a miss, and the loot calls out when armor saved your spree. After two failed submits you can read the quest's reference solution, paying with a Seer Stone (you keep the XP) or with the quest's XP; seeing it again is free. A world's test-out drill names its world, and afterwards the map marks the build quests you may skip.
+- Audit at the start (what M3.3 already had):
+  - Daily quest with chests: partial. The rules, the chest roll, choosing an offer, and the chest on loot and drill (drawn already open) were there. There was no way to open the chosen offer and no record of today's chest, the month badge was never shown, and a drill was offered on days when a drill could not finish it.
+  - Seer Stone flow: missing. The rule existed in main, but there was no IPC method and the button was disabled (A358).
+  - Spree and armor display: partial. The Character meter and a loot text line were there; nothing on the Build screen or the Studio.
+  - Streak celebrations: partial. The loot had a text suffix; the drill finish had nothing.
+  - Test-out per world: partial. The button, the drill, and the rules were there; skippable stages were never shown.
+- Rule changes made on the way: viewing a solution again, or after a pass, is free and schedules no rematch, which closes a pass, view, rematch farm (A1391). Armor is only spent while the spree is above 0 (A1396). The drill offer is left out on a day with nothing due (A1393). Fix round 1: a first pass after a Seer Stone view pays in full even on or after the rematch date (it paid 50% before, so the stone bought nothing).
+- How to see it: `npm install`, then `VITE_DOJO_FAKE=economy npm run dev`, and follow "The economy with sample data" under Ready to playtest in `docs/plan.md`.
+- Proof (Windows 11, hidden windows): `npm run typecheck` passes; `npm test` passes (rule paths in `tests/progress/seerStoneAndDaily.test.ts`, `spreeRules.test.ts`, `dailyQuestAndChest.test.ts`, `progressContentHandlers.test.ts`; screen helpers and the fake in `tests/renderer/economyScreens.test.ts`); `npx tsx tools/verify-content.ts` has no problems (12 warnings, all existing); `npm run build` passes; `e2e/economy.spec.ts` 3 of 3 pass. The full `npx playwright test` run had 46 passed, 1 skipped (the real-engine learner flow), and 1 failed: the long build flow in `ui-quests-flow.spec.ts` ran out of its 60 s while other e2e ran on the machine. It passes alone (52 s) and fails the same way on main with `SAVE_PROOF=1`, logged in problems.md.
+
+![[m3-3-studio-daily-offers.jpg|800]]
+*The Studio: today's three offers, the closed chest, the month count, and the spree meter with one armor.*
+
+![[m3-3-loot-streak-and-chest.jpg|800]]
+*The daily concept quest passed: the 7 day streak celebration and the chest opened with a Seer Stone.*
+
+![[m3-3-studio-daily-done.jpg|800]]
+*Back in the Studio: the day is done and the chest stays open with its reward.*
+
+![[m3-3-build-spree-stake.jpg|800]]
+*The Build screen: the first try counts, a pass makes the spree 5 with the bonus, and armor covers a miss.*
+
+![[m3-3-loot-armor-absorbed.jpg|800]]
+*A missed first try: armor absorbed it and the spree of 4 stands.*
+
+![[m3-3-seer-stone-choice.jpg|800]]
+*After two failed submits: a Seer Stone or the quest's XP, both naming the rematch.*
+
+![[m3-3-seer-stone-solution.jpg|800]]
+*The reference solution in the same dialog, with what it cost and when the rematch is due.*
+
+![[m3-3-test-out-summary.jpg|800]]
+*A test-out drill passed: the world is tested out, and this drill reached the 7 day streak.*
+
+![[m3-3-world-map-skippable.jpg|800]]
+*The map after the test-out: the training dummy and the pop-up target carry the skip mark; the boss does not.*
+
+- Review: a fresh reviewer found five issues; all fixed in fix round 1 (above), then PASS on d5ccdd5.
+- Tester (fresh agent, branch tip 37893f8): `npm run typecheck` passes; `npm test` 98 files passed, 5 skipped, 1268 tests passed, 29 skipped; verify-content no problems; build passes; `e2e/economy.spec.ts` 3 of 3 pass alone and in the full run. The full suite had 33 passed, 14 failed, 1 skipped: the machine's GPU process crashed on hidden-window screenshots, and `smoke.spec.ts` fails the same way on main 8077657 (problems.md). The full suite needs a rerun on a quiet machine, which the Lead's merge run does.
+- Decisions made: A1390 to A1399. Cross-owner lines (IPC contract, handler, composition root, fake fixture builder) are logged in A1390.
+- Not done or left for later: studio cosmetics are listed, not drawn; the fake never pays rematch XP; integration tests and the packaged build's `solutions/` folder were not run (no engine needed for this task, and `viewSolution` touches no Unreal service); macOS not checked.
+
+## M5.1g2 Close the quit save gap (app-shell, m3-3-economy-ui)
+- What changed: when you quit while Unreal work is running, the app keeps its window open for up to 20 seconds while it stops the build and closes the editor. Anything you changed in that time was not saved, because the app only waited for saves once, at the very start of quitting. Now it waits for saves (at most 3 seconds) before every quit attempt, so after Unreal is stopped it waits once more and your last change reaches the disk. A quit with nothing pending is as fast as before.
+- How to see it: nothing changes on screen. `npx vitest run tests/window` runs the quit tests.
+- Proof: `tests/window/quitSequence.test.ts` drives the save hold and the Unreal stop together on a fake app whose quit really fires `before-quit` to both: a change made while the editor closes is saved before exit (this test fails on the old code); a quit with nothing pending exits on the next turn; a save queued at quit is awaited; a hung save still exits within the Unreal stop plus 3 s, with and without the editor; pressing quit again adds no wait. The existing `holdQuitForSaves` and `stopEngineWorkBeforeQuit` tests still pass.
+- Decisions made: A1460.
+- Not done: macOS (the deferred quit's behaviour on Cmd+Q is still the unverified A1211 item); the real app's quit was not run by hand (A77: no launching the app).
+
+### Fix round 1
+- What the reviewer asked for: the main test proved the fix only through a count of save waits (the change it made landed long before the editor closed, so the old code saved it too); two test names and a comment in `src/main/index.ts` still said quit waits once; the no-editor bound for a hung save was loose enough for the old code.
+- What changed: the test now makes its change 100 ms before the editor closes and checks what was saved at the very moment the app exits; on the old code it fails with nothing saved. A new unit case shows the attempt after the helper's own let-through quit is held again. Names, the file comment, the `index.ts` comment, and the bound are corrected.
+- Review: PASS after fix round 1 (78f9a08).
+- Tester (fresh agent, 78f9a08): `npm run typecheck` passes; `npm test` 99 files passed, 5 skipped, 1274 tests passed, 29 skipped; verify-content no problems; build passes; `tests/window` 24 of 24. Full `npx playwright test` had 33 passed, 14 failed, 1 skipped: every failure's main log shows the machine's GPU process crash, and the same tests fail on main bd1fb4c (problems.md). No failure touches quit or saves. The full suite needs a rerun on a quiet machine.

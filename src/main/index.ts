@@ -23,6 +23,7 @@ import { NodeFileSystem } from "./services/progress/NodeFileSystem";
 import { ProgressContentService } from "./services/progress/ProgressContentService";
 import type { ProgressGraders } from "./services/progress/ProgressGraders";
 import { ProgressService } from "./services/progress/ProgressService";
+import { SolutionFolderReader } from "./services/progress/SolutionFolderReader";
 import { ProgressStore } from "./services/progress/ProgressStore";
 import { SystemClock } from "./services/progress/SystemClock";
 import { createReviewHandlers, type ReviewHandlers } from "./services/review/createReviewHandlers";
@@ -100,7 +101,7 @@ async function start(): Promise<void>
 
 	let unrealServices: UnrealServices | null = null;
 
-	// Pending progress saves get up to 3 s to finish before quitting (A1211).
+	// Pending progress saves get up to 3 s to finish before each quit attempt, so a change made during the Unreal stop is saved too (A1211, A1460).
 	holdQuitForSaves(app, progressService);
 
 	// Runs, then the editor, before quitting; never builds the Unreal services just to quit (A530).
@@ -140,7 +141,9 @@ async function start(): Promise<void>
 
 	// Breakdowns and explain items are graded by the review service; it falls back to tests only on its own (replaces A318, A460).
 	const graders: ProgressGraders = { gradeExplain: (input) => getReviewService().gradeExplain(input), gradeBreakdown: (input) => getReviewService().gradeBreakdown(input) };
-	const progressContentService = new ProgressContentService(contentCatalog, progressService, graders, new MathRandomSource(), () => randomUUID());
+	// The Seer Stone flow reads the same reference solutions the prerequisite filler uses (A406, A1390).
+	const solutions = new SolutionFolderReader(appResourceFolder(["solutions"], ["tools", "solutions"]));
+	const progressContentService = new ProgressContentService(contentCatalog, progressService, graders, new MathRandomSource(), () => randomUUID(), solutions);
 
 	let reviewHandlers: ReviewHandlers | null = null;
 	const getReviewHandlers = (): ReviewHandlers =>

@@ -1,4 +1,4 @@
-// The build screen's right column: Run, Submit, and Open Editor; live progress; the last submit; tests and the build log; hint spells; and the offers after failed submits.
+// The build screen's right column: Run, Submit, and Open Editor; the spree at stake; live progress; the last submit; tests and the build log; hint spells; and the offers after failed submits.
 import { MonitorPlayIcon, PlayIcon, SendIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -34,6 +34,9 @@ interface RunColumnProps
 	readonly onOpenEditor: () => void;
 	readonly isOpeningEditor: boolean;
 
+	/** The spree note under the buttons (A1396). */
+	readonly spree?: ReactNode;
+
 	/** The last submit card, hint spells, and offers, placed in order under the results. */
 	readonly lastSubmit?: ReactNode;
 	readonly hints: ReactNode;
@@ -64,7 +67,7 @@ function isShownAsCallError(failure: AppError, callError: AppError | null): bool
 }
 
 /** The controls stack; whichever of Run or Submit ran last owns the progress view. */
-export function RunColumn({ run, submit, lastResult, lastResultSource, canSubmit, submitBlockedReason, onRun, onSubmit, onOpenEditor, isOpeningEditor, lastSubmit, hints, offers }: RunColumnProps)
+export function RunColumn({ run, submit, lastResult, lastResultSource, canSubmit, submitBlockedReason, onRun, onSubmit, onOpenEditor, isOpeningEditor, spree, lastSubmit, hints, offers }: RunColumnProps)
 {
 	const busy = run.status === "running" || submit.status === "running";
 	const showing = submit.status === "running" ? submit : run.status !== "idle" ? run : null;
@@ -92,6 +95,8 @@ export function RunColumn({ run, submit, lastResult, lastResultSource, canSubmit
 					Open Editor
 				</Button>
 			</div>
+
+			{spree}
 
 			{showing && (
 				<RunProgress
