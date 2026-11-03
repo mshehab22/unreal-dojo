@@ -31,6 +31,14 @@ describe("SpreeRules", () =>
 		expect(result.armorUsed).toBe(true);
 	});
 
+	it("keeps armor on a miss with no spree to protect (A1396)", () =>
+	{
+		const result = rules.applySubmit({ current: 0, best: 6, armor: 1 }, { countsForSpree: true, firstSubmit: true, passed: false });
+
+		expect(result.spree).toEqual({ current: 0, best: 6, armor: 1 });
+		expect(result.armorUsed).toBe(false);
+	});
+
 	it("ignores quests that do not count (not build or refactor, a repeat, or Run)", () =>
 	{
 		expect(rules.applySubmit(start, { countsForSpree: false, firstSubmit: true, passed: false }).spree).toEqual(start);

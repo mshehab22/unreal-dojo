@@ -380,24 +380,36 @@ export class ProgressService
 		});
 	}
 
-	/** Views a quest's reference solution after two failed submits, spending a Seer Stone when asked, and schedules the rematch. */
+	/**
+	 * Views a quest's reference solution after two failed submits, spending a Seer Stone when asked, and schedules the rematch.
+	 * A repeat view and a view of a passed quest are free and change nothing but `solutionViewed` (A1391). Asking to spend a stone with none held is refused, so XP is never taken by surprise.
+	 */
 	viewSolution(questId: string, spendStone: boolean): Promise<SolutionView>
 	{
 		return this.enqueue(async () =>
 		{
 			const current = this.questProgressOf(this.progress, questId);
+			const passed = current.status === "passed";
 
-			if (current.status !== "passed" && !this.seerStoneRules.canOfferSolution(current.attempts))
+			if (!passed && !current.solutionViewed && !this.seerStoneRules.canOfferSolution(current.attempts))
 			{
 				throw new AppErrorException("quest-locked", "The solution opens after two failed submits.", "Submit again, or reveal a hint spell first.");
 			}
 
-			const view = this.seerStoneRules.viewSolution(this.progress.seerStones, spendStone, this.clock.now());
+			if (!passed && !current.solutionViewed && spendStone && this.progress.seerStones === 0)
+			{
+				throw new AppErrorException("invalid-payload", "You hold no Seer Stone.", "View it with this quest's XP instead, or earn a stone from a daily chest.");
+			}
+
+			const view = this.seerStoneRules.viewSolution({ stonesHeld: this.progress.seerStones, spendStone, alreadyViewed: current.solutionViewed, passed, now: this.clock.now() });
+			const rematchDueAt = view.rematchDueAt;
+
+			if (view.alreadyViewed) return view;
 
 			await this.commit((progress) => ({
 				...this.withQuest(progress, questId, { solutionViewed: true, seerStoneSpent: current.seerStoneSpent || view.stoneSpent }),
 				seerStones: view.stonesAfter,
-				rematches: { ...progress.rematches, [questId]: view.rematchDueAt },
+				rematches: rematchDueAt === null ? progress.rematches : { ...progress.rematches, [questId]: rematchDueAt },
 			}));
 
 			return view;
@@ -491,7 +503,7 @@ export class ProgressService
 					if (completion.completedNow)
 					{
 						chest = this.chestRules.roll(next, this.random);
-						next = this.applyChest(next, chest, now);
+						next = { ...this.applyChest(next, chest, now), daily: { ...next.daily, chest } };
 					}
 				}
 			}
@@ -573,7 +585,7 @@ export class ProgressService
 				if (completion.completedNow)
 				{
 					chest = this.chestRules.roll(next, this.random);
-					next = this.applyChest(next, chest, now);
+					next = { ...this.applyChest(next, chest, now), daily: { ...next.daily, chest } };
 				}
 			}
 

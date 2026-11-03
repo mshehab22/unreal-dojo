@@ -1,5 +1,5 @@
-// The Studio's engine room and shipped-titles wall: a module per shipped mechanic, a line per passed boss.
-import { BoxIcon } from "lucide-react";
+// The Studio's engine room and shipped-titles wall: a module per shipped mechanic, the studio touches from chests, a line per passed boss.
+import { BoxIcon, SparklesIcon } from "lucide-react";
 
 import type { AttemptRecord, PlayerProgress } from "@shared/types/progress";
 
@@ -56,6 +56,12 @@ export function EngineRoomPanel({ progress, quests }: EngineRoomPanelProps)
 					);
 				})}
 			</div>
+			{progress.studio.cosmetics.length > 0 && (
+				<p data-testid="studio-cosmetics" className="flex flex-wrap items-center gap-2 text-xs text-paper-muted">
+					<SparklesIcon className="size-3.5 text-pack" />
+					Studio touches from chests: {progress.studio.cosmetics.map(humanizeId).join(", ")}
+				</p>
+			)}
 			<div className="flex flex-col gap-2 border-t border-line pt-3">
 				<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Shipped titles</span>
 				{titles.length === 0 ? (

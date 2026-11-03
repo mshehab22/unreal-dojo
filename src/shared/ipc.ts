@@ -22,6 +22,7 @@ import type {
 	QuestDraft,
 	QuestProgress,
 	RulesSnapshot,
+	SolutionViewing,
 	SubmitOutcome,
 	WorldTestOutStatus,
 } from "./types/progress";
@@ -130,6 +131,12 @@ export interface DojoInvokeApi
 
 	/** Reveals the next hint spell for a quest and returns its text and XP cost. With `hintIndex`, an already revealed hint is answered again at no cost; a new one must be the next in order (A501). */
 	revealHint(questId: string, hintIndex?: number): Promise<HintReveal>;
+
+	/**
+	 * Views a quest's reference solution after two failed submits (the Seer Stone flow, A1390). The first view of an unpassed quest costs a Seer Stone
+	 * when `useSeerStone` is true (refused when none is held), else the quest's first-pass XP, and schedules a rematch; a repeat view or a passed quest's view is free (A1391).
+	 */
+	viewSolution(questId: string, useSeerStone: boolean): Promise<SolutionViewing>;
 
 	/** Grades a finished concept quest and records it. */
 	submitConcept(submission: ConceptSubmission): Promise<ConceptOutcome>;
@@ -258,6 +265,7 @@ export const IPC_CHANNELS = {
 	saveQuestDraft: "dojo:saveQuestDraft",
 	resetQuest: "dojo:resetQuest",
 	revealHint: "dojo:revealHint",
+	viewSolution: "dojo:viewSolution",
 	submitConcept: "dojo:submitConcept",
 	submitBreakdown: "dojo:submitBreakdown",
 	reviseBreakdown: "dojo:reviseBreakdown",
