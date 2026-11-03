@@ -33,7 +33,7 @@ Compiles against earlier quests: m3-checkpoint (`Quests/m3-checkpoint/DojoM3Runn
 
 ## See it in the editor
 
-Place a `DojoM3Gate` at X 500, a `DojoM3Runner` at the origin, and a `DojoM2Bumper` at Y 300 with its Heading set to X 1, Y 0. Type `show Collision` and press Play: the ball bounces off the gate. In the level Blueprint, on the 1 key, add Add Actor World Offset on the runner with X 800 and Sweep ticked: the runner stops at the gate. On the 2 key, call Open on the gate, and press 1 again: the runner passes and the ball keeps bouncing. Then put the runner in the doorway with Set Actor Location at X 500, call Close on the 3 key, and read CLEARING until you move the runner out.
+Place a `DojoM3Gate` at X 500, a `DojoM3Runner` at the origin, a `DojoM2Bumper` at Y 200 with its Heading set to X 1, Y 0, and a `DojoM2Wall` at X -300, Y 200 turned 90 degrees about Z so the ball has something to come back from. Type `show Collision` and press Play: the ball bounces between the wall and the gate. In the level Blueprint, on the 1 key, add Add Actor World Offset on the runner with X 800 and Sweep ticked: the runner stops at the gate. On the 2 key, call Open on the gate, and press 1 again: the runner passes and the ball keeps bouncing. Then put the runner in the doorway with Set Actor Location at X 500, call Close on the 3 key, and read CLEARING until you move the runner out.
 
 # Files
 
@@ -371,8 +371,8 @@ The gate could switch its whole collision off with `SetCollisionEnabled(ECollisi
     - "	RefreshLabel();"
     - "}"
   distractors:
-    - line: "	Box->SetCollisionResponseToAllChannels(ECR_Block);"
-      mistake: That works here only because the box blocked everything else already; changing one channel says exactly what the gate means.
+    - line: "	Box->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);"
+      mistake: Ignore lets pawns walk straight through a gate that is meant to be shut; shutting means Block.
     - line: "	Box->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);"
       mistake: The gate never turned its collision off, so there is nothing to turn back on; what changed was one response.
 ```

@@ -49,7 +49,7 @@ Extensions, in order of importance:
 2. Two plates and two gates, where the second gate needs both plates pressed, wired entirely in the room.
 3. A best time and fewest falls across rounds, shown on the board.
 
-Feel: move the plate and the pit until carrying a crate past the pit feels like a small risk you choose to take, not a trap you cannot see.
+Feel: once the core round passes, move the chute (a property on the room) until carrying a crate from it past the pit feels like a small risk you choose to take, not a trap you cannot see.
 
 # Required Pieces
 
@@ -129,4 +129,4 @@ Feel: move the plate and the pit until carrying a crate past the pit feels like 
 - A crate can never reach the vault: the gate stops it open or shut, and the vault notices pawns only.
 - The vault ends the round once: the time freezes, the lever and falls stop, and the board shows the real time and falls.
 - R does nothing while a round runs; a new round destroys and rebuilds every crate and piece and resets the falls, the time, and the runner.
-- Nothing ticks and nothing polls; the plate's needed count and the crate limit are properties a designer can tune; the submission says in one sentence where it moved the plate and pit for the feel criterion and why.
+- Nothing ticks and nothing polls; the plate's needed count and the crate limit are properties a designer can tune; the submission says in one sentence where it moved the chute for the feel criterion and why.

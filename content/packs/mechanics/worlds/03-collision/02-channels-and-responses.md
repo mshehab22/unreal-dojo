@@ -49,7 +49,7 @@ Ticking a dozen boxes per shape gets old, so a **collision profile** (the editor
 
 Read a profile's whole table before trusting its name. `OverlapOnlyPawn` overlaps pawns and vehicles and ignores the camera, but every other channel keeps the default, which is Block, so a crate swept into it stops.
 
-In code, `SetCollisionProfileName(TEXT("BlockAllDynamic"))` picks a profile, and `SetCollisionEnabled`, `SetCollisionObjectType`, `SetCollisionResponseToAllChannels`, and `SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap)` change one setting. Changing a single response turns the profile into Custom. All of them work while the game runs, and the shape's overlaps are brought up to date at once.
+In code, `SetCollisionProfileName(TEXT("BlockAllDynamic"))` picks a profile, and `SetCollisionEnabled`, `SetCollisionObjectType`, `SetCollisionResponseToAllChannels`, and `SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap)` change one setting. Changing a single response turns the profile into Custom. All of them work while the game runs. The profile, response, and Collision Enabled setters bring the shape's overlaps up to date at once; a changed object type is only noticed the next time the shape moves.
 
 Your own object types and trace channels are added under Project Settings, Collision, and appear in code as `ECC_GameTraceChannel1` and onward. To see the shapes in a running game, type `show Collision` in the console.
 
@@ -91,7 +91,7 @@ ADojoTrapDoor::ADojoTrapDoor()
   explanation: ECC_Pawn is the channel for shapes whose object type is Pawn; changing only that response leaves the box solid to everything else.
 - id: profile-surprise
   type: spot-the-bug
-  prompt: A zone should notice runners and let rolling crates pass straight through it, but crates stop at its edge. Which line is wrong?
+  prompt: A zone should notice runners and let rolling crates pass straight through it, but crates pushed into it with a sweep stop at its edge. Which line is wrong?
   code: |
     Zone = CreateDefaultSubobject<UBoxComponent>(TEXT("Zone"));
     Zone->SetBoxExtent(FVector(200.f, 200.f, 100.f));

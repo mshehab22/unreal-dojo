@@ -7,7 +7,7 @@ scaffold: stub
 difficulty: 3
 patterns: []
 skills: [collision, delegates]
-terms: [overlap-event, get-overlapping-actors, adddynamic, ufunction, box-component, collision-preset]
+terms: [overlap-event, adddynamic, ufunction, box-component, collision-preset]
 prerequisites: [m3-pawn-gate, m3-checkpoint]
 xp: 90
 estimatedMinutes: 22
@@ -20,7 +20,7 @@ concepts:
 
 When you place a plate that needs two things and press Play, its label reads 0 / 2; a runner stepping on makes it 1 / 2, a crate beside the runner makes it 2 / 2 and the plate pressed, and when either steps off it drops back to 1 / 2 and is no longer pressed; a crate that is destroyed while standing on it counts as stepping off.
 
-Two classes are in this quest. The crate, `ADojoM3Crate`, is given in full: a solid box body, and a small grab handle on top that later grabbers will find with an overlap query, plus a home it can be sent back to. Write the bodies of `BeginPlay`, both handlers, and `RefreshLabel` in `ADojoM3Plate`; the getters are written for you. Rules:
+Two classes are in this quest. The crate, `ADojoM3Crate`, is given in full: a solid box body, a small grab handle on top for later grabbers, and a home it can be sent back to. Write the bodies of `BeginPlay`, both handlers, and `RefreshLabel` in `ADojoM3Plate`; the getters are written for you. Rules:
 
 - The plate listens for shapes arriving on its zone and leaving it.
 - `GetCount` is the number of things standing on the plate. A runner is one thing and a crate is one thing.
@@ -51,7 +51,7 @@ Place a `DojoM3Plate` at the origin, a `DojoM3Runner` at Y -500, and two `DojoM3
 class UBoxComponent;
 class USphereComponent;
 
-/** A crate to stand on plates: a solid body, a grab handle on top that grabbers find with an overlap query, and a home to go back to. */
+/** A crate to stand on plates: a solid body, a grab handle on top for grabbers, and a home to go back to. */
 UCLASS()
 class ADojoM3Crate : public AActor
 {
@@ -404,7 +404,7 @@ bool FDojo_M3_ScalePlate_DestroyedThingsStepOff::RunTest(const FString& Paramete
 
 # Hints
 
-- Both handlers have the same job: bring the count up to date and refresh the label. Bind them in `BeginPlay` the way the flag bound its handler, one to each of the zone's two overlap events.
+- Bind one handler to each of the zone's two overlap events in `BeginPlay`, the way the flag bound its handler; each one updates `Count` and refreshes the label.
 - The handlers are told about one shape at a time, arriving or leaving, and one thing can be made of more than one shape, as a crate is. The zone can also be asked, at any moment, which actors overlap it now, and that list has each actor once.
 - `GetOverlappingActors` is on `UPrimitiveComponent` and fills a `TArray<AActor*>`; `FString::Printf` with `%d` builds the label.
 

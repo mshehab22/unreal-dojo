@@ -7,7 +7,7 @@
 class UBoxComponent;
 class USphereComponent;
 
-/** A crate to stand on plates: a solid body, a grab handle on top that grabbers find with an overlap query, and a home to go back to. */
+/** A crate to stand on plates: a solid body, a grab handle on top for grabbers, and a home to go back to. */
 UCLASS()
 class ADojoM3Crate : public AActor
 {

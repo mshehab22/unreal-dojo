@@ -35,7 +35,7 @@ Compiles against earlier quests: m3-checkpoint (`Quests/m3-checkpoint/DojoM3Runn
 
 ## See it in the editor
 
-Place a `DojoM3Pit` at X 1000, a `DojoM3Runner` at the origin, and a `DojoM3Crate` at Y 500. Type `show Collision` and press Play. In the level Blueprint, on the 1 key, set the runner's location to X 1000, and on the 2 key, set the crate's location to X 1000: each pops back to where it started. Add a `DojoM3Checkpoint` at X 500, touch it first, and drop the runner again: now it comes back at the flag. Print the pit's Get Catches on the 3 key.
+Place a `DojoM3Pit` at X 1000, a `DojoM3Runner` at the origin, and a `DojoM3Crate` at Y 500. Type `show Collision` and press Play. In the level Blueprint, on the 1 key, set the runner's location to X 1000, and on the 2 key, set the crate's location to X 1000: each pops back to where it started. Add a `DojoM3Checkpoint` at X 500 and, on the 4 key, set the runner's location to X 500 to touch it; press 4, then 1: now the runner comes back at the flag. Print the pit's Get Catches on the 3 key.
 
 # Files
 
