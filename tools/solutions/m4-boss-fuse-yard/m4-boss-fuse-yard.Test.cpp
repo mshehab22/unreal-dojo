@@ -217,4 +217,55 @@ bool FDojo_M4_FuseYard_OnlyTheRunnerSetsItOff::RunTest(const FString& Parameters
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M4_FuseYard_LateSparksKeepItBurning, "Dojo.M4.FuseYard.LateSparksKeepItBurning", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Binds a second chain to the bombs after the yard has bound, so its sparks come from a listener that runs after the yard's, and checks the round still ends only when no bomb burns. */
+bool FDojo_M4_FuseYard_LateSparksKeepItBurning::RunTest(const FString& Parameters)
+{
+	using namespace DojoM4FuseYardTest;
+
+	FDojoTestWorld TestWorld;
+	ADojoM3Runner* Runner = TestWorld.GetWorld()->SpawnActor<ADojoM3Runner>(FVector(-3000.0, 0.0, 0.0), FRotator::ZeroRotator);
+	ADojoM4FuseYard* Yard = TestWorld.GetWorld()->SpawnActorDeferred<ADojoM4FuseYard>(ADojoM4FuseYard::StaticClass(), FTransform::Identity);
+	if (!TestNotNull(TEXT("The yard spawned"), Yard)) return false;
+	Yard->Runner = Runner;
+	Yard->Reach = 0.f;
+	Yard->FinishSpawning(FTransform::Identity);
+
+	const int32 Placed = Yard->GetPlaced();
+	if (!TestTrue(TEXT("The yard lays out at least two bombs"), Placed >= 2)) return false;
+
+	ADojoM4Chain* LateChain = TestWorld.GetWorld()->SpawnActorDeferred<ADojoM4Chain>(ADojoM4Chain::StaticClass(), FTransform::Identity);
+	if (!TestNotNull(TEXT("A second chain spawned"), LateChain)) return false;
+	LateChain->Reach = 100000.f;
+	LateChain->SparkDelay = 0.5f;
+	LateChain->FinishSpawning(FTransform::Identity);
+	for (ADojoM4Bomb* Bomb : Yard->GetBombs()) LateChain->Watch(Bomb);
+
+	Runner->SetActorLocation(FVector(200.0, 0.0, 0.0));
+	if (!TestTrue(TEXT("A step on the plate sets the yard burning"), Yard->IsBurning())) return false;
+
+	bool bEnded = false;
+	bool bEndedWhileLit = false;
+	for (int32 Frame = 0; Frame < 900 && !bEnded; ++Frame)
+	{
+		TestWorld.Tick(1);
+		bEnded = Yard->IsOver();
+		if (bEnded)
+		{
+			for (ADojoM4Bomb* Bomb : Yard->GetBombs())
+			{
+				if (IsValid(Bomb) && Bomb->IsLit()) bEndedWhileLit = true;
+			}
+		}
+	}
+
+	if (!TestTrue(TEXT("The chain ends within 15 seconds"), bEnded)) return false;
+	TestFalse(TEXT("The round never ends while a spark from a later listener is still burning"), bEndedWhileLit);
+	TestEqual(TEXT("Every bomb the later chain lit blew before the round ended"), Yard->GetBlown(), Placed);
+	TestEqual(TEXT("and the board calls the whole chain"), Yard->Board->Text.ToString(), FString::Printf(TEXT("CHAIN %d of %d"), Placed, Placed));
+
+	return true;
+}
+
 #endif
