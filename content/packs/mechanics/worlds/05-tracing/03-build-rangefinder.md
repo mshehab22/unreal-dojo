@@ -238,6 +238,10 @@ bool FDojo_M5_Rangefinder_SaysSoWhenNothingIsInReach::RunTest(const FString& Par
 	TestTrue(TEXT("With a longer reach the same wall is found"), Finder->HasTarget());
 	TestEqual(TEXT("at the face of the wall"), Finder->GetDistance(), 480.f, 1.f);
 
+	Finder->Reach = 300.f;
+	Finder->Measure();
+	TestNull(TEXT("A measurement that finds nothing clears the actor from the one before, though that actor still stands"), Finder->GetTargetActor());
+
 	FarWall->Destroy();
 	TestWorld.Tick(1);
 	Finder->Measure();
