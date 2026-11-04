@@ -3,6 +3,7 @@ import type { EngineInstall, ToolchainCheck } from "@shared/types/engine";
 import { isAppError, type AppError } from "@shared/types/errors";
 
 import { AppErrorException } from "../../errors/AppErrorException";
+import { ENGINE_SAID_MARKER } from "./EngineCrashReader";
 import { isMissingFileError, locatedErrors, questIdsNamedIn, type LocatedError } from "./buildErrorLocations";
 import { BUILD_FAILURE_SIGNATURES } from "./buildFailureSignatures";
 import {
@@ -154,7 +155,7 @@ export class BuildFailureExplainer
 	{
 		// Once the code compiled, the output holds only kept warnings: a coincident warning must not refund a test-time crash or loop, so only the pipeline error is read.
 		const outputLines = compiled ? [] : compilerOutput.split(/\r?\n/).filter((line) => questIdsNamedIn(line).length === 0 && !CODE_EXCERPT_LINE.test(line));
-		const lines = [...outputLines, ...(pipelineError === undefined ? [] : pipelineError.split(/\r?\n/))];
+		const lines = [...outputLines, ...(pipelineError === undefined ? [] : withoutEngineQuote(pipelineError).split(/\r?\n/))];
 
 		for (const signature of BUILD_FAILURE_SIGNATURES)
 		{
@@ -169,8 +170,11 @@ export class BuildFailureExplainer
 	}
 
 	/** Rule 2: the runner problems that are outside the learner's code for certain: a program that could not start, a build that timed out or whose tool crashed while starting (only before the code compiled), and none of the quest's tests running. Once the code compiled, a timeout or a missing test report may be the learner's crash or endless loop, and any text not listed here is unknown: both answer undefined (A1199). */
-	private async outsidePipelineFailure(message: string, engineRoot: string, compiled: boolean): Promise<AppError | undefined>
+	private async outsidePipelineFailure(fullMessage: string, engineRoot: string, compiled: boolean): Promise<AppError | undefined>
 	{
+		// Only the runner's own words are read: the engine's quoted fatal text can hold the learner's text (a UE_LOG(Fatal) message) and must not match a rule (A1863).
+		const message = withoutEngineQuote(fullMessage);
+
 		if (/could not be started|did not (?:start|answer)/i.test(message)) return this.explainStartFailure(message, engineRoot);
 		if (/none of this quest's tests ran/i.test(message)) return questTestsDidNotRun(message);
 
@@ -290,6 +294,14 @@ function firstErrorLine(output: string): string
 	const errorLine = lines.find((line) => /\berror\b/i.test(line)) ?? lines[0] ?? SILENT_BUILD_DETAIL;
 
 	return clipped(errorLine);
+}
+
+/** The pipeline error without the engine's quoted fatal text, which a crash message ends with ("The engine said: ..."). */
+function withoutEngineQuote(message: string): string
+{
+	const quoteStart = message.indexOf(ENGINE_SAID_MARKER);
+
+	return quoteStart === -1 ? message : message.slice(0, quoteStart);
 }
 
 /** A line trimmed and cut to the length an error detail keeps. */

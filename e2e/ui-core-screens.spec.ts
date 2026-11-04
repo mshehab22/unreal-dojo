@@ -224,7 +224,10 @@ test("Cmd/Ctrl+K searches the glossary and opens the term in the Codex", async (
 	await expect(window.getByTestId("drill-queued")).toBeVisible();
 
 	await window.getByTestId("codex-category").selectOption("containers");
-	await expect(window.getByTestId("codex-list").getByRole("button")).toHaveCount(4);
+	// The filter narrows the list: a container stays and UPROPERTY goes (the exact count grows as packs add terms).
+	const filtered = window.getByTestId("codex-list").getByRole("button");
+	await expect(filtered.filter({ hasText: "TArray" })).toBeVisible();
+	await expect(filtered.filter({ hasText: "UPROPERTY" })).toHaveCount(0);
 	await window.keyboard.press("Escape");
 });
 

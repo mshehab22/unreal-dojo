@@ -34,7 +34,7 @@ This is the second piece of the Village Gate boss.
 
 ## See it in the editor
 
-Make a Blueprint actor `BP_Hero` with a `DojoS4Interactor` component, and place it in the level 100 units from a `DojoS4Door`, with a `DojoS4Sign` 150 units from the hero and another 600 away. In the level Blueprint, with the hero selected, get its interactor with Get Component by Class. On BeginPlay bind a custom event to On Focus Changed that prints the prompt, and on the 1 key call Try Interact. Press Play: the prompt `Open door` prints once; press 1 and `Close door` prints, with the door open.
+Make a Blueprint actor `BP_Hero` with a `DojoS4Interactor` component, and place it in the level 100 units from a `DojoS4Door`, with a `DojoS4Sign` 150 units from the hero and another 600 away. In the level Blueprint, with the hero selected, get its interactor with Get Component by Class. On BeginPlay bind a custom event to On Focus Changed that prints the prompt, and right after the bind print Get Focus Prompt too, because the hero may have announced its first focus before the level Blueprint was listening. On the 1 key call Try Interact. Press Play: `Open door` prints from the Get Focus Prompt line (and from the event too when it fires in time); press 1 and `Close door` prints, with the door open.
 
 # Files
 
@@ -650,9 +650,9 @@ bool FDojo_S4_Interactor_IgnoresOthers::RunTest(const FString& Parameters)
 
 # Hints
 
-- `Refresh` is a search with a running best: start with no best, walk `Nearby`, skip what cannot be used, and keep the candidate only when it is strictly nearer. Strictly nearer is what lets the first arrival keep a tie.
-- Comparing squared distances avoids a square root: `FVector::DistSquared`. `FText::EqualTo` compares texts, because two prompts can read the same while being different objects.
-- Call the interface with `IDojoS4Interactable::Execute_CanInteract`, `Execute_GetPrompt`, and `Execute_Interact`; they take the actor as their first argument.
+- `Refresh` keeps a running best while it walks `Nearby`, and it replaces the best only when a candidate is strictly nearer, which is what lets the first arrival keep a tie.
+- Two prompts can read the same while being different objects, so compare their text and not the objects when deciding whether anything changed.
+- Using the focus can change it, so `TryInteract` uses it first, works the focus out again, and returns what the use gave back.
 
 # Rubric
 
