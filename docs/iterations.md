@@ -2386,6 +2386,21 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Not done or left for later: the replacement mutation's run, which needs a second lock hold; unverified on macOS (A75). The boss's keys are called directly in headless tests (no player controller).
 - Decisions made: A1770 to A1782 under "Awaiting Mohammad's review".
 
+## M4.P2.23 Pack 2 World 23, Combos (content-patterns, author-patterns)
+- What changed: the last Patterns world, "Patterns that have to share a room", with a framing concept, three breakdowns, and three bosses that each join finished build quests from earlier worlds with a director that owns no rules. A fair's stalls (Component, Observer, Event Queue), the arena's instant replay (Command, Game Loop, Double Buffer), and the castle's siege wall (Subclass Sandbox, State) are planned first; then the arena night, the ghost drill, and the trap hall are built from the merged pieces of Worlds 4 to 9. Combinations are structured from the research's Part 4, with new scenarios, numbers, and text (A1806).
+- The quests and their observables:
+  - Three patterns, one room (concept): the seams between pieces (who calls whom, what is handed over, and when), a director that owns no rules, and signs of too much structure.
+  - Breakdowns, each with two reference plans: the fair's stalls, the instant replay, and the siege wall (A1803).
+  - Boss, the arena night: four fighters on two teams, a script of blows over six turns, loot dropped once, knockouts heard together at the end of the frame, TEAM 2 WINS in night 1 and TEAM 1 WINS in night 2. Four tests.
+  - Boss, the ghost drill: a live run of 50 fixed steps recorded as commands and replayed on a ghost dummy through the same clock, identical at 30, 60, and 144 frames a second, two pads scoring 50 and then 30. Four tests.
+  - Boss, the trap hall: a spike trap, a new frost vent, and a ballista with modes; the ballista is shown a target, ordered to fire, and its bolts hit the nearest fighter, three bolts and CLEARED in round 1 and four bolts and HELD in round 2. Three tests.
+- Also: no new glossary entries and no change to the pattern cards. A follow-up list of the later patterns each boss should add is in A1805.
+- Proof so far:
+  - Content verifier: no problems.
+  - Engine proof on UE 5.8.4 (one hold, 04:29 to 06:35, no stalls): all three boss references build and pass (arena night, ghost drill, trap hall), no content changes were needed.
+  - Mutations: 29 of 30 caught in the first hold, 30 of 30 after the second. The first survivor was t02 (the ballista is shown a target whether or not a fighter is in reach). The hall looks every half second and the ballista fires on the whole second, so the wrong spot and drop always cancelled out before a fire order, and the reach test only looked on whole seconds. A check just after a look (5.3 s after the start) would catch it; the test change (a check at 5.3 s in OutOfReachNeverWakesTheBallista, commit 12394ae) was run in a short second hold on the engine (06:50 to 06:57): the trap hall reference passes and t02 now fails OutOfReachNeverWakesTheBallista.
+  - Several mutations fail more tests than the mutation README listed (for example t01 also fails AnyTrapClassWillDo); all are caught.
+- Not done: nothing for the engine. No screenshots. Decisions A1798 to A1809 (A1798 is the fix round).
 ## M4.P2.20 Pack 2 World 20, Strategy (content-patterns, author-patterns)
 - What changed: a twentieth Patterns world, "Choose the rule, keep the actor", with the full arc for Strategy (six teaching quests and a boss), set around a practice yard: a launcher that picks its target, dummies that move, and a turret with an aim switch. Each way of doing one job becomes a child class behind one shared function, and the object that needs the job holds one and calls it. Unreal forms: an abstract `UObject` base with `Instanced` and `EditInlineNew` so a designer picks and tunes the rule in Details, and a `TSubclassOf` with `NewObject` so code picks the class and swaps it while the game runs. How it differs from State and Subclass Sandbox is taught in the card, the when-not, and the card's items (A1732).
 - The quests and their observables:
