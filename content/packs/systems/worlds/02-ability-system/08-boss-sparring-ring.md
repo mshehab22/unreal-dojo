@@ -117,7 +117,7 @@ Feel: tune the shockwave's reach and wait until clearing the ring takes planning
 
 # Integration Rubric
 
-- The pieces are reused unchanged apart from the Effects list on the ability asset; every rule about starting, paying, waiting, and tags stays in the ability and energy components.
+- The pieces are reused unchanged apart from the Effects list on the ability asset and the one call that runs a move's effects, which sits in whichever piece the plan chooses; every rule about starting, paying, waiting, and tags stays in the ability and energy components.
 - A move does what its asset's effects say: changing the effects in the asset changes the move with no code change, and a third kind of effect is one more child of the effect base.
 - The director subscribes to the three events; neither component points at the director or the board.
 - A move that is waiting, unaffordable, or blocked by the hero's tags does nothing and costs nothing, including a dash while Focus still roots the hero after the shockwave's root has ended.

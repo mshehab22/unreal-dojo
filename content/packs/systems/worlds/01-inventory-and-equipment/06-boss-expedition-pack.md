@@ -43,7 +43,7 @@ The hero's bag and equipment are components on the hero; the director finds them
 
 Compiles against earlier quests: s1-item-data (`Quests/s1-item-data/DojoS1ItemData.h`, `Quests/s1-item-data/DojoS1WorldItem.h`), s1-bag (`Quests/s1-bag/DojoS1InventoryComponent.h`), s1-equipment (`Quests/s1-equipment/DojoS1EquipmentComponent.h`), and s1-bag-view (`Quests/s1-bag-view/DojoS1BagView.h`). The pieces need no additions.
 
-Core numbers are fixed: 4 slots, a weight limit of 20, 200 to pick up, 100 to drop, 25 per potion, 3 potions needed, health 50 of 100.
+Core numbers are fixed for the core round: 4 slots, a weight limit of 20, 200 to pick up, 100 to drop, 25 per potion, 3 potions needed, health 50 of 100. The Feel line below tunes the slots and the weight limit afterwards, and the submission reports those tuned values in addition.
 
 Extensions, in order of importance:
 

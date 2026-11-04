@@ -36,7 +36,7 @@ Write the obvious version first and run the tests. One of them fails on purpose 
 
 ## See it in the editor
 
-Place a `DojoP12TrialBook`. In Details add three Rows, in this order: Swift (Parent Name Basic, Swing Speed 150, everything else -1), Heavy (Parent Name Basic, Blade Count 5, Reward 25, the rest -1), and Basic (no parent, Blade Count 3, Swing Speed 90, Time Limit 60, Reward 10). In the Level Blueprint, on Begin Play, call Resolve on the book with Trial Name Swift, break the Out Trial struct, and print its four numbers: 3, 150, 60, and 10. Change Basic's Reward to 40 while playing, resolve Swift from a key press, and it prints 40; Heavy keeps its 25. One edit to a parent reaches every child that did not set the number itself.
+Place a `DojoP12TrialBook`. In Details add three Rows, in this order: Swift (Parent Name Basic, Swing Speed 150, everything else -1), Heavy (Parent Name Basic, Blade Count 5, Reward 25, the rest -1), and Basic (no parent, Blade Count 3, Swing Speed 90, Time Limit 60, Reward 10). With the book selected in the viewport, right-click in the Level Blueprint and choose Create a Reference to Selected Actor. On Begin Play, call Resolve on that reference with Trial Name Swift, break the Out Trial struct, and print its four numbers: 3, 150, 60, and 10. Then add a key event on the 1 key that resolves Swift and prints its Reward, and one on the 2 key that resolves Heavy and prints its Reward. Change Basic's Reward to 40 while playing and press 1: it prints 40. Press 2 and Heavy still prints its own 25. One edit to a parent reaches every child that did not set the number itself.
 
 # Files
 
@@ -362,6 +362,6 @@ Resolve could be done once, when the game starts: walk every row, write its fina
   distractors:
     - line: "		Result = *Row;"
       mistake: Copying the whole parent row over the result throws away the child's own numbers; the child keeps what it set and borrows only what it did not.
-    - line: "	const_cast<FDojoP12TrialRow*>(Row)->Reward = Result.Reward;"
-      mistake: Writing the resolved number back into the book's row rewrites the designers' data, so the row no longer says it borrows that number.
+    - line: "	Rows.Add(Result);"
+      mistake: Adding the resolved row to the book changes the designers' data, and the next Resolve of that name finds two rows with it.
 ```

@@ -32,7 +32,7 @@ This patrol is the second piece of the Clockwork Hall boss, where it swings as t
 
 ## See it in the editor
 
-Place a `DojoM2Patrol`, turn it 90 degrees about Z so its arrow points along Y, and set Travel Distance to 500 and Speed to 250 in Details. Press Play: the block swings along Y between its start and 500 units away, forever. In the level Blueprint, on the 1 key, add a Print String of Get Ends Reached; press 1 after 2, 4, and 6 seconds and read 1, 2, and 3. Type `slomo 0.2` in the console to watch a turn up close, and `t.MaxFPS 20` to see it still turn at the same two points.
+Place a `DojoM2Patrol`, turn it 90 degrees about Z so its arrow points along Y, and set Travel Distance to 500 and Speed to 250 in Details. The block is only a scene root and an arrow, and the arrow is hidden in game, so you read its movement from numbers. Press Play, press F8 to eject, select the patrol in the World Outliner, and watch Location Y in Details: it runs from its start value out to 500 more and back, forever. To read the turns, select the patrol, right-click in the level Blueprint and choose Create a Reference to Selected Actor, then on the 1 key add a Print String of its Get Ends Reached; press 1 after 2, 4, and 6 seconds and read 1, 2, and 3. Type `slomo 0.2` in the console to slow a turn down in Details, and `t.MaxFPS 20` to see it still turn at the same two points.
 
 # Files
 
@@ -101,7 +101,7 @@ private:
 
 ADojoM2Patrol::ADojoM2Patrol()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = true; // @explain: The patrol moves every frame, so it asks the engine to tick it; an actor that never needs a tick leaves this off and costs nothing.
 
 	USceneComponent* Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = Root;
@@ -231,7 +231,7 @@ bool FDojo_M2_Patrol_SlowFramesStayOnThePath::RunTest(const FString& Parameters)
 
 - The distance along the path is the one stored fact, and the location is set from it every frame.
 - The movement per frame is `Speed` times `DeltaSeconds`.
-- At the end of every frame the block stands between the start and the far end.
+- The block is always on the stretch between the start and the far end.
 - Turning round at an end is counted once per end in `EndsReached`.
 - The path direction is the actor's forward at BeginPlay, so turning the patrol in the editor turns its swing.
 

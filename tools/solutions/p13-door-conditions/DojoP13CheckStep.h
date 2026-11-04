@@ -14,9 +14,9 @@ enum class EDojoP13CheckOp : uint8
 	ECO_ReadStat UMETA(DisplayName = "Read Stat"),
 	/** Takes two values and puts back whether they are equal. */
 	ECO_Equal UMETA(DisplayName = "Equal"),
-	/** Takes two values and puts back whether the first written is less than the second. */
+	/** Takes two values and puts back whether the comparison holds. */
 	ECO_Less UMETA(DisplayName = "Less"),
-	/** Takes two values and puts back whether the first written is greater than the second. */
+	/** Takes two values and puts back whether the comparison holds. */
 	ECO_Greater UMETA(DisplayName = "Greater"),
 	/** Takes two values and puts back whether both are true. */
 	ECO_And UMETA(DisplayName = "And"),
