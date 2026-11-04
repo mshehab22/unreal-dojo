@@ -26,13 +26,13 @@ It is drill day in the drone yard. The hero is an `ADojoM1Walker` at the origin.
 
 F is the handoff key. While the hero is in control, F takes over the nearest drone within 250 units of the hero; between two equally near drones the scanner wins, and with no drone in reach F does nothing. While a drone is in control, F hands control back to the hero. A pawn that is not in control answers to no keys. Tab opens and closes a pause. While the pause is open, W, A, S, D, Space, and F do nothing, so the pawn in control cannot move, turn, charge, or be handed back, but Tab still works. The pause belongs to the director, not to any pawn.
 
-A drill is done at the moment control returns to the hero if the scanner has turned at least 90 degrees from where it started (either way) and the cannon's last shot was Heavy. Then the round ends, handoff does nothing, and the status line reads `DRILL DONE in 41.2 s` with the time since the round began. Before that the status line is the mode label: `HERO`, `SCANNER`, or `CANNON`, with ` PAUSED` added while the pause is open.
+A drill is done at the moment control returns to the hero if the scanner has turned at least 90 degrees from where it started (either way), measured as the net angle from its starting yaw, from -180 to 180 (so a scanner that has turned 350 degrees one way reads as 10 degrees the other way) and the cannon's last shot was Heavy. Then the round ends, handoff does nothing, and the status line reads `DRILL DONE in 41.2 s` with the time since the round began. Before that the status line is the mode label: `HERO`, `SCANNER`, or `CANNON`, with ` PAUSED` added while the pause is open.
 
 R starts the next round, only after the drill is done; before that, R does nothing. Starting a round destroys the old hero and drones, spawns a fresh hero, scanner, and cannon at their places, closes the pause, and gives the hero to the player. A second round plays exactly like the first. Reference game: Kerbal Space Program's switch of control between vessels, with the game's pause menu over it all.
 
 Compiles against earlier quests: m1-turntable (`Quests/m1-turntable/DojoM1Turntable.h`, and `Quests/m1-turntable/DojoM1InputRig.h` for tests), m1-move-pad (`Quests/m1-move-pad/DojoM1Walker.h`), m1-pause-context (`Quests/m1-pause-context/DojoM1PauseSwitch.h`), and m1-charge-meter (`Quests/m1-charge-meter/DojoM1Charger.h`). The pieces need no additions.
 
-Core numbers are fixed: 500 to each drone, 250 to take one over, 90 degrees to turn, and the pieces' own numbers (300 units a second, 90 degrees a second, a one second full charge).
+Core numbers are fixed: 500 to each drone, 250 to take one over, 90 degrees to turn, and the pieces' own numbers (300 units a second, 90 degrees a second, a one second full charge). Reach is a designer value: with these numbers the drones are never equally near, and a wider reach is how a tie shows.
 
 Layers: the pawns' own controls sit at priority 0, the director's keys (F, Tab, R) at 5, and the pause above them both.
 

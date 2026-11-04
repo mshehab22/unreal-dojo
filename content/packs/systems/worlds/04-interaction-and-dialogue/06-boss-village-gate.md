@@ -26,19 +26,19 @@ pieces:
 
 A village road runs east, and a locked gate closes it. The hero starts at the west end, far from everyone. Along the road stand a gossip, then a gatekeeper with a sign beside, then the gate. Everything is placed for you: the gossip 600 units along the road, the gatekeeper 1200, the sign 150 to the side of the gatekeeper, the gate 1800.
 
-The hero carries an interactor with a reach of 200, the radius of its sphere, so a thing counts as in reach once its box touches the sphere. Whatever the interactor offers is shown on the board as `Prompt: Talk to Gatekeeper`, `Prompt: Read sign`, `Prompt: Open door`, or `Prompt: none` when nothing can be used. E uses the offered thing. The nearest usable thing is offered, and a locked gate is never offered.
+The hero carries an interactor with a reach of 200, the radius of its sphere, so a thing counts as in reach once its box touches the sphere. Whatever the interactor offers is shown on the board as `Prompt: Talk to Gatekeeper`, `Prompt: Read sign`, `Prompt: Open door`, `Prompt: Close door` once it is open, or `Prompt: none` when nothing can be used. E uses the offered thing. The nearest usable thing is offered, and a locked gate is never offered.
 
 The gatekeeper greets the hero with `Halt. State your business.` and three answers: `I carry a message.`, `Let me through.`, and `The password is moonlight.`, which is shown only once the hero knows the password. The first two end in a short refusal and then the end of the conversation. The third sets the flag that unlocks the gate and leads to the closing line `Moonlight. Go ahead.`, which E moves on. The gossip says `Psst. The gate password changes daily.` and can be asked: `Tell me.` leads to `Today it is moonlight.` and the answer `Thanks.` sets the flag `knows-password`; `Not interested.` ends the conversation.
 
 While a conversation plays, the board shows the speaker's line and the numbered answers that are shown, such as `1. I carry a message.`; a closing line shows `(E to continue)`; the number keys 1 to 3 pick an answer by its position among those shown; E does nothing except move a closing line on; the hero cannot walk; and nobody else can be talked to. When it ends the board goes back to the prompt.
 
-Opening the gate ends the round: the board adds `GATE OPEN in 41.2 s`, the time since the round began, and E does nothing more. R starts the next round, only after the finale. Starting a round locks and shuts the gate, clears every flag, ends any conversation, puts the hero back at the start, and makes the board read `Prompt: none`. Reference game: Skyrim's guard conversations, where what you have learned decides which answers you are offered.
+Opening the gate ends the round: the board adds `GATE OPEN in 41.2 s`, the time since the round began, and E does nothing more. R starts the next round, only after the finale. Starting a round locks and shuts the gate, clears every flag, ends any conversation, puts the hero back at the start, and makes the board read `Prompt: none`. Reference game: Morrowind's conversation topics, where each thing you have learned adds a topic you can ask about.
 
 A C++ director receives keys only after `EnableInput` with the player controller. The hero's interactor is a component on the hero; the director finds it with `FindComponentByClass`. The director creates the one runner and the one flag store and gives them to every villager.
 
 Compiles against earlier quests: s4-interactable (`Quests/s4-interactable/DojoS4Door.h`, `Quests/s4-interactable/DojoS4Sign.h`), s4-interactor (`Quests/s4-interactor/DojoS4Interactor.h`), s4-dialogue-runner (`Quests/s4-dialogue-runner/DojoS4DialogueData.h`, `Quests/s4-dialogue-runner/DojoS4DialogueRunner.h`, `Quests/s4-dialogue-runner/DojoS4FlagStore.h`), and s4-villager (`Quests/s4-villager/DojoS4Villager.h`). The pieces need no additions.
 
-Core numbers are fixed: a reach of 200, places 600, 1200, and 1800 along the road, three answers at the gatekeeper, answers picked by position among those shown, and the flags `knows-password` and `pass`.
+Core numbers are fixed, and the class defaults stay as they are: a reach of 200, places 600, 1200, and 1800 along the road, three answers at the gatekeeper, answers picked by position among those shown, and the flags `knows-password` and `pass`.
 
 The system combines four Pack 2 patterns: Component ("Actors built from parts"), for the interactor that any actor can carry; Observer ("The lens, then the first payoff"), for the focus, the conversation, and the flags, which are listened to instead of asked; Type Object ("Kinds as data"), for conversations that live in assets; and State ("One mode at a time"), for the runner that is idle or active and the keys that mean exploring or talking.
 
@@ -48,7 +48,7 @@ Extensions, in order of importance:
 2. A quest that reads the flags: "learn the password" completes when `knows-password` is set, with the Pack 3 quest tracker.
 3. Dialogue portraits and a typewriter effect on the line, as a listener of the conversation events.
 
-Feel: tune the reach and the places until the road feels like a short walk with a decision at every stop, not a corridor. The submission gives the numbers and one sentence on why.
+Feel: once the core round passes, change the reach (the Sphere Radius of the interactor on the hero, in Details) and move the placed actors until the road feels like a short walk with a decision at every stop, not a corridor. The submission gives the values it tried and one sentence on why.
 
 # Required Pieces
 
@@ -92,7 +92,7 @@ Feel: tune the reach and the places until the road feels like a short walk with 
     - { id: director, kind: class, label: ADojoS4GateDirector with the hero and the gate and the villagers set in Details and the interactor found on the hero and the runner and flags created and given to every villager, covers: [director] }
     - { id: offer, kind: step, label: PressInteract calls TryInteract on the hero's interactor and the interactor itself picks the nearest usable thing, covers: [offer] }
     - { id: talk, kind: step, label: PressChoice calls Choose with the number minus one and PressInteract calls Advance while talking, covers: [talk] }
-    - { id: mode, kind: event, label: Handlers bound to OnFocusChanged and the runner's started and choice and ended events rewrite the board and switch the input mode and stop or allow walking, covers: [mode] }
+    - { id: mode, kind: event, label: Handlers bound to OnFocusChanged and the runner's started and choice and ended events rewrite the board and switch the input mode and stop or allow walking through the player controller's SetIgnoreMoveInput, covers: [mode] }
     - { id: flaggate, kind: event, label: A handler bound to OnFlagSet unlocks the gate and refreshes the interactor when the pass flag arrives, covers: [flag-gate] }
     - { id: finale, kind: step, label: After E the director checks whether the gate is open and records the time and ends the round, covers: [finale] }
     - { id: fresh, kind: step, label: RestartRound ends any conversation and resets the flags and locks the gate and moves the hero back and starts the clock only when not running, covers: [fresh] }
@@ -109,7 +109,7 @@ Feel: tune the reach and the places until the road feels like a short walk with 
     - { id: level, kind: class, label: Level Blueprint with variables for the hero and the gate and the villagers and the runner and the flag store and a Running Boolean, covers: [director] }
     - { id: offer, kind: step, label: The E event gets the interactor with Get Component by Class and calls Try Interact on it, covers: [offer] }
     - { id: talk, kind: step, label: The 1 and 2 and 3 events branch on the runner's Get State and call Choose with the number minus one and E calls Advance while Active, covers: [talk] }
-    - { id: mode, kind: event, label: Custom events bound with Bind Event to On Focus Changed and On Dialogue Started and On Choice Made and On Dialogue Ended rewrite a Text Render and set a Talking Boolean, covers: [mode] }
+    - { id: mode, kind: event, label: Custom events bound with Bind Event to On Focus Changed and On Dialogue Started and On Choice Made and On Dialogue Ended rewrite a Text Render and set a Talking Boolean and call Set Ignore Move Input on the player controller, covers: [mode] }
     - { id: flaggate, kind: event, label: A custom event bound to On Flag Set compares the flag name to pass and calls Unlock on the gate, covers: [flag-gate] }
     - { id: finale, kind: step, label: After Try Interact a branch on the gate's Is Open sets Running to false and prints the time, covers: [finale] }
     - { id: fresh, kind: step, label: The R event behind a branch on Running calls End on the runner and Reset on the flags and Lock on the gate and Set Actor Location on the hero, covers: [fresh] }
@@ -131,4 +131,4 @@ Feel: tune the reach and the places until the road feels like a short walk with 
 - While a conversation plays, E only moves a closing line on, no other villager can be used, and the hero cannot walk; the keys mean exploring again as soon as it ends.
 - The pass flag unlocks the gate through the flag event, and the gate is never unlocked any other way.
 - Every delegate binding made in BeginPlay is removed in EndPlay, and nothing runs in Tick.
-- R starts a fresh round only after the finale, and a second round plays exactly like the first; the submission gives the tuned numbers with one sentence on why.
+- R starts a fresh round only after the finale, and a second round plays exactly like the first; the submission gives the values it tried for the Feel with one sentence on why.

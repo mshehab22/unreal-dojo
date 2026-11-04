@@ -25,11 +25,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: forty kinds of dart trap differ only in damage, dart speed, and how often they fire. A teammate proposes a little step machine so designers can write each trap's numbers as push steps. Is that the right tool?"
 choices:
-  - Yes; behavior should always be data
-  - No; when only numbers differ, a Data Asset or a row in a Data Table per kind is enough
-  - Yes, as long as the stack holds at least sixteen values
-  - No; traps can never be data driven
-answerIndex: 1
+  - Yes; behavior should always be data, so every trap should be written as steps
+  - Yes, as long as the stack holds at least sixteen values for each trap's program
+  - No; traps can never be data driven, because their timing has to be compiled in
+  - No; when only numbers differ, a Data Asset or a Data Table row per kind is enough
+answerIndex: 3
 explanation: A machine earns its cost when behavior has to be composed. Numbers that only vary per kind are plain data, and a machine around them adds a front end and a debugger to build for nothing.
 ```
 
@@ -81,20 +81,20 @@ struct FDartTrapKind : public FTableRowBase
   type: multiple-choice
   prompt: "Why should the movement of ten thousand particles each frame not run through your own step machine?"
   choices:
-    - A machine cannot do arithmetic
-    - Each step pays for a loop, a switch, and the stack, which adds up to far too much at that scale
-    - Particles cannot be data driven
-    - A machine cannot run during play
-  answerIndex: 1
+    - Each step pays for a loop, a switch, and the stack, which adds up at that scale
+    - A step machine cannot do arithmetic on floating point numbers, only on integers
+    - Particles cannot be data driven, because their numbers are computed every frame
+    - A step machine cannot run during play, only while the editor is paused
+  answerIndex: 0
   explanation: Interpretation costs a little per step, which matters only when the steps run very often. Keep hot paths native or in a machine the engine already optimizes.
 - id: when-not-blueprint
   type: multiple-choice
   prompt: "Your designers all have the editor and want to script one-off level events. Nobody outside the team will write behavior. What is the better choice?"
   choices:
-    - A custom step machine with its own text language
+    - A custom step machine with its own text language for the designers
     - Blueprint, which is already a machine with a graph editor and a debugger
-    - Hard-coded C++ for every event
-    - A Data Table with one row per event
+    - Hard-coded C++ for every event, rebuilt whenever a designer changes one
+    - A Data Table with one row per event, read by a small native switch
   answerIndex: 1
   explanation: When the authors are on the team and have the editor, Blueprint gives you the machine, the front end, and the debugger for free.
 - id: spot-no-tools
