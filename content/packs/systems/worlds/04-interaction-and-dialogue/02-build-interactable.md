@@ -152,7 +152,7 @@ ADojoS4Door::ADojoS4Door()
 	RootComponent = Body;
 	Body->SetBoxExtent(FVector(50.f, 50.f, 100.f));
 	Body->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
-	Body->SetGenerateOverlapEvents(true); // @explain: Overlap events are off unless a component asks for them, and the interactor finds the door only through the overlap of its sphere with this box.
+	Body->SetGenerateOverlapEvents(true); // @explain: Overlap events are already on for a box, but the interactor finds the door only through them, so the code states the dependency instead of relying on the default.
 
 	Label = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Label"));
 	Label->SetupAttachment(Body);
@@ -426,9 +426,9 @@ bool FDojo_S4_Interactable_FindableByOverlap::RunTest(const FString& Parameters)
 
 # Hints
 
-- A door has three states and two of them matter for the prompt: look at `bLocked` first, then at `bOpen`. For `Interact_Implementation`, the guard comes first and the flip comes after it.
-- `FText::FromString` makes the prompt, and a function that updates the label is already written.
-- An interface function is called as `IDojoS4Interactable::Execute_GetPrompt(Actor)`; the `_Implementation` suffix is only for the class that implements it.
+- A door has more than one state, so decide which one the prompt reports first.
+- The prompt is text, and the label above the door already has a function that shows the current state.
+- Do the check that can refuse before anything changes, so a refused use leaves the door exactly as it was.
 
 # Rubric
 

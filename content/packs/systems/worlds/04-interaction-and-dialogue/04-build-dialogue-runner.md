@@ -13,7 +13,7 @@ xp: 110
 estimatedMinutes: 30
 concepts:
   - Conversations as data in nodes, choices, and flags, with no story in the runner
-  - A runner that is idle or active and refuses to start one conversation on top of another
+  - A runner that is idle or active and answers questions about the conversation it is playing
   - Choices that appear only once a flag is set, picked by their position among those shown
 ---
 
@@ -21,7 +21,7 @@ concepts:
 
 When you start the gate conversation, its greeting shows two choices; after the password flag is set it shows three; picking a choice sets its flag, moves on, and announces it; and a choice with no next node ends the conversation.
 
-The conversation asset, its nodes and choices, the flag store, and two ready-made listeners are given: `UDojoS4DialogueSpy` writes down every event in order, and `UDojoS4DialogueChain` starts a follow-up when a conversation ends. The runner's declaration is given; every body in `DojoS4DialogueRunner.cpp` is yours:
+The conversation asset, its nodes and choices, the flag store, and two ready-made listeners are given: `UDojoS4DialogueSpy` and `UDojoS4DialogueChain`; the tests use both. The runner's declaration is given; every body in `DojoS4DialogueRunner.cpp` is yours:
 
 - `Start` starts a conversation on its start node and announces `OnDialogueStarted`. It returns false, announcing nothing, when a conversation is already playing or the asset, its start node, or the flag store is missing.
 - `GetState`, `GetCurrentText`, and `GetVisibleChoices` answer questions. Visible choices are those with no required flag, or whose required flag is set, in the order they are written. An idle runner shows no text and no choices.
@@ -37,7 +37,7 @@ This is the third piece of the Village Gate boss.
 
 ## See it in the editor
 
-Make a Dojo S4 Dialogue Data asset `DA_Gate` with Start Node `greet` and one node, `greet`, whose text is `Halt.` and which has one choice, `Leave`, with no next node. In the level Blueprint, on BeginPlay create a Dojo S4 Flag Store and a Dojo S4 Dialogue Runner with Construct Object from Class, bind a custom event to On Dialogue Ended that prints `ended`, and call Start with `DA_Gate`. On the 1 key call Choose with 0 and print Get State. Press Play and press 1: `ended` prints and the state is Idle.
+Make a Dojo S4 Dialogue Data asset `DA_Gate` with Start Node `greet` and one node, `greet`, whose text is `Halt.` and which has one choice, `Leave`, with no next node. In the level Blueprint, on BeginPlay create a Dojo S4 Flag Store and a Dojo S4 Dialogue Runner with Construct Object from Class and store both in variables, bind a custom event to On Dialogue Ended that prints `ended`, and call Start with `DA_Gate`. On the 1 key call Choose with 0 and print Get State. Press Play and press 1: `ended` prints and the state is Idle.
 
 # Files
 
@@ -765,7 +765,7 @@ bool FDojo_S4_Runner_OneAfterAnother::RunTest(const FString& Parameters)
 	TStrongObjectPtr<UDojoS4FlagStore> Store(NewObject<UDojoS4FlagStore>());
 	TStrongObjectPtr<UDojoS4DialogueSpy> Spy(NewObject<UDojoS4DialogueSpy>());
 	TStrongObjectPtr<UDojoS4DialogueChain> Chain(NewObject<UDojoS4DialogueChain>());
-	// The spy is bound before the chain so its "ended" line is written before the chain starts the follow-up; the log below relies on that order.
+	// The spy is bound first, so for this test its "ended" line is written before the chain starts the follow-up and the log below is written for that order; a real listener must not depend on it.
 	Spy->Watch(Runner.Get(), Store.Get(), FName(TEXT("none")));
 	Chain->Arm(Runner.Get(), Second.Get(), Store.Get());
 
@@ -790,8 +790,8 @@ bool FDojo_S4_Runner_OneAfterAnother::RunTest(const FString& Parameters)
 # Hints
 
 - Run the first failing test and read its message: the spy's log shows the events in the order they arrived, and the assertions name what the runner should be doing at each point.
-- A listener is called from inside the call that announces. Ask what state the runner is in, and what it still holds, while it is calling its listeners, and what a listener is allowed to do at that moment.
-- Whatever a listener might do next, the runner must already be in the state it would be in after the call finishes. Change the state, and let go of the conversation, before you announce the end.
+- A listener is called from inside the call that announces, so ask what state the runner is in, and what it still holds, while it calls them.
+- Change the state, and let go of the conversation, before you announce the end, so a listener meets the runner as it will be after the call.
 
 # Rubric
 
@@ -799,7 +799,7 @@ bool FDojo_S4_Runner_OneAfterAnother::RunTest(const FString& Parameters)
 - Visible choices are filtered by their required flag in written order, and `Choose` counts positions among the visible ones.
 - A choice sets its flag before it is announced, and a choice whose flag was just set shows up at once on the node it returns to.
 - Each of the three events is broadcast exactly once per occurrence, in the order started, choice, ended.
-- Everything the runner needs is in its asset and its flags; it holds no story, and listeners hold the only references to the runner.
+- Everything the runner needs is in its asset and its flags; it holds no story, and it holds no pointer to any listener, villager or hero.
 
 # Alternative
 

@@ -40,15 +40,25 @@ fi
 # npm ci sometimes skips the Electron download; e2e then fails at launch.
 node -e "require('fs').accessSync(require('electron'))" 2>/dev/null || node node_modules/electron/install.js >/dev/null 2>&1
 
-npm run typecheck >/dev/null 2>&1 && echo "TYPECHECK OK" || echo "TYPECHECK FAILED"
-npm test 2>&1 | grep -E "Tests |FAIL" | head -5
-npx tsx tools/verify-content.ts 2>&1 | tail -2
-npm run build >/dev/null 2>&1 && echo "BUILD OK" || echo "BUILD FAILED"
+CHECKS_FAILED=0
+
+npm run typecheck >/dev/null 2>&1 && echo "TYPECHECK OK" || { echo "TYPECHECK FAILED"; CHECKS_FAILED=1; }
+npm test > "$LOG_FOLDER/dojo-last-test.log" 2>&1 || CHECKS_FAILED=1
+grep -E "Tests |FAIL" "$LOG_FOLDER/dojo-last-test.log" | head -5
+npx tsx tools/verify-content.ts > "$LOG_FOLDER/dojo-last-verify.log" 2>&1 || CHECKS_FAILED=1
+tail -2 "$LOG_FOLDER/dojo-last-verify.log"
+npm run build >/dev/null 2>&1 && echo "BUILD OK" || { echo "BUILD FAILED"; CHECKS_FAILED=1; }
 
 # e2e opens its windows hidden and unfocused (A77); never set DOJO_TEST_SHOW_WINDOW here.
 if [ "${RUN_E2E:-1}" = "1" ]; then
-	npm run test:e2e > "$LOG_FOLDER/dojo-last-e2e.log" 2>&1
+	npm run test:e2e > "$LOG_FOLDER/dojo-last-e2e.log" 2>&1 || CHECKS_FAILED=1
 	grep -E "✘|flaky|failed|passed" "$LOG_FOLDER/dojo-last-e2e.log" | tail -5
 else
 	echo "E2E SKIPPED"
+fi
+
+# The merge commit stays on main either way; a nonzero exit tells the Lead not to stack another merge or push.
+if [ "$CHECKS_FAILED" != "0" ]; then
+	echo "CHECKS FAILED: fix main before the next merge or push."
+	exit 5
 fi
