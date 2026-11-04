@@ -25,7 +25,7 @@ After the refactor, the fire basket keeps its embers as plain records in two arr
 
 `ADojoP19Brazier` is a fire basket. `Kindle` throws up one ember at a spot with a velocity and a kind such as Spark or Ash; an ember lives `EmberSeconds`, 3 by default. Each frame `Step` moves every ember by its velocity, cools it by the frame's length, and removes every ember with no heat left. `GetEmberCount`, `GetHighestEmberZ`, `GetTotalHeat`, `CountEmbersOfKind`, and `GetHighestZOfKind` read the embers.
 
-Today every ember is a `UDojoP19Ember`, made with `NewObject` and held in a `UPROPERTY` array of object pointers. Each one carries its position and velocity as `FVector`s, its heat, and the kind and time it was kindled, which only the readers ever look at. A summer evening kindles thousands of embers, and every one is an object for the garbage collector and a pointer to follow in the step.
+Today every ember is a `UDojoP19Ember`, made with `NewObject` and held in a `UPROPERTY` array of object pointers. Each one carries its position and velocity as `FVector`s, its heat, and the kind and time it was kindled, which the step never reads. A summer evening kindles thousands of embers, and every one is an object for the garbage collector and a pointer to follow in the step.
 
 Refactor the embers into plain data:
 
@@ -38,7 +38,7 @@ Three of the five tests pass on the starter and must pass after; two do not. Rea
 
 ## See it in the editor
 
-Place a `DojoP19Brazier`. In the Level Blueprint, on Begin Play, use Set Timer by Event with a looping time of 0.1 seconds to call Kindle at the brazier's location with a velocity of 0, 0, 150 and the kind Spark, and on Event Tick print Get Ember Count. Press Play: the count climbs to about 30 and holds there, as embers cool as fast as they are kindled. Type `obj gc` in the console to collect the embers that already went out, then `obj list class=DojoP19Ember`: before the refactor it lists about 30 objects, one per ember still up, and after it the console says it does not recognize the class, because the class is gone.
+Place a `DojoP19Brazier`. In the Level Blueprint, on Begin Play, use Set Timer by Event with a looping time of 0.1 seconds to call Kindle at the brazier's location with a velocity of 0, 0, 150 and the kind Spark, and on Event Tick print Get Ember Count. Press Play: the count climbs to about 30 and holds there, as embers cool as fast as they are kindled. Type `obj gc` in the console to collect the embers that already went out, then `obj list class=DojoP19Ember`: before the refactor it lists about 30 objects, one per ember still up, and after the refactor and an editor restart the list is empty, because the class is gone.
 
 # Files
 
@@ -398,9 +398,9 @@ bool FDojo_P19_Embers_HotRecordsStaySmall::RunTest(const FString& Parameters)
 
 # Hints
 
-- The two failing tests read the brazier's own layout through the reflection system. Read their messages: which array holds objects, and which arrays does the test look for?
-- A position and a velocity as two `FVector`s are already 48 bytes. Which vector type keeps them, with the heat, inside 32?
-- Every kindle adds to both arrays and every removal takes from both at the same index. Which test fails if one of the two arrays is removed from differently?
+- Read the two failing messages: which array holds objects, and which arrays does the test look for?
+- Add up the bytes of a position, a velocity and the heat in each vector type to see which one fits.
+- If one array is removed from differently from the other, a reader reports an ember's kind from the wrong ember, and one test says so.
 
 # Rubric
 

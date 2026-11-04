@@ -26,21 +26,23 @@ The director runs the night watch. A watchman stands on a tower in the wind, and
 
 Every 1 second, the first at 0.5 seconds, the watch is checked. A check first removes any drink of oil that has worn off, then reads the guard, and if it is below 40 the check is shaky. It also reads the lantern's position for the label. The label reads `Round N  Guard G  Lantern X,Y,Z  Shaky S`, with the lantern rounded to whole numbers, and when the round ends it adds two spaces and the result, `HELD` when there were at most 3 shaky checks and `FELL` otherwise.
 
-Every 5 seconds, the first at 2 seconds, a gust pushes the tower's base 20 units along X. The watchman starts every round with base guard 30. Pressing E puts armour on, worth 15 guard, or takes it off if it is on. Pressing B drinks lantern oil, worth 10 guard for 12 seconds, and drinks can stack. E and B do nothing outside a round. Round 1 starts when play begins, and R starts the next round only after one has ended. Starting a round returns everything to the start through the pieces' own functions: no buffs, no armour, the base guard of 30, the tower's base back where it began, and no shaky checks. A C++ director receives keys only after `EnableInput` with the player controller. Reference game: the character sheet of a Diablo-style action role-playing game, where armour and resistances are totals built from a base, each worn item, and temporary buffs, and that the player keeps checking.
+Every 5 seconds, the first at 2 seconds, a gust pushes the tower's base 20 units along X. The watchman starts every round with base guard 30. Pressing E puts armour on, worth 15 guard, or takes it off if it is on. Pressing B drinks lantern oil, worth 10 guard for 12 seconds, and drinks can stack. E and B do nothing outside a round. Round 1 starts when play begins, and R starts the next round only after one has ended. Starting a round returns everything to the start through the pieces' own functions: no buffs, no armour, the base guard of 30, the tower's base back where it began, and no shaky checks. A C++ director receives keys only after `EnableInput` with the player controller. Starting a round writes the label at once, before the first check. Reference game: the character sheet of a Diablo-style action role-playing game, where armour and resistances are totals built from a base, each worn item, and temporary buffs, and that the player keeps checking.
 
 The pieces know nothing about the director. The director never works out a rating or a position itself and never touches a piece's stored values. Every change goes through the pieces' functions (`SetBaseGuard`, `Equip`, `Unequip`, `AddBuff`, `RemoveBuff`, `ClearBuffs`, and `SetLocalOffset`), and every read goes through `GetGuard` and `GetPosition`.
 
+The director's public surface is what the tests read and set: a `Label` text component and a `Guard` stats component on the director, a `Rig` that can be given before play begins, the editable numbers `StartingGuard`, `MostShakyChecks`, `RoundSeconds`, `FirstGustSeconds` and `GustInterval`, the key functions `PressArmour`, `PressOil` and `PressNextRound`, and the readers `IsRunning`, `GetRoundNumber`, `GetShakyChecks` and `GetResult`.
+
 Compiles against earlier quests: p17-guard-rating (`Quests/p17-guard-rating/DojoP17GuardStats.h`, `Quests/p17-guard-rating/DojoP17GuardBuff.h`) and p17-tower-rig (`Quests/p17-tower-rig/DojoP17TowerRig.h`, `Quests/p17-tower-rig/DojoP17RigNode.h`).
 
-Core numbers are fixed: a 36 second round, a check every second, a gust every 5 seconds of 20 units, a base guard of 30, armour worth 15, oil worth 10 for 12 seconds, steady at 40, and held with at most 3 shaky checks.
+Core numbers are fixed as the defaults of the editable numbers above, so a player never changes them, but the director must expose them for the tests: a 36 second round, a check every second, a gust every 5 seconds of 20 units, a base guard of 30, armour worth 15, oil worth 10 for 12 seconds, steady at 40, and held with at most 3 shaky checks.
 
-Extensions, in order of importance:
+Extensions, all optional and beyond the tests, in order of importance:
 
 1. A second watchman on the tower with his own guard stats: the label shows the lower of the two guards, and each guard is worked out only after its own parts change.
 2. An autosave: a note that the round state has changed since it was last written, set by every change and cleared by a write once every 10 seconds, so a quiet minute writes nothing.
 3. A label line, `Sums G/T`, showing how many times the guard and the tower have been worked out, so the saving can be watched.
 
-Feel: tune the oil's length and the armour's worth so that a player who dresses at once and drinks oil early holds easily, a player who takes the armour off for the last seven seconds falls, and the moment the armour comes off is when a drink of oil feels worth having.
+Feel: judge the fixed oil length and armour worth: a player who dresses at once and drinks oil early should hold easily, a player who takes the armour off for the last seven seconds should fall, and the moment the armour comes off is when a drink of oil should feel worth having.
 
 # Required Pieces
 
@@ -116,11 +118,11 @@ Feel: tune the oil's length and the armour's worth so that a player who dresses 
 
 # Integration Rubric
 
-- The pieces are reused unchanged, and the director never works out a rating or a position and never touches the pieces' stored values: every change and every read goes through their functions.
+- The pieces are reused unchanged and know nothing about the director, and the director never works out a rating or a position and never touches the pieces' stored values: every change and every read goes through their functions.
 - Armour toggles with Unequip and Equip, oil adds a buff by id and removes it by id when it has worn off, and the reset clears buffs, armour, the base guard, and the base joint through the same functions.
 - The check removes worn-off oil before it reads the guard, so an expired drink is gone the same second.
 - A quiet watch with no change reads the guard and the lantern every second and works each out once; after a change, the next check works out only what depends on it.
 - A gust moves only the tower: the guard is not worked out again for it, and the tower's joints are each worked out once for each gust.
 - A shaky check is a guard below 40, the round holds with at most 3 shaky checks, and the result and the lantern position appear on the label as specified.
 - E and B work only while a round runs, R only between rounds, and a new round starts from the starting guard and the starting base, with the shaky count reset.
-- The submission says which function of each piece every change goes through, why the director keeps no copy of either value, and gives the tuned oil length and armour value with the feel they produced.
+- The submission says which function of each piece every change goes through, why the director keeps no copy of either value, and says how the fixed oil length and armour value felt in play.

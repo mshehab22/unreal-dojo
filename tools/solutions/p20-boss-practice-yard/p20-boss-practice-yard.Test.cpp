@@ -276,4 +276,67 @@ bool FDojo_P20_PracticeYard_EachSwapMakesANewRule::RunTest(const FString& Parame
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P20_PracticeYard_ShotIntervalIsTunable, "Dojo.P20.PracticeYard.ShotIntervalIsTunable", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** With FireInterval set to 3 seconds and a 14 second round, the first shot comes after three seconds and four shots are fired, not the six a 2 second interval would give. */
+bool FDojo_P20_PracticeYard_ShotIntervalIsTunable::RunTest(const FString& Parameters)
+{
+	using namespace DojoP20YardTest;
+
+	FDojoTestWorld TestWorld;
+
+	ADojoP20PracticeYard* Yard = SpawnYard(TestWorld, { UDojoP20WeakestRule::StaticClass() }, [](ADojoP20PracticeYard& Tuned)
+	{
+		Tuned.RoundSeconds = 14.f;
+		Tuned.FireInterval = 3.f;
+	});
+	if (!TestNotNull(TEXT("Yard spawned"), Yard)) return false;
+
+	TickUntil(TestWorld, 2.5f);
+	TestEqual(TEXT("No shot has been fired before the first interval is up"), Yard->GetShotLog().Num(), 0);
+
+	TickUntil(TestWorld, 3.5f);
+	TestEqual(TEXT("The first shot comes after one interval of three seconds"), LogText(Yard->GetShotLog()), FString(TEXT("A")));
+
+	TickUntil(TestWorld, 14.5f);
+	TestFalse(TEXT("The round is over after its 14 seconds"), Yard->IsRunning());
+	TestEqual(TEXT("Four shots at three second intervals, the weakest first"), LogText(Yard->GetShotLog()), FString(TEXT("AAAC")));
+	TestEqual(TEXT("All four hit"), Yard->GetHits(), 4);
+	TestEqual(TEXT("The anvil is down and the barrel and the crate are standing"), Yard->GetStandingCount(), 2);
+	TestEqual(TEXT("So the dummies escaped"), Yard->GetResult(), FString(TEXT("ESCAPED")));
+	TestEqual(TEXT("The label shows the hits and the result"), Yard->Label->Text.ToString(), FString(TEXT("Round 1  DojoP20WeakestRule  Hits 4  Standing 2  ESCAPED")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P20_PracticeYard_HitDamageIsTunable, "Dojo.P20.PracticeYard.HitDamageIsTunable", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** With HitDamage set to 30, the anvil falls to one hit and the crate to two, so the weakest rule moves on sooner than it does at a damage of 10. */
+bool FDojo_P20_PracticeYard_HitDamageIsTunable::RunTest(const FString& Parameters)
+{
+	using namespace DojoP20YardTest;
+
+	FDojoTestWorld TestWorld;
+
+	ADojoP20PracticeYard* Yard = SpawnYard(TestWorld, { UDojoP20WeakestRule::StaticClass() }, [](ADojoP20PracticeYard& Tuned)
+	{
+		Tuned.RoundSeconds = 9.f;
+		Tuned.HitDamage = 30;
+	});
+	if (!TestNotNull(TEXT("Yard spawned"), Yard)) return false;
+
+	TickUntil(TestWorld, 2.5f);
+	TestEqual(TEXT("One hit of 30 takes the anvil down"), Yard->GetStandingCount(), 2);
+
+	TickUntil(TestWorld, 9.5f);
+	TestFalse(TEXT("The round is over after its 9 seconds"), Yard->IsRunning());
+	TestEqual(TEXT("The anvil once, the crate twice, then the barrel"), LogText(Yard->GetShotLog()), FString(TEXT("ACCB")));
+	TestEqual(TEXT("All four hit"), Yard->GetHits(), 4);
+	TestEqual(TEXT("Only the barrel is standing"), Yard->GetStandingCount(), 1);
+	TestEqual(TEXT("So the dummies escaped"), Yard->GetResult(), FString(TEXT("ESCAPED")));
+	TestEqual(TEXT("The label shows the hits and the result"), Yard->Label->Text.ToString(), FString(TEXT("Round 1  DojoP20WeakestRule  Hits 4  Standing 1  ESCAPED")));
+
+	return true;
+}
+
 #endif

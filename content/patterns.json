@@ -2202,7 +2202,7 @@
     "title": "Object Pool",
     "intent": "Make a fixed set of objects once and lend them out and take them back as play needs them, so the busiest moments of a game never pay for creating and destroying them.",
     "problem": "A finale fires three hundred rockets in twenty seconds. Spawning each one builds an actor from its class, registers its components with rendering and physics, and runs BeginPlay; destroying it takes all that apart again and leaves the memory for a later garbage collection. The cost lands exactly when the screen is fullest.",
-    "unrealForm": "Actor spawning is the expensive part, so pools of actors are the common case: a manager actor or a UWorldSubsystem spawns the actors when play begins and keeps them in UPROPERTY arrays. Lending one resets it and turns drawing, collision, and ticking back on; taking it back turns all three off with SetActorHiddenInGame, SetActorEnableCollision, and SetActorTickEnabled. Niagara effects already have a pool: spawn them with the AutoRelease pooling method.",
+    "unrealForm": "Actor spawning is the expensive part, so pools of actors are the common case: a manager actor or a UWorldSubsystem spawns the actors when play begins and keeps them in UPROPERTY arrays. Lending one resets it and turns drawing, collision, and ticking back on; taking it back turns all three off with SetActorHiddenInGame, SetActorEnableCollision, and SetActorTickEnabled. Niagara can pool its effects: spawn them with the AutoRelease pooling method, as the default of None makes a fresh component each time.",
     "whenNot": "Skip it for things made a few times a level, for actors too complex to reset with certainty, and whenever stat game or Unreal Insights does not show spawning as the cost. A pool holds memory all the time and needs a reset that misses nothing; give it a size, a limit, and a deliberate choice for when it runs out.",
     "useCaseQuestIds": [
       "p16-rocket-rack",
@@ -2214,12 +2214,12 @@
         "type": "multiple-choice",
         "prompt": "Why is pooling actors more valuable in Unreal than pooling small structs?",
         "choices": [
-          "Structs cannot be stored in arrays",
-          "Spawning an actor runs construction, registration, and BeginPlay, which is costly",
-          "Actors are never garbage collected",
-          "Pooled actors replicate for free"
+          "A spawn runs construction, registration, and BeginPlay, which is costly",
+          "Structs cannot be stored in arrays, so a pool of them could not reuse a slot",
+          "Actors are never garbage collected, so keeping them around costs nothing",
+          "Pooled actors replicate to every client for free, which structs cannot do"
         ],
-        "answerIndex": 1,
+        "answerIndex": 0,
         "explanation": "The cost being saved is the actor spawn and destroy pipeline, not raw memory allocation."
       },
       {
@@ -2247,12 +2247,12 @@
         "type": "multiple-choice",
         "prompt": "A pool keeps its resting rockets in a TArray and lends from the end with Pop. Why from the end?",
         "choices": [
-          "Pop is the only way to read a TArray",
-          "Taking the last element moves nothing else, so lending takes the same time however many rockets rest",
-          "The first element is always invalid",
-          "It makes the rockets spawn faster"
+          "Pop is the only function in Unreal that can read an element back out of a TArray",
+          "The first element of a TArray is always invalid, so lending has to start at the end",
+          "Removing the last element moves nothing, so lending costs the same at any size",
+          "It makes the rockets spawn faster, because the array is filled from back to front"
         ],
-        "answerIndex": 1,
+        "answerIndex": 2,
         "explanation": "Removing from the end of an array shifts no other element, which gives the same constant-time take and return that a free list gives."
       },
       {
@@ -2262,8 +2262,8 @@
         "choices": [
           "Nothing, the second return is ignored by the engine",
           "The rack later lends the same rocket to two users at once",
-          "The rocket is destroyed",
-          "The rack spawns a replacement"
+          "The rocket is destroyed the next time it is lent out",
+          "The rack spawns a replacement for the missing rocket"
         ],
         "answerIndex": 1,
         "explanation": "A rocket listed twice is handed out twice. A pool takes back only what it lent and has not yet taken back."
@@ -2300,15 +2300,15 @@
       {
         "id": "object-pool-scenario-2",
         "type": "multiple-choice",
-        "prompt": "A dungeon spawns its single boss once per level, and a teammate proposes pooling it. What is the best response?",
+        "prompt": "A harbor level places a dozen lanterns when it loads, and Unreal Insights shows the load spending almost nothing on spawning them. A teammate proposes pooling them. What is the best response?",
         "choices": [
-          "Pool it, since pooling is always faster",
-          "Pool it with a capacity of ten to be safe",
-          "Skip pooling; one spawn per level costs little and pooling adds a reset burden for no gain",
-          "Make the boss a singleton instead"
+          "Pool them anyway, because keeping actors around is always the safer habit to have",
+          "Skip pooling; a dozen spawns cost little, and a pool adds a reset to get right",
+          "Pool them with room for a hundred, so that the pool can never run out of lanterns",
+          "Merge the lanterns into one Singleton so that only a single lantern ever exists"
         ],
-        "answerIndex": 2,
-        "explanation": "Pool things created and destroyed often. A once-per-level spawn does not justify reset logic and a pool's memory."
+        "answerIndex": 1,
+        "explanation": "Pool things created and removed often. A dozen spawns at load do not justify a reset that must miss nothing and a pool's memory."
       },
       {
         "id": "object-pool-scenario-3",
@@ -2342,12 +2342,12 @@
         "type": "multiple-choice",
         "prompt": "A grenade pool spawns one more grenade whenever it is empty and never removes any. After an hour-long match it holds 400 grenades, though at most 12 were ever in the air at once. What should change?",
         "choices": [
-          "Nothing, a bigger pool is always better",
-          "Give the pool a limit near the real peak and choose what happens at the limit, such as refusing or recycling the oldest",
-          "Destroy the pool every minute",
-          "Replace it with a static array of 1000 grenades"
+          "Nothing, since a bigger pool is always better and the memory is cheap anyway",
+          "Destroy the whole pool every minute, then let it grow back up from empty again",
+          "Give it a limit near the real peak, and refuse or recycle at the limit",
+          "Replace it with a static array of 1000 grenades, so that it can never run out"
         ],
-        "answerIndex": 1,
+        "answerIndex": 2,
         "explanation": "Growing without a limit spawns during play and keeps every grenade forever. Size the pool for the real peak and decide what the limit means."
       }
     ]
@@ -2389,10 +2389,10 @@
         "type": "multiple-choice",
         "prompt": "When is a dirty flag the wrong tool?",
         "choices": [
-          "When derived data is expensive and read rarely",
-          "When several changes land in one frame",
-          "When derived data is cached",
-          "When a simple running total can be updated in constant time per change"
+          "When the derived data is expensive to work out and is read only rarely",
+          "When several changes land in the same frame before anything reads the value",
+          "When the derived value is cached next to the data it is worked out from",
+          "When a running total can be updated for free on each change"
         ],
         "answerIndex": 3,
         "explanation": "If you can update the result incrementally for free, a flag only adds a branch and a chance to forget."
@@ -2507,12 +2507,12 @@
         "type": "multiple-choice",
         "prompt": "A hit's damage is the fighter's strength times two, and it is read whenever a hit lands. Should the product be cached behind a dirty flag?",
         "choices": [
-          "No; one multiplication is cheaper than a stored copy, a flag, and every setter that must set it",
-          "Yes; every number that is read should be cached",
-          "Yes, but only with a timer",
-          "No; damage should be recomputed in Tick"
+          "Yes; every number that is read often should be cached beside a flag",
+          "Yes, but only if a timer clears the flag every few seconds",
+          "No; the product costs less than keeping a flag right",
+          "No; the damage should be recomputed from scratch inside Tick"
         ],
-        "answerIndex": 0,
+        "answerIndex": 2,
         "explanation": "A flag pays when the work is worth saving. For a single multiplication the flag costs more and adds a path that can be forgotten."
       }
     ]
@@ -2534,12 +2534,12 @@
         "type": "multiple-choice",
         "prompt": "What must happen when an object in a uniform grid moves across a cell boundary?",
         "choices": [
-          "It must be removed from its old cell and added to its new one",
-          "Nothing; the grid recalculates each query",
-          "The whole grid must be rebuilt",
-          "The cell size must change"
+          "Nothing, because the grid recalculates each query on its own",
+          "The whole grid must be rebuilt from every object's position",
+          "It must be moved from its old cell's list to its new one",
+          "The cell size must change to fit where the object went"
         ],
-        "answerIndex": 0,
+        "answerIndex": 2,
         "explanation": "An object's cell is worked out from where it stands, so when it moves into another cell its entry has to move with it."
       },
       {
@@ -2571,13 +2571,13 @@
         "type": "multiple-choice",
         "prompt": "In a grid that measures every pair of nearby objects, why does each cell compare against only four of its eight neighbor cells?",
         "choices": [
-          "Because four neighbors are always empty",
-          "So every two touching cells are compared from one side only and no pair is measured twice",
-          "To keep the grid smaller in memory",
-          "Because diagonal cells can never hold a nearby object"
+          "Because four of the eight neighbors are always empty cells",
+          "To keep the grid's memory use smaller for a very large pond",
+          "Because diagonal cells can never hold a nearby object at all",
+          "So any two touching cells are compared from one side alone"
         ],
-        "answerIndex": 1,
-        "explanation": "If each of two touching cells compared against the other, every pair across them would be measured twice. Four directions cover each touching pair once."
+        "answerIndex": 3,
+        "explanation": "If each of two touching cells compared against the other, every pair across them would be measured twice. Four directions, one from each opposite pair, cover each touching pair once."
       },
       {
         "id": "spatial-partition-recall-5",
@@ -2624,12 +2624,12 @@
         "type": "multiple-choice",
         "prompt": "A puzzle room has 12 pressure plates and needs to know which plate the player stands on. A teammate proposes building an octree. What is the better approach?",
         "choices": [
-          "Build the octree; it scales better",
-          "Let each plate's box component report overlaps, since the physics broadphase already partitions space",
-          "Loop over all actors in the level each frame",
-          "Use a uniform grid with 1 centimeter cells"
+          "Build the octree, because it scales better as the room grows",
+          "Loop over all actors in the level each frame and measure",
+          "Use a uniform grid with 1 centimeter cells, refiled each frame",
+          "Let each plate's box report overlaps; physics tracks them"
         ],
-        "answerIndex": 1,
+        "answerIndex": 3,
         "explanation": "With a dozen objects the engine's own overlap events already do the spatial work. A custom partition pays off only for many objects physics does not track."
       },
       {
@@ -2664,12 +2664,12 @@
         "type": "multiple-choice",
         "prompt": "A courtyard has 25 statues that are static meshes with collision, and a spell needs every statue within 600 units of where it lands. What fits best?",
         "choices": [
-          "A uniform grid of the statues, refiled every frame",
-          "An overlap query with a 600 unit sphere where the spell lands",
-          "An octree rebuilt every frame",
+          "A uniform grid of the statues, refiled every single frame",
+          "An octree of the statues, rebuilt from scratch every frame",
+          "An overlap query with a 600 sphere where the spell lands",
           "A loop over every actor in the level, measuring distance"
         ],
-        "answerIndex": 1,
+        "answerIndex": 2,
         "explanation": "The statues already have collision shapes in the physics scene, so an overlap query finds them without a second structure. With 25 statues even a loop over just the statues would do; a structure of your own adds upkeep for nothing."
       }
     ]
@@ -2691,10 +2691,10 @@
         "type": "multiple-choice",
         "prompt": "Why is iterating a TArray<FDojoParticle> usually faster than iterating a TArray<UDojoParticle*>?",
         "choices": [
-          "Structs are smaller than pointers",
-          "Pointers cannot be iterated in a range-based for",
-          "The struct array is contiguous, so the CPU reads neighbors from cache instead of chasing pointers",
-          "UObjects are always slower to read than structs"
+          "Structs are smaller than pointers, so the array is shorter",
+          "Pointers cannot be iterated in a range-based for loop at all",
+          "The struct array is contiguous, so neighbors share cache lines",
+          "UObjects are always slower to read than structs, whatever the layout"
         ],
         "answerIndex": 2,
         "explanation": "Contiguous memory lets cache lines and prefetching do their job."
@@ -2779,12 +2779,12 @@
         "type": "multiple-choice",
         "prompt": "A menu with 30 buttons feels sluggish, and a teammate proposes rewriting the buttons as packed struct arrays for cache efficiency. What should come first?",
         "choices": [
-          "Do the rewrite; cache misses are always the cause",
-          "Convert the buttons to Mass entities",
-          "Pool the buttons",
-          "Profile with Unreal Insights, because 30 buttons cannot plausibly cause a cache bottleneck"
+          "Do the rewrite now, because cache misses are always the cause",
+          "Profile first; 30 buttons are an unlikely cause",
+          "Convert all the buttons into Mass entities at once",
+          "Pool the buttons so they are not created again"
         ],
-        "answerIndex": 3,
+        "answerIndex": 1,
         "explanation": "Data Locality is for large, hot loops confirmed by a profiler. Thirty widgets are almost certainly slow for another reason."
       },
       {
@@ -2819,12 +2819,12 @@
         "type": "multiple-choice",
         "prompt": "A fire basket's embers are only seen: no gameplay code ever reads where they are. A teammate wants to write a hot and cold split for them. What is the better choice?",
         "choices": [
-          "Write the split; embers are a classic case",
-          "Make each ember an actor so it can be seen",
-          "Store them in a TMap by ID",
-          "Use a Niagara system, which keeps its particles packed for you, and write no ember code at all"
+          "Write the split now, since embers suit it well",
+          "Make each ember an actor so that it can be seen",
+          "Use a Niagara system and write no ember code",
+          "Store them in a TMap keyed by an ember ID"
         ],
-        "answerIndex": 3,
+        "answerIndex": 2,
         "explanation": "Effects that are only seen belong in Niagara. Records of your own pay off when gameplay has to read or change them."
       }
     ]

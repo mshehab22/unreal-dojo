@@ -25,11 +25,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: the lantern grid has cells 200 units wide. A designer asks how many lanterns burn within 900 units of the keeper. How many cells does FindNear visit in each direction from the keeper's cell?"
 choices:
-  - One, the cells right next to it, as always
-  - None; it looks only in the keeper's own cell
-  - About five, because the circle reaches across four or five cells each way
-  - It gives up, because the radius is larger than a cell
-answerIndex: 2
+  - About five, since the circle spans four or five cells each way out
+  - One, the cells right next to it, as always, whatever the radius is
+  - None; it looks only in the keeper's own cell and nowhere else at all
+  - It gives up, because the radius is larger than a cell and cannot be used
+answerIndex: 0
 explanation: FindNear visits every cell between the one under the circle's lowest corner and the one under its highest. With 200 unit cells and a 900 unit radius, that is four or five cells each way, about a hundred cells in all, which is why a cell near the size of the radius matters.
 ```
 
@@ -66,11 +66,11 @@ const FIntPoint High = CellOf(Center + FVector(Radius, Radius, 0.f));
   type: multiple-choice
   prompt: "Questions in your game usually ask for things within 100 units. Which cell size suits a uniform grid best?"
   choices:
-    - 1 unit, so every cell holds almost nothing
-    - About 100 units, near the radius the questions ask about
-    - 10,000 units, so the whole level is a few cells
+    - 1 unit, so every cell holds almost nothing at all
+    - 10,000 units, so the whole level is a few big cells
+    - About 100 units, near the radius the questions ask
     - The size makes no difference to the work a question does
-  answerIndex: 1
+  answerIndex: 2
   explanation: Cells near the radius keep a question to a small block of cells with few objects each. Tiny cells mean visiting many empty cells; huge cells mean measuring many objects that are far away.
 - id: fill-refile
   type: fill-blank
@@ -81,31 +81,30 @@ const FIntPoint High = CellOf(Center + FVector(Radius, Radius, 0.f));
   type: multiple-choice
   prompt: "Every pair of lanterns within reach gets a thread. Why does each cell measure against only half of its eight neighbor cells?"
   choices:
-    - To save memory
-    - Because the other neighbors are always empty
-    - So each pair of neighbor cells is measured from one side only, and no pair is measured or joined twice
-    - Because pairs only ever reach to the right
-  answerIndex: 2
-  explanation: If cell A measured against cell B and B against A, every pair across them would be measured twice. Choosing four of the eight directions covers each neighbor pair exactly once.
+    - To keep the memory the grid takes up as small as it can be
+    - So each touching pair of cells is measured from one side only
+    - Because the other neighbors are always empty cells of the grid
+    - Because pairs only ever reach to the right of a cell, never left
+  answerIndex: 1
+  explanation: If cell A measured against cell B and B against A, every pair across them would be measured twice. Choosing four directions, one from each opposite pair, covers each neighbor pair exactly once.
 - id: tree-or-grid
   type: multiple-choice
   prompt: "When is an octree a better fit than a uniform grid?"
   choices:
-    - When objects are spread evenly and move every frame
-    - When objects clump in a few places and most of the space is empty
-    - When there are fewer than ten objects
-    - Never; a grid is always faster
-  answerIndex: 1
+    - When objects are spread out evenly and move every single frame
+    - When there are fewer than ten objects in the whole level
+    - Never; a grid is always faster than every kind of tree
+    - When objects clump together and most of the space is empty
+  answerIndex: 3
   explanation: An octree splits only where it is crowded, so clumps get fine cells and empty space costs one node. A grid with fixed cells wastes nothing on empty space but overfills the crowded cells.
 - id: spot-dangling
   type: spot-the-bug
-  prompt: A grid files actors for proximity questions. Which line lets a question hand back an actor that was destroyed?
+  prompt: A grid files actors for proximity questions, and each of its cells holds a TArray of raw AActor pointers. Which line lets a question hand back an actor that was destroyed?
   code: |
     void FCrowdGrid::Add(AActor* Actor)
     {
     	const FIntPoint Cell = CellOf(Actor->GetActorLocation());
-    	TArray<AActor*>& Bucket = Cells.FindOrAdd(Cell);
-    	Bucket.Add(Actor);
+    	Cells.FindOrAdd(Cell).Add(Actor);
     }
   bugLine: 4
   fix: File weak pointers, and skip entries that no longer point at a live actor, or remove each actor when it is destroyed.
@@ -114,11 +113,11 @@ const FIntPoint High = CellOf(Center + FVector(Radius, Radius, 0.f));
   type: multiple-choice
   prompt: "Which of these is already a spatial partition that Unreal keeps for you?"
   choices:
-    - The physics scene's broadphase, which overlap queries and traces ask
-    - The Content Browser's folders
-    - A Data Table's rows
-    - The order of actors in the World Outliner
-  answerIndex: 0
+    - The Content Browser's folders and the assets in them
+    - The physics scene's broadphase, which queries ask
+    - A Data Table's rows, which are read by their row name
+    - The order of actors in the World Outliner list
+  answerIndex: 1
   explanation: The broadphase keeps every collision shape's bounding box in a tree, which is why overlap queries look only near their shape.
 - id: explain-pattern
   type: explain-in-one-sentence

@@ -417,9 +417,9 @@ bool FDojo_P18_MothSwarm_AnyRangeAnyCell::RunTest(const FString& Parameters)
 
 # Hints
 
-- One test passes right after the moths scatter and another fails after they have flown. What happened to the moths between those two moments, and which code did it?
-- `Step` changes where each moth is. What does the grid know about that change, and what would a question about a moth's new place find?
-- `Step` already visits every moth right after moving it. What could it do there that costs almost nothing for the moths that stayed inside their cell?
+- One test passes right after the moths scatter and another fails after they have flown, so what happened to the moths in between, and which code did it?
+- `Step` changes where each moth is, so what does the grid know about that change, and what would a question about a moth's new place find?
+- `Step` already visits every moth right after moving it, so what could it do there that costs almost nothing for a moth that stayed inside its cell?
 
 # Rubric
 
@@ -437,7 +437,7 @@ Flying every moth and then emptying and rebuilding the whole grid once per step 
 
 ```yaml
 - id: file-all
-  prompt: Put FileAll in order. It starts from an empty grid.
+  prompt: "Put FileAll in order. It starts from an empty grid: clear the cells, size the list of each moth's cell, then for each moth find its cell, file its index there, and remember the cell."
   lines:
     - "void ADojoP18MothSwarm::FileAll()"
     - "{"

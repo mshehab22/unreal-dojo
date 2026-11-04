@@ -23,13 +23,13 @@ concepts:
 ```yaml
 id: predict
 type: multiple-choice
-prompt: "Guess, no penalty: the harbor's boss, a sea serpent, is spawned once at the start of each level and destroyed at its end. A teammate wants to pool it to save the spawn. What is the best answer?"
+prompt: "Guess, no penalty: the harbor's ferry, an actor with an AI controller, attached cargo, and timers in flight, is spawned once when each level loads and destroyed when it unloads. A teammate wants to pool it to save the spawn. What is the best answer?"
 choices:
-  - Pool it; pooling is always faster
-  - Pool it with room for ten, to be safe
-  - Spawn it; one spawn per level costs almost nothing, and a serpent with health, phases, an AI controller, and attacks in flight is hard to reset with certainty
-  - Make the serpent a Singleton instead
-answerIndex: 2
+  - Pool it, because keeping an actor in memory always beats spawning it again later on
+  - "Spawn it as usual: one spawn a level is cheap, and a ferry is hard to reset"
+  - Pool it with room for a spare, in case the first ferry is lost partway through the level
+  - Keep one ferry in a static variable that every level reuses, so it is never spawned
+answerIndex: 1
 explanation: A pool pays off for things made and removed many times a second. Once a level, the spawn is invisible, and every field the reset might miss is a bug that only shows on the second level.
 ```
 
@@ -45,10 +45,10 @@ A pool is a trade: memory held all the time, and a reset you must get right, in 
 
 **When to spawn instead.**
 
-- *It is made rarely.* A boss once a level, a door that opens twice: the spawn costs less than the pool's memory and reset.
+- *It is made rarely.* A ferry once a level, a door that opens twice: the spawn costs less than the pool's memory and reset.
 - *It is hard to reset with certainty.* A character with an AI controller, an ability system, attached weapons, and timers in flight has dozens of things a reset could miss, and each miss is a bug that only shows on the second use.
 - *The numbers do not show it.* If `stat game` and Unreal Insights do not show spawning as the cost, a pool adds risk and saves nothing.
-- *The engine already pools it.* Niagara effects spawned with the `AutoRelease` pooling method are reused by the engine; a hand-written pool around them repeats its work.
+- *The engine can pool it.* Niagara effects spawned with the `AutoRelease` pooling method are reused by the engine; a hand-written pool around them repeats its work.
 
 **When you do pool, give it a limit.** A pool that grows whenever it is empty and never shrinks ends a long fight holding the most it ever needed, forever, and every growth was a spawn during play. Size it for the common case, choose what happens at the limit, and log when the limit is reached, so a designer can see when the size is wrong.
 
@@ -75,21 +75,21 @@ void ADojoShell::RestInPool()
   type: multiple-choice
   prompt: "A rocket starts a 2 second timer and is destroyed after 1 second. Another rocket is sent to rest in a pool after 1 second of its own 2 second timer. What happens at 2 seconds?"
   choices:
-    - Both timers fire
-    - Neither fires
-    - The destroyed rocket's timer does not fire, because the timer held it weakly; the resting rocket is alive, so its timer fires
-    - Only the destroyed rocket's timer fires
-  answerIndex: 2
+    - Both timers fire, because a timer does not depend on its object at all
+    - Neither timer fires, because both rockets stopped their flight at 1 second
+    - Only the destroyed rocket's timer fires, because Destroy runs its timers early on
+    - Only the resting rocket's timer fires; the destroyed rocket's object is gone
+  answerIndex: 3
   explanation: Destroy gave the first rocket a clean end for free. A pooled rocket keeps living, so its rest has to clear its own timers.
 - id: begin-play-once
   type: multiple-choice
   prompt: "A pooled shell picks a random burst color in BeginPlay. What do players see?"
   choices:
-    - A new color on every use
-    - Every shell keeps the color it picked on its first use, because BeginPlay runs once per actor, not once per loan
-    - No color at all
-    - A crash on the second use
-  answerIndex: 1
+    - Every shell keeps its first color; BeginPlay runs once per actor, not per loan
+    - A new color on every use, because each loan counts as a fresh start for the shell
+    - No color at all, because a pooled actor skips BeginPlay completely when it is lent
+    - A crash on the second use, because BeginPlay refuses to run for a second time
+  answerIndex: 0
   explanation: A pooled actor begins play once, when it is spawned. Per-use setup belongs in its wake.
 - id: fill-delegate
   type: fill-blank
@@ -117,12 +117,12 @@ void ADojoShell::RestInPool()
   type: multiple-choice
   prompt: "Which of these is the best fit for a hand-written actor pool?"
   choices:
-    - The level's one boss, spawned once
-    - A Niagara spark effect spawned on every hit
+    - The level's one ferry, spawned once when the level loads in
+    - A Niagara spark effect on every hit, which the engine can pool for you if asked
     - Bullets fired twenty times a second, which stat game shows spawning as a cost
-    - The player's character
+    - The player's character, with its controller, abilities, attachments, and timers
   answerIndex: 2
-  explanation: Frequent, simple, and measured is when a pool pays. The boss and the character are rare and complex, and Niagara already pools its effects.
+  explanation: Frequent, simple, and measured is when a pool pays. The ferry and the character are rare and complex, and Niagara can pool its effects when you ask it to.
 - id: explain-limit
   type: explain-in-one-sentence
   prompt: In one sentence, say why a pool that grows whenever it is empty, with no limit, defeats its own purpose.

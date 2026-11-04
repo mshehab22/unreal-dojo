@@ -24,11 +24,11 @@ pieces:
 
 The dusk hunt runs a firefly catch in the summer meadow. When play begins it sets up one ambient swarm holding `AmbientFireflies` fireflies, 2000 by default, and one meadow for the catchable ones, both at its own spot. Those are the only actors it ever adds: every firefly of the evening, ambient or catchable, is a record.
 
-A round lasts 60 seconds. One second after it starts, and every 2 seconds after that, the hunt releases a catchable firefly into the meadow, 100 units up at a spot within 400 units of the hunt along X and Y, drifting slowly sideways, with 6.5 seconds to live. The spots come from a random stream seeded with `Seed`, restarted at the start of every round. The hunt keeps the handle of every firefly it releases. Each frame, any released firefly within 100 units of the champion is caught: it leaves the meadow and is let go into the ambient swarm at the champion's spot. A released firefly whose handle no longer finds it faded uncaught and counts as missed. Ten caught fireflies fill the jar: the label shows `JAR FULL in <seconds> s`, the round's time to one decimal. When 60 seconds pass first, dusk falls and the label shows `DUSK: <caught> caught, <missed> missed`. While a round runs, the label shows the caught count out of ten, the missed count, and the seconds left. Reference game: Animal Crossing: New Horizons, where fireflies come out over the island on summer nights and the player catches them with a net.
+A round lasts 60 seconds. One second after it starts, and every 2 seconds after that, the hunt releases a catchable firefly into the meadow, 100 units up at a spot within 400 units of the hunt along X and Y, drifting slowly sideways, with 6.5 seconds to live. The spots come from a random stream seeded with `Seed`, restarted at the start of every round. The hunt keeps the handle of every firefly it releases. Each frame, any released firefly within 100 units of the champion is caught: it leaves the meadow and is let go into the ambient swarm at the champion's spot. A released firefly whose handle no longer finds it faded uncaught and counts as missed. The champion is any actor a designer picks in Details, or the player's pawn when none is picked. Ten caught fireflies fill the jar: the label shows `JAR FULL in <seconds> s`, the round's time to one decimal. When 60 seconds pass first, dusk falls and the label shows `DUSK: <caught> caught, <missed> missed`. While a round runs, the label shows the caught count out of ten, the missed count, and the seconds left. Reference game: Animal Crossing: New Horizons, where fireflies come out over the island on summer nights and the player catches them with a net.
 
 How rounds start: round 1 starts when play begins. R starts the next round, only after one has ended: the catchable fireflies left over from the last round are taken out of the meadow, the counts start at zero, and the spots start again from the seed. The ambient swarm keeps every firefly it has ever been given. A C++ hunt receives keys only after `EnableInput` with the player controller.
 
-Every piece is the earlier quests' own: the ambient swarm is an `ADojoP19Swarm`, given its starting count before it begins play and its new fireflies with `AddFirefly`; the meadow is an `ADojoP19Meadow`, given its fireflies with `AddFirefly` and read and emptied through the `FDojoP19FlyHandle`s it hands back, with `IsAlive`, `GetPosition`, and `Catch`. The pieces need no changes.
+Every piece is the earlier quests' own: the ambient swarm is an `ADojoP19Swarm`, given its starting count before it begins play and its new fireflies with `AddFirefly`; the meadow is an `ADojoP19Meadow`, given its fireflies with `AddFirefly` and read and emptied through the `FDojoP19FlyHandle`s it hands back, with `IsAlive`, `GetPosition`, and `Catch`. The pieces need no changes. The hunt is an `ADojoP19DuskHunt` with a `Label` text component and a `Champion` property, and the tests read `IsRunning`, `StartRound`, `GetReleased`, `GetCaughtCount`, `GetMissedCount`, `GetMeadow` and `GetSwarm`.
 
 Compiles against earlier quests: p19-firefly-swarm (`Quests/p19-firefly-swarm/DojoP19Swarm.h`) and p19-firefly-meadow (`Quests/p19-firefly-meadow/DojoP19Meadow.h`, `Quests/p19-firefly-meadow/DojoP19MeadowFly.h`).
 
@@ -40,7 +40,7 @@ Extensions, in order of importance:
 2. Embers: the fire basket from the refactor stands in the meadow, and every caught firefly kindles a spark there, so three kinds of records run side by side.
 3. A crowded dusk: the ambient swarm grows to 50,000, and the submission reports the swarm's step time from Unreal Insights before and after a change of your choice to its layout.
 
-Feel: tune the drift and the spots so that a player who moves steadily can fill the jar in about 25 seconds, and the last few fireflies need a real chase.
+Feel: with the fixed numbers, judge whether a player who moves steadily fills the jar in about 25 seconds and whether the last few fireflies need a real chase; the drift is yours to set.
 
 # Required Pieces
 
@@ -110,11 +110,11 @@ Feel: tune the drift and the spots so that a player who moves steadily can fill 
 
 # Integration Rubric
 
-- The swarm and meadow pieces are reused unchanged, and the hunt reaches the meadow's fireflies only through the handles it was given.
+- The swarm and meadow pieces are reused unchanged and know nothing about the hunt, and the hunt reaches the meadow's fireflies only through the handles it was given.
 - The swarm, with its 2000 starting fireflies, and the meadow are spawned when play begins, and no actor is added during any round.
 - Catchable fireflies are released after 1 second and every 2 seconds after, at spots from the seed restarted every round, with 6.5 seconds to live.
 - A released firefly within 100 units of the champion is caught, leaves the meadow, and joins the ambient swarm at the champion's spot.
 - A released firefly that faded uncaught counts as missed.
 - Ten caught show JAR FULL with the round's time; 60 seconds first show DUSK with the caught and missed counts.
 - Round 1 starts when play begins; R starts a clean round only after one has ended, with leftover fireflies taken out and the spots restarted.
-- The submission says why no firefly is an actor and why the hunt keeps handles instead of indices, and gives the tuned drift and spots with the time a steady player needs.
+- The submission says why no firefly is an actor and why the hunt keeps handles instead of indices, and says how long a steady player needed to fill the jar.

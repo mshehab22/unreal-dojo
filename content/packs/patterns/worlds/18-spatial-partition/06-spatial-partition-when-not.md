@@ -25,11 +25,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: a puzzle room has 16 floor switches, each a box component that overlaps pawns, and the game needs to know which switch the player stands on. A teammate wants to file the switches in a uniform grid. What is the better approach?"
 choices:
-  - The grid; it scales to any number of switches
-  - Let each switch's box report its own begin and end overlap events, because the physics scene already knows where the boxes and the player are
-  - Loop over every actor in the level each frame and measure
-  - An octree, because switches never move
-answerIndex: 1
+  - The grid, because it scales to any number of switches in one room
+  - Looping over every actor in the level each frame and measuring
+  - An octree, because switches never move around a puzzle room
+  - Each box reporting its own overlaps; physics already files them
+answerIndex: 3
 explanation: The switches and the player all have collision shapes, so the physics scene already files them and tells each box when the player steps in. A grid would be a second copy of positions physics already keeps, for sixteen objects.
 ```
 
@@ -64,7 +64,7 @@ GetWorld()->OverlapMultiByObjectType(Overlaps, KeeperSpot, FQuat::Identity, Lant
   prompt: "Which job is the poorest fit for a grid of your own?"
   choices:
     - Finding the neighbors of each of 3,000 starlings stored as structs, every frame
-    - Finding which of 30 shrines is closest to the player when a key is pressed
+    - Finding the closest of 30 shrines when a player presses a key in the room
     - Scoring 4,000 cover points against guard positions every second
     - Finding crowd members near each of 2,000 crowd members every frame
   answerIndex: 1
@@ -73,21 +73,21 @@ GetWorld()->OverlapMultiByObjectType(Overlaps, KeeperSpot, FQuat::Identity, Lant
   type: multiple-choice
   prompt: "The objects you ask about are actors with sphere components that overlap your query channel. What answers \"which are within 400\" best?"
   choices:
-    - A uniform grid refiled every frame
-    - UWorld::OverlapMultiByChannel with a 400 sphere, which asks the physics scene that already files the spheres
-    - A loop over every actor in the level
-    - FNavigationOctree
-  answerIndex: 1
+    - A uniform grid of your own, refiled by the keeper every frame
+    - A loop that measures every actor in the level each frame
+    - An overlap query with a 400 sphere, asking the physics scene
+    - FNavigationOctree, which files the geometry of the nav mesh
+  answerIndex: 2
   explanation: The physics scene keeps those spheres in its broadphase already; an overlap query asks it.
 - id: when-not-copy
   type: multiple-choice
   prompt: "What is the main hidden cost of keeping your own grid of actors?"
   choices:
-    - It cannot hold more than 1,000 actors
-    - It is a second copy of every position, so every move and every destroy must update it or questions silently go wrong
-    - It makes the physics scene slower
-    - It only works in the editor
-  answerIndex: 1
+    - It cannot hold more than about a thousand actors in a single level
+    - It makes the physics scene slower in every frame it runs
+    - It only works in the editor and not in a packaged game
+    - It is a second copy of positions that every move must update
+  answerIndex: 3
   explanation: The grid knows only what it was told. Code that moves or destroys an actor without telling it leaves stale entries that no compiler warning will catch.
 - id: spot-stale
   type: spot-the-bug

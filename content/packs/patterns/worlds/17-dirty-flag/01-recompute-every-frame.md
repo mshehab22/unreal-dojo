@@ -7,7 +7,7 @@ difficulty: 2
 patterns: []
 skills: [architecture, performance]
 terms: [mutable-member]
-prerequisites: [p13-bytecode-when-not]
+prerequisites: [p16-boss-finale]
 xp: 25
 estimatedMinutes: 8
 concepts:
@@ -30,7 +30,7 @@ choices:
   - 60, once a second
   - 6, once for each change
 answerIndex: 3
-explanation: The answer only changes when a part changes. Six changes means at most six different answers, however many times it is asked.
+explanation: The answer only changes when a part changes, so six changes mean at most six new sums, however many times it is asked.
 ```
 
 # Card
@@ -84,10 +84,10 @@ int32 UDojoGuard::GetGuard() const
   type: multiple-choice
   prompt: "The rating changes six times a minute and is read sixty times a second. Which plan does the least work?"
   choices:
-    - Work it out on every read
-    - Work it out on every change
-    - Remember the answer, note changes, and work it out only on a read after a change
-    - Work it out every second on a timer
+    - Work it out again every time anyone reads it
+    - Work it out again every time a part changes
+    - Keep the answer and redo it after a change
+    - Work it out again once a second on a timer
   answerIndex: 2
   explanation: Only a read after a change needs a new sum. Reads with no change reuse the answer, and several changes before a read share one sum.
 - id: fill-mutable

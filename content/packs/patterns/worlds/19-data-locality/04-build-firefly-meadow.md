@@ -25,13 +25,13 @@ When you press Play with the setup below, the meadow lets four fireflies drift, 
 
 `ADojoP19Meadow` holds catchable fireflies as `FDojoP19MeadowFly` records in one `UPROPERTY` array. Each frame its `Tick` calls the given `Step`: every firefly moves by its velocity and loses life, and every firefly whose life has run out is removed. `Catch` removes the firefly a handle names and returns true, or returns false when the handle names no firefly in the meadow. `IsAlive`, `GetPosition`, and `GetFireflyCount` read the meadow. All of that is given.
 
-Yours are `AddFirefly`, `FindIndex`, and `RemoveFirefly`. `AddFirefly` puts a firefly in the meadow and returns an `FDojoP19FlyHandle` that names it. `FindIndex` returns where in the array the firefly a handle names is now, or `INDEX_NONE` when the meadow does not hold it. `RemoveFirefly` removes the firefly at an index and keeps the array packed: no gaps, every record in it a live firefly, and the order of the records does not matter. A handle finds its own firefly for as long as that firefly is in the meadow, and finds nothing once it has been caught or has faded, also after other fireflies have been added. You may add private members, and fields to the records if you need them, as long as each record stays plain numbers with no pointers in it; `Step`, `Catch`, `IsAlive`, `GetPosition`, and `GetFireflyCount` stay as they are.
+Yours are `AddFirefly`, `FindIndex`, and `RemoveFirefly`. `AddFirefly` puts a firefly in the meadow and returns an `FDojoP19FlyHandle` that names it. `FindIndex` returns where in the array the firefly a handle names is, or `INDEX_NONE` when the meadow does not hold it. `RemoveFirefly` removes the firefly at an index and keeps the array packed: no gaps, every record in it a live firefly, and the order of the records does not matter. A handle finds its own firefly for as long as that firefly is in the meadow, and finds nothing once it has been caught or has faded, also after other fireflies have been added. The header and the records may be changed, as long as each record stays plain numbers with no pointers in it; `Step`, `Catch`, `IsAlive`, `GetPosition`, and `GetFireflyCount` stay as they are.
 
 Write the obvious version first and run the tests. One of them fails on purpose for most people. Read its name and message before you read the hints.
 
 ## See it in the editor
 
-Place a `DojoP19Meadow` and set Draw Debug to true in the Details panel. In the Level Blueprint, on Begin Play, call Add Firefly four times with spots 100 units apart along X, each with a velocity of 0, 0, 20 and a life of 30, and keep the four handles in a Dojo P19 Fly Handle array variable. Press Play: four points rise slowly. After a Delay of 2 seconds, call Catch with the last handle and print the answer: true, and one of the four points is gone. After another Delay of 1 second, call Catch with the same handle again and print the answer: false.
+Place a `DojoP19Meadow` at 0, 0, 0 and set Draw Debug to true in the Details panel. With it selected, right-click the Level Blueprint graph and choose Create a Reference to Dojo P19 Meadow. On Begin Play, call Add Firefly on it four times with spots 100 units apart along X starting at 0, 0, 100, each with a velocity of 0, 0, 20 and a life of 30, and keep the four handles in a Dojo P19 Fly Handle array variable. Press Play: four points rise slowly. After a Delay of 2 seconds, call Catch with the last handle and print the answer: true, and one of the four points is gone. After another Delay of 1 second, call Catch with the same handle again and print the answer: false.
 
 # Files
 
@@ -360,9 +360,9 @@ bool FDojo_P19_Meadow_ABusyEveningStaysPacked::RunTest(const FString& Parameters
 
 # Hints
 
-- The failing test catches the first of four fireflies. Read its messages: which handle found nothing, and which found a firefly that was not its own?
-- Keeping the array packed moved a record when you removed one from the middle. Which firefly moved, and what did its handle still say about where it was?
-- A handle needs a name for its firefly that does not change when the firefly moves in the array; the meadow then needs a way from that name to where the firefly is now.
+- Read the failing test's messages: which handle found nothing, and which found a firefly that was not its own?
+- Removing from the middle moves a record, so ask what a handle still says about a record after it moves.
+- A handle needs something about its firefly that stays true when the firefly moves in the array.
 
 # Rubric
 

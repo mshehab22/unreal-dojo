@@ -25,7 +25,7 @@ After the refactor, a night of hundreds of splashes spawns only as many ripples 
 
 `ADojoP16Water` is the harbor's water. Every `Splash` shows a ripple at a spot for `RippleSeconds`, 1 by default, and returns it. At most `MaxRipples`, 5 by default, show at once: when that many already show, the oldest one gives way to the new splash. `GetShowingCount` says how many show now. `ADojoP16Ripple` is the ring on the water. The water depends on the ripples; the ripples know nothing about the water.
 
-Today every splash spawns a new ripple and gives it a lifespan with `SetLifeSpan`, so it destroys itself when its time is up, and a full water destroys its oldest ripple to make room. A show splashes twice a second for minutes on end, and every splash is a spawn and, a second later, a destroy for the garbage collector to clean up.
+Today every splash spawns a new ripple and gives it a lifespan with `SetLifeSpan`, so it destroys itself when its time is up, and a full water destroys its oldest ripple to make room. A show splashes several times a second for minutes on end, and every splash is a spawn and, a second later, a destroy for the garbage collector to clean up.
 
 Refactor the ripples so they come back:
 
@@ -386,9 +386,9 @@ bool FDojo_P16_Ripples_TheSameRippleComesBack::RunTest(const FString& Parameters
 
 # Hints
 
-- The two failing tests count spawns and follow the first ripple. Read their messages: how many ripples did the starter spawn, and what became of the first one?
-- A faded ripple only has to be out of play to be shown again. Which line of the starter ends a ripple's life for good, and what could the ripple do in its place?
-- The water needs two answers at every splash: which of its ripples is free, and which has shown longest. What order could it keep its array in so the second answer is easy?
+- Read the two failing messages for what each says about the first ripple.
+- Find the line of the starter that ends a ripple's life for good, and think what a ripple could do in its place.
+- Keep the array in an order that makes the ripple that has shown longest easy to find.
 
 # Rubric
 

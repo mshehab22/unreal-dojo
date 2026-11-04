@@ -110,12 +110,37 @@ namespace DojoP18MeadowTest
 		return Sum;
 	}
 
-	/** Ticks one frame and, when a whole second was scored in it, checks the moths drawn against a full count; false when the count was wrong. */
+	/** True when no moth in After moved farther from its place in Before than one Step of ElapsedSeconds allows, at the speed it had in Before; a bounce shortens a move, so only the upper bound is safe. */
+	bool MothsFlewOneStep(FAutomationTestBase& Test, const TArray<FDojoP18Moth>& BeforeMoths, const TArray<FDojoP18Moth>& AfterMoths, double ElapsedSeconds, const FString& Prefix)
+	{
+		if (!Test.TestEqual(Prefix + TEXT("the swarm keeps its moths"), AfterMoths.Num(), BeforeMoths.Num())) return false;
+
+		for (int32 Index = 0; Index < BeforeMoths.Num(); ++Index)
+		{
+			const double Allowed = BeforeMoths[Index].Velocity.Size() * ElapsedSeconds + 0.25;
+			const double Moved = FVector2D::Distance(BeforeMoths[Index].Position, AfterMoths[Index].Position);
+			if (Moved > Allowed)
+			{
+				Test.AddError(Prefix + FString::Printf(TEXT("a moth moved %.2f units in one frame, farther than one Step of that frame allows (%.2f); is the swarm still ticking itself, or is the meadow stepping it twice?"), Moved, Allowed));
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/** Ticks one frame, checks the moths flew one step and no more, and, when a whole second was scored in it, checks the moths drawn against a full count; false when either was wrong. */
 	bool TickAndCheck(FAutomationTestBase& Test, FDojoTestWorld& TestWorld, const FMeadowScene& Scene, const FString& Prefix, int32& OutScored)
 	{
 		const int32 Before = Scene.Meadow->GetScoredSeconds();
+		const float ElapsedBefore = Scene.Meadow->GetElapsed();
+		const TArray<FDojoP18Moth> MothsBefore = Scene.Meadow->GetSwarm() ? Scene.Meadow->GetSwarm()->GetMoths() : TArray<FDojoP18Moth>();
+
 		TestWorld.Tick(1);
+
 		const int32 After = Scene.Meadow->GetScoredSeconds();
+		const double ElapsedSeconds = static_cast<double>(Scene.Meadow->GetElapsed()) - static_cast<double>(ElapsedBefore);
+		if (Scene.Meadow->GetSwarm() && !MothsFlewOneStep(Test, MothsBefore, Scene.Meadow->GetSwarm()->GetMoths(), ElapsedSeconds, Prefix)) return false;
 		if (After == Before) return true;
 
 		OutScored += Scene.Meadow->GetLastDrawn();

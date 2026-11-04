@@ -35,7 +35,7 @@ Write the obvious version first and run the tests. One of them fails on purpose 
 
 ## See it in the editor
 
-Place a `DojoP17TowerRig`. In Details, add three Nodes: Base (Parent Index -1, Local Offset 0, 0, 0), Platform (Parent Index 0, Local Offset 0, 0, 300), and Lantern (Parent Index 1, Local Offset 0, 0, 100). In the Level Blueprint, on Begin Play, print Get Position for index 2 three times: X=0.000 Y=0.000 Z=400.000 each time. Then print Get Recompute Count for indices 0, 1, and 2: 1 each. Call Set Local Offset with index 2 and (0, 0, 150), print Get Position for index 2 (X=0.000 Y=0.000 Z=450.000) and the three counters again: 1, 1, and 2.
+Place a `DojoP17TowerRig`. In Details, add three Nodes: Base (Parent Index -1, Local Offset 0, 0, 0), Platform (Parent Index 0, Local Offset 0, 0, 300), and Lantern (Parent Index 1, Local Offset 0, 0, 100). In the Level Blueprint, with the rig still selected in the level, right-click the graph and choose Create a Reference to it, then on Begin Play print Get Position for index 2 three times: X=0.000 Y=0.000 Z=400.000 each time. Then print Get Recompute Count for indices 0, 1, and 2: 1 each. Call Set Local Offset with index 2 and (0, 0, 150), print Get Position for index 2 (X=0.000 Y=0.000 Z=450.000) and the three counters again: 1, 1, and 2.
 
 # Files
 
@@ -353,9 +353,9 @@ bool FDojo_P17_TowerRig_ChildrenFollowTheirParent::RunTest(const FString& Parame
 
 # Hints
 
-- The failing test reads a joint after its parent has moved. After your `SetLocalOffset`, which joints are marked as old, and which should be?
-- A joint's position is built from its parent's. If the parent's position has changed, what is true of the position kept for the child, and for the child's own children?
-- Parents come before children in the list, so one pass forward from the moved joint can mark every joint that hangs from it. Or compare against the parent when a joint is read. Either way, reading the lantern after moving the base and the platform must work each of the three out once.
+- After `SetLocalOffset` moves a joint, ask which joints' kept positions are no longer true.
+- A joint's position is built from its parent's, so ask what a change in a parent means for the position kept for its child.
+- Reading the lantern after moving the base and the platform must work each of the three out once.
 
 # Rubric
 

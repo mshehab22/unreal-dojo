@@ -29,7 +29,7 @@ Most of the code is written. First read the marked lines and say in a sentence w
 
 ## See it in the editor
 
-Place a `DojoP18LanternKeeper` at the origin and ten `DojoP18Lantern` actors around it, three of them within 300 units of the keeper with Lit ticked in Details, one lit lantern 500 units away, and the rest unlit. In the Level Blueprint, on Begin Play, add a Delay of 0.2 seconds so the keeper has filed its lanterns, then call Count Lit Near on the keeper with its own location and a radius of 300, and print the result: 3. Then print Get Last Measured: it is the lanterns in the cells around the keeper, fewer than ten once some stand far away. Move the far lit lantern to within 300 of the keeper with Move Lantern, call Count Lit Near again, and the print shows 4.
+Place a `DojoP18LanternKeeper` at the origin and ten `DojoP18Lantern` actors around it. None of them draws anything, so work from the Outliner and the Details panel: tick Lit on three lanterns within 300 units of the keeper, tick Lit on one lantern 500 units away and rename it FarLantern in the Outliner, and leave the rest unlit. In the level, select the keeper and FarLantern, then in the Level Blueprint right-click the graph and choose Create a Reference to Selected Actor for each. On Begin Play, add a Delay of 0.2 seconds so the keeper has filed its lanterns, then call Count Lit Near on the keeper with its own location and a radius of 300, and print the result: 3. Then print Get Last Measured: it is the lanterns in the cells around the keeper, fewer than ten once some stand far away. Call Move Lantern with FarLantern and a spot within 300 of the keeper, call Count Lit Near again, and the print shows 4.
 
 # Files
 
@@ -520,9 +520,9 @@ bool FDojo_P18_LanternGrid_DestroyedLanternDropsOut::RunTest(const FString& Para
 
 # Hints
 
-- Which cell holds the lowest corner of the square around the circle, and which holds the highest? Every cell the circle can touch lies between those two.
+- Which cell holds the lowest corner of the square around the circle, and which holds the highest?
 - Inside each of those cells, which entries might no longer be lanterns at all, and what does a weak pointer give you for those?
-- A lantern in a visited cell is not near just because its cell is near. What do you still have to measure, and on which plane?
+- A lantern in a visited cell is not near just because its cell is near, so what is left to measure?
 
 # Rubric
 
@@ -541,7 +541,7 @@ Give every lantern a small sphere component that overlaps the Visibility channel
 
 ```yaml
 - id: find-near
-  prompt: Put FindNear in order. It starts by emptying the list it fills.
+  prompt: Put FindNear in order. It empties the list it fills, works out the low corner cell and then the high corner cell, and starts the count; inside a cell, each live entry is counted before its distance is checked.
   lines:
     - "int32 FDojoP18Grid::FindNear(const FVector& Center, float Radius, TArray<AActor*>& OutActors) const"
     - "{"
