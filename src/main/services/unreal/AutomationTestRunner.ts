@@ -1,6 +1,7 @@
 // Runs a quest's automation tests in a headless editor and reads the report it writes.
 import type { TestCaseResult } from "@shared/types/run";
 
+import { describeEngineCrash, EngineCrashReader } from "./EngineCrashReader";
 import type { PlatformPaths } from "./PlatformPaths";
 import type { ProcessLauncher } from "./ProcessLauncher";
 import { ReportParser } from "./ReportParser";
@@ -65,6 +66,7 @@ export class AutomationTestRunner
 	private readonly timer: Timer;
 	private readonly reportReader: ReportReader;
 	private readonly reportParser = new ReportParser();
+	private readonly crashReader = new EngineCrashReader();
 
 	/** Takes the platform's paths, a process launcher, the clock, and a file reader for the report. */
 	constructor(paths: PlatformPaths, launcher: ProcessLauncher, timer: Timer, reportReader: ReportReader)
@@ -109,7 +111,13 @@ export class AutomationTestRunner
 		if (outcome.timedOut) return { ...base, tests: [], pipelineError: "The test run took longer than 10 minutes and was stopped." };
 
 		const reportText = await this.reportReader.readTextFile(this.paths.join(request.reportFolder, REPORT_FILE_NAME));
-		if (reportText === null) return { ...base, tests: [], pipelineError: `The engine stopped before writing a test report (exit code ${String(outcome.exitCode)}).` };
+		if (reportText === null)
+		{
+			// A fatal error in this run's own output names the reason; with none (a stall, a kill from outside) the plain exit code message stays, and says nothing about the learner's code.
+			const crash = this.crashReader.read(outcome.lines, request.testNames);
+
+			return { ...base, tests: [], pipelineError: crash ? describeEngineCrash(crash, outcome.exitCode) : `The engine stopped before writing a test report (exit code ${String(outcome.exitCode)}).` };
+		}
 
 		const report = this.reportParser.parse(reportText);
 		if (!report.ok) return { ...base, tests: [], pipelineError: report.problem };
