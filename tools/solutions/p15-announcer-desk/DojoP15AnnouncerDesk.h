@@ -13,7 +13,7 @@ class UDojoP15AnnouncerDesk : public UWorldSubsystem
 	GENERATED_BODY()
 
 public:
-	/** Makes the do-nothing announcer and provides it, so the desk is never empty. */
+	/** Makes the do-nothing announcer and installs it, so the desk is never empty. */
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 	/** The desk of LevelWorld, or nullptr when there is no world. */

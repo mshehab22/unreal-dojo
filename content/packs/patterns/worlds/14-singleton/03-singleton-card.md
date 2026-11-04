@@ -102,8 +102,8 @@ UCareerRecords* Records = GetGameInstance()->GetSubsystem<UCareerRecords>();
   choices:
     - ULocalPlayerSubsystem
     - UWorldSubsystem
-    - UEngineSubsystem
-    - The game mode
+    - UGameInstanceSubsystem
+    - The game mode actor
   answerIndex: 0
   explanation: A local player subsystem exists once per local player, so two players on one screen get one each.
 - id: fill-get-subsystem

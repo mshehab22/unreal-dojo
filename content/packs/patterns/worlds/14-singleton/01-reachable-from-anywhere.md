@@ -28,7 +28,7 @@ choices:
   - An empty board, because stopping play destroys the session's objects
   - A crash, because AddToRoot is not allowed during play
   - Nothing at all; the static pointer resets to nullptr when play stops
-  - The first session's two laps, because the board outlived the session
+  - The first session's two laps, because the board outlived it
 answerIndex: 3
 explanation: Static storage lasts as long as the program, and the editor is one program for every play session. A rooted object is never collected, so the second session reads the first session's laps.
 ```

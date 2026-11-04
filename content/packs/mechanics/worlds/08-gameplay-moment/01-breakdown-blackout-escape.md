@@ -59,7 +59,7 @@ Acceptance:
 - id: clock
   kind: class
   label: A clock that owns the time and decides which ending the moment has
-  why: One place for the ending, so only one ending can happen.
+  why: One place for the ending.
 - id: director
   kind: class
   label: A director that spawns the round and connects the pieces and restarts it
@@ -105,7 +105,7 @@ Acceptance:
 
 - The plan lists the mechanics, interactions, and events of the walkthrough, including the small ones such as the counter and the restart.
 - Each piece has one job, and the plan says which side points at the other, which side announces, and which only listens.
-- The ending is decided in one place, and the plan says what happens if an escape and a catch come close together or the time runs out afterwards.
+- The ending is decided in one place, and the plan says where that decision lives.
 - Nothing is checked on every frame where an event or a timer would do, and the plan says what is on a timer.
 - The gap map names at least two things that are faked or cut and says why the moment still feels right without them.
 - Every tunable number from the walkthrough is a property, and a second round resets everything it should.

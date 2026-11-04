@@ -2177,7 +2177,7 @@
           },
           {
             "choice": "observer",
-            "why": "Subscribing the tests to every source works, but every source would have to be wired, where a located announcer needs one provide call."
+            "why": "Subscribing the tests to every source works, but every source would have to be wired, where a located announcer needs one Install call."
           }
         ],
         "explanation": "The callers use an announcer interface, and the test provides a recording announcer once."

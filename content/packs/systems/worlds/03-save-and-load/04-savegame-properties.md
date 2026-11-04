@@ -116,7 +116,7 @@ void DojoExCopyProgress(AActor* FromPot, AActor* ToPot)
     - It compresses the bytes before they reach the memory writer
     - It is the only archive allowed to set the ArIsSaveGame flag
     - It makes Serialize skip every property marked Transient
-    - It writes object references as paths and looks them up again
+    - It stores object references as paths, then finds them again
   answerIndex: 3
   explanation: A plain memory archive stops the engine with a fatal error when it meets an object reference; the proxy writes the referenced object's path and looks it up again on load.
 - id: explain-savegame-flag

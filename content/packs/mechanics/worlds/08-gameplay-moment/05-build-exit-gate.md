@@ -450,7 +450,7 @@ The gate could check power in the overlap handler only and ignore pawns already 
     - line: "	for (AActor* Candidate : Inside) OnEscaped.Broadcast(Candidate);"
       mistake: Broadcasting directly skips the checks in LetOut, so a pawn could escape twice.
 - id: gate-let-out
-  prompt: Put LetOut in order.
+  prompt: Put LetOut in order; the flag is set before the announcement.
   lines:
     - "void ADojoM8ExitGate::LetOut(AActor* Candidate)"
     - "{"

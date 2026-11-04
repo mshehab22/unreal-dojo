@@ -26,7 +26,7 @@ type: multiple-choice
 prompt: "Guess, no penalty: a TyreManager wears down every tyre in the garage each frame, checks whether each one is worn out, and retires it. A teammate turns it into a UWorldSubsystem so it is no longer a static. Is the design fixed?"
 choices:
   - Yes, because a subsystem is never a design problem
-  - Only partly; the tyres' own job still sits outside them
+  - Only partly; the tyres' own job sits outside them
   - No, because a subsystem cannot hold an array of objects
   - Yes, provided that the subsystem is set to tick
 answerIndex: 1
@@ -72,7 +72,7 @@ void ATyre::Tick(float DeltaSeconds)
     - It is shared by more than one level of the game
     - It owns several UPROPERTY members of its own
     - It is derived from UObject instead of AActor
-    - It loops over other objects and does their work
+    - It loops over other objects, doing their work
   answerIndex: 3
   explanation: Work done to each object in turn is usually that object's own behavior; moving it onto the object removes the manager.
 - id: when-not-scope
