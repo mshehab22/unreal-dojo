@@ -1,14 +1,14 @@
 ---
 id: s6-walk-beat
 title: A Behavior Tree task that walks a beat
-order: 3
+order: 5
 kind: build
 scaffold: faded
 difficulty: 3
 patterns: [state, component]
 skills: [ai, movement, memory]
 terms: [behavior-tree, bt-task-node, node-memory, ai-controller, blackboard, pawn]
-prerequisites: [s6-sense-memory]
+prerequisites: [s6-tree-nodes, s6-sense-memory]
 xp: 80
 estimatedMinutes: 25
 concepts:
@@ -37,7 +37,7 @@ This is the second piece of the Night Shift boss.
 
 ## See it in the editor
 
-Make a Blackboard asset `BB_Guard` and a Behavior Tree asset `BT_Guard` that uses it. In `BT_Guard`, put a Sequence under the root and a Walk Beat task under the Sequence; Walk Beat appears in the task list because it is a `UBTTaskNode` class. Make a Blueprint class from `DojoS6Guard` called `BP_Guard`, place one in the level, give it two Beat points in Details, and in its Event Graph call Run Behavior Tree on Get AI Controller with `BT_Guard` on BeginPlay. Press Play: the guard glides to each point in turn. With the Behavior Tree editor open while playing, the Walk Beat node lights up while it runs, and finishes once per point.
+Make a Blackboard asset `BB_Guard` and a Behavior Tree asset `BT_Guard` that uses it. In `BT_Guard`, put a Sequence under the root and a Walk Beat task under the Sequence; Walk Beat appears in the task list because it is a `UBTTaskNode` class. Make a Blueprint class from `DojoS6Guard` called `BP_Guard` and add a Cube static mesh component to it, scaled to about a person's size, so you can see where the guard is (the class itself has no mesh). Place one in the level, give it two Beat points in Details, and in its Event Graph call Run Behavior Tree on Get AI Controller with `BT_Guard` on BeginPlay. Press Play: the cube glides to each point in turn and starts over at the first. Select the guard in the level and open `BT_Guard` while playing: the Walk Beat node lights up while the guard walks and goes dark for a moment each time the guard reaches a point.
 
 # Files
 
@@ -358,7 +358,7 @@ int32 ADojoS6Guard::GetNextPointIndex() const
 #include "BehaviorTree/BTTaskNode.h"
 #include "DojoS6BTTask_Hold.generated.h"
 
-/** A task that stands still and never finishes on its own; the branch above it ends only when a decorator aborts it. */
+/** A task that stands still and never finishes on its own. */
 UCLASS()
 class UDojoS6BTTask_Hold : public UBTTaskNode
 {
@@ -653,38 +653,44 @@ bool FDojo_S6_WalkBeat_EmptyBeatStandsStill::RunTest(const FString& Parameters)
 
 # Hints
 
-- In `ExecuteTask`, the memory block for this guard arrives as the raw `NodeMemory` pointer; one call on the node base class turns it into your struct, and two more build and tear the struct down in place. The three results a task can return are Succeeded, Failed, and InProgress, and only one of them makes the tree come back next frame.
-- In `TickTask`, compare the distance still to go with the larger of the step and the acceptance radius. Arriving is three things in a fixed order: stand on the point, tell the guard to move on, finish. Leave the function right after, so the step toward the point does not also run on that frame.
-- If one guard works and two guards drift toward each other's points, the destination is being kept somewhere both guards share. Each guard's tree has its own memory block; the task object itself is shared by both trees.
+- A walk in progress is state that belongs to one guard, so it goes in that guard's node memory block and never in a member of the shared task object.
+- One call on the node base class turns the raw `NodeMemory` pointer into your struct, two more build and tear it down in place, and returning `InProgress` is what makes the tree call `TickTask` again.
+- In `TickTask`, compare the distance still to go with the larger of the step and the acceptance radius, and when it is the smaller one, finish the task and leave the function so the step does not also run.
 
 # Rubric
 
 - `ExecuteTask` stores the destination in node memory and returns InProgress; it fails without a guard or a beat.
-- `TickTask` moves the guard at its walking speed and, on arrival, stands it on the point, advances the beat, and ends the task with `FinishLatentTask` as a success.
+- `TickTask` moves the guard at its walking speed and, on arrival, stands it on the point, advances the beat, and ends the task as a success.
 - Two guards running one tree each walk their own beat, because nothing about a walk in progress is stored in the shared task object.
 - The guard owns its beat and its place on it; the task reads them and never stores them.
 - The task reaches the pawn through the AI controller and holds no pointer to it between frames.
+- The guard knows nothing about trees or tasks: it holds a beat and a place on it, and only the task calls it.
 
 # Alternative
 
-Setting `bCreateNodeInstance = true` in the constructor makes the tree create one task object per guard, and then a member variable for the destination would be safe. It is simpler to write and slower to run: each guard pays for a whole UObject per instanced node, and the engine's own tasks avoid it for that reason. Node memory is the shared-object design the engine expects, at the cost of a struct and a cast. A real game would also walk with `MoveToLocation` on the AI controller, which follows the nav mesh around walls; the test world has no nav mesh, so this task moves the pawn itself. Seen from the guard, the tree is choosing one behavior to run at a time, which is the State pattern from Pack 2's "State" world: each task is a state's update, and finishing hands control back to the tree.
+Setting `bCreateNodeInstance = true` in the constructor makes the tree create one task object per guard, and then a member variable for the destination would be safe. It is simpler to write and slower to run: each guard pays for a whole UObject per instanced node, and most of the engine's native tasks use node memory instead for that reason. Node memory is the shared-object design the engine expects, at the cost of a struct and a cast. A real game would also walk with `MoveToLocation` on the AI controller, which follows the nav mesh around walls; the test world has no nav mesh, so this task moves the pawn itself. Seen from the guard, the tree is choosing one behavior to run at a time, which is the State pattern from Pack 2's "One mode at a time" world: each task is a state's update, and finishing hands control back to the tree.
 
 # Parsons
 
 ```yaml
-- id: walk-beat-arrive
-  prompt: Put the arrival check from TickTask in order.
+- id: walk-beat-start
+  prompt: Put the body of ExecuteTask, after the guard and its point are found, in order.
   lines:
-    - "if (ToGo.Size() <= FMath::Max(Step, AcceptanceRadius))"
-    - "{"
-    - "	Guard->SetActorLocation(Memory->Destination);"
-    - "	Guard->AdvancePoint();"
-    - "	FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);"
-    - "	return;"
-    - "}"
+    - "FDojoS6WalkBeatMemory* Memory = CastInstanceNodeMemory<FDojoS6WalkBeatMemory>(NodeMemory);"
+    - "Memory->Destination = Point;"
+    - "return EBTNodeResult::InProgress;"
   distractors:
-    - line: "	return EBTNodeResult::Succeeded;"
-      mistake: TickTask returns nothing; a latent task ends only through FinishLatentTask, which tells the tree to move on.
-    - line: "	Destination = Memory->Destination;"
+    - line: "return EBTNodeResult::Succeeded;"
+      mistake: Succeeded ends the task on its first frame, so the tree would move on before the guard had walked anywhere; InProgress keeps TickTask coming.
+    - line: "Destination = Point;"
       mistake: A member variable on the task is shared by every guard that runs the tree, so another guard's walk would overwrite it.
+- id: walk-beat-step
+  prompt: Put the step toward the destination in order.
+  lines:
+    - "const FVector Direction = ToGo.GetSafeNormal();"
+    - "const FVector NextPosition = Here + Direction * Step;"
+    - "Guard->SetActorLocation(NextPosition);"
+  distractors:
+    - line: "const FVector NextPosition = Here + ToGo * Step;"
+      mistake: ToGo is the whole distance still to go, not a direction of length one, so the step would grow with the distance instead of being one step of WalkSpeed times the frame time.
 ```

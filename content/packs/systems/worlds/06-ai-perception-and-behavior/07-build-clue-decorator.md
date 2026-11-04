@@ -1,7 +1,7 @@
 ---
 id: s6-clue-decorator
 title: A decorator that drops the beat for a near clue
-order: 5
+order: 7
 kind: build
 scaffold: blank
 difficulty: 4
@@ -13,7 +13,7 @@ xp: 90
 estimatedMinutes: 30
 concepts:
   - A condition that lets a branch run only while a fresh clue is near enough
-  - Switching branches the moment the condition changes, in both directions
+  - A guard that reacts to a clue while it is already busy, and goes back to its beat when the clue is stale
   - A designer-tunable distance on a node
 ---
 
@@ -40,7 +40,7 @@ This is the fourth piece of the Night Shift boss.
 
 ## See it in the editor
 
-In `BT_Guard`, change the root to a Selector. Under it put a Sequence with a Wait task of 3 seconds, then the Walk Beat task to its right. Right-click the Sequence, choose Add Decorator, and pick Near Clue; set Max Distance in its Details. Keep Read Memory on the root. Press Play, call Note Noise on the guard's memory near the guard from the level Blueprint, and watch the Behavior Tree editor: the Near Clue branch lights up while the guard stands still, and the beat lights up again once the clue is stale.
+In `BT_Guard`, delete the Sequence under Root and add a Selector there; a node cannot change its type in place. Add Read Memory to the new Selector again, because it went with the old Sequence. Under the Selector put a Sequence with a Wait task of 3 seconds, then the Walk Beat task to its right. Right-click the new Sequence, choose Add Decorator, and pick Near Clue; set Max Distance in its Details. Press Play, call Note Noise on the guard's memory near the guard from the level Blueprint, and watch the Behavior Tree editor: the Near Clue branch lights up while the guard stands still, and the beat lights up again once the clue is stale.
 
 # Files
 
@@ -202,21 +202,21 @@ bool FDojo_S6_NearClue_FarClueIsIgnored::RunTest(const FString& Parameters)
 
 # Hints
 
-- A decorator's condition is one const function that returns true or false; read the two keys from the tree component's blackboard and the pawn from its AI controller. A decorator whose condition is right can still fail these tests, so check when the tree asks for it.
-- The tree evaluates a decorator when execution reaches its node. A guard that is busy walking further right in the tree never reaches it until the walk ends. Decorators have a setting for watching their condition while other branches run, with values for watching lower branches, their own branch, or both.
-- `UBTDecorator_BlackboardBase` is a decorator base class that registers as an observer of one blackboard key and asks the tree to check the condition again whenever that key changes. Set its `BlackboardKey` to the clue flag and its abort mode in the constructor; on Windows, avoid parameter names that match members of the base classes.
+- A decorator's condition is one const function that returns true or false, reading the two keys from the tree component's blackboard and the pawn from its AI controller.
+- If the guard keeps walking after the noise, remember that the tree asks a decorator only when execution reaches its node, so the decorator needs a setting that lets the tree watch it while other branches run.
+- Derive from `UBTDecorator_BlackboardBase`, point its `BlackboardKey` at the clue flag in the constructor, and set the decorator's flow abort mode to Both so it watches in both directions.
 
 # Rubric
 
 - The condition holds only while `HasClue` is set and the clue lies within `MaxDistance` of the guard's pawn; without a pawn or a blackboard it is false.
-- A fresh near clue interrupts the beat within half a second, and the branch under the decorator runs.
-- When the clue goes stale, the decorator's own branch is interrupted and the beat resumes within half a second.
+- A guard walking its beat stops within half a second of a fresh near clue, and the branch under the decorator runs.
+- When the clue goes stale, the guard leaves the clue branch and walks its beat again within half a second.
 - A clue beyond `MaxDistance` changes nothing, and `MaxDistance` is a property a designer edits on the node.
 - The decorator reads only blackboard keys and the pawn's location; it knows nothing about the memory, the service, or the tasks below it.
 
 # Alternative
 
-A decorator with only a condition is checked when the tree reaches its node, and the beat task runs for ten seconds before the tree comes back, so a guard built that way finishes its walk before it notices the noise. That is the failure this quest was built around. Setting `FlowAbortMode` to Lower Priority turns the decorator into an observer of its key: when the key changes and the condition becomes true, the tree aborts the branches to its right and runs this one. Self does the opposite, aborting its own branch when the condition turns false, which is what lets the Hold task end. Both gives the guard the behavior the spec asked for. The tree is now a State machine whose transitions are decorators, and the blackboard key is the event they observe, which is the Observer pattern built into the engine. The cost of observing is small: a callback when the key changes, never a check every frame.
+A decorator with only a condition is checked when the tree reaches its node, and the beat task runs for ten seconds before the tree comes back, so a guard built that way finishes its walk before it notices the noise. That is the failure this quest was built around. Setting `FlowAbortMode` to Lower Priority turns the decorator into an observer of its key: when the key changes and the condition becomes true, the tree aborts the branches to its right and runs this one. Self does the opposite, aborting its own branch when the condition turns false, which is what lets the Hold task end. Both gives the guard the behavior the spec asked for. The tree is now a State machine whose transitions are decorators, and the blackboard key is the event they observe, which is the Observer pattern built into the engine. The cost of observing is small: a callback when the key changes, never a check every frame. One limit remains: this decorator watches only `HasClue`, and a blackboard key notifies only when its value actually changes. A near noise heard while a farther, still fresh clue already holds `HasClue` true changes no watched key, so the tree does not recheck at once; fixing that means watching a fact that does change, such as one flag the service publishes for "a near clue", at the price of putting the distance rule in the service.
 
 # Parsons
 
@@ -224,10 +224,10 @@ A decorator with only a condition is checked when the tree reaches its node, and
 - id: near-clue-condition
   prompt: Put the body of CalculateRawConditionValue in order.
   lines:
-    - "const UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();"
     - "const AAIController* Controller = OwnerComp.GetAIOwner();"
     - "const APawn* Pawn = Controller != nullptr ? Controller->GetPawn() : nullptr;"
-    - "if (Blackboard == nullptr || Pawn == nullptr || !Blackboard->GetValueAsBool(FDojoS6TreeKit::HasClueKey())) return false;"
+    - "const UBlackboardComponent* Blackboard = Pawn != nullptr ? OwnerComp.GetBlackboardComponent() : nullptr;"
+    - "if (Pawn == nullptr || Blackboard == nullptr || !Blackboard->GetValueAsBool(FDojoS6TreeKit::HasClueKey())) return false;"
     - "const FVector Clue = Blackboard->GetValueAsVector(FDojoS6TreeKit::ClueLocationKey());"
     - "return FVector::Dist(Pawn->GetActorLocation(), Clue) <= MaxDistance;"
   distractors:

@@ -1,7 +1,7 @@
 ---
 id: s6-boss-night-shift
 title: "Boss: the night shift"
-order: 6
+order: 8
 kind: boss
 difficulty: 5
 patterns: [state, component, observer]
@@ -23,7 +23,7 @@ pieces:
 
 # Spec
 
-A thief has one night to reach a vault, and a guard walks a square beat between them. The guard starts at its post at the origin and walks the corners (800, 0), (800, 800), (0, 800), and back to (0, 0) at 300 units a second. It sees up to 1200 units within 60 degrees either side of where it faces, and hears noises up to 1500 units away. The thief starts at (-1500, 0), behind the guard, and the vault is at (1600, 400).
+A thief has one night to reach a vault, and a guard walks a square beat between them. The guard starts at its post at the origin and walks the corners (800, 0), (800, 800), (0, 800), and back to (0, 0) at 300 units a second. It notices a thief up to 1200 units away within 70 degrees either side of where it faces, keeps seeing it out to 1400 units once noticed, and hears noises up to 1500 units away. The thief starts at (-1500, 0), behind the guard, and the vault is at (1600, 400).
 
 The guard decides in this order, switching the moment the facts change:
 
@@ -33,20 +33,20 @@ The guard decides in this order, switching the moment the facts change:
 
 Losing sight of the thief leaves the place it was last seen as a clue, so a lost chase turns into a search. The round ends when the guard catches the thief, and the board adds `CAUGHT in 8.3 s`, or when the thief reaches the vault (within 150 units), and the board adds `VAULT OPEN in 21.4 s`. The time counts from the round's start. The board's first line is `Guard: on patrol`, `Guard: searching`, or `Guard: chasing`, from the guard's memory: chasing while the thief is in sight, searching while there is a clue, on patrol otherwise.
 
-Keys: the thief is the player's own pawn and walks with the usual movement. N throws a pebble that lands 400 units in front of the thief and makes a noise there, to lure the guard away. R starts the next round, only after a round ended. Reference game: Thief: The Dark Project, whose guards turn toward a noise, search where they heard it, and give up after a while, so sound is a tool for the player. The guard combines three Pack 2 patterns: State ("State"), for the chase, search, and beat branches with one running at a time; Component ("Actors built from parts"), for the memory and the perception on the controller; and Observer ("The lens, then the first payoff"), for the perception events, the memory's announcements, the decorators watching their keys, and the board.
+Keys: the thief is the player's own pawn and walks with the usual movement. N throws a pebble that lands 400 units in front of the thief and makes a noise there that names the thief as its source, to lure the guard away; perception ignores a noise that has no source. R starts the next round, only after a round ended. Reference game: Thief: The Dark Project, whose guards turn toward a noise, search where they heard it, and give up after a while, so sound is a tool for the player. The guard combines three Pack 2 patterns: State ("One mode at a time"), for the chase, search, and beat branches with one running at a time; Component ("Actors built from parts"), for the memory and the perception on the controller; and Observer ("The lens, then the first payoff"), for the perception events, the memory's announcements, the decorators watching their keys, and the board.
 
 How rounds start: round 1 starts when play begins. Starting a round removes the last guard and its controller, spawns a fresh guard at the post with the guard controller, puts the thief back at its start, and clears the result line. A C++ director receives keys only after `EnableInput` with the player controller.
 
-The guard controller owns the perception component (sight and hearing), the sense memory, and the tree, which it builds when it possesses the guard. The director spawns the guard and only listens: to the memory for the board, and to the controller's catch event for the finale.
+The guard controller owns the perception component (sight and hearing), the sense memory, and the tree, which it builds when it possesses the guard. The director spawns the guard and only listens: to the memory for the board, and to the controller's catch event for the finale. The controller and the guard know nothing about the director. After a round ends, a noise and the guard's senses change nothing on the board, and N does nothing, until R starts the next round.
 
 Compiles against earlier quests: s6-sense-memory (`Quests/s6-sense-memory/DojoS6SenseMemoryComponent.h`), s6-walk-beat (`Quests/s6-walk-beat/DojoS6TreeKit.h`, `Quests/s6-walk-beat/DojoS6Guard.h`, `Quests/s6-walk-beat/DojoS6BTTask_WalkBeat.h`), s6-memory-service (`Quests/s6-memory-service/DojoS6BTService_ReadMemory.h`), and s6-clue-decorator (`Quests/s6-clue-decorator/DojoS6BTDecorator_NearClue.h`). The pieces need no additions; chase, go to clue, and the in-sight decorator are new nodes in the boss.
 
-Core numbers are fixed: sight 1200 and 60 degrees, hearing 1500, walk 300, run 450, catch at 100, clue fresh for 10 seconds and near within 3000, 2 seconds of looking, pebble at 400, vault radius 150.
+Core numbers are fixed: sight 1200 to notice and 1400 to keep seeing at 70 degrees, hearing 1500, walk 300, run 450, catch at 100, clue fresh for 10 seconds and near within 3000, 2 seconds of looking, pebble at 400, vault radius 150.
 
 Extensions, in order of importance:
 
 1. Eyes that follow the walk: the guard faces where it is going, so sight sweeps the room instead of always facing east, using the AI controller's focus.
-2. A second guard with its own beat, sharing the same tree and the same controller class, and a board line per guard.
+2. A second guard with its own beat, built from the same tree design and the same controller class, and a board line per guard.
 3. Noise from the thief's own feet: walking faster than half speed reports a quiet noise every second, so creeping becomes a choice.
 
 Feel: tune the sight angle and the hearing range until a careful player can reach the vault with one or two pebbles, and a careless one is caught. The submission gives the numbers and one sentence on why.
@@ -107,7 +107,7 @@ Feel: tune the sight angle and the hearing range until a careful player can reac
     - { id: decorators, kind: step, label: The engine's Blackboard decorator on TargetVisible and Near Clue on the search branch with Observer Aborts set to Both, covers: [interrupts] }
     - { id: tasks, kind: step, label: Two Blueprint tasks from BTTask_BlueprintBase for chase and go to clue that call Finish Execute when done, covers: [new-tasks] }
     - { id: director, kind: class, label: A level Blueprint that binds On Memory Changed and the controller's catch event and a trigger at the vault, covers: [board] }
-    - { id: rounds, kind: step, label: The R event behind a Running branch destroys the guard and spawns a fresh one and moves the thief, covers: [rounds] }
+    - { id: rounds, kind: step, label: The R event through a Branch node that checks a Running variable destroys the guard and spawns a fresh one and moves the thief, covers: [rounds] }
   edges:
     - { from: controller, to: tree, label: Run Behavior Tree }
     - { from: tree, to: decorators, label: gated by }
@@ -120,10 +120,10 @@ Feel: tune the sight angle and the hearing range until a careful player can reac
 # Integration Rubric
 
 - The memory, the guard, Walk Beat, Read Memory, and Near Clue are reused without changes; every rule about sight beating hearing, clue freshness, and walking the beat stays in those pieces.
-- The controller owns perception, memory, and the tree; the memory listens to perception, and nothing reads the perception component directly.
+- The controller owns perception, memory, and the tree; the memory listens to perception, nothing reads the perception component directly, and the controller and guard know nothing about the director, which only listens.
 - Chase, search, and the beat are branches of one selector in that order, and a change in what the guard knows switches branches at once, in both directions.
 - The new tasks keep everything about one guard's run in node memory or on the guard, so two guards can share the tree.
 - A pebble near the guard sends it searching, the thief in sight sends it chasing, and losing sight leaves a clue to search.
 - The board and the finale change only on events (the memory's, the controller's catch event, and the vault overlap), and nothing runs in Tick.
-- Every binding is removed when its listener or its sender leaves, and R starts a fresh round only after the finale.
+- Every binding is removed when its listener or its sender leaves, R starts a fresh round only after the finale, and between the finale and R nothing changes the board.
 - A second round plays exactly like the first, with a fresh guard at the post; the submission gives the tuned numbers with one sentence on why.

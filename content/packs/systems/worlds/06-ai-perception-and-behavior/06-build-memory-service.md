@@ -1,7 +1,7 @@
 ---
 id: s6-memory-service
 title: A service that copies memory into the blackboard
-order: 4
+order: 6
 kind: build
 scaffold: stub
 difficulty: 3
@@ -19,7 +19,7 @@ concepts:
 
 # Brief
 
-When a guard's tree has the Read Memory service on its root, the blackboard holds what the guard's sense memory knows from the first frame the tree runs, follows every change within a quarter of a second, and drops a clue once it is more than six seconds old.
+When a guard's tree has the Read Memory service on its root, the blackboard holds what the guard's sense memory knows from the first frame the tree runs, follows every change within a third of a second, and drops a clue once it is more than six seconds old.
 
 Compiles against earlier quests: s6-sense-memory (`Quests/s6-sense-memory/DojoS6SenseMemoryComponent.h`) and s6-walk-beat (`Quests/s6-walk-beat/DojoS6TreeKit.h`, `Quests/s6-walk-beat/DojoS6BTTask_WalkBeat.h`, `Quests/s6-walk-beat/DojoS6Guard.h`).
 
@@ -35,7 +35,7 @@ This is the third piece of the Night Shift boss.
 
 ## See it in the editor
 
-Open `BT_Guard` from the walk beat quest and add the four keys to `BB_Guard`: `TargetActor` (Object, base class Actor), `TargetVisible` (Bool), `ClueLocation` (Vector), `HasClue` (Bool). Right-click the root's Sequence, choose Add Service, and pick Read Memory. Give the guard's AI controller a `DojoS6SenseMemoryComponent`, as in the memory quest. Press Play, select the guard, and open the Gameplay Debugger with the apostrophe key: the blackboard section lists the four keys. Call Note Noise on the memory from the level Blueprint on a key press and watch `HasClue` turn true within a quarter of a second, then false six seconds later.
+Open `BT_Guard` from the walk beat quest and add the four keys to `BB_Guard`: `TargetActor` (Object, base class Actor), `TargetVisible` (Bool), `ClueLocation` (Vector), `HasClue` (Bool). Right-click the root's Sequence, choose Add Service, and pick Read Memory. The guard's controller must carry the memory: open `BP_Guard` and set its AI Controller Class to `BP_Watcher` from the memory quest, which already holds a `DojoS6SenseMemoryComponent`. In the level Blueprint, on a key press, take the placed `BP_Guard`, call Get AI Controller, then Get Component by Class with `DojoS6SenseMemoryComponent`, then Note Noise with a location a few hundred units away. Press Play, select the guard, and open the Gameplay Debugger with the apostrophe key: the blackboard section lists the four keys. Press the key and watch `HasClue` turn true within a third of a second, then false six seconds later.
 
 # Files
 
@@ -293,9 +293,9 @@ bool FDojo_S6_ReadMemory_NoMemoryChangesNothing::RunTest(const FString& Paramete
 
 # Hints
 
-- A service only ticks if the tree is told it wants to, the same way the walk task asked for `TickTask`; the service base class has its own macro for that, and `Interval` and `RandomDeviation` are fields you set in the constructor.
-- The parent `TickNode` schedules the next tick, so skipping it stops the service after its first copy. Both overrides do the same work, which is why that work lives in one private function.
-- `GetAIOwner` on the tree component gives the AI controller and `GetBlackboardComponent` gives the blackboard; `FindComponentByClass` finds the memory on the controller. A clue is fresh when the memory has one and its age is at most `ClueSeconds`; `SetValueAsObject`, `SetValueAsBool`, and `SetValueAsVector` take the key names from the kit.
+- The first-frame copy needs the tree told the service wants its become-relevant call; the service base class has a macro for that.
+- The parent `TickNode` schedules the next interval, so skipping it makes the service run every frame.
+- `GetAIOwner` and `GetBlackboardComponent` on the tree component give the controller and the blackboard, `FindComponentByClass` finds the memory, and `SetValueAsObject`, `SetValueAsBool`, and `SetValueAsVector` write the keys named by the kit.
 
 # Rubric
 
@@ -307,16 +307,16 @@ bool FDojo_S6_ReadMemory_NoMemoryChangesNothing::RunTest(const FString& Paramete
 
 # Alternative
 
-The memory could write the blackboard itself, in the same place it broadcasts `OnMemoryChanged`. Keys would then change the instant the news arrives, with no quarter-second delay. The cost is that the memory would have to know about blackboards and key names, so it could no longer serve a guard without a tree, such as the state machine plan from the breakdown, and the staleness rule would need a timer of its own. The service keeps the memory a plain component and puts the translation into tree terms in one node a designer can see. Its interval is a dial between how fresh the keys are and how much work each guard does per second. The memory announces, and the service is a periodic reader of what it knows.
+The memory could write the blackboard itself, in the same place it broadcasts `OnMemoryChanged`. Keys would then change the instant the news arrives, with no wait of up to a quarter of a second. The cost is that the memory would have to know about blackboards and key names, so it could no longer serve a guard without a tree, such as the state machine plan from the breakdown, and the staleness rule would need a timer of its own. The service keeps the memory a plain component and puts the translation into tree terms in one node a designer can see. Its interval is a dial between how fresh the keys are and how much work each guard does per second. The memory announces, and the service is a periodic reader of what it knows.
 
 # Parsons
 
 ```yaml
 - id: read-memory-fresh-clue
-  prompt: Put the lines that write the clue keys in order.
+  prompt: Put the lines that decide and write the HasClue key in order.
   lines:
-    - "const bool bFreshClue = Memory->HasClue() && Memory->GetClueAge() <= ClueSeconds;"
-    - "Blackboard->SetValueAsVector(FDojoS6TreeKit::ClueLocationKey(), Memory->GetClueLocation());"
+    - "const float ClueAge = Memory->GetClueAge();"
+    - "const bool bFreshClue = Memory->HasClue() && ClueAge <= ClueSeconds;"
     - "Blackboard->SetValueAsBool(FDojoS6TreeKit::HasClueKey(), bFreshClue);"
   distractors:
     - line: "Blackboard->SetValueAsBool(FDojoS6TreeKit::HasClueKey(), Memory->HasClue());"
