@@ -147,7 +147,7 @@ bool FDojo_M2_ClockworkHall_HazardsDoTheirJobs::RunTest(const FString& Parameter
 
 	Scene.Hero->SetActorLocation(FVector(0.f, -3000.f, 0.f));
 	TestWorld.Tick(60);
-	TestTrue(TEXT("After 1 second the crusher is a third of the way round its swing"), IsNear(Scene.Hall->GetCrusher(), FVector(500.f, 0.f, 0.f), 3.0));
+	TestTrue(TEXT("After 1 second the crusher is halfway out along its swing"), IsNear(Scene.Hall->GetCrusher(), FVector(500.f, 0.f, 0.f), 3.0));
 	TestTrue(TEXT("The boulder rolls along its own forward, which the level turned to the east"), IsNear(Scene.Hall->GetBoulder(), FVector(1000.f, -350.f, 0.f), 3.0));
 	const ADojoM2Bumper* Bouncer = Cast<ADojoM2Bumper>(Scene.Hall->GetBouncer());
 	if (!TestNotNull(TEXT("The bouncer exists"), Bouncer)) return false;

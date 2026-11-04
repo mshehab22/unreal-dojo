@@ -76,7 +76,7 @@ Acceptance:
     - { from: director, to: walker, label: Possess }
     - { from: director, to: drones, label: Possess }
     - { from: director, to: pause, label: Toggle }
-    - { from: walker, to: pause, label: sits below }
+    - { from: pause, to: walker, label: sits above }
 - id: controller-owned
   title: A player controller owns the modes and the pawns only bind
   pieces:
