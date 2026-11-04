@@ -4770,6 +4770,80 @@
     "firstQuestId": "p13-behavior-as-data"
   },
   {
+    "id": "set-actor-hidden-in-game",
+    "term": "SetActorHiddenInGame",
+    "aliases": [
+      "SetActorHiddenInGame()",
+      "IsHidden()",
+      "bHidden"
+    ],
+    "category": "framework",
+    "short": "Stops or starts drawing an actor during play; on its own it changes nothing about collision or ticking.",
+    "long": "SetActorHiddenInGame(true) stops the actor's components from being drawn in the game, and false draws them again; IsHidden() says which it is now. It only affects drawing. A hidden actor still collides and still ticks, which is why taking an actor out of play without destroying it also needs SetActorEnableCollision(false) and SetActorTickEnabled(false). Hiding an actor in the editor, with the eye icon in the Outliner or the H key, is a separate thing and does not change what the game draws.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/AActor/SetActorHiddenInGame?application_version=5.8",
+    "related": [
+      "set-actor-enable-collision",
+      "primary-actor-tick",
+      "object-pool",
+      "actor"
+    ],
+    "firstQuestId": "p16-spawn-cost"
+  },
+  {
+    "id": "set-actor-enable-collision",
+    "term": "SetActorEnableCollision",
+    "aliases": [
+      "SetActorEnableCollision()",
+      "GetActorEnableCollision",
+      "bActorEnableCollision"
+    ],
+    "category": "collision",
+    "short": "Turns collision off or on for a whole actor at once, keeping each component's own collision settings for when it comes back on.",
+    "long": "SetActorEnableCollision(false) makes every component of the actor ignore collision without touching their own settings, and true restores them as they were; GetActorEnableCollision() reads the switch. It is the quick way to take an actor out of play: a hidden actor still blocks shots and overlaps triggers until this is off. To change how one shape collides while the actor stays in play, set that component's Collision Enabled or its responses instead.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/AActor/SetActorEnableCollision?application_version=5.8",
+    "related": [
+      "set-actor-hidden-in-game",
+      "collision-enabled",
+      "collision-response",
+      "object-pool"
+    ],
+    "firstQuestId": "p16-spawn-cost"
+  },
+  {
+    "id": "free-list",
+    "term": "Free list",
+    "aliases": [
+      "free-list"
+    ],
+    "category": "memory",
+    "short": "A chain through the unused slots of a fixed set, so finding a free one takes one step instead of a search.",
+    "long": "A set of reusable objects needs a fast answer to which one is free. A free list keeps that answer ready: each unused slot holds the index of the next unused slot, and the set remembers the first. Taking one means taking the first and moving the start to its next; giving one back means making it the new first. Both take the same time however large the set is. Unreal's TSparseArray keeps its empty slots on a free list in the same way, and for a handful of pooled actors a plain TArray of resting ones, used from its end with Pop and Add, does the same job.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TSparseArray?application_version=5.8",
+    "related": [
+      "object-pool",
+      "tarray"
+    ],
+    "firstQuestId": "p16-object-pool-card"
+  },
+  {
+    "id": "niagara-component-pool",
+    "term": "Niagara component pooling",
+    "aliases": [
+      "ENCPoolMethod",
+      "UNiagaraComponentPool",
+      "ReleaseToPool"
+    ],
+    "category": "framework",
+    "short": "Niagara's own reuse of effect components, chosen with the pooling method when an effect is spawned.",
+    "long": "UNiagaraFunctionLibrary::SpawnSystemAtLocation and SpawnSystemAttached take an ENCPoolMethod. None, the default, makes a fresh component each time. AutoRelease takes one from the world's Niagara pool and gives it back when the effect finishes, for fire and forget effects such as a hit spark; do not keep using the component after the frame it was spawned in. ManualRelease takes one from the pool and leaves it to you to call ReleaseToPool when you are done. Effects get reuse this way without a pool of your own.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/Niagara/ENCPoolMethod?application_version=5.8",
+    "related": [
+      "object-pool",
+      "spawnactor"
+    ],
+    "firstQuestId": "p16-object-pool-card"
+  },
+  {
     "id": "static-variable",
     "term": "Static variable",
     "aliases": [
