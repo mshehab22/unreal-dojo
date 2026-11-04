@@ -27,11 +27,11 @@ When you press Play with the setup below, the first set of start lights on the t
 
 Yours are `BeginPlay` and `EndPlay`. Only one set of lights may run on each track, and a track is a world. When a set begins play and no other set is running in its world, it runs: `IsRunning` is true. When another set is already running there, the new set is a duplicate: `IsRunning` is false, `IsDuplicate` is true, and it hides itself in game, so a designer sees one set. When the running set ends play, for example because it is destroyed, it stops running, and a set that begins play after that can run. A duplicate stays a duplicate; it never takes over. No other class needs to know about this rule, and nothing outside the lights should be able to reach it.
 
-Write the obvious version first and run the tests. One of them fails on purpose for most people. Read its name and message before you read the hints.
+Write the obvious version first and run the tests. One of them fails on purpose. Read its name and message before you read the hints.
 
 ## See it in the editor
 
-Place a `DojoP14StartLights` and give it a Static Mesh component in the Details panel (a sphere is enough) so you can see it. Place a second one beside it, with a sphere of its own. In the Level Blueprint, on Begin Play, call Begin Countdown on both and print the two results, then after a Delay of 4 seconds print Is Green on both. Press Play: one sphere is gone, the prints say true and false, then true and false.
+Place a `DojoP14StartLights` and give it a Static Mesh component in the Details panel (a sphere is enough) so you can see it. Place a second one beside it, with a sphere of its own. In the Level Blueprint, on Begin Play, wait with a Delay of 0.2 seconds so both sets have begun play, then call Begin Countdown on both and print the two results, and after a Delay of 4 seconds print Is Green on both. Press Play: one sphere is gone, the prints say true and false, then true and false.
 
 # Files
 
@@ -108,7 +108,6 @@ private:
 #include "DojoP14StartLights.h"
 
 #include "Components/SceneComponent.h"
-#include "EngineUtils.h"
 
 ADojoP14StartLights::ADojoP14StartLights()
 {
@@ -289,9 +288,9 @@ bool FDojo_P14_StartLights_CountdownTakesItsTime::RunTest(const FString& Paramet
 
 # Hints
 
-- The failing test is the only one with two tracks open at once. Read its message: which track's lights got the wrong answer, and what was true of the other track at that moment?
-- Two tracks open at once are two worlds in one program, as with two players in Play In Editor. Whatever your lights consult to decide whether another set runs: is there one of it per track, or one for the whole program?
-- Lights can ask their own world which actors it holds. Ask only the world these lights stand in whether a set other than this one is already running, and keep nothing that outlives the track.
+- Read the failing test's message to see which track's lights got the wrong answer and what was true of the other track at that moment.
+- Two tracks open at once are two worlds in one program, so ask whether whatever your lights consult exists once per track or once for the whole program.
+- Let the lights ask their own world whether a different set is already running, and keep nothing that outlives the track.
 
 # Rubric
 
@@ -300,7 +299,7 @@ bool FDojo_P14_StartLights_CountdownTakesItsTime::RunTest(const FString& Paramet
 - A duplicate stays hidden and refuses a countdown for as long as it exists.
 - The rule is enforced inside the lights, and nothing gives other code access to it from outside.
 - Running lights count down for their CountdownSeconds and turn green; a new countdown turns them red again.
-- The lights depend only on their own world; no other class knows about the rule.
+- No other class knows about the rule.
 
 # Alternative
 

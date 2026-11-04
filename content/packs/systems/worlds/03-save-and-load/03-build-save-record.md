@@ -241,9 +241,9 @@ bool FDojo_S3_SaveRecord_RoundTripThroughASlot::RunTest(const FString& Parameter
 
 # Hints
 
-- Each gap is a few lines. `FindActor` only has to turn "no id" and "never stored" into null; `MarkGone` has to change two containers, and the order you change them in does not matter.
-- `TMap::Find` returns a pointer to the value or null, and `TMap::Remove` drops a key and does nothing when it is not there. `TArray::AddUnique` adds an element only when it is not already in the array.
-- `FName::IsNone` tells you an id was never set. The header `Containers/Map.h` documents `Find` and `Remove`.
+- A map lookup that finds nothing already hands back null, so `FindActor` is that lookup behind a guard for an id that was never set.
+- Removing a key the map does not hold is harmless, so `MarkGone` needs no check before it drops the state.
+- The array call that adds an element only when it is not already there keeps an id from being listed twice.
 
 # Rubric
 

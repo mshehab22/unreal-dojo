@@ -347,9 +347,9 @@ bool FDojo_P14_Standings_ANewTrackStartsEmpty::RunTest(const FString& Parameters
 
 # Hints
 
-- `ANewTrackStartsEmpty` closes one track and opens another. Read its message: what did the standings of the new track already hold, and where did that come from?
-- The standings live as long as whatever owns them. Who owns them in the starter, and how long does that owner live in the editor? Which owner lives exactly as long as one track?
-- Derive the standings from `UWorldSubsystem`, drop everything static, and let `GetStandings` ask the checkpoint's own world for its standings. The test file only uses the checkpoints' and the standings' public functions, so their signatures must not change.
+- Read the message of `ANewTrackStartsEmpty`, which closes one track and opens another, and see what the new track's standings already held.
+- Work out who owns the standings in the starter and how long that owner lives in the editor, then find the owner that lives exactly as long as one track.
+- The base class decides who owns the standings, so change it, and let each checkpoint get them from the world it stands in.
 
 # Rubric
 

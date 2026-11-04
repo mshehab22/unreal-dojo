@@ -21,7 +21,7 @@ public:
 
 	/** Makes Provider the scoreboard; nullptr puts the do-nothing scoreboard back. Returns false, changing nothing, when Provider does not implement the scoreboard interface. */
 	UFUNCTION(BlueprintCallable, Category = "Scoreboard")
-	bool Provide(UObject* Provider);
+	bool Install(UObject* Provider);
 
 	/** Adds Points to Fighter's total on the scoreboard now in place. */
 	UFUNCTION(BlueprintCallable, Category = "Scoreboard")

@@ -442,7 +442,7 @@
       "programming subsystems"
     ],
     "category": "framework",
-    "short": "An engine-managed singleton whose lifetime is tied to a host, such as the game instance or the world.",
+    "short": "An engine-managed object whose lifetime is tied to a host, such as the game instance or the world, found through that host.",
     "long": "Subsystems give you a clean place for a manager without writing singleton code. Derive from the right base, and the engine creates your object when the host starts and destroys it when the host ends, with Initialize and Deinitialize hooks. Need a quest log that survives level loads? Use a game instance subsystem. Need a per-level spawn director? Use a world subsystem. You fetch one with GetSubsystem on its host, and Blueprints can reach them too.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
     "related": [
@@ -480,8 +480,8 @@
       "UTickableWorldSubsystem"
     ],
     "category": "framework",
-    "short": "A subsystem created for each world, so it resets whenever a new level loads.",
-    "long": "A world subsystem is the right owner for things that belong to the current map: tracking every active enemy, a spawn director, or a registry of interactable objects. Because each world gets its own copy, data never leaks from one level into the next. Grab it with GetWorld()->GetSubsystem<T>(). There is also a tickable variant if the manager needs to update every frame without being an actor.",
+    "short": "A subsystem the engine creates with each game or editor world and destroys with it, so a new world starts clean.",
+    "long": "A world subsystem is the right owner for things that belong to the current map: tracking every active enemy, a spawn director, or a registry of interactable objects. Because each world gets its own copy, data never leaks from one world into the next. A subsystem may decline to be created, so check what GetWorld()->GetSubsystem<T>() returns for null. There is also a tickable variant if the manager needs to update every frame without being an actor.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
     "related": [
       "subsystem",
@@ -523,7 +523,8 @@
       "subsystem",
       "gengine",
       "editor-subsystem"
-    ]
+    ],
+    "firstQuestId": "p14-singleton-card"
   },
   {
     "id": "editor-subsystem",
@@ -550,7 +551,7 @@
     ],
     "category": "framework",
     "short": "The top-level object for everything currently in play: loaded levels, actors, physics, timers, and networking.",
-    "long": "When you press Play, the engine creates a world and loads levels into it. Nearly everything that touches the running game goes through the world: SpawnActor, line traces, the timer manager, and finding the game mode or game state. From any actor or component you can call GetWorld(). In the editor there may be several worlds at once, such as the editor world and one play-in-editor world per player, which is a reason never to cache a world pointer in static data.",
+    "long": "When you press Play, the engine creates a world and loads levels into it. Nearly everything that touches the running game goes through the world: SpawnActor, line traces, the timer manager, and finding the game mode or game state. From any actor or component you can call GetWorld().",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UWorld?application_version=5.8",
     "related": [
       "level",
@@ -1807,7 +1808,7 @@
     ],
     "category": "object model",
     "short": "The reflected half of an Unreal interface, which lets unrelated classes promise the same set of functions.",
-    "long": "A chest, a door, and an NPC have nothing in common in their class trees, yet all can be interacted with. An interface lets each promise an Interact function without sharing a parent. Unreal interfaces come in two parts: a UINTERFACE class prefixed with U that the reflection system sees, and a matching I class that holds the functions you implement. You test for support with Implements<UInteractable>() or by casting to the I type. This keeps the player's interaction code from knowing about every interactable class.",
+    "long": "A chest, a door, and an NPC have nothing in common in their class trees, yet all can be interacted with. An interface lets each promise an Interact function without sharing a parent. Unreal interfaces come in two parts: a UINTERFACE class prefixed with U that the reflection system sees, and a matching I class that holds the functions you implement. You ask an object whether it supports the interface with a test on its class, which also works for a Blueprint-only implementer where a cast to the I type does not. This keeps the player's interaction code from knowing about every interactable class.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/interfaces-in-unreal-engine?application_version=5.8",
     "related": [
       "iinterface",
@@ -3690,7 +3691,8 @@
       "net-mode",
       "listen-server",
       "world"
-    ]
+    ],
+    "firstQuestId": "p14-reachable-from-anywhere"
   },
   {
     "id": "savegame",
@@ -3704,7 +3706,7 @@
     ],
     "category": "framework",
     "short": "A UObject subclass whose UPROPERTY fields get written to disk and read back to save player progress.",
-    "long": "Make UDojoSaveGame : public USaveGame with UPROPERTY fields such as unlocked levels and best times. To save, create one with UGameplayStatics::CreateSaveGameObject, fill it, and call SaveGameToSlot with a slot name and user index. To load, check DoesSaveGameExist and call LoadGameFromSlot, then cast. Async versions avoid hitches. Saving actor pointers does not work across sessions; save stable IDs, like an FName or a gameplay tag, and look things up again on load.",
+    "long": "Make UDojoSaveGame : public USaveGame with UPROPERTY fields such as unlocked levels and best times. To save, create one with UGameplayStatics::CreateSaveGameObject, fill it, and call SaveGameToSlot with a slot name and user index. To load, check DoesSaveGameExist and call LoadGameFromSlot, then cast. Async versions avoid hitches. A pointer to an actor spawned during play cannot be trusted to find the same actor in a later session; save stable IDs, like an FName or a gameplay tag, and look things up again on load.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/saving-and-loading-your-game-in-unreal-engine?application_version=5.8",
     "related": [
       "game-instance-subsystem",
@@ -3725,7 +3727,7 @@
     ],
     "category": "reflection",
     "short": "Properties marked with the SaveGame specifier, which an archive with ArIsSaveGame set writes into a save and reads back.",
-    "long": "Most of an actor's properties are settings or looks, not progress. Marking the progress ones UPROPERTY(SaveGame) lets one generic routine save any actor: wrap a memory writer in an FObjectAndNameAsStringProxyArchive, set ArIsSaveGame on it (and ArNoDelta, so values equal to the defaults are written too), and call the actor's Serialize, and only the marked properties are written, by name. Reading the bytes back with a memory reader and the same setup puts just those properties back and leaves the rest alone. A USaveGame object is written without the flag, so all of its properties are saved.",
+    "long": "Most of an actor's properties are settings or looks, not progress. Marking the progress ones UPROPERTY(SaveGame) lets one generic routine save any actor: an archive that has ArIsSaveGame set writes only the marked properties of the actor it serializes, by name, and an archive of the same kind reading those bytes puts just those properties back and leaves the rest alone. A USaveGame object is written without the flag, so all of its properties except Transient ones are saved.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
     "related": [
       "savegame",

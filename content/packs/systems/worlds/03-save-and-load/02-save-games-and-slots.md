@@ -33,7 +33,7 @@ explanation: The slot is a file on disk; loading reads it and builds a new objec
 
 # Card
 
-Progress that must outlive a level or a game session goes into a **save game**: an object of a class derived from `USaveGame` (header `GameFramework/SaveGame.h`). The class is ordinary data: `UPROPERTY` fields such as a coin count, a map of states, or a transform. Every `UPROPERTY` on it is written when it is saved; it needs no special specifier.
+Progress that must outlive a level or a game session goes into a **save game**: an object of a class derived from `USaveGame` (header `GameFramework/SaveGame.h`). The class is ordinary data: `UPROPERTY` fields such as a coin count, a map of states, or a transform. Every `UPROPERTY` on it is written when it is saved, except one marked `Transient`; it needs no special specifier.
 
 `UGameplayStatics` (header `Kismet/GameplayStatics.h`) does the work with a slot, a name you choose plus a user index (0 for a single local player):
 
@@ -45,7 +45,7 @@ Progress that must outlive a level or a game session goes into a **save game**: 
 
 The same object can also go to bytes in memory with `SaveGameToMemory` and back with `LoadGameFromMemory`, which is useful for undo or for sending a state somewhere else, but nothing written to memory survives quitting the game.
 
-Saving to a slot and loading from it happen at once on the calling thread. For big saves, `AsyncSaveGameToSlot` and `AsyncLoadGameFromSlot` do the file work on another thread and call a delegate when they finish, so the frame does not hitch; the world in this pack uses the plain calls so tests can check the result on the same line.
+Saving to a slot and loading from it happen at once on the calling thread. For big saves, `AsyncSaveGameToSlot` and `AsyncLoadGameFromSlot` write or read the file on another thread and call a delegate when they finish, so the frame does not wait for the disk (the object is still turned into bytes on the calling thread); the world in this pack uses the plain calls so tests can check the result on the same line.
 
 A save game holds data, not live actors. A pointer property is saved as the object's path, and reading it back looks the object up, or loads it, by that path; an actor spawned during play can get another name next session, and a placed actor can come back from a level package that is not the one being played. Store an id you set yourself, find the actor by it, and save the values to put back.
 

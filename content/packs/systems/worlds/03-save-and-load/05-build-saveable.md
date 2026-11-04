@@ -38,7 +38,7 @@ This is the second piece of the Vault Checkpoint boss.
 
 ## See it in the editor
 
-Place a `DojoS3Lantern` and select it: its Saveable component shows a Save Id field; set it to `Lantern1`. In the level Blueprint, on the 1 key, call Capture State on its Saveable and keep the result in a variable; on the 2 key set the lantern's Lit to false and Oil to 0; on the 3 key call Restore State with the variable and print Lit and Oil. Press Play, press 1, 2, 3: it prints the values from when you pressed 1.
+Place a `DojoS3Lantern` and select it: tick Lit, set Oil to 4, and type `Lantern1` into the Save Id field of its Saveable component. In the level Blueprint, on the 1 key, call Capture State on its Saveable and keep the result in a variable; on the 2 key set the lantern's Lit to false and Oil to 0; on the 3 key call Restore State with the variable and print Lit and Oil. Press Play, press 1, 2, 3: it prints the values from when you pressed 1.
 
 # Files
 
@@ -67,7 +67,7 @@ public:
 
 	/** The owner's SaveGame properties, written into bytes; empty when there is no owner. */
 	UFUNCTION(BlueprintCallable, Category = "Save")
-	TArray<uint8> CaptureState() const;
+	TArray<uint8> CaptureState() const; // @explain: Capturing only reads the owner, so the function is const, and the bytes come back by value so the caller owns them.
 
 	/** Reads bytes from CaptureState back into the owner's SaveGame properties, then tells a restorable owner; false for empty bytes or no owner. */
 	UFUNCTION(BlueprintCallable, Category = "Save")
@@ -101,15 +101,15 @@ TArray<uint8> UDojoS3SaveableComponent::CaptureState() const
 		return Bytes;
 	}
 
-	// Your code: write the owner's SaveGame properties into Bytes: a memory writer over Bytes, wrapped in the proxy archive, with only SaveGame properties allowed through and every one of them written, even when it equals its default.
+	// Your code: write the owner's SaveGame properties into Bytes.
 	return Bytes;
 }
 
 bool UDojoS3SaveableComponent::RestoreState(const TArray<uint8>& Bytes)
 {
 	// Your code: refuse when there is no owner or the bytes are empty.
-	// Your code: read the bytes back into the owner's SaveGame properties, the same way they were written but with a memory reader.
-	// Your code: if the owner implements UDojoS3Restorable, tell it through the interface that its state is back.
+	// Your code: read the bytes back into the owner's SaveGame properties.
+	// Your code: if the owner implements UDojoS3Restorable, tell it that its state is back.
 	return false;
 }
 ```
@@ -138,7 +138,7 @@ class IDojoS3Restorable
 public:
 	/** Called after the actor's SaveGame properties were read back from a save. */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Save")
-	void OnRestoredFromSave();
+	void OnRestoredFromSave(); // @explain: A native event lets C++ supply the default while a Blueprint may override it, so callers go through the static Execute_ form and whichever version exists runs.
 };
 ```
 
@@ -176,7 +176,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Lantern")
 	int32 Oil = 10;
 
-	/** The actor that tends this lantern; saved as a reference, which only the proxy archive can write. */
+	/** The actor that tends this lantern; saved as a reference, which a plain memory archive cannot write, so the archive must be object-aware. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Lantern")
 	TObjectPtr<AActor> Keeper;
 
@@ -356,9 +356,9 @@ bool FDojo_S3_Saveable_DesignersSetIds::RunTest(const FString& Parameters)
 
 # Hints
 
-- Both bodies build the same three things in the same order: a memory archive over the bytes, a proxy archive around it, and the flag that lets only SaveGame properties through. Only the first one differs between the two.
-- `FMemoryWriter` and `FMemoryReader` take the byte array and `true` for a persistent archive; `FObjectAndNameAsStringProxyArchive` takes the inner archive and `true`; its `ArIsSaveGame` member is the SaveGame flag and `ArNoDelta` the write-every-value flag; `AActor::Serialize` takes the archive.
-- `Implements<UDojoS3Restorable>()` asks whether an object implements the interface, and `IDojoS3Restorable::Execute_OnRestoredFromSave(Owner)` calls a BlueprintNativeEvent on it; the headers are `Serialization/MemoryReader.h` and `Serialization/ObjectAndNameAsStringProxyArchive.h`.
+- Capturing and restoring build the same stack of archives, and only the innermost one, a writer in one and a reader in the other, differs.
+- Give `Serialize` the outermost archive, the proxy, because it is the proxy that carries the SaveGame and write-every-value flags.
+- Tell the owner only after its properties are back, and only when it implements the restorable interface, calling the event through the interface's static `Execute_` function.
 
 # Rubric
 

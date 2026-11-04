@@ -134,7 +134,7 @@ bool FDojo_P15_TournamentBooth_TwoRoundsThroughTheDesks::RunTest(const FString& 
 	TestEqual(TEXT("And announces nothing"), RoundOneRecord->GetLines().Num(), RoundOneLineCount);
 
 	UDojoP15RecordingAnnouncer* RoundTwoRecord = NewObject<UDojoP15RecordingAnnouncer>(GetTransientPackage());
-	TestTrue(TEXT("A new announcer is provided between rounds"), Announcers->Provide(RoundTwoRecord));
+	TestTrue(TEXT("A new announcer is provided between rounds"), Announcers->Install(RoundTwoRecord));
 
 	Director->PressNextRound();
 	TestTrue(TEXT("Round 2 is running"), Director->IsRunning());
@@ -306,7 +306,7 @@ bool FDojo_P15_TournamentBooth_SwappedScoreboardTakesOver::RunTest(const FString
 	TestEqual(TEXT("Ayla won round 1 on the first scoreboard"), First->GetPoints(TEXT("Ayla")), 3);
 
 	UDojoP15MemoryScoreboard* Second = NewObject<UDojoP15MemoryScoreboard>(GetTransientPackage());
-	TestTrue(TEXT("A new scoreboard is provided between rounds"), Scoreboards->Provide(Second));
+	TestTrue(TEXT("A new scoreboard is provided between rounds"), Scoreboards->Install(Second));
 
 	Director->PressNextRound();
 	const float RoundTwoStart = TestWorld.GetWorld()->GetTimeSeconds();

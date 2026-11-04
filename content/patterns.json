@@ -1881,7 +1881,7 @@
     "title": "Singleton",
     "intent": "Make a class guarantee there is only one of it and let any code reach that one through the class itself. In Unreal you learn it mostly to recognize it, and to give the one instance a real owner instead.",
     "problem": "A lap board, the standings, the start lights: some things feel naturally single, and a static Get saves passing them around. But the static belongs to the whole program, so in the editor it outlives every play session and is shared by worlds running together; its pointer is invisible to the garbage collector; every caller hides a dependency; and access from anywhere also rules out the second instance a practice mode or a test needs.",
-    "unrealForm": "Subsystems give single instances an owner and a lifetime the engine manages: UEngineSubsystem for the program, UGameInstanceSubsystem for the game session, UWorldSubsystem for each world, ULocalPlayerSubsystem for each local player, each found through its owner (GetSubsystem<T>() on the world, the game instance, or the local player, and GEngine->GetEngineSubsystem<T>() for the engine). The game instance, game mode, game state, and player controllers are owners that already exist. Code that only needs access is handed the object by whoever sets it up.",
+    "unrealForm": "Subsystems give single instances an owner and a lifetime the engine manages: UEngineSubsystem for the program, UGameInstanceSubsystem for the game session, UWorldSubsystem for each world, ULocalPlayerSubsystem for each local player, each found through its owner (GetSubsystem<T>() on the world, the game instance, or the local player, and GEngine->GetEngineSubsystem<T>() for the engine). The game instance, the game state, each player controller, and on the server the game mode are owners that already exist. A subsystem may decline to be created, so check what GetSubsystem returns. Code that only needs access is handed the object by whoever sets it up.",
     "whenNot": "Almost always skip the classic form. If the need is access, hand the object in or find it through its owner. If the need is one instance, enforce it where the instance comes into being, without global access. A manager that only does other objects' work should become behavior on those objects, a subsystem needs the owner whose lifetime matches its data, and stateless helpers belong in a function library.",
     "useCaseQuestIds": [
       "p14-lap-log",
@@ -1904,7 +1904,7 @@
       {
         "id": "singleton-recall-2",
         "type": "spot-the-bug",
-        "prompt": "This score manager is a hand-rolled singleton. Which line risks a crash after garbage collection or between play sessions?",
+        "prompt": "This score manager is a hand-rolled singleton. Which line declares the pointer that risks a crash after garbage collection or between play sessions?",
         "code": "UDojoScoreManager* UDojoScoreManager::Get()\n{\n    static UDojoScoreManager* Instance = nullptr;\n    if (!Instance) { Instance = NewObject<UDojoScoreManager>(); }\n    return Instance;\n}",
         "bugLine": 3,
         "fix": "Use a UGameInstanceSubsystem and GetSubsystem<UDojoScoreManager>() so the engine owns the lifetime.",
@@ -1926,12 +1926,12 @@
         "type": "multiple-choice",
         "prompt": "A finish line must write practice laps and ranked laps into different logs. What lets the same line class do both?",
         "choices": [
-          "A static Get on the log class",
-          "The line is handed the log it writes into by whoever sets up the race",
-          "A UEngineSubsystem that holds every log",
-          "A check that only one log exists"
+          "The line is handed its log by whoever sets up the race",
+          "A static Get on the log class, rooted so it stays alive",
+          "A UEngineSubsystem that holds every log for the program",
+          "A check at startup that only one log exists"
         ],
-        "answerIndex": 1,
+        "answerIndex": 0,
         "explanation": "A line that is handed its log can be handed either one; a log reached through the class can only ever be the one."
       },
       {
@@ -1939,12 +1939,12 @@
         "type": "multiple-choice",
         "prompt": "When does a UWorldSubsystem's Initialize run, compared with a classic Singleton made on first use?",
         "choices": [
-          "Whenever some code first calls GetSubsystem for it, like a Singleton",
-          "When its world is created, so its setup happens at a moment the game controls, such as a level load",
-          "Every frame, before Tick",
-          "Only when the game is packaged"
+          "When some code first calls GetSubsystem for it, like a Singleton",
+          "Every frame, just before Tick runs on the world",
+          "Only when the game is packaged for release",
+          "When its world is created, such as at a level load"
         ],
-        "answerIndex": 1,
+        "answerIndex": 3,
         "explanation": "The engine makes a world subsystem together with its world, so heavy setup runs at level load instead of in the middle of play when some code first asks."
       }
     ],
@@ -1952,7 +1952,7 @@
       {
         "id": "singleton-scenario-1",
         "type": "which-pattern",
-        "prompt": "Your quest tracker needs to live across level loads and be reachable from any widget or actor. A teammate writes a static GetInstance. Which Unreal form should replace it?",
+        "prompt": "Your quest tracker needs to live across level loads and be reachable from any widget or actor. A teammate writes a static GetInstance, and a game instance subsystem found by type with GetSubsystem replaces it. Which pattern is that replacement closest to?",
         "choices": [
           "facade",
           "observer",
@@ -1979,7 +1979,7 @@
       {
         "id": "singleton-scenario-2",
         "type": "which-pattern",
-        "prompt": "A class named UDojoEnemyManager has grown functions for moving, damaging, and animating every enemy, and every enemy calls it. Which pattern smell is this, and which pattern points to the fix?",
+        "prompt": "A class named UDojoEnemyManager has grown functions for moving, damaging, and animating every enemy, and every enemy calls it. Which pattern points to the fix?",
         "choices": [
           "component",
           "flyweight",
@@ -2036,11 +2036,11 @@
         "prompt": "A WeatherManager is a UGameInstanceSubsystem that holds the current level's rain and fog. After a level change the new level starts in the old level's storm. What is the fix?",
         "choices": [
           "Make it a static Get so it is easier to reset",
-          "Make it a UWorldSubsystem, so each level gets its own weather and it is destroyed with the level",
-          "Call AddToRoot on it",
-          "Make it a UEngineSubsystem"
+          "Call AddToRoot on it so the level cannot free it",
+          "Make it a UWorldSubsystem so each level gets its own",
+          "Make it a UEngineSubsystem that lives for the program"
         ],
-        "answerIndex": 1,
+        "answerIndex": 2,
         "explanation": "The owner decides the lifetime. Weather that belongs to a level needs the level's world as its owner."
       }
     ]
@@ -2050,11 +2050,11 @@
     "title": "Service Locator",
     "intent": "Let code ask one place for \"the announcer\" or \"the scoreboard\" by interface and get back whichever provider was set up (loud, recording, or silent), without knowing which class that is.",
     "problem": "The gong, the bout timer, and the score screen all need to announce lines. Passing an announcer through every function is tedious, and letting each create its own welds them to one concrete class, which blocks swapping in a silent or recording version for tests or a different build.",
-    "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem may keep its current provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's own registry for plugin features, and you ask whether a feature exists before asking for it. Provide a null provider so callers never check for nullptr.",
+    "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem may keep its current provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's own registry for plugin features, and you ask whether a feature exists before asking for it. Use a null provider so callers never check for nullptr.",
     "whenNot": "If the dependency can be passed in through a constructor or function parameter, do that; it stays visible. A global lookup also cannot keep a facility to one context or phase, so do not use a locator for something that may only be reached there.",
     "useCaseQuestIds": [
       "p15-announcer-desk",
-      "p15-crier-trace"
+      "p15-gong-refactor"
     ],
     "recall": [
       {
@@ -2062,10 +2062,10 @@
         "type": "multiple-choice",
         "prompt": "What is the point of a null provider in a located service?",
         "choices": [
-          "A crash when used, to catch bugs",
-          "A cached copy of the last service",
-          "A network fallback",
-          "A do-nothing implementation so callers never have to check for a missing service"
+          "A crash when it is used, to catch bugs early",
+          "A cached copy of the last service that was used",
+          "A network fallback for when the service is offline",
+          "A do-nothing version, so callers need no checks"
         ],
         "answerIndex": 3,
         "explanation": "The null object keeps code working when no real provider is registered, such as in tests or a dedicated server."
@@ -2105,10 +2105,10 @@
         "type": "multiple-choice",
         "prompt": "Which of these is a service locator's three-part shape?",
         "choices": [
-          "A base class, a component, and a delegate",
-          "A service interface, providers behind it, and a place that hands out the provider in use",
-          "A factory, a prototype, and a pool",
-          "A header, a source file, and a build file"
+          "A base class, a component to attach it, and a delegate to call it",
+          "An interface, its providers, and a place that hands out the one in use",
+          "A factory that builds it, a prototype to copy it, and a pool to reuse it",
+          "A header that declares it, a source file, and a build file that compiles it"
         ],
         "answerIndex": 1,
         "explanation": "Callers use the interface, providers implement it, and the locator hands out whichever is in place."
@@ -2147,10 +2147,10 @@
         "type": "multiple-choice",
         "prompt": "A bell is spawned by a bout director that already holds a reference to the announcer desk. The bell needs to announce. What is the better choice than having the bell look the service up globally?",
         "choices": [
-          "Have the director pass the announcer interface to the bell when it spawns it",
-          "Make the announcer desk a static singleton",
-          "Broadcast a delegate asking someone to speak the line",
-          "Queue the line for the next frame"
+          "Have the director pass the announcer to the bell at spawn",
+          "Make the announcer desk a static singleton that the bell can call",
+          "Broadcast a delegate that asks someone else to speak the line",
+          "Queue the line and have the next frame find a speaker for it"
         ],
         "answerIndex": 0,
         "explanation": "When a caller already has the dependency, passing it in keeps it visible in the bell's interface. A locator is the fallback when passing in is impractical, not the default."
@@ -2177,7 +2177,7 @@
           },
           {
             "choice": "observer",
-            "why": "Subscribing the tests to every source works, but every source would have to be wired, where a located announcer needs one provide call."
+            "why": "Subscribing the tests to every source works, but every source would have to be wired, where a located announcer needs one Install call."
           }
         ],
         "explanation": "The callers use an announcer interface, and the test provides a recording announcer once."
@@ -2187,10 +2187,10 @@
         "type": "multiple-choice",
         "prompt": "A rival's strike needs the health of the one fighter it is hitting. Is a service locator the right way to reach it?",
         "choices": [
-          "Yes; anything many classes need belongs in a locator",
-          "No; the target is part of this one strike, so pass it in or reach its health through it",
-          "Yes, but only through a game instance subsystem",
-          "No; health should be a console variable"
+          "Yes; anything that many classes need belongs in a locator, so use one",
+          "No; the target belongs to this one strike, so pass it in",
+          "Yes, but only if it is registered through a game instance subsystem",
+          "No; a fighter's health should be a console variable instead"
         ],
         "answerIndex": 1,
         "explanation": "A locator is for a few cross-cutting services. A dependency that belongs to one relationship should stay visible in the code that uses it."

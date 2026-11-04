@@ -7,7 +7,7 @@ scaffold: stub
 difficulty: 3
 patterns: [service-locator]
 skills: [service-locator, null-object]
-terms: [world-subsystem, uinterface, null-object, beginplay]
+terms: [world-subsystem, uinterface, null-object]
 prerequisites: [p15-service-locator-card, p15-announcer-desk]
 xp: 120
 estimatedMinutes: 35
@@ -36,7 +36,7 @@ Write the obvious version first and run the tests. One of them fails on purpose 
 
 ## See it in the editor
 
-Place a `DojoP15Crier`. In the Level Blueprint, on Begin Play, get the world subsystem Dojo P15 Announcer Desk and call Provide with a Construct Object from Class of Dojo P15 Recording Announcer (outer: the desk). On the keys 1, 2, and 3, call Call Out on the crier with the lines "One", "Two", and "Three". Press 1 and 2, then print the recording announcer's Lines (Get Provider, then Cast To Dojo P15 Recording Announcer, then Get Lines, then Join String Array into Print String): One and Two. Now on key T make a Dojo P15 Tracing Announcer with Construct Object from Class, call Wrap with the desk's Get Provider, then call Provide on the desk with the tracer, and keep the tracer in a variable. Press 3, then print the tracer's Forwarded Count (1) and the recording announcer's Lines again (One, Two, Three): the line went through the tracer and on to the recording announcer.
+Place a `DojoP15Crier`, select it in the level, then right-click in the Level Blueprint graph and choose Create a Reference to it. On Begin Play, get the world subsystem Dojo P15 Announcer Desk and call Install with a Construct Object from Class of Dojo P15 Recording Announcer (outer: the desk), and keep that recording announcer in a variable. On the keys 1, 2, and 3, call Call Out on the crier with the lines "One", "Two", and "Three". Press 1 and 2, then print the variable's Lines (Get Lines, then Join String Array into Print String): One and Two. Now on key T make a Dojo P15 Tracing Announcer with Construct Object from Class, call Wrap with the desk's Get Provider, then call Install on the desk with the tracer, and keep the tracer in a variable. Press 3, then print the tracer's Forwarded Count (1) and the recording announcer variable's Lines again (One, Two, Three): the line went through the tracer and on to the recording announcer.
 
 # Files
 
@@ -219,7 +219,7 @@ bool FDojo_P15_CrierTrace_CrierCallsOutThroughTheDesk::RunTest(const FString& Pa
 	if (!TestNotNull(TEXT("The world has a desk"), Desk)) return false;
 
 	UDojoP15RecordingAnnouncer* Record = NewObject<UDojoP15RecordingAnnouncer>(GetTransientPackage());
-	Desk->Provide(Record);
+	Desk->Install(Record);
 
 	ADojoP15Crier* Crier = TestWorld.SpawnActor<ADojoP15Crier>();
 	if (!TestNotNull(TEXT("Crier spawned"), Crier)) return false;
@@ -263,7 +263,7 @@ bool FDojo_P15_CrierTrace_ChangesReachTheCrier::RunTest(const FString& Parameter
 
 	UDojoP15RecordingAnnouncer* First = NewObject<UDojoP15RecordingAnnouncer>(GetTransientPackage());
 	const TStrongObjectPtr<UObject> KeepFirst(First);
-	Desk->Provide(First);
+	Desk->Install(First);
 
 	ADojoP15Crier* Crier = TestWorld.SpawnActor<ADojoP15Crier>();
 	if (!TestNotNull(TEXT("Crier spawned"), Crier)) return false;
@@ -273,14 +273,14 @@ bool FDojo_P15_CrierTrace_ChangesReachTheCrier::RunTest(const FString& Parameter
 	UDojoP15TracingAnnouncer* Tracer = NewObject<UDojoP15TracingAnnouncer>(GetTransientPackage());
 	const TStrongObjectPtr<UObject> KeepTracer(Tracer);
 	Tracer->Wrap(Desk->GetProvider());
-	Desk->Provide(Tracer);
+	Desk->Install(Tracer);
 
 	Crier->CallOut(TEXT("Two"));
 	TestEqual(TEXT("The tracer saw the line called out after it was slipped in"), Tracer->GetForwardedCount(), 1);
 	TestEqual(TEXT("And passed it on to the first recording announcer"), First->GetLines().Num(), 2);
 
 	UDojoP15RecordingAnnouncer* Second = NewObject<UDojoP15RecordingAnnouncer>(GetTransientPackage());
-	Desk->Provide(Second);
+	Desk->Install(Second);
 
 	Crier->CallOut(TEXT("Three"));
 	TestEqual(TEXT("The second recording announcer heard the line called out after it was provided"), Second->GetLines().Num(), 1);
@@ -295,9 +295,9 @@ bool FDojo_P15_CrierTrace_ChangesReachTheCrier::RunTest(const FString& Parameter
 
 # Hints
 
-- The failing test names what must keep working after the announcer in place is replaced. Read its message: which announcer got the line, and which should have?
-- The crier is made once and called out through many times. Which of the things it knows can change between its first call and its second?
-- Ask the desk for the announcer each time `CallOut` runs, and keep nothing between calls. In the tracer, count first, then pass the line on only if something is wrapped.
+- Read the failing test's message: it says which announcer received the line and which one should have.
+- The crier is made once and called many times, so look at which thing it knows can change between its first call and its second.
+- Ask the desk for its announcer each time `CallOut` runs, and keep nothing between calls.
 
 # Rubric
 
@@ -310,7 +310,7 @@ bool FDojo_P15_CrierTrace_ChangesReachTheCrier::RunTest(const FString& Parameter
 
 # Alternative
 
-The desk could forward the call itself, with a function such as `Say(Line)`, so a caller never holds or even sees the announcer. That is the safest shape for callers and works from Blueprint, since a native interface cannot be called there; the cost is that the desk grows a function for every operation on the service. A different route is to hand each actor the announcer it should use when it is made, which shows every dependency in plain sight and needs a parameter everywhere. The tracer could also be a flag inside each announcer, but a separate wrapper can be put around any announcer, including ones written later.
+The desk could forward the call itself, with a function such as `Say(Line)`, so a caller never holds or even sees the announcer. That is the safest shape for callers and works from Blueprint, where this interface's `Announce` is not exposed; the cost is that the desk grows a function for every operation on the service. A different route is to hand each actor the announcer it should use when it is made, which shows every dependency in plain sight and needs a parameter everywhere. The tracer could also be a flag inside each announcer, but a separate wrapper can be put around any announcer, including ones written later.
 
 # Parsons
 

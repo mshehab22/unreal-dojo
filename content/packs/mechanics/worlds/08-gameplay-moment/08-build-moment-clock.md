@@ -20,12 +20,17 @@ concepts:
 
 When you start a moment on the clock and the exit gate announces an escape at 40 seconds, the clock reads `ESCAPED in 40.0 s`; a catch at 10 seconds reads `CAUGHT after 10.0 s`; with nothing announced it reads `TIME UP` when the limit passes, and before it starts it reads `WAITING`.
 
-`ADojoM8MomentClock` has its header written for you, including the five outcomes. Everything in the `.cpp` except the constructor is yours:
+Write `ADojoM8MomentClock` from nothing: an actor that keeps the time of a moment and reports how it ended. It listens to a gate's escapes and a meter's catches, counts the time limit down with one timer, and never ticks. However many times the watch functions are called, each source is listened to only once.
 
-1. `WatchExit` and `WatchAlert`: listen to the gate's escapes and the meter's catches with `HandleEscaped` and `HandleCaught`, binding only once.
-2. `Start`: begin the moment: it is running, its time starts now, and the time limit starts counting down.
-3. `HandleEscaped`, `HandleCaught`, `HandleTimeUp`, and `Finish`: end the moment and record how and when.
-4. `GetOutcome`, `GetElapsedSeconds` (zero before the start, the time so far while running, the time at the instant it ended afterwards), and `GetLabel`.
+The tests use this public interface, so keep these names:
+
+- `UENUM(BlueprintType) enum class EDojoM8Outcome : uint8` with the values `EO_Waiting`, `EO_Running`, `EO_Escaped`, `EO_Caught`, and `EO_TimeUp`.
+- `UPROPERTY(EditAnywhere, BlueprintReadWrite) float TimeLimitSeconds`, 120 by default.
+- `UFUNCTION(BlueprintCallable) void WatchExit(ADojoM8ExitGate* Gate);` and `void WatchAlert(ADojoM8AlertMeter* Meter);` listen to the gate's escapes and the meter's catches, and ignore an invalid pointer.
+- `UFUNCTION(BlueprintCallable) void Start();` begins the moment: it is running, its time starts now, and the time limit starts counting down.
+- `UFUNCTION(BlueprintPure) EDojoM8Outcome GetOutcome() const;` says how the moment stands.
+- `UFUNCTION(BlueprintPure) float GetElapsedSeconds() const;` gives the seconds since the moment started, up to the moment it ended, and zero before it starts.
+- `UFUNCTION(BlueprintPure) FString GetLabel() const;` gives the label described above, with the time to one decimal.
 
 Dependency direction: the clock listens to the gate and the meter; neither knows the clock exists, and the clock holds no list of them.
 
@@ -35,165 +40,20 @@ This clock is the fifth and last piece of the Blackout Escape boss.
 
 ## See it in the editor
 
-Place a `DojoM8MomentClock`, a `DojoM8ExitGate`, and a `DojoM8AlertMeter`. In the level Blueprint, on BeginPlay call Watch Exit and Watch Alert on the clock, then Start, and print the clock's Get Label on a one second timer. Press Play: it reads RUNNING. Call Set Powered on the gate and walk the pawn in to read `ESCAPED in ...`, or set Time Limit Seconds to 5 in Details and wait to read `TIME UP`.
+Place a `DojoM8MomentClock`, a `DojoM8ExitGate` near the player start, and a `DojoM8AlertMeter`; the gate's zone is an invisible box, so switch on Show, then Collision in the viewport to see it. Add references to all three in the level Blueprint. On BeginPlay call Watch Exit and Watch Alert on the clock, then Start, and print the clock's Get Label on a looping one second timer; on the 1 key call Set Powered with true on the gate. Press Play: it reads RUNNING. Press 1 and walk the pawn into the zone to read `ESCAPED in ...`, or set Time Limit Seconds to 5 in Details and wait to read `TIME UP`.
 
 # Files
 
 ## DojoM8MomentClock.h
 
 ```cpp
-#pragma once
-
-#include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
-#include "TimerManager.h"
-#include "DojoM8MomentClock.generated.h"
-
-class ADojoM8AlertMeter;
-class ADojoM8ExitGate;
-
-/** How a moment is going: not started, running, or ended one of three ways. */
-UENUM(BlueprintType)
-enum class EDojoM8Outcome : uint8
-{
-	EO_Waiting UMETA(DisplayName = "Waiting"),
-	EO_Running UMETA(DisplayName = "Running"),
-	EO_Escaped UMETA(DisplayName = "Escaped"),
-	EO_Caught UMETA(DisplayName = "Caught"),
-	EO_TimeUp UMETA(DisplayName = "Time Up")
-};
-
-/** Keeps the time of a moment and decides how it ends: the first of an escape, a catch, or the time limit wins, and the answer then never changes. */
-UCLASS()
-class ADojoM8MomentClock : public AActor
-{
-	GENERATED_BODY()
-
-public:
-	/** Turns ticking off. */
-	ADojoM8MomentClock();
-
-	/** How long the moment may last, in seconds. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Moment Clock", meta = (ClampMin = "1.0"))
-	float TimeLimitSeconds = 120.f;
-
-	/** Ends the moment as an escape when the gate announces one; binds only once however many times it is called. */
-	UFUNCTION(BlueprintCallable, Category = "Moment Clock")
-	void WatchExit(ADojoM8ExitGate* Gate);
-
-	/** Ends the moment as a catch when the meter announces one; binds only once however many times it is called. */
-	UFUNCTION(BlueprintCallable, Category = "Moment Clock")
-	void WatchAlert(ADojoM8AlertMeter* Meter);
-
-	/** Starts the moment now. */
-	UFUNCTION(BlueprintCallable, Category = "Moment Clock")
-	void Start();
-
-	/** How the moment stands. */
-	UFUNCTION(BlueprintPure, Category = "Moment Clock")
-	EDojoM8Outcome GetOutcome() const;
-
-	/** Seconds since the moment started; frozen at the instant it ended; zero before it starts. */
-	UFUNCTION(BlueprintPure, Category = "Moment Clock")
-	float GetElapsedSeconds() const;
-
-	/** WAITING, RUNNING, ESCAPED in 41.2 s, CAUGHT after 12.0 s, or TIME UP. */
-	UFUNCTION(BlueprintPure, Category = "Moment Clock")
-	FString GetLabel() const;
-
-private:
-	/** Ends the moment as an escape. */
-	UFUNCTION()
-	void HandleEscaped(AActor* Escapee);
-
-	/** Ends the moment as a catch. */
-	UFUNCTION()
-	void HandleCaught();
-
-	/** Ends the moment when the time limit runs out. */
-	void HandleTimeUp();
-
-	/** Records how the moment ended. */
-	void Finish(EDojoM8Outcome Result);
-
-	FTimerHandle LimitHandle;
-
-	EDojoM8Outcome Outcome = EDojoM8Outcome::EO_Waiting;
-
-	double StartSeconds = 0.0;
-
-	double EndSeconds = 0.0;
-};
+// Declare ADojoM8MomentClock and EDojoM8Outcome here.
 ```
 
 ## DojoM8MomentClock.cpp
 
 ```cpp
-#include "DojoM8MomentClock.h"
-
-#include "Components/SceneComponent.h"
-#include "Engine/World.h"
-#include "Quests/m8-alert-meter/DojoM8AlertMeter.h"
-#include "Quests/m8-exit-gate/DojoM8ExitGate.h"
-
-ADojoM8MomentClock::ADojoM8MomentClock()
-{
-	PrimaryActorTick.bCanEverTick = false;
-
-	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-}
-
-void ADojoM8MomentClock::WatchExit(ADojoM8ExitGate* Gate)
-{
-	// Your code: ignore an invalid gate; otherwise listen to its escapes with HandleEscaped, binding only once.
-}
-
-void ADojoM8MomentClock::WatchAlert(ADojoM8AlertMeter* Meter)
-{
-	// Your code: ignore an invalid meter; otherwise listen to its catches with HandleCaught, binding only once.
-}
-
-void ADojoM8MomentClock::Start()
-{
-	// Your code: begin the moment: it is running, its time starts now, and the time limit starts counting down once.
-}
-
-EDojoM8Outcome ADojoM8MomentClock::GetOutcome() const
-{
-	return EDojoM8Outcome::EO_Waiting;
-}
-
-float ADojoM8MomentClock::GetElapsedSeconds() const
-{
-	// Your code: zero before the start, the time so far while running, and the time at the instant it ended afterwards.
-	return 0.f;
-}
-
-FString ADojoM8MomentClock::GetLabel() const
-{
-	// Your code: WAITING, RUNNING, ESCAPED in 41.2 s, CAUGHT after 12.0 s, or TIME UP, with the time to one decimal.
-	return FString();
-}
-
-void ADojoM8MomentClock::HandleEscaped(AActor* Escapee)
-{
-	// Your code: end the moment as an escape.
-}
-
-void ADojoM8MomentClock::HandleCaught()
-{
-	// Your code: end the moment as a catch.
-}
-
-void ADojoM8MomentClock::HandleTimeUp()
-{
-	// Your code: end the moment because the time ran out.
-}
-
-void ADojoM8MomentClock::Finish(EDojoM8Outcome Result)
-{
-	// Your code: record how the moment ended and when.
-}
+// Define ADojoM8MomentClock here.
 ```
 
 # Tests
@@ -241,7 +101,7 @@ namespace DojoM8MomentClockTest
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M8_MomentClock_WaitsUntilStarted, "Dojo.M8.MomentClock.WaitsUntilStarted", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Checks a clock that has not started reads WAITING and ignores an escape. */
+/** Checks a clock that has not started reads WAITING with no time, and RUNNING once started. */
 bool FDojo_M8_MomentClock_WaitsUntilStarted::RunTest(const FString& Parameters)
 {
 	using namespace DojoM8MomentClockTest;
@@ -252,9 +112,6 @@ bool FDojo_M8_MomentClock_WaitsUntilStarted::RunTest(const FString& Parameters)
 
 	TestEqual(TEXT("A new clock waits"), Scene.Clock->GetLabel(), FString(TEXT("WAITING")));
 	TestEqual(TEXT("with no time on it"), Scene.Clock->GetElapsedSeconds(), 0.f);
-
-	Scene.Gate->OnEscaped.Broadcast(Scene.Runner);
-	TestEqual(TEXT("An escape before the start changes nothing"), Scene.Clock->GetLabel(), FString(TEXT("WAITING")));
 
 	Scene.Clock->Start();
 	TestEqual(TEXT("A started clock runs"), Scene.Clock->GetLabel(), FString(TEXT("RUNNING")));
@@ -383,22 +240,22 @@ bool FDojo_M8_MomentClock_DesignersCanSetTheLimit::RunTest(const FString& Parame
 
 # Hints
 
-- Four things can end a moment: an escape, a catch, the limit, and nothing else. Give them one place to go through, so the recording of the ending is written once.
-- The limit is a one-shot timer set when the moment starts. `GetWorld()->GetTimeSeconds()` is the time to record at the start and at the end. A label is a switch over the outcome, and `FString::Printf` with `%.1f` gives one decimal.
-- A moment can be started again, for example by a restart, so decide what a second start must reset. The handler functions only call `Finish`; `Finish` records the outcome and the end time, and must not change an ending that is already recorded.
+- Give the escape, the catch, and the time limit one place to go through, so the recording of an ending is written once.
+- Take the world's time at the start and again at the end, and let the label be a switch over the outcome.
+- A moment can be started again, so decide what a second start must reset, and make sure a later event cannot change an ending that is already recorded.
 
 # Rubric
 
-- The clock listens to the gate and the meter with AddUniqueDynamic and holds no pointer to either.
+- The clock listens to the gate and the meter with AddUniqueDynamic and holds no pointer to either, and neither of them knows the clock exists.
 - Start puts the moment in the running state, records the start time, and starts the time limit as a one-shot timer.
 - All three endings go through one function that records the outcome and the end time.
-- The first ending recorded is the one shown; the label and the time then stay as they were at that instant.
+- Each of the three endings shows its own label and its own time.
 - Starting a moment again begins a fresh time and a fresh limit.
 - The limit is a property a designer can set in Details, and the label reads exactly `WAITING`, `RUNNING`, `ESCAPED in 41.2 s`, `CAUGHT after 12.0 s`, or `TIME UP`.
 
 # Alternative
 
-The clock could poll: tick every frame, compare the time with the limit, and look at the gate and the meter for their state. That works with no events at all, but it spends a check on every frame for an answer that changes three times in a whole round, and it has to ask each object every frame what they already know. Events and one timer do the same job with no per-frame cost, and a new ending, such as a bell at the exit, only needs a new handler. This shape, one object whose state changes only by the events it hears, is the State pattern, as in Pack 2's State world.
+The clock could poll: tick every frame, compare the time with the limit, and look at the gate and the meter for their state. That works with no events at all, but it spends a check on every frame for an answer that changes three times in a whole round, and it has to ask each object every frame what they already know. Events and one timer do the same job with no per-frame cost, and a new ending, such as a bell at the exit, only needs a new handler. This shape, one object whose state changes only by the events it hears, is the State pattern, as in Pack 2's "One mode at a time" world.
 
 # Parsons
 
@@ -414,16 +271,25 @@ The clock could poll: tick every frame, compare the time with the limit, and loo
   distractors:
     - line: "	Gate->OnEscaped.AddDynamic(this, &ADojoM8MomentClock::HandleEscaped);"
       mistake: AddDynamic binds again on every call, so watching a gate twice would end the moment twice; the Unique form ignores a repeat.
-- id: clock-label
-  prompt: Put the middle of GetLabel in order.
+- id: clock-elapsed
+  prompt: Put GetElapsedSeconds in order.
   lines:
-    - "	case EDojoM8Outcome::EO_Waiting:"
-    - "		return TEXT(\"WAITING\");"
-    - "	case EDojoM8Outcome::EO_Running:"
-    - "		return TEXT(\"RUNNING\");"
-    - "	case EDojoM8Outcome::EO_Escaped:"
-    - "		return FString::Printf(TEXT(\"ESCAPED in %.1f s\"), GetElapsedSeconds());"
+    - "float ADojoM8MomentClock::GetElapsedSeconds() const"
+    - "{"
+    - "	const bool bStillRunning = Outcome == EDojoM8Outcome::EO_Running;"
+    - "	const double Until = bStillRunning ? GetWorld()->GetTimeSeconds() : EndSeconds;"
+    - "	return static_cast<float>(Until - StartSeconds);"
+    - "}"
   distractors:
-    - line: "		return FString::Printf(TEXT(\"ESCAPED in %d s\"), GetElapsedSeconds());"
-      mistake: "%d prints a whole number and expects an integer; the elapsed time is a float, so it needs %.1f."
+    - line: "	const double Until = bStillRunning ? EndSeconds : GetWorld()->GetTimeSeconds();"
+      mistake: The two branches are swapped, so a running moment would show a frozen time and an ended one would keep counting.
+- id: clock-label
+  prompt: Put the end of GetLabel in order.
+  lines:
+    - "	const float Seconds = GetElapsedSeconds();"
+    - "	const FString Time = FString::Printf(TEXT(\"%.1f s\"), Seconds);"
+    - "	return Outcome == EDojoM8Outcome::EO_Escaped ? TEXT(\"ESCAPED in \") + Time : TEXT(\"CAUGHT after \") + Time;"
+  distractors:
+    - line: "	const FString Time = FString::Printf(TEXT(\"%d s\"), Seconds);"
+      mistake: "%d expects an integer, and Printf checks its format against the arguments when the code compiles, so a float given to it does not build; a decimal needs %.1f."
 ```
