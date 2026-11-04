@@ -539,7 +539,7 @@ bool FDojo_S6_SenseMemory_ListensToPerception::RunTest(const FString& Parameters
 
 - Both gaps are guards first and changes second, so ask what would make the news meaningless and return early in that case.
 - For the lost branch the question is whether the actor that went out of sight is the one the memory follows, and for the noise it is whether the followed actor is in sight right now.
-- A weak pointer's `Get` gives the followed actor to compare, `IsTargetVisible` answers the sight question, and after the guards the change is `SetClue` and then `OnMemoryChanged.Broadcast(this)`, as `NoteSight` ends.
+- A weak pointer's `Get` gives the followed actor to compare, `IsTargetVisible` answers the sight question, and after the guards the change is stored and announced the way `NoteSight` ends.
 
 # Rubric
 

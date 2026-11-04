@@ -33,7 +33,7 @@ explanation: Sight sends news only when its answer changes, so the guard gets on
 
 # Card
 
-A guard that sees and hears needs three engine parts before any decision is made.
+A guard that sees and hears needs four engine parts before any decision is made.
 
 The **AI controller** is the brain that possesses a pawn. A pawn gets one through its AI Controller Class setting, and the controller, not the pawn, holds the senses and the decision logic. A player controller reads a keyboard; an AI controller reads the world.
 
@@ -48,7 +48,7 @@ An **AI stimulus**, `FAIStimulus`, is one piece of that news:
 
 Sight sends one update when it starts seeing an actor and another when it loses it. Hearing hears only what game code reports: `UAISense_Hearing::ReportNoiseEvent(WorldContext, Location, Loudness, Instigator, MaxRange)`. Pass the actor that made the noise as the instigator. The update is about an actor, so a noise reported with no instigator is dropped.
 
-A **blackboard** is the notice board a Behavior Tree reads. It is a set of named, typed keys, such as a Bool called `HasClue` or a Vector called `ClueLocation`, defined in a blackboard asset and held while the game runs by a `UBlackboardComponent` that the controller sets up when it runs a tree. Code writes a key with `SetValueAsBool` or `SetValueAsVector`, and the tree only ever reads keys, so it never needs to know where a fact came from.
+A **blackboard** is the notice board a Behavior Tree reads. It is a set of named, typed keys, such as a Bool called `HasClue` or a Vector called `ClueLocation`, defined in a blackboard asset and held while the game runs by a `UBlackboardComponent` that the controller sets up when it runs a tree. Code writes a key with `SetValueAsBool` or `SetValueAsVector`, and the decisions in the tree only read keys, so a decision never needs to know where a fact came from.
 
 A Behavior Tree is a root with branches below it, and each branch point is a composite node that decides which children run. A selector tries its children from left to right until one succeeds, and a sequence runs its children in order until one fails.
 
@@ -100,7 +100,7 @@ void ADojoExSentryController::HandleUpdate(AActor* Actor, FAIStimulus Stimulus)
   choices:
     - OnPerceptionUpdated, which passes the list of changed actors
     - GetCurrentlyPerceivedActors, which a handler calls on demand
-    - OnTargetPerceptionUpdated
+    - OnTargetPerceptionUpdated, which reports one actor's change
     - OnComponentBeginOverlap, which reports touching
   answerIndex: 2
   explanation: OnTargetPerceptionUpdated passes one actor and its stimulus; OnPerceptionUpdated passes only a list of actors, with nothing to tell sight from hearing.
