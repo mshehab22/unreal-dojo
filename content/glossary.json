@@ -4772,6 +4772,90 @@
     "firstQuestId": "p13-behavior-as-data"
   },
   {
+    "id": "subsystem-dependency",
+    "term": "Subsystem dependency",
+    "aliases": [
+      "InitializeDependency",
+      "FSubsystemCollectionBase"
+    ],
+    "category": "framework",
+    "short": "A subsystem asking, in its Initialize, for another subsystem to be created first, so it can keep a pointer to it.",
+    "long": "Subsystems of one kind are created in no promised order. A subsystem that needs another calls Collection.InitializeDependency<UOtherSubsystem>() inside Initialize(FSubsystemCollectionBase& Collection); the collection creates and initializes that one first if it does not exist yet, and returns it. Keeping the returned pointer in a UPROPERTY lets a subsystem that fronts others hold the systems behind it without looking them up on every call.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
+    "related": [
+      "subsystem",
+      "world-subsystem",
+      "game-instance-subsystem"
+    ],
+    "firstQuestId": "p22-every-system-every-hit"
+  },
+  {
+    "id": "niagara-function-library",
+    "term": "UNiagaraFunctionLibrary",
+    "aliases": [
+      "SpawnSystemAtLocation",
+      "SpawnSystemAttached"
+    ],
+    "category": "framework",
+    "short": "The Niagara plugin's static functions for spawning particle systems from code or Blueprint, such as SpawnSystemAtLocation.",
+    "long": "UNiagaraFunctionLibrary::SpawnSystemAtLocation(WorldContextObject, SystemTemplate, Location, Rotation) spawns a UNiagaraSystem asset as a new component that destroys itself when the system finishes, since bAutoDestroy defaults to true; SpawnSystemAttached does the same on a component. A module that calls them lists Niagara in its Build.cs dependencies. Gameplay code that calls them in many places is a natural thing to hide behind one feedback function.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/Niagara/UNiagaraFunctionLibrary?application_version=5.8",
+    "related": [
+      "gameplay-statics",
+      "blueprint-function-library"
+    ],
+    "firstQuestId": "p22-every-system-every-hit"
+  },
+  {
+    "id": "save-game-to-memory",
+    "term": "SaveGameToMemory",
+    "aliases": [
+      "LoadGameFromMemory"
+    ],
+    "category": "framework",
+    "short": "UGameplayStatics functions that turn a USaveGame into an array of bytes and back, with no file or slot involved.",
+    "long": "UGameplayStatics::SaveGameToMemory(SaveObject, OutBytes) writes a small header naming the save's class and then every UPROPERTY of the object into a TArray<uint8>; LoadGameFromMemory(Bytes) reads the header, makes a new object of that class, and fills it, returning nullptr for an empty array or when the class named in the header cannot be found. SaveGameToSlot is built on the same bytes plus the platform's save system. The memory form suits checkpoints kept for a session, saves sent over the network, and tests.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/saving-and-loading-your-game-in-unreal-engine?application_version=5.8",
+    "related": [
+      "savegame",
+      "gameplay-statics"
+    ],
+    "firstQuestId": "p22-facade-card"
+  },
+  {
+    "id": "god-object",
+    "term": "God object",
+    "aliases": [
+      "god class",
+      "everything manager"
+    ],
+    "category": "cpp idiom",
+    "short": "One class that knows and does too much of the game, so almost every change touches it and almost everything depends on it.",
+    "long": "It usually starts as a helpful front: a GameServices class with a few calls. Then it gains pass-through functions for every call of the systems behind it, then state of its own (the score, the inventory, the current level), then rules. Every class includes it, every change risks breaking something unrelated, and it can no longer be tested alone. The cure is to keep each front small and about one job, let callers that need a system's full power use that system directly, and move state to the class that owns it.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/epic-cplusplus-coding-standard-for-unreal-engine?application_version=5.8",
+    "related": [
+      "subsystem",
+      "gameplay-statics"
+    ],
+    "firstQuestId": "p22-facade-card"
+  },
+  {
+    "id": "kismet-system-library",
+    "term": "UKismetSystemLibrary",
+    "aliases": [
+      "KismetSystemLibrary"
+    ],
+    "category": "framework",
+    "short": "An engine library of static functions behind many Blueprint nodes, such as PrintString, traces, and timers by function name.",
+    "long": "UKismetSystemLibrary is a UBlueprintFunctionLibrary: each static function is one simple node in front of a larger engine system, such as PrintString over on-screen and log output, LineTraceSingle over the physics scene, or K2_SetTimer over the timer manager. Like UGameplayStatics, it is a collection of small fronts rather than one facade, which keeps each call simple without becoming a class that owns the systems.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UKismetSystemLibrary?application_version=5.8",
+    "related": [
+      "gameplay-statics",
+      "blueprint-function-library"
+    ],
+    "firstQuestId": "p22-facade-card"
+  },
+  {
     "id": "virtual-function",
     "term": "Virtual function",
     "aliases": [

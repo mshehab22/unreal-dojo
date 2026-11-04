@@ -3080,9 +3080,12 @@
     "title": "Facade",
     "intent": "Put a short list of plain, task-named functions such as SaveCheckpoint and LoadLatest in front of a tangled system, so the rest of the game uses those few calls and never has to learn the system's internals.",
     "problem": "Saving the game touches USaveGame objects, slot names, user indices, async callbacks, and version migration. If every menu and checkpoint actor talks to all of that directly, the details leak everywhere and a change in the save format touches dozens of files.",
-    "unrealForm": "UGameplayStatics is a facade over many engine services (spawning, saving, sound, level loading). You build your own as a subsystem with a few intention-revealing functions, for example UDojoSaveSubsystem with SaveCheckpoint and LoadLatest that hides SaveGameToSlot, AsyncSaveGameToSlot, and slot naming. Blueprint function libraries are a lightweight facade for designers.",
-    "whenNot": "If callers truly need the subsystem's full power, a thin facade becomes a bottleneck that keeps growing pass-through functions. Do not wrap a simple API just to wrap it.",
-    "useCaseQuestIds": [],
+    "unrealForm": "UGameplayStatics and UKismetSystemLibrary are libraries of small fronts, each static function one call in front of an engine system (PlaySoundAtLocation, SaveGameToMemory, LineTraceSingle). You build your own as a world or game instance subsystem with a few calls named for the job, for example a hit feedback subsystem with PlayHitFeedback that drives the sound, effects, and HUD systems, asking for them with Collection.InitializeDependency in Initialize, or a checkpoint desk with SaveCheckpoint and LoadLatest that hides CreateSaveGameObject, the bytes, and the slots. A Blueprint function library is the lightest facade for designers.",
+    "whenNot": "Do not wrap a small API that has one caller just to wrap it, and do not add pass-through calls for callers who need a system's full power; let them use the system. A facade that collects the score, the inventory, and every team's special case becomes a god object everything depends on; split it by job.",
+    "useCaseQuestIds": [
+      "p22-hit-feedback",
+      "p22-checkpoint-desk"
+    ],
     "recall": [
       {
         "id": "facade-recall-1",
@@ -3116,6 +3119,28 @@
           "coupling"
         ],
         "explanation": "Callers couple to a few facade functions instead of the whole subsystem."
+      },
+      {
+        "id": "facade-recall-4",
+        "type": "multiple-choice",
+        "prompt": "In a facade subsystem's Initialize, why call Collection.InitializeDependency on the systems it drives?",
+        "choices": [
+          "To make a private copy of each system",
+          "Because subsystems start in no promised order, it makes sure each system exists and is initialized first, and hands it back to keep",
+          "To stop the systems from ticking",
+          "It is required for every UPROPERTY"
+        ],
+        "answerIndex": 1,
+        "explanation": "Asking for a dependency puts that subsystem first and returns it, so the facade can hold it from the start."
+      },
+      {
+        "id": "facade-recall-5",
+        "type": "fill-blank",
+        "prompt": "A facade that gathers other jobs' state and a pass-through for every call of the systems behind it turns into a ___ object.",
+        "acceptedAnswers": [
+          "god"
+        ],
+        "explanation": "Once everything depends on it for everything, no change to it is small."
       }
     ],
     "scenarios": [
@@ -3172,6 +3197,46 @@
           }
         ],
         "explanation": "One StartDialogue(ConversationId) function that performs the six steps in order."
+      },
+      {
+        "id": "facade-scenario-3",
+        "type": "which-pattern",
+        "prompt": "Every weapon, trap, and falling rock in a game plays its own sound, particles, and damage number on a hit, each with slightly different rules, and tuning what a heavy hit looks like means editing nine classes. Which pattern?",
+        "choices": [
+          "facade",
+          "observer",
+          "flyweight",
+          "prototype"
+        ],
+        "answer": "facade",
+        "distractorNotes": [
+          {
+            "choice": "observer",
+            "why": "Broadcasting a hit event lets listeners react, but each listener would still need to know how to drive the sound, effects, and HUD systems."
+          },
+          {
+            "choice": "flyweight",
+            "why": "Sharing the hit data saves memory; it does not put the rules in one place for every caller."
+          },
+          {
+            "choice": "prototype",
+            "why": "Copying a configured hit does not give callers one simple call or keep the systems' rules out of them."
+          }
+        ],
+        "explanation": "One feedback front with PlayHitFeedback, called by every weapon, trap, and rock."
+      },
+      {
+        "id": "facade-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A tool programmer wants to wrap UGameplayStatics::GetPlayerController in UMyHelpers::GetPlayerController with the same parameters, for one widget. What is the better choice?",
+        "choices": [
+          "Write the wrapper; every engine call deserves a facade",
+          "Call UGameplayStatics::GetPlayerController directly; the wrapper hides nothing and has one caller",
+          "Make the wrapper a game instance subsystem",
+          "Put the call in a god object with everything else"
+        ],
+        "answerIndex": 1,
+        "explanation": "A pass-through with one caller adds a class and a file and hides nothing. A facade earns its place by turning several steps into one call for many callers."
       }
     ]
   }

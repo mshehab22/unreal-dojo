@@ -4,6 +4,68 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1782 2026-11-03 World 22 review round 1 (author-patterns, M4.P2.22)
+A fresh reviewer found no blockers and two should-fixes, both fixed:
+- The worked quest said "facade" in its brief, concepts, rubric, comments, and test messages before the card names the pattern; it now says "front" or "the hit feedback subsystem" until the Alternative, the first quest's dependency question says "front" too (found in the re-review), and the `subsystem-dependency` hover no longer says facade.
+- Two Parsons blocks had more than one valid order; their prompts now pin the order (sound, sparks, line, flash; Gate, Where, Health, then the slots, then the count).
+
+Nits also fixed: the checkpoint editor step uses three saves so it never shows the wrap (A1775); `LoadLatest` and `LoadBack` are `BlueprintPure = false` so they keep exec pins; `LoadGameFromMemory`'s nullptr cases and the Niagara component's auto destroy are stated exactly; the god object recall accepts only "god"; the boss says the pit does not restore the saved health; the authoring paragraph says only the hit feedback facade has dependencies; the Get Lines step uses a For Each Loop; long class comments are wrapped. Reverse cost: none.
+
+### A1781 2026-11-03 World 22 was written without the engine; the proof is the Lead's (author-patterns, M4.P2.22)
+By the Lead's order no engine run was made. The verifier, typecheck, and unit tests pass, and 20 mutation copies of the references are prepared in this session's scratch folder for the Lead's queue; the iterations entry lists each, the test it should fail, and where the copies are. Not proven yet: that the references compile on UE 5.8 (in particular `InitializeDependency` between world subsystems in the test world, and `SaveGameToMemory` and `LoadGameFromMemory` of a quest class), that every test passes with them, that the starters fail as designed, and that each mutation is caught. Unverified on macOS (A75). Reverse cost: none.
+
+### A1780 2026-11-03 The Facade card in `patterns.json` (author-patterns, M4.P2.22)
+Only the `facade` entry changed, as World 18 did for its card (A1703): use cases `p22-hit-feedback` and `p22-checkpoint-desk`; the Unreal form now names `UKismetSystemLibrary` beside `UGameplayStatics`, the hit feedback subsystem with `InitializeDependency`, and the checkpoint desk; the when-not names pass-through calls and the god object; two recall items (subsystem dependencies, the god object) and two scenarios (nine hit callers with drifting rules; a one-caller pass-through) were added. Reverse cost: one entry.
+
+### A1779 2026-11-03 Five glossary entries (author-patterns, M4.P2.22)
+Added `subsystem-dependency` and `niagara-function-library` (first taught in `p22-every-system-every-hit`), and `save-game-to-memory`, `god-object`, and `kismet-system-library` (first taught in `p22-facade-card`), after checking every term and alias against every entry on main. The existing `savegame` entry keeps the first quest main gave it, `s3-save-games`, from Pack 4 World 3; World 22 no longer sets one, and the merge brought no new warning. Facts checked in UE 5.8 source: `UGameplayStatics::SaveGameToMemory` writes an `FSaveGameHeader` with the class and then serializes the object through `FObjectAndNameAsStringProxyArchive` with no SaveGame flag filter, so every UPROPERTY goes in; `LoadGameFromMemory` returns nullptr for an empty array, finds or loads the class named in the header, makes a new object in the transient package, and serializes into it; `CreateSaveGameObject` takes a `TSubclassOf<USaveGame>`; `FSubsystemCollectionBase::InitializeDependency` has a templated form returning the typed subsystem; `UNiagaraFunctionLibrary::SpawnSystemAtLocation` and `SpawnSystemAttached` exist in the Niagara plugin; `UKismetSystemLibrary` is a `UBlueprintFunctionLibrary` with `PrintString`, `LineTraceSingle`, and `K2_SetTimer`; `UGameplayStatics::PlaySoundAtLocation` and `PlayWorldCameraShake` exist. Reverse cost: low.
+
+### A1778 2026-11-03 The boss is a gauntlet of gates, and its master only calls the two facades (author-patterns, M4.P2.22)
+Three gates 1000 apart, three dummies each 300 in front and 200 apart with 60 health, 25 per strike, 200 to reach, a breaking strike played as a 60 damage heavy hit, a checkpoint per gate, a pit that takes 30 and loads the newest checkpoint, 100 health, and a 60 second round; CLEAR, TIME UP, or DOWN. The master never includes the sound desk, the spark pool, the HUD ticker, or a save object; the tests read those systems to check what the master caused. The systems are world subsystems and live across rounds, so the round test compares what each round added; a round start clears the checkpoint desk. Reference game: Hades. Reverse cost: low.
+
+### A1777 2026-11-03 The refactor routes a turret and a drifted trap through the facade (author-patterns, M4.P2.22)
+The starter turret drives the three systems with rules that match the facade, so its two tests pass on the starter; the starter trap's copy drifted (always the light cue, always 6 sparks, never a flash), and the turret hard-codes the 40 threshold, so `TrapFeelsLikeTheTurret` and `OneSettingChangesBoth` fail until both call the facade. Options considered: a refactor that splits a god object into fronts, which needs tests against classes the starter does not have and so cannot compile on the starter; it is taught in the when-not quest instead. Reverse cost: low.
+
+### A1776 2026-11-03 Checkpoints are bytes in memory, not slots on disk (author-patterns, M4.P2.22)
+The checkpoint desk keeps `SaveGameToMemory` bytes in three slots so the headless tests touch no file system and two test runs cannot see each other's saves. The quest's brief and Alternative say that `SaveGameToSlot` writes the same bytes through the platform's save system, and the boss's first extension uses a slot on disk for best times. Reverse cost: low.
+
+### A1775 2026-11-03 World 22's deliberate failure: the newest checkpoint is not in the last slot after the slots wrap (author-patterns, M4.P2.22)
+Options:
+- A facade that leaves a spark reservation unfired: the worked quest marks the line that explains it.
+- A trap that copies the rules wrong: the refactor's brief states it.
+- A bus left at 0: the worked quest's facade opens it, on a marked line.
+- The stub checkpoint desk, where the written-for-you `SaveCheckpoint` overwrites the oldest of three slots, and the learner writes `LoadLatest` and `LoadBack`.
+
+Chosen: the last. Reading the newest as the last filled slot passes three of four tests and fails `KeepsTheThreeNewest` after the fourth save. The brief, concepts, and rubric say only that the desk keeps the three newest, overwriting the oldest, and that `LoadLatest` gives the newest however many were saved (the editor step uses three saves, so it never shows the wrap); the first place that says the newest is not in the last slot is the hint ladder. One honest limit: the given `SaveCheckpoint` shows `NextSlot` wrapping, so a learner who reads it closely will not fail, as with Pack 3 World 4's fuse and World 18's swarm (A1404, A1694). Reverse cost: low.
+
+### A1774 2026-11-03 Stand-in systems that record, behind a world subsystem facade (author-patterns, M4.P2.22)
+The Lead's example was a game instance subsystem over audio, VFX, and UI. Real audio needs an audio device, Niagara needs the plugin and an asset, and a widget needs a player, none of which a headless test world has. So the sound desk, the spark pool, and the HUD ticker are small world subsystems with deliberately fussy interfaces (a silent bus to open, sparks to reserve and then fire or cancel, ids from names), each recording what it did, and each header names the real call it stands for (`PlaySoundAtLocation`, `SpawnSystemAtLocation`, a `UUserWidget`). The facade is a `UWorldSubsystem` because the test world has no game instance and feedback belongs to the level; the worked quest's Alternative explains when a game instance subsystem is the better home. It asks for its systems with `InitializeDependency`. Reverse cost: medium (every quest builds on these four classes).
+
+### A1773 2026-11-03 The first quest requires World 13's last teaching quest (author-patterns, M4.P2.22)
+Worlds 14 to 21 are in flight and their ids are not on main, so `p22-every-system-every-hit` requires `p13-bytecode-when-not`, as Worlds 14 to 18 did. When those worlds merge the Lead may point it at World 21's last quest. No quest here names another world's ids. Reverse cost: one line.
+
+### A1772 2026-11-03 Facade arc, written from Unreal practice (author-patterns, M4.P2.22)
+The research has no Facade chapter (it is not one of the book's patterns), so the arc is built from the Pack 2 mini-arc rule and Unreal's own fronts. The gauntlet, its systems, its numbers, and its tests are original; a 6-word comparison with the research files found no matches. The arc:
+- `p22-every-system-every-hit` (concept, no pattern name: callers driving three systems; subsystems as a home; engine fronts).
+- `p22-hit-feedback` (worked: the facade over the sound desk, the spark pool, and the HUD ticker; the learner writes `PlayHitFeedback`).
+- `p22-facade-card` (with the god object).
+- `p22-checkpoint-desk` (stub: a facade over save objects, bytes, and slots; deliberate failure A1775).
+- `p22-feedback-refactor` (a turret and a drifted trap routed through the facade).
+- `p22-facade-when-not` (pass-throughs, one caller, the god object).
+- `p22-boss-gauntlet` (boss, with an A67 integration).
+
+Reverse cost: low.
+
+### A1771 2026-11-03 Pack 2 World 22 ids (author-patterns, M4.P2.22)
+- Folder `22-facade`; world id `facade`, unique across packs (A73).
+- Quest ids `p22-<slug>`; types `UDojoP22SoundDesk` (with `FDojoP22PlayedCue`), `UDojoP22SparkPool` (with `FDojoP22SparkBurst`), `UDojoP22HudTicker`, `UDojoP22HitFeedback`, `UDojoP22CheckpointSave`, `UDojoP22CheckpointDesk`, `ADojoP22Turret`, `ADojoP22SpikeTrap`, `ADojoP22Gauntlet`; tests `Dojo.P22.<Quest>.<Case>` (`HitFeedback`, `CheckpointDesk`, `FeedbackRefactor`, `Gauntlet`).
+- No enums. Locals avoid the names of `AActor`, `UActorComponent`, `UObject`, and `USubsystem` members (A1050, A1060): `Where`, `Ticket`, `Count`, `Save`, `Slot`, `Best`, `From`, `Back`, `Feedback`, `Desk`.
+
+Reverse cost: medium once learners have progress saved.
+
+### A1770 2026-11-03 Decision block A1770 to A1789 from the Lead (author-patterns, M4.P2.22)
+Assigned under A71; this world uses A1770 to A1782 so far. Reverse cost: none.
+
 ### A1740 2026-11-03 World 20 fix round 1 (author-patterns, M4.P2.20)
 The reviewer's verdict was FIXES NEEDED with no compile error and no wrong boss number found. Changed:
 - Two spot-the-bug items put the mistake on a missing line. Quest 6's now shows `Step` with the cached-object line as the bug, and quest 1's became a multiple-choice question.
