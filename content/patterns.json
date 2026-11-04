@@ -2832,11 +2832,14 @@
   {
     "id": "strategy",
     "title": "Strategy",
-    "intent": "Hand an object a pluggable rule object, such as how a turret picks its target, so different actors run different rules (picked by a designer in the Details panel) while the class that uses the rule stays exactly the same.",
-    "problem": "An AI targeting component picks a target by nearest, lowest health, or highest threat depending on the enemy. A growing switch statement inside the component mixes every rule together, and adding a rule means editing a class many enemies depend on.",
-    "unrealForm": "Write an abstract UObject base marked UCLASS(Abstract, EditInlineNew), for example UDojoTargetingRule with a virtual ChooseTarget, and give the component a UPROPERTY(EditAnywhere, Instanced) TObjectPtr<UDojoTargetingRule>. Designers then pick and tune a rule per enemy in the Details panel. The Instanced property must point at that abstract UObject base, not at a UINTERFACE, because the editor can only create inline subobjects of a UObject class. Environment Query tests and Behavior Tree decorators are engine examples of pluggable rules. A TFunction member is the lightweight form for one-off cases.",
-    "whenNot": "If there are two fixed variants that never change, an if statement is clearer. If the object changes its own behavior based on its mode, that is State, not Strategy. Strategies that need lots of the owner's private data are a sign the split is wrong.",
-    "useCaseQuestIds": [],
+    "intent": "Give an object one pluggable rule, such as how a launcher picks its target or how a dummy moves, so different actors run different rules, chosen from outside in the Details panel or by code, while the class that uses the rule never changes.",
+    "problem": "A practice launcher picks its target by nearest, weakest, or farthest depending on the level. A switch on a number inside the launcher mixes every rule together, a designer cannot pick or tune one without a programmer, and each new rule means editing a class that every launcher shares.",
+    "unrealForm": "Write an abstract UObject base marked UCLASS(Abstract, Blueprintable, EditInlineNew), for example UDojoTargetRule with a virtual ChooseTarget(From, Candidates) that answers with an index, and give the host a UPROPERTY(EditAnywhere, Instanced) TObjectPtr<UDojoTargetRule>. Designers then pick and tune a rule on each host in the Details panel. The Instanced property must point at that UObject base, not at a UINTERFACE, because the editor can only create inline subobjects of a UObject class. To pick the rule from code instead, hold a TSubclassOf<UDojoMoveRule> and make the object with NewObject when it is needed; a rule that remembers things between calls, such as which way a patrol is heading, needs an object for each host. Environment Query tests and the navigation query filter class that a move request names are engine examples of pluggable rules. A TFunction member is the lightweight form for one-off cases.",
+    "whenNot": "If there are two fixed variants that never change, an if statement is clearer. If the object changes its own behavior as its mode changes in response to events, that is State, not Strategy. If the variation is fixed when the actor is made and needs many of the host's protected helpers, a Subclass Sandbox is plainer. Rules that need lots of the host's private data are a sign the split is wrong.",
+    "useCaseQuestIds": [
+      "p20-target-rules",
+      "p20-mover-rules"
+    ],
     "recall": [
       {
         "id": "strategy-recall-1",
@@ -2864,13 +2867,26 @@
         "id": "strategy-recall-3",
         "type": "explain-in-one-sentence",
         "prompt": "In one sentence, what does Strategy let you change without touching the class that uses it?",
-        "modelAnswer": "It lets you swap the algorithm, such as a targeting or scoring rule, by handing the user a different implementation of the same interface.",
+        "modelAnswer": "It lets you swap the algorithm, such as a targeting or scoring rule, by handing the user a different child of the same base class.",
         "rubric": [
           "Mentions swapping an algorithm or rule",
-          "Mentions an interface or common base",
+          "Mentions a shared base class",
           "Says the using class stays unchanged"
         ],
-        "explanation": "The host depends on the interface; new rules arrive as new classes."
+        "explanation": "The host depends on the shared base class; new rules arrive as new child classes."
+      },
+      {
+        "id": "strategy-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A turret can aim three ways and move three ways, in any pairing. How many classes does that take as turret subclasses, and how many as rule classes held by one turret class?",
+        "choices": [
+          "Nine subclasses, or six rule classes",
+          "Six subclasses, or nine rule classes",
+          "Three in both cases",
+          "Nine in both cases"
+        ],
+        "answerIndex": 0,
+        "explanation": "Subclasses multiply, one for each pair. Rules add, one for each way, and any aim pairs with any movement."
       }
     ],
     "scenarios": [
@@ -2899,7 +2915,7 @@
             "why": "Data per kind tunes numbers; the rule itself is behavior."
           }
         ],
-        "explanation": "A targeting rule interface with three implementations, chosen per turret."
+        "explanation": "A targeting rule base class with three child classes, chosen per turret."
       },
       {
         "id": "strategy-scenario-2",
@@ -2927,6 +2943,33 @@
           }
         ],
         "explanation": "The game mode hands the generator a roll strategy."
+      },
+      {
+        "id": "strategy-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A guard patrols until it sees the player, chases until it loses sight, and then searches the spot where it last saw them before it goes back to patrolling. Which pattern?",
+        "choices": [
+          "command",
+          "state",
+          "strategy",
+          "type-object"
+        ],
+        "answer": "state",
+        "distractorNotes": [
+          {
+            "choice": "strategy",
+            "why": "Nobody outside chooses the guard's behavior; the guard switches itself as events happen."
+          },
+          {
+            "choice": "command",
+            "why": "The guard is not being given actions to queue or undo."
+          },
+          {
+            "choice": "type-object",
+            "why": "A data row can set how fast the guard runs, but not when it changes what it is doing."
+          }
+        ],
+        "explanation": "The guard moves between modes on events, and each mode leads to the next, which is State."
       }
     ]
   },
