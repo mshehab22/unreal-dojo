@@ -165,6 +165,7 @@ void ADojoP15Crier::CallOut(const FString& Line)
 
 ```cpp
 #include "Misc/AutomationTest.h"
+#include "Components/SceneComponent.h"
 
 #if WITH_AUTOMATION_TESTS
 
@@ -201,7 +202,7 @@ bool FDojo_P15_CrierTrace_TracerPassesLinesOn::RunTest(const FString& Parameters
 	TestEqual(TEXT("With nothing wrapped the line is still counted"), Tracer->GetForwardedCount(), 3);
 	TestEqual(TEXT("And the old announcer heard nothing more"), Record->GetLines().Num(), 2);
 
-	Tracer->Wrap(NewObject<UObject>(GetTransientPackage()));
+	Tracer->Wrap(NewObject<USceneComponent>(GetTransientPackage()));
 	TestNull(TEXT("An object that is not an announcer is not wrapped"), Tracer->GetWrapped());
 
 	return true;

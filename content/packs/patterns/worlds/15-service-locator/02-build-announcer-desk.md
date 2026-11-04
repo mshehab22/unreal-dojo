@@ -250,6 +250,7 @@ UDojoP15NullAnnouncer* UDojoP15AnnouncerDesk::GetNullAnnouncer() const
 
 ```cpp
 #include "Misc/AutomationTest.h"
+#include "Components/SceneComponent.h"
 
 #if WITH_AUTOMATION_TESTS
 
@@ -336,7 +337,7 @@ bool FDojo_P15_AnnouncerDesk_ReplacingAndResetting::RunTest(const FString& Param
 	TestEqual(TEXT("And that announcer counts the line"), Desk->GetNullAnnouncer()->GetAbsorbedCount(), 1);
 
 	Desk->Provide(First);
-	UObject* NotAnAnnouncer = NewObject<UObject>(GetTransientPackage());
+	UObject* NotAnAnnouncer = NewObject<USceneComponent>(GetTransientPackage());
 	TestFalse(TEXT("An object that is not an announcer is refused"), Desk->Provide(NotAnAnnouncer));
 	TestTrue(TEXT("And the desk is unchanged"), Desk->GetProvider() == First);
 
