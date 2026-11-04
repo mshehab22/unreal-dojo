@@ -24,11 +24,11 @@ pieces:
 
 The trial director runs time trial rounds on one track. The champion drives laps across a finish line that stands at a spot on the director; the champion crosses the line by moving from smaller X to an X at or past the line's X, and moving back the other way is not a crossing. The director owns two lap logs, ranked and practice, made when play begins and kept for the whole session, and each round writes into exactly one of them.
 
-A round goes like this. The director puts a fresh finish line at the spot, hands it the log of the round's mode, and starts the countdown on the track's start lights. The lights are the set already running on the track; when none runs, the director places one set of its own and keeps using it for every later round. While the lights are red, crossing the line is a false start: it is counted and timed as nothing. The moment the lights turn green the first lap starts, and every crossing after that finishes a lap. Three laps finish the round: the label shows FINISH, the seconds from green to the last crossing to one decimal, and the champion's best ranked lap. When 120 seconds pass from the start of the round without that, the label shows TIME UP, and the laps already finished stay in the log. While a round runs, the label shows the mode (RANKED or PRACTICE), the laps finished out of three, the false starts, and the best ranked lap, which never counts a practice lap. Reference game: Trackmania's time attack, where a player's best time on a track is kept as their record. Here, laps driven in practice on the same track must never reach that record.
+A round goes like this. The director puts a fresh finish line at the spot, hands it the log of the round's mode, and starts the countdown on the track's start lights. The lights are the set already running on the track; when none runs, the director places one set of its own and keeps using it for every later round. While the lights are red, crossing the line is a false start: it is counted and timed as nothing. The moment the lights turn green the first lap starts, and every crossing after that finishes a lap. Three laps finish the round, and 120 seconds from the start of the round without that end it as a timeout; the laps already finished stay in the log. The label's wording is fixed. While a round runs it starts with the mode, RANKED or PRACTICE, and then holds the laps finished as "Lap 2/3", the false starts as "False starts 1", and the best ranked lap as "Best ranked 10.0" to one decimal, which never counts a practice lap. After the third lap it starts with FINISH, then the seconds from green to the last crossing to one decimal, and holds "Best ranked" and the best ranked lap the same way. On a timeout it reads exactly TIME UP. Reference game: Trackmania's time attack, where a player's best time on a track is kept as their record. Here, laps driven in practice on the same track must never reach that record.
 
 How rounds start: round 1 is ranked and starts on the first frame of play, after every actor placed in the level has begun play, so lights placed after the director in the level are already running when it looks for them. R starts the next round, only after one has ended. P switches the next round between ranked and practice, only between rounds; during a round it does nothing. Starting a round replaces the finish line, so no lap of the last round is still being timed, and zeroes the laps and false starts; it does not clear either log. A C++ director receives keys only after `EnableInput` with the player controller.
 
-Every piece is the earlier quests' own: the finish line is an `ADojoP14FinishLine` handed a `UDojoP14LapLog` with `UseLog`, and the lights are an `ADojoP14StartLights`, counted down with `BeginCountdown` and read with `IsGreen`. The director finds the running lights by asking its own world, and it never reaches a log, a line, or the lights through anything static. The pieces need no changes.
+Every piece is the earlier quests' own: the finish line is an `ADojoP14FinishLine` handed a `UDojoP14LapLog` with `UseLog`, and the lights are an `ADojoP14StartLights`, counted down with `BeginCountdown` and read with `IsGreen`. The director finds the running lights by asking its own world, and it never reaches a log, a line, or the lights through anything static. The pieces need no changes. The director's public surface is what the tests read: `Champion` and `Label` properties, `RestartRound`, `TogglePractice`, `IsRunning`, `IsPractice`, `GetLapsThisRound`, `GetFalseStarts`, `GetFinishSeconds`, `GetRankedLog`, `GetPracticeLog`, `GetLights` and `GetFinishLine`.
 
 Compiles against earlier quests: p14-lap-log (`Quests/p14-lap-log/DojoP14FinishLine.h`, `Quests/p14-lap-log/DojoP14LapLog.h`) and p14-start-lights (`Quests/p14-start-lights/DojoP14StartLights.h`).
 
@@ -36,11 +36,11 @@ Core numbers are fixed: three laps a round, a 120 second round counted from its 
 
 Extensions, in order of importance:
 
-1. Checkpoints: the round counts a lap only when the champion touched every checkpoint of the track in order since the last crossing, using the standings from the refactor, which the director finds through its world.
+1. Checkpoints: the round counts a lap only when the champion touched every checkpoint of the track in order during that lap, using the standings from the refactor, which the director finds through its world. Those standings count one pass and have no reset, so the director has to find its own way to start each lap's count afresh.
 2. Career records: the ranked log moves into a `UGameInstanceSubsystem`, so the best ranked lap survives a level change while practice laps still do not.
 3. A ghost: the best ranked lap's positions are recorded and replayed as a second actor in the next ranked round.
 
-Feel: tune the track so that a clean lap takes about 20 seconds, three good laps finish with about a minute to spare, and a player can tell from the label alone whether the practice lap they just drove would have beaten their best ranked lap.
+Feel: tune the track so that a clean lap takes about 20 seconds, three good laps finish with about a minute to spare, and the FINISH label gives a player enough to judge a round against their best ranked lap.
 
 # Required Pieces
 
@@ -98,7 +98,7 @@ Feel: tune the track so that a clean lap takes about 20 seconds, three good laps
     - { id: line, kind: step, label: "A Start Round function destroys the old line, spawns a Dojo P14 Finish Line with Spawn Actor from Class, and calls Use Log with a Select node on the Practice flag", covers: [line] }
     - { id: lights, kind: step, label: "Get All Actors Of Class for Dojo P14 Start Lights, a loop that keeps the first whose Is Running is true, and a Spawn Actor only when none is found, stored in a Lights variable", covers: [lights] }
     - { id: laps, kind: step, label: "Event Tick checks Is Green once to call Cross Line at the green time, then compares the champion's X with the line's X: a Branch on a Racing flag adds a false start or calls Cross Line and adds a lap", covers: [laps] }
-    - { id: round, kind: step, label: "Begin Play starts round 1 after a Delay of 0 so placed lights have begun play; a 120 second Set Timer by Event shows TIME UP, the third lap shows FINISH with the time since green, and the R and P events sit behind a Branch on Running", covers: [round] }
+    - { id: round, kind: step, label: "Begin Play starts round 1 after a Delay of 0 so placed lights have begun play; a 120 second Set Timer by Event shows TIME UP, the third lap shows FINISH with the time since green, and the R and P events, enabled with Enable Input on the player controller in Begin Play, sit behind a Branch on Running", covers: [round] }
   edges:
     - { from: logs, to: line, label: "the mode picks which log the new line gets" }
     - { from: lights, to: laps, label: "green starts lap 1" }
@@ -110,7 +110,7 @@ Feel: tune the track so that a clean lap takes about 20 seconds, three good laps
 
 # Integration Rubric
 
-- The lap log, finish line, and start lights pieces are reused unchanged, and the director reaches none of them through anything static or global.
+- The lap log, finish line, and start lights pieces are reused unchanged and know nothing about the director, and the director reaches none of them through anything static or global.
 - Both logs are made once when play begins and kept for the whole session; each round writes into exactly the log of its mode, and practice laps never reach the ranked log or the label's best ranked lap.
 - Every round has a fresh finish line handed its log, so no lap of the last round is still being timed.
 - The director counts down on the lights already running on the track, places one set only when none runs, and keeps using that set.

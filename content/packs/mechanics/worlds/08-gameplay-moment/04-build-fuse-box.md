@@ -33,7 +33,7 @@ This fuse box is the second piece of the Blackout Escape boss.
 
 ## See it in the editor
 
-Place four `DojoM8Fuse` actors, a `DojoM8FuseBox`, and a `DojoM8PowerLog`. In the level Blueprint, on BeginPlay call Watch on the box once for each fuse, and Listen on the log with the box, and press the 1 key to call Collect on the first fuse with the player pawn. Print the box's Get Collected right after. Press Play and press 1: the fuse disappears and 1 prints. Walk the pawn into the other fuses to see 2, 3, and 4, and watch the log's Get Powered Count stop at 1.
+Place four `DojoM8Fuse` actors a few hundred units apart, a `DojoM8FuseBox`, and a `DojoM8PowerLog`; the fuses have no mesh, so switch on Show, then Collision in the viewport to see their balls. With them selected, right-click the level Blueprint's graph to add references. On BeginPlay call Watch on the box once for each fuse and Listen on the log with the box. On the 1 key call Collect on each fuse in turn with the player pawn, and after each call print the box's Get Collected and the log's Get Powered Count. Press Play and press 1 four times: the printed fuse count goes 1, 2, 3, 4, and the Get Powered Count becomes 1 on the third press and stays at 1 on the fourth.
 
 # Files
 
@@ -515,9 +515,9 @@ bool FDojo_M8_FuseBox_DesignersCanTuneIt::RunTest(const FString& Parameters)
 
 # Hints
 
-- Collect has a guard and three steps, and their order matters: listeners should hear about a fuse that still stands. HandleCollected has a count and a one-time announcement.
-- Broadcast passes the same two values the delegate was declared with. For the box, the announcement must happen on the frame the count first reaches the requirement, so remember that it happened in a flag.
-- For the fuse, tell the listeners with the fuse and the collector first, then destroy the fuse. For the box, a count that reaches the requirement and a flag that is already set are the only two conditions to check.
+- In Collect, the listeners should hear about the fuse while it still exists, so announce first and destroy last.
+- Broadcast passes the same two values the delegate was declared with, the fuse and the collector.
+- For the box, remember in a flag that the power has been announced, so only the call that first reaches the requirement announces it.
 
 # Rubric
 

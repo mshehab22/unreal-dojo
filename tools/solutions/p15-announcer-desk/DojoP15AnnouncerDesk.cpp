@@ -15,7 +15,7 @@ UDojoP15AnnouncerDesk* UDojoP15AnnouncerDesk::Locate(const UWorld* LevelWorld)
 	return LevelWorld ? LevelWorld->GetSubsystem<UDojoP15AnnouncerDesk>() : nullptr;
 }
 
-bool UDojoP15AnnouncerDesk::Provide(UObject* Provider)
+bool UDojoP15AnnouncerDesk::Install(UObject* Provider)
 {
 	if (!IsValid(Provider))
 	{

@@ -29,7 +29,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Lantern")
 	int32 Oil = 10;
 
-	/** The actor that tends this lantern; saved as a reference, which only the proxy archive can write. */
+	/** The actor that tends this lantern; saved as a reference, which a plain memory archive cannot write, so the archive must be object-aware. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame, Category = "Lantern")
 	TObjectPtr<AActor> Keeper;
 

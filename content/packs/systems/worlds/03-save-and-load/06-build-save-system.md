@@ -39,7 +39,7 @@ This is the third piece of the Vault Checkpoint boss.
 
 ## See it in the editor
 
-Place three `DojoS3Lantern` actors with Save Ids `Lantern1` to `Lantern3`, light the first in Details. In the level Blueprint, get the subsystem with Get Dojo S3 Save System, bind a custom event to On Loaded that prints the slot and the result, and on the 1 key call Save To Slot with `Vault`; on the 2 key destroy `Lantern2`; on the 3 key call Load From Slot with `Vault`. Press Play, press 1, change the first lantern's oil in the Details panel while playing, press 3: its oil comes back and the print shows `Vault true`. Stop, play again, and press 3 first: the checkpoint from the last session loads.
+Place three `DojoS3Lantern` actors with Save Ids `Lantern1` to `Lantern3`, light the first in Details. In the level Blueprint, get the subsystem with Get Dojo S3 Save System, bind a custom event to On Loaded that prints the slot and the result, and on the 1 key call Save To Slot with `Vault`; on the 2 key destroy `Lantern2`; on the 3 key call Load From Slot with `Vault`. Press Play, press 1, press F8 to eject, select the first lantern in the Outliner and change its oil in the Details panel, click the game window again, press 3: its oil comes back and the print shows `Vault true`. Stop, play again, and press 3 first: the checkpoint from the last session loads.
 
 # Files
 
@@ -486,8 +486,8 @@ bool FDojo_S3_SaveSystem_LaidOutAgain::RunTest(const FString& Parameters)
 # Hints
 
 - Write `FindSaveables` first and use it in both directions: it is the only place that walks the world.
-- `TActorIterator<AActor>` walks the actors of a world and `FindComponentByClass` finds the saveable part; `UGameplayStatics` has `CreateSaveGameObject`, `SaveGameToSlot`, `DoesSaveGameExist`, and `LoadGameFromSlot`.
-- `AddOnActorDestroyedHandler` takes an `FOnActorDestroyed::FDelegate`, which `CreateUObject` builds from this object and a member function taking an `AActor*`; it returns a handle that `RemoveOnActorDestroyedHandler` takes. The headers are `Engine/World.h` and `Kismet/GameplayStatics.h`.
+- Finding the saveables is a loop over every actor in the world that asks each one for its saveable part and skips the ones without an id.
+- The destroyed-actor handler is built from this object and a member function that takes the destroyed actor, and the handle it returns is the only way to remove it later.
 
 # Rubric
 
