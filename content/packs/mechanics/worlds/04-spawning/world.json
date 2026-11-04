@@ -1,0 +1,5 @@
+{
+	"id": "spawning",
+	"title": "Things that appear, and things that wait",
+	"summary": "The training hall gets a fuse yard. Learn to spawn where there is room and nowhere else, to set a new actor up before it begins play, to hold a running timer by its handle, and to hear when an actor leaves play, then build a scatterer, a bomb with a fuse, a rack that loads lit bombs, a chain that spreads a blast, and a keeper that holds a budget, all wired into a yard that goes off from one step on a plate."
+}

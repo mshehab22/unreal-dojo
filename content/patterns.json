@@ -387,7 +387,10 @@
     "whenNot": "Inside one small feature where both ends live in the same class, a direct call is easier to read and debug. Avoid it when the sender needs an answer back, when the listener must run later (use Event Queue), or in tight loops where broadcasting to many listeners per element costs too much.",
     "useCaseQuestIds": [
       "p1-bounty-board",
-      "p1-tutorial-sign"
+      "p1-tutorial-sign",
+      "s2-energy",
+      "s2-ability-component",
+      "s3-save-system"
     ],
     "recall": [
       {
@@ -433,6 +436,19 @@
           "AddUniqueDynamic()"
         ],
         "explanation": "AddDynamic would add a second copy of the same binding, so the handler would run twice per broadcast; the unique form checks the list first."
+      },
+      {
+        "id": "observer-recall-5",
+        "type": "multiple-choice",
+        "prompt": "A save system announces OnLoaded. Several saveable actors are restored during the load. When should the announcement go out?",
+        "choices": [
+          "Before the first actor is restored, so listeners can prepare",
+          "Once per restored actor",
+          "Once, after every actor is restored",
+          "Only when a listener asks for it"
+        ],
+        "answerIndex": 2,
+        "explanation": "A listener that reads the level when it hears OnLoaded must find it fully restored, so the sender announces once, after the work is done."
       }
     ],
     "scenarios": [
@@ -904,7 +920,8 @@
     "whenNot": "When the variants differ only in numbers, use data (Type Object) instead of a class per variant. When the base class keeps growing tools for every new subclass, move single-use tools back into their subclass and group related tools into a helper object before the base becomes a dumping ground. When the capability must mix across unrelated actors, use components.",
     "useCaseQuestIds": [
       "p8-trap-family",
-      "p8-interactables"
+      "p8-interactables",
+      "s2-effects"
     ],
     "recall": [
       {
@@ -1021,6 +1038,33 @@
         ],
         "answerIndex": 1,
         "explanation": "A base for two members is a guess at what they share; with a third member the real shared tools become clear."
+      },
+      {
+        "id": "subclass-sandbox-scenario-4",
+        "type": "which-pattern",
+        "prompt": "An ability asset lists what a move does: move the user ahead, push nearby targets away, refill energy. Each kind has its own small piece of logic, and every kind needs the same helpers to find targets and to move an actor. Which pattern shapes the kinds?",
+        "choices": [
+          "type-object",
+          "subclass-sandbox",
+          "strategy",
+          "component"
+        ],
+        "answer": "subclass-sandbox",
+        "distractorNotes": [
+          {
+            "choice": "type-object",
+            "why": "The ability asset around the effects is a type object, but the effect kinds differ in logic, not only in numbers."
+          },
+          {
+            "choice": "strategy",
+            "why": "Strategy swaps one algorithm behind an interface; the point here is the protected toolbox every kind shares."
+          },
+          {
+            "choice": "component",
+            "why": "Components add capabilities to an actor; effects are behaviors run on an actor, not parts it carries."
+          }
+        ],
+        "explanation": "An abstract effect base with a public Apply, one protected hook, and protected tools; each kind overrides only the hook."
       }
     ]
   },
@@ -1033,7 +1077,11 @@
     "whenNot": "A small actor with one job does not need its job split into parts. If parts constantly reach into each other, the split is in the wrong place. Something that must outlive its owner or has its own place and lifetime in the level, such as a dropped pouch or a turret that can be knocked off a wall, is an actor, not a component.",
     "useCaseQuestIds": [
       "p9-arena-parts",
-      "p9-sprint-parts"
+      "p9-sprint-parts",
+      "s2-energy",
+      "s2-ability-component",
+      "s3-saveable",
+      "s3-door"
     ],
     "recall": [
       {
@@ -1166,6 +1214,33 @@
           }
         ],
         "explanation": "A stamina part, and separate sprint and health parts, can be added to any of them in whatever mix each needs."
+      },
+      {
+        "id": "component-scenario-4",
+        "type": "which-pattern",
+        "prompt": "Doors, coins, lanterns, and the player must all be saved and loaded, and designers keep adding new kinds of actor that should be saved too, without the saving code changing. Which pattern gives every kind the same way in?",
+        "choices": [
+          "component",
+          "type-object",
+          "subclass-sandbox",
+          "observer"
+        ],
+        "answer": "component",
+        "distractorNotes": [
+          {
+            "choice": "type-object",
+            "why": "Type Object shares data between instances of one kind; the need here is one capability added to many unrelated actor classes."
+          },
+          {
+            "choice": "subclass-sandbox",
+            "why": "A shared saveable base class would force doors, coins, and the player into one hierarchy they do not otherwise share."
+          },
+          {
+            "choice": "observer",
+            "why": "The save system can announce saves and loads to listeners, but that does not give each actor a way to be saved."
+          }
+        ],
+        "explanation": "A saveable component that any actor can carry turns saving into a part, so a new kind only adds the part and marks its saved properties."
       }
     ]
   },
@@ -1178,7 +1253,8 @@
     "whenNot": "If kinds mostly differ in behavior rather than numbers, data cannot express it without growing into a scripting system. With a few kinds that never change and nobody tunes, plain code is simpler. If every object really needs its own numbers, there is no kind to share.",
     "useCaseQuestIds": [
       "p10-weapon-kinds",
-      "p10-quiver-kinds"
+      "p10-quiver-kinds",
+      "s2-ability-data"
     ],
     "recall": [
       {
@@ -1227,6 +1303,19 @@
         ],
         "answerIndex": 1,
         "explanation": "The row is shared by every quiver of that kind; what changes per quiver, arrows left, lives on the quiver."
+      },
+      {
+        "id": "type-object-recall-5",
+        "type": "multiple-choice",
+        "prompt": "A Dash ability is a data asset with a cost, a cooldown, and the tags that block it, and two heroes are granted the same asset. Where does each hero's time left on the cooldown live?",
+        "choices": [
+          "In the asset, as a field next to Cooldown",
+          "In each hero's ability component",
+          "In a static variable on the asset class",
+          "In the effect object listed inside the asset"
+        ],
+        "answerIndex": 1,
+        "explanation": "The asset is the shared type object and holds only what every user has in common; what changes for one user, such as the time left, lives with that user."
       }
     ],
     "scenarios": [
@@ -1551,7 +1640,7 @@
       {
         "id": "prototype-scenario-2",
         "type": "which-pattern",
-        "prompt": "Designers want sixty blade kinds that differ only in numbers, edited side by side in a spreadsheet view. A teammate proposes sixty hidden template blades in the level. Which pattern is the better fit?",
+        "prompt": "Designers want thirty-five blade kinds that differ only in numbers, edited side by side in a spreadsheet view. A teammate proposes thirty-five hidden template blades in the level. Which pattern is the better fit?",
         "choices": [
           "flyweight",
           "prototype",
@@ -1578,7 +1667,7 @@
       {
         "id": "prototype-scenario-3",
         "type": "which-pattern",
-        "prompt": "The trial book has forty trials, each written as the basic trial plus one or two changes. The designers want to retune the basic trial and have all forty follow. Which pattern?",
+        "prompt": "Every trial in the hall's book starts from the Basic trial's time limit and reward and sets only its own blade count. The designers want to raise the Basic reward and have every other trial follow. Which pattern?",
         "choices": [
           "flyweight",
           "command",
@@ -1620,11 +1709,14 @@
   {
     "id": "bytecode",
     "title": "Bytecode",
-    "intent": "Let designers or modders write behavior as a short list of small instructions stored in an asset, and run that list with a tiny interpreter inside the game, so new behavior ships without a C++ compile and cannot reach past what the instructions allow.",
-    "problem": "Some behavior changes too often, or comes from people who should not touch C++: spell effects, card rules, modder scripts. Compiling native code for each change is slow, and running untrusted native code is unsafe.",
-    "unrealForm": "Blueprint is a bytecode virtual machine: the Blueprint compiler turns graphs into instructions the engine interprets. Niagara compiles module graphs to its own VM, and materials compile to shaders. You would write your own only for a narrow domain such as card effects or item formulas, often as a TArray of instruction structs authored in a data asset, with a stack-based interpreter and hard limits on stack size and instruction count.",
-    "whenNot": "Hot engine paths where interpretation is too slow, and any project without time to build authoring and debugging tools, since you lose the C++ debugger inside the VM. If Blueprint already serves designers, a custom VM is rarely worth it.",
-    "useCaseQuestIds": [],
+    "intent": "Write behavior that changes often, or that comes from modders, as a short list of small steps stored as data, such as a vault potion's recipe or a door's rule, and run the list with a tiny machine inside the game, so new behavior ships without a compile and can do nothing the machine does not allow.",
+    "problem": "The vault ships new potions, door rules, and trap rhythms every week, and modders want to share their own. As C++ each one waits for a programmer and a compile, and native code from strangers can do anything. A tree of step objects is clear but heavy, and its steps are tempted to keep state that breaks when many actors share one program.",
+    "unrealForm": "Blueprint is Unreal's own: graphs compile to script bytes stored on each UFunction, and the engine's interpreter walks them with FFrame and stops runaway loops. Niagara runs module graphs on its own vector machine. Your own is a USTRUCT step with a UENUM op, kept in a UPROPERTY TArray or a Data Asset and edited in the Details panel with EditCondition hiding unused fields, run by a small loop with a fixed-size stack, a budget of steps, and its place in the program kept by whoever runs it.",
+    "whenNot": "When only numbers vary per kind, use a Data Asset or a Data Table. When the authors are on the team and have the editor, Blueprint is already the machine, with a debugger. Keep hot paths that run thousands of times a frame in C++. Skip it when nobody will build a front end and a way to see what a program did, and keep the instruction set to the one job it was made for.",
+    "useCaseQuestIds": [
+      "p13-potion-recipes",
+      "p13-door-conditions"
+    ],
     "recall": [
       {
         "id": "bytecode-recall-1",
@@ -1651,14 +1743,40 @@
       {
         "id": "bytecode-recall-3",
         "type": "explain-in-one-sentence",
-        "prompt": "In one sentence, why is a bytecode VM safer than letting mods load native DLLs?",
-        "modelAnswer": "The VM only exposes the instructions you define, so scripts cannot touch memory or call engine functions you did not allow.",
+        "prompt": "In one sentence, why is a small step machine safer for modders' scripts than letting mods load native code?",
+        "modelAnswer": "The machine only does what its instructions do, with a bounded stack and a step budget, so a script cannot touch memory or call engine functions you did not expose, while native code can do anything.",
         "rubric": [
           "Mentions a limited instruction set",
           "Mentions sandboxing or restricted access",
           "Contrasts with full native access"
         ],
         "explanation": "The instruction set is the security boundary."
+      },
+      {
+        "id": "bytecode-recall-4",
+        "type": "multiple-choice",
+        "prompt": "Which three limits keep a modder's program inside a small machine's sandbox?",
+        "choices": [
+          "A UPROPERTY on the program, a Data Asset, and a Blueprint child",
+          "Instructions that reach only what you allow, a fixed-size stack, and a budget of steps",
+          "check on every step, a crash dump, and a log",
+          "Replication, garbage collection, and ticking"
+        ],
+        "answerIndex": 1,
+        "explanation": "The machine decides what a program can touch, how much memory it can use, and how long it can run."
+      },
+      {
+        "id": "bytecode-recall-5",
+        "type": "multiple-choice",
+        "prompt": "Many dart traps run one routine asset. Where should each trap's next step and the time its current wait has lasted live?",
+        "choices": [
+          "On the trap, because they are its run state; the routine stays read-only",
+          "On each step of the routine",
+          "In the routine's class default object",
+          "In a global variable shared by every trap"
+        ],
+        "answerIndex": 0,
+        "explanation": "The program is shared data; where a runner has got to in it belongs to the runner, so sharing the program shares nothing else."
       }
     ],
     "scenarios": [
@@ -1715,17 +1833,60 @@
           }
         ],
         "explanation": "Reach for Bytecode only when behavior, not data, must be authored."
+      },
+      {
+        "id": "bytecode-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A quest giver's dialogue options appear only when rules like 'quest stage at least 3 and no key yet' hold. Writers add new rules in every patch, and the rules must ship as data with no compile. Which pattern?",
+        "choices": [
+          "bytecode",
+          "state",
+          "observer",
+          "type-object"
+        ],
+        "answer": "bytecode",
+        "distractorNotes": [
+          {
+            "choice": "state",
+            "why": "The quest giver may well have states, but the rules are composed conditions that writers keep adding, not modes to switch between."
+          },
+          {
+            "choice": "observer",
+            "why": "Listening for stage changes tells you when to check, not how to describe the rule that is checked."
+          },
+          {
+            "choice": "type-object",
+            "why": "A data record per option holds numbers, but a rule that combines a comparison with a not and an and is logic, which plain fields cannot express."
+          }
+        ],
+        "explanation": "Each rule is a short list of compare and logic steps that a small machine judges, the way the vault's doors were."
+      },
+      {
+        "id": "bytecode-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "Ten thousand particles each move by a formula every frame, and a teammate wants the formula to be steps run by your own machine so artists can edit it. Is that the right tool?",
+        "choices": [
+          "Yes; behavior should always be data",
+          "No; each step costs a loop, a switch, and the stack, which is far too much at that scale; use C++ or Niagara's own optimized machine",
+          "Yes, if the stack holds sixteen values",
+          "No; particles cannot be data driven at all"
+        ],
+        "answerIndex": 1,
+        "explanation": "Interpreting steps costs a little each time; on a hot path that little is multiplied by every particle every frame."
       }
     ]
   },
   {
     "id": "singleton",
     "title": "Singleton",
-    "intent": "Make a class responsible for there only ever being one of it, and let any code fetch that one object through the class itself. In Unreal you mostly learn it to spot it and swap it for a subsystem with a real owner.",
-    "problem": "Some things feel naturally single (the audio device, the save system), so a static GetInstance looks convenient. The trouble is that global access lets any code reach in from anywhere, hides dependencies, makes order of initialization fragile, and makes tests share state.",
-    "unrealForm": "Gameplay code should rarely write a classic singleton. Unreal gives scoped, engine-managed single instances instead: UGameInstanceSubsystem lives as long as the game, UWorldSubsystem per world, ULocalPlayerSubsystem per local player, and UEngineSubsystem for the engine. Reach them with GetSubsystem<T>() from the right owner. Existing roots like the Game Mode, Game State, and Game Instance already hold per-game objects.",
-    "whenNot": "Almost always skip the full pattern. If the real need is convenient access, pass the object in or use a subsystem with a defined lifetime. A static pointer to a UObject outside UPROPERTY can be garbage collected and leave a dangling pointer.",
-    "useCaseQuestIds": [],
+    "intent": "Make a class guarantee there is only one of it and let any code reach that one through the class itself. In Unreal you learn it mostly to recognize it, and to give the one instance a real owner instead.",
+    "problem": "A lap board, the standings, the start lights: some things feel naturally single, and a static Get saves passing them around. But the static belongs to the whole program, so in the editor it outlives every play session and is shared by worlds running together; its pointer is invisible to the garbage collector; every caller hides a dependency; and access from anywhere also rules out the second instance a practice mode or a test needs.",
+    "unrealForm": "Subsystems give single instances an owner and a lifetime the engine manages: UEngineSubsystem for the program, UGameInstanceSubsystem for the game session, UWorldSubsystem for each world, ULocalPlayerSubsystem for each local player, each found through its owner (GetSubsystem<T>() on the world, the game instance, or the local player, and GEngine->GetEngineSubsystem<T>() for the engine). The game instance, game mode, game state, and player controllers are owners that already exist. Code that only needs access is handed the object by whoever sets it up.",
+    "whenNot": "Almost always skip the classic form. If the need is access, hand the object in or find it through its owner. If the need is one instance, enforce it where the instance comes into being, without global access. A manager that only does other objects' work should become behavior on those objects, a subsystem needs the owner whose lifetime matches its data, and stateless helpers belong in a function library.",
+    "useCaseQuestIds": [
+      "p14-lap-log",
+      "p14-start-lights"
+    ],
     "recall": [
       {
         "id": "singleton-recall-1",
@@ -1759,6 +1920,32 @@
           "Mentions coupling, testing, or reasoning difficulty"
         ],
         "explanation": "The single instance is rarely the problem; the global access is."
+      },
+      {
+        "id": "singleton-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A finish line must write practice laps and ranked laps into different logs. What lets the same line class do both?",
+        "choices": [
+          "A static Get on the log class",
+          "The line is handed the log it writes into by whoever sets up the race",
+          "A UEngineSubsystem that holds every log",
+          "A check that only one log exists"
+        ],
+        "answerIndex": 1,
+        "explanation": "A line that is handed its log can be handed either one; a log reached through the class can only ever be the one."
+      },
+      {
+        "id": "singleton-recall-5",
+        "type": "multiple-choice",
+        "prompt": "When does a UWorldSubsystem's Initialize run, compared with a classic Singleton made on first use?",
+        "choices": [
+          "Whenever some code first calls GetSubsystem for it, like a Singleton",
+          "When its world is created, so its setup happens at a moment the game controls, such as a level load",
+          "Every frame, before Tick",
+          "Only when the game is packaged"
+        ],
+        "answerIndex": 1,
+        "explanation": "The engine makes a world subsystem together with its world, so heavy setup runs at level load instead of in the middle of play when some code first asks."
       }
     ],
     "scenarios": [
@@ -1815,22 +2002,65 @@
           }
         ],
         "explanation": "Move the behavior onto the enemies through components; a manager that only exists to operate on other objects is a singleton smell."
+      },
+      {
+        "id": "singleton-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A platform's achievement service must have exactly one wrapper per game session, because two would both sync and overwrite each other's progress. Every system that unlocks achievements needs to reach it. A teammate writes a class with a private constructor and a static Instance function. Which pattern is that?",
+        "choices": [
+          "singleton",
+          "service-locator",
+          "observer",
+          "component"
+        ],
+        "answer": "singleton",
+        "distractorNotes": [
+          {
+            "choice": "service-locator",
+            "why": "A locator answers how callers find a service, not how to make sure only one exists; it is a fair choice for the access half."
+          },
+          {
+            "choice": "observer",
+            "why": "Systems could announce unlocks as events, but something still has to own the one wrapper."
+          },
+          {
+            "choice": "component",
+            "why": "The wrapper is not part of any actor; it belongs to the game session."
+          }
+        ],
+        "explanation": "It is a Singleton. Keep the one instance, owned by the game session as a game instance subsystem, and replace the static access with finding it through that owner or handing it in."
+      },
+      {
+        "id": "singleton-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A WeatherManager is a UGameInstanceSubsystem that holds the current level's rain and fog. After a level change the new level starts in the old level's storm. What is the fix?",
+        "choices": [
+          "Make it a static Get so it is easier to reset",
+          "Make it a UWorldSubsystem, so each level gets its own weather and it is destroyed with the level",
+          "Call AddToRoot on it",
+          "Make it a UEngineSubsystem"
+        ],
+        "answerIndex": 1,
+        "explanation": "The owner decides the lifetime. Weather that belongs to a level needs the level's world as its owner."
       }
     ]
   },
   {
     "id": "service-locator",
     "title": "Service Locator",
-    "intent": "Let code ask a central registry for \"the audio service\" or \"the analytics service\" by interface and get back whichever implementation was registered (real, silent, or a test double), without knowing which class that is.",
-    "problem": "Audio, analytics, and haptics are needed from all over the codebase. Passing them through every function is tedious, and a singleton welds callers to one concrete class, which blocks swapping in a silent or logging version for tests or a different platform.",
-    "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem can hold a provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's literal locator for plugin features. Always provide a null provider so callers never check for nullptr.",
-    "whenNot": "If the dependency can be passed in through a constructor or function parameter, do that; it stays visible. Do not use a locator for something that should only be reachable in one context or phase, because a global lookup cannot enforce that.",
-    "useCaseQuestIds": [],
+    "intent": "Let code ask one place for \"the announcer\" or \"the scoreboard\" by interface and get back whichever provider was set up (loud, recording, or silent), without knowing which class that is.",
+    "problem": "The gong, the bout timer, and the score screen all need to announce lines. Passing an announcer through every function is tedious, and letting each create its own welds them to one concrete class, which blocks swapping in a silent or recording version for tests or a different build.",
+    "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem may keep its current provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's own registry for plugin features, and you ask whether a feature exists before asking for it. Provide a null provider so callers never check for nullptr.",
+    "whenNot": "If the dependency can be passed in through a constructor or function parameter, do that; it stays visible. A global lookup also cannot keep a facility to one context or phase, so do not use a locator for something that may only be reached there.",
+    "useCaseQuestIds": [
+      "p15-announcer-desk",
+      "p15-crier-trace"
+    ],
     "recall": [
       {
         "id": "service-locator-recall-1",
         "type": "multiple-choice",
-        "prompt": "What does a null service provide?",
+        "prompt": "What is the point of a null provider in a located service?",
         "choices": [
           "A crash when used, to catch bugs",
           "A cached copy of the last service",
@@ -1860,6 +2090,28 @@
           "Contrasts with a single concrete class"
         ],
         "explanation": "Same global reach, but the concrete class is no longer baked in."
+      },
+      {
+        "id": "service-locator-recall-4",
+        "type": "fill-blank",
+        "prompt": "A subsystem found with GetWorld()->GetSubsystem<T>() lives as long as its ___.",
+        "acceptedAnswers": [
+          "world"
+        ],
+        "explanation": "A world subsystem is created and destroyed with its world. A game instance subsystem lives as long as the game instance."
+      },
+      {
+        "id": "service-locator-recall-5",
+        "type": "multiple-choice",
+        "prompt": "Which of these is a service locator's three-part shape?",
+        "choices": [
+          "A base class, a component, and a delegate",
+          "A service interface, providers behind it, and a place that hands out the provider in use",
+          "A factory, a prototype, and a pool",
+          "A header, a source file, and a build file"
+        ],
+        "answerIndex": 1,
+        "explanation": "Callers use the interface, providers implement it, and the locator hands out whichever is in place."
       }
     ],
     "scenarios": [
@@ -1893,15 +2145,55 @@
       {
         "id": "service-locator-scenario-2",
         "type": "multiple-choice",
-        "prompt": "A trap is spawned by a spawner that already holds a reference to the audio subsystem. The trap needs audio. What is the better choice than having the trap look the service up globally?",
+        "prompt": "A bell is spawned by a bout director that already holds a reference to the announcer desk. The bell needs to announce. What is the better choice than having the bell look the service up globally?",
         "choices": [
-          "Have the spawner pass the audio interface to the trap when it spawns it",
-          "Make the audio subsystem a static singleton",
-          "Broadcast a delegate asking someone to play the sound",
-          "Queue the sound request for the next frame"
+          "Have the director pass the announcer interface to the bell when it spawns it",
+          "Make the announcer desk a static singleton",
+          "Broadcast a delegate asking someone to speak the line",
+          "Queue the line for the next frame"
         ],
         "answerIndex": 0,
-        "explanation": "When a caller already has the dependency, passing it in keeps it visible in the trap's interface. A locator is the fallback when passing in is impractical, not the default."
+        "explanation": "When a caller already has the dependency, passing it in keeps it visible in the bell's interface. A locator is the fallback when passing in is impractical, not the default."
+      },
+      {
+        "id": "service-locator-scenario-3",
+        "type": "which-pattern",
+        "prompt": "Automated bout tests must run without sound and must be able to read back every line the bouts announce. The gong, the timer, and the score screen all announce. Which pattern?",
+        "choices": [
+          "strategy",
+          "singleton",
+          "service-locator",
+          "observer"
+        ],
+        "answer": "service-locator",
+        "distractorNotes": [
+          {
+            "choice": "singleton",
+            "why": "A singleton gives one concrete announcer, and the test needs a recording one in its place."
+          },
+          {
+            "choice": "strategy",
+            "why": "A strategy swaps one algorithm inside one object; here many callers share one swappable service."
+          },
+          {
+            "choice": "observer",
+            "why": "Subscribing the tests to every source works, but every source would have to be wired, where a located announcer needs one provide call."
+          }
+        ],
+        "explanation": "The callers use an announcer interface, and the test provides a recording announcer once."
+      },
+      {
+        "id": "service-locator-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A rival's strike needs the health of the one fighter it is hitting. Is a service locator the right way to reach it?",
+        "choices": [
+          "Yes; anything many classes need belongs in a locator",
+          "No; the target is part of this one strike, so pass it in or reach its health through it",
+          "Yes, but only through a game instance subsystem",
+          "No; health should be a console variable"
+        ],
+        "answerIndex": 1,
+        "explanation": "A locator is for a few cross-cutting services. A dependency that belongs to one relationship should stay visible in the code that uses it."
       }
     ]
   },

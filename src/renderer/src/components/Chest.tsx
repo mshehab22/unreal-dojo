@@ -1,4 +1,6 @@
 // A loot chest: closed while it waits to be earned, open with what it held. Opening is a reward moment, so it may use the slow motion tokens (A98).
+import { useEffect, useState } from "react";
+
 import type { ChestReward } from "@shared/types/progress";
 
 import { cn } from "@/lib/utils";
@@ -18,12 +20,35 @@ interface ChestProps
 	readonly reward: ChestReward | null;
 	readonly caption: string;
 	readonly className?: string;
+
+	/** True when the chest was just earned: it draws closed for two frames, then the lid opens with the reward motion (A1395). */
+	readonly opensOnMount?: boolean;
 }
 
 /** A chest drawn in SVG with a caption; with a reward it is open and names it. */
-export function Chest({ reward, caption, className }: ChestProps)
+export function Chest({ reward, caption, className, opensOnMount = false }: ChestProps)
 {
-	const isOpen = reward !== null;
+	const [hasOpened, setHasOpened] = useState(!opensOnMount);
+
+	// Two frames, so the closed lid is painted before the transition to open starts.
+	useEffect(() =>
+	{
+		if (hasOpened) return;
+
+		let secondFrame = 0;
+		const firstFrame = requestAnimationFrame(() =>
+		{
+			secondFrame = requestAnimationFrame(() => setHasOpened(true));
+		});
+
+		return () =>
+		{
+			cancelAnimationFrame(firstFrame);
+			cancelAnimationFrame(secondFrame);
+		};
+	}, [hasOpened]);
+
+	const isOpen = reward !== null && hasOpened;
 
 	return (
 		<div data-testid="chest" data-open={isOpen} className={cn("flex items-center gap-3", className)}>
@@ -35,7 +60,7 @@ export function Chest({ reward, caption, className }: ChestProps)
 				<rect x="19" y="15" width="6" height="8" rx="1.5" className={isOpen ? "fill-foundations" : "fill-line-strong"} />
 			</svg>
 			<div className="flex flex-col leading-tight">
-				<span className="text-sm font-medium text-paper">{reward ? CHEST_REWARD_LABELS[reward] : "Chest"}</span>
+				<span data-testid="chest-reward" className="text-sm font-medium text-paper">{reward ? CHEST_REWARD_LABELS[reward] : "Chest"}</span>
 				<span className="text-xs text-paper-faint">{caption}</span>
 			</div>
 		</div>

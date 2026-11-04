@@ -1,6 +1,6 @@
-// Setup step 3: copy the template and run the first full build, with phase, elapsed time, cancel, plain-English failures (the main process's own explanation first), and retry.
+// Setup step 3: copy the template and run the first full build, with phase, elapsed time, cancel, plain-English failures (the main process's own explanation first), and retry. Settings reuses it to set the sandbox up again (M5.1k).
 import { CircleCheckIcon, PlayIcon, SquareIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { EngineInstall, SandboxFolderChoice } from "@shared/types/engine";
 
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useSandboxBuild } from "@/data/useSandboxBuild";
 import { buildOutcome } from "@/lib/buildOutcome";
 import { formatElapsed } from "@/lib/formatting";
-import { describeSandboxFailure } from "@/lib/sandboxFailure";
+import { describeSandboxFailure, type SandboxBuildContext } from "@/lib/sandboxFailure";
 
 import { StepFrame } from "./StepFrame";
 
@@ -22,12 +22,23 @@ interface BuildStepProps
 	readonly folder: SandboxFolderChoice;
 	readonly onBack: () => void;
 	readonly onNext: () => void;
+
+	/** Where the step runs: first-run setup (the default) or Settings' Set up the sandbox again, which words failures and a lost run for that screen. */
+	readonly context?: Exclude<SandboxBuildContext, "rebuild">;
 }
 
 /** Starts and follows the first sandbox build. */
-export function BuildStep({ engine, folder, onBack, onNext }: BuildStepProps)
+export function BuildStep({ engine, folder, onBack, onNext, context = "first-run" }: BuildStepProps)
 {
-	const build = useSandboxBuild((client, runId) => client.createSandbox({ runId, enginePath: engine.path, folder: folder.path }), "first-run");
+	// A failed or cancelled build leaves the copy in the folder and Settings already names it, so a second create would be refused
+	// (`sandbox-folder-not-empty`): every later start here rebuilds that copy instead (M5.1k review).
+	const hasCopyReference = useRef(false);
+	const build = useSandboxBuild((client, runId) => hasCopyReference.current ? client.rebuildSandbox(runId) : client.createSandbox({ runId, enginePath: engine.path, folder: folder.path }), context);
+
+	useEffect(() =>
+	{
+		if (build.status === "failed" || build.status === "cancelled") hasCopyReference.current = true;
+	}, [build.status]);
 	const [showOutput, setShowOutput] = useState(false);
 	const isRunning = build.status === "running";
 
@@ -69,14 +80,17 @@ export function BuildStep({ engine, folder, onBack, onNext }: BuildStepProps)
 				</p>
 			)}
 			{build.status === "succeeded" && build.result && (
-				<p data-testid="build-succeeded" className="flex items-center gap-2 text-sm text-paper">
-					<CircleCheckIcon className="size-4 text-pass" />
-					The sandbox built in {formatElapsed(build.result.durationMs)}. It lives in <span className="font-mono text-xs break-all text-paper-muted">{build.result.sandboxPath}</span>
+				<p data-testid="build-succeeded" className="flex items-start gap-2 text-sm text-paper">
+					<CircleCheckIcon className="mt-0.5 size-4 shrink-0 text-pass" />
+					<span className="min-w-0">
+						The sandbox built in {formatElapsed(build.result.durationMs)}. It lives in <span className="font-mono text-xs break-all text-paper-muted">{build.result.sandboxPath}</span>
+					</span>
 				</p>
 			)}
 			{build.status === "failed" && build.result && (
 				<div data-testid="build-failed" className="flex flex-col gap-2">
-					<AppErrorView error={describeSandboxFailure(build.result, "first-run")} onRetry={build.start} retryLabel="Build again" />
+					{/* A path too long for Windows fails the same way on a rebuild here, so it offers no Build again; its advice is to go back for a short folder (A1308). */}
+					<AppErrorView error={describeSandboxFailure(build.result, context)} onRetry={build.result.failure?.code === "sandbox-path-too-long" ? undefined : build.start} retryLabel="Build again" />
 					{build.result.compilerOutput && (
 						<button type="button" onClick={() => setShowOutput(!showOutput)} className="self-start text-xs text-paper-faint hover:text-paper-muted">
 							{showOutput ? "Hide the compiler output" : "Show the compiler output"}

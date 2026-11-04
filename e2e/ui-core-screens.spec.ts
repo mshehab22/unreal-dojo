@@ -250,7 +250,10 @@ test("a pointer resting where results appear does not steal the keyboard highlig
 			await window.keyboard.press(`${SHORTCUT_MODIFIER}+K`);
 			await window.keyboard.type("uprop");
 
-			await expect(window.getByTestId("codex-search-results").getByRole("option")).toHaveCount(4);
+			// Wait for the settled list: UPROPERTY on top and at least four rows (the exact count grows as packs add terms).
+			const options = window.getByTestId("codex-search-results").getByRole("option");
+			await expect(options.nth(3)).toBeVisible();
+			await expect(options.first().getByText("UPROPERTY", { exact: true })).toBeVisible();
 			await window.waitForTimeout(250);
 			await expect(window.getByTestId("codex-search-results").getByRole("option").first(), `run ${run + 1}, pointer resting on row ${restingRow}`).toHaveAttribute("aria-selected", "true");
 			await window.keyboard.press("Enter");

@@ -1,0 +1,33 @@
+Snippet-one.cpp
+C:\Program Files\Epic Games\UE_5.8\Engine\Source\Runtime\Core\Public\Templates\TypeCompatibleBytes.h(81,10): error C2027: use of undefined type 'FThing'
+	alignas(ElementType) uint8 Pad[sizeof(ElementType)];
+	        ^
+C:\Dojo\DojoSandbox\Intermediate\DojoSnippets\Snippet-one.cpp(3,8): note: see declaration of 'FThing'
+struct FThing;
+       ^
+C:\Program Files\Epic Games\UE_5.8\Engine\Source\Runtime\Core\Public\Templates\TypeCompatibleBytes.h(81,10): note: the template instantiation context (the oldest one first) is
+	alignas(ElementType) uint8 Pad[sizeof(ElementType)];
+	        ^
+C:\Dojo\DojoSandbox\Intermediate\DojoSnippets\Snippet-one.cpp(7,31): note: see reference to function template instantiation 'TSharedRef<ObjectType,ESPMode::ThreadSafe> MakeShared<FThing,ESPMode::ThreadSafe,>(void)' being compiled
+        with
+        [
+            ObjectType=FThing
+        ]
+	TSharedPtr<FThing> Pointer = MakeShared<FThing>();
+	                             ^
+C:\Program Files\Epic Games\UE_5.8\Engine\Source\Runtime\Core\Public\Templates\SharedPointer.h(2114,64): note: see reference to class template instantiation 'SharedPointerInternals::TIntrusiveReferenceController<FThing,ESPMode::ThreadSafe>' being compiled
+	return UE::Core::Private::MakeSharedRef<InObjectType, InMode>(Controller->GetObjectPtr(), (SharedPointerInternals::TReferenceControllerBase<InMode>*)Controller);
+	                                                              ^
+C:\Program Files\Epic Games\UE_5.8\Engine\Source\Runtime\Core\Public\Templates\SharedPointerInternals.h(445,44): note: see reference to class template instantiation 'TTypeCompatibleBytes<ObjectType>' being compiled
+        with
+        [
+            ObjectType=FThing
+        ]
+		mutable TTypeCompatibleBytes<ObjectType> ObjectStorage;
+		                                         ^
+C:\Program Files\Epic Games\UE_5.8\Engine\Source\Runtime\Core\Public\Templates\TypeCompatibleBytes.h(81,33): error C2027: use of undefined type 'FThing'
+	alignas(ElementType) uint8 Pad[sizeof(ElementType)];
+	                               ^
+C:\Dojo\DojoSandbox\Intermediate\DojoSnippets\Snippet-one.cpp(3,8): note: see declaration of 'FThing'
+struct FThing;
+       ^

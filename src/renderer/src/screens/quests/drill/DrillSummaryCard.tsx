@@ -5,8 +5,9 @@ import type { DrillRequest } from "@shared/types/drill";
 import type { DrillOutcome } from "@shared/types/progress";
 
 import { useNavigate } from "@/app/router/useRoute";
-import { Chest } from "@/components/Chest";
+import { DailyReward } from "@/components/DailyReward";
 import { Panel } from "@/components/Panel";
+import { StreakCelebration } from "@/components/StreakCelebration";
 import { Button } from "@/components/ui/button";
 import { formatDue, formatShortDate } from "@/lib/formatting";
 
@@ -17,10 +18,16 @@ interface DrillSummaryCardProps
 {
 	readonly outcome: DrillOutcome;
 	readonly request: DrillRequest;
+
+	/** The streak milestones from the rules, to name the next one after a celebration. */
+	readonly streakMilestones: readonly number[];
+
+	/** The world a test-out drill covered, by title, for its result line. */
+	readonly testOutWorldTitle?: string;
 }
 
-/** The finish card. The Parsons fallback goes back to its quest; other drills go back to the Studio. */
-export function DrillSummaryCard({ outcome, request }: DrillSummaryCardProps)
+/** The finish card. The Parsons fallback goes back to its quest, a test-out to the map, a due drill to the Studio. */
+export function DrillSummaryCard({ outcome, request, streakMilestones, testOutWorldTitle }: DrillSummaryCardProps)
 {
 	const navigate = useNavigate();
 	const copy = drillSummaryCopy(outcome);
@@ -50,15 +57,20 @@ export function DrillSummaryCard({ outcome, request }: DrillSummaryCardProps)
 				<CalendarClockIcon className="size-4 text-pack" />
 				{outcome.nextDueAt ? `Next item due ${formatDue(outcome.nextDueAt)} (${formatShortDate(outcome.nextDueAt)}).` : "Nothing else is scheduled yet."}
 			</p>
-			{outcome.testedOutWorldIds.length > 0 && (
-				<p className="flex items-center gap-2 text-sm text-pass">
-					<GraduationCapIcon className="size-4" />
-					Tested out: its worked and faded quests can be skipped.
+			{outcome.streak.milestoneReached !== undefined && (
+				<StreakCelebration milestone={outcome.streak.milestoneReached} nextMilestone={streakMilestones.find((milestone) => milestone > (outcome.streak.milestoneReached ?? 0))} />
+			)}
+			{request.kind === "test-out" && (
+				<p data-testid="test-out-result" data-tested-out={outcome.testedOutWorldIds.length > 0} className={outcome.testedOutWorldIds.length > 0 ? "flex items-center gap-2 text-sm text-pass" : "flex items-center gap-2 text-sm text-paper-muted"}>
+					<GraduationCapIcon className="size-4 shrink-0" />
+					{outcome.testedOutWorldIds.length > 0
+						? `Tested out of ${testOutWorldTitle ?? "this world"}: its worked and faded build quests can be skipped on the map. The boss still waits for you.`
+						: `Not tested out yet: every term of ${testOutWorldTitle ?? "this world"} has to stay proficient. The items you missed are due for review; try again once they are.`}
 				</p>
 			)}
-			{outcome.chest && <Chest reward={outcome.chest} caption="Today's daily quest is done" />}
-			<Button variant="pack" className="self-start" autoFocus onClick={() => (request.kind === "parsons-fallback" ? navigate("quest", { id: request.questId }) : navigate("studio"))}>
-				{request.kind === "parsons-fallback" ? "Back to the quest" : "Back to the studio"}
+			<DailyReward chest={outcome.chest} monthBadge={outcome.monthBadge} />
+			<Button variant="pack" className="self-start" autoFocus data-testid="drill-done" onClick={() => (request.kind === "parsons-fallback" ? navigate("quest", { id: request.questId }) : navigate(request.kind === "test-out" ? "worldMap" : "studio"))}>
+				{request.kind === "parsons-fallback" ? "Back to the quest" : request.kind === "test-out" ? "Back to the map" : "Back to the studio"}
 				<ArrowRightIcon />
 			</Button>
 		</Panel>

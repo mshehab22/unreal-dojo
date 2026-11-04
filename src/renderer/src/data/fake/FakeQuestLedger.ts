@@ -6,7 +6,7 @@ import type { RunResult } from "@shared/types/run";
 
 import { levelStanding } from "../../lib/levels";
 
-import { todayLocal } from "./fixtures/fakeClock";
+import { localDayOf, todayLocal } from "./fixtures/fakeClock";
 
 /** What one attempt was, as the ledger needs it. */
 export interface LedgerAttempt
@@ -52,6 +52,23 @@ function tierFor(useCases: number, rules: RulesSnapshot): PatternCardTier
 	return "bronze";
 }
 
+/** Counts today as an active day: the streak grows once per calendar day and reports a milestone (7, 30, 100) the first time it is reached. */
+export function recordStreakDay(current: PlayerProgress["streak"], rules: RulesSnapshot): { streak: PlayerProgress["streak"]; milestoneReached: number | undefined }
+{
+	const streak = { ...current, milestones: [...current.milestones] };
+
+	if (streak.lastActivityAt && localDayOf(streak.lastActivityAt) === todayLocal()) return { streak, milestoneReached: undefined };
+
+	streak.count += 1;
+	streak.lastActivityAt = new Date().toISOString();
+
+	if (!rules.streakMilestones.includes(streak.count) || streak.milestones.includes(streak.count)) return { streak, milestoneReached: undefined };
+
+	streak.milestones.push(streak.count);
+
+	return { streak, milestoneReached: streak.count };
+}
+
 /** Prices the attempt, writes it into the save, and returns the loot. `chest` is what a finished daily offer pays, if any. */
 export function recordAttempt(progress: PlayerProgress, rules: RulesSnapshot, attempt: LedgerAttempt, chest: ChestReward | undefined): AttemptOutcome
 {
@@ -60,31 +77,24 @@ export function recordAttempt(progress: PlayerProgress, rules: RulesSnapshot, at
 	const wasPassed = questProgress.status === "passed";
 	const before = levelStanding(progress.xp, rules);
 	const multiplier = bandMultiplier(quest.difficulty, before.level, rules);
-	const firstPass = attempt.passed && !wasPassed ? Math.round(quest.xp * multiplier) : 0;
+	// A solution viewed without a Seer Stone takes the quest's first-pass XP (A1391).
+	const forfeited = questProgress.solutionViewed && !questProgress.seerStoneSpent;
+	const firstPass = attempt.passed && !wasPassed && !forfeited ? Math.round(quest.xp * multiplier) : 0;
 	const hintCost = attempt.passed && !wasPassed ? -Math.round(quest.xp * rules.hintCostShare) * questProgress.hintsRevealed : 0;
 	const effort = !attempt.passed && attempt.compiled && attempt.movesSpree && !questProgress.effortXpGranted ? Math.round(quest.xp * rules.effortShare) : 0;
 
+	// Armor absorbs one missed first try, as the spree rules do.
 	const spree = { ...progress.spree };
 	const isFirstSubmit = attempt.movesSpree && !wasPassed && questProgress.attempts === 0;
-	if (isFirstSubmit) spree.current = attempt.passed ? spree.current + 1 : 0;
+	const armorUsed = isFirstSubmit && !attempt.passed && spree.current > 0 && spree.armor > 0;
+	if (armorUsed) spree.armor -= 1;
+	else if (isFirstSubmit) spree.current = attempt.passed ? spree.current + 1 : 0;
 	spree.best = Math.max(spree.best, spree.current);
 
 	const spreeBonus = attempt.passed && spree.current >= rules.spreeBonusThreshold ? Math.round(firstPass * rules.spreeBonusShare) : 0;
 	const xp: XpBreakdown = { base: quest.xp, difficultyMultiplier: multiplier, firstPass, spreeBonus, hintCost, effort, potionBonus: 0, total: Math.max(0, firstPass + spreeBonus + hintCost + effort) };
 
-	const streak = { ...progress.streak };
-	const today = todayLocal();
-	let milestoneReached: number | undefined;
-	if (attempt.passed && streak.lastActivityAt?.slice(0, 10) !== today)
-	{
-		streak.count += 1;
-		streak.lastActivityAt = new Date().toISOString();
-		if (rules.streakMilestones.includes(streak.count) && !streak.milestones.includes(streak.count))
-		{
-			milestoneReached = streak.count;
-			streak.milestones = [...streak.milestones, streak.count];
-		}
-	}
+	const { streak, milestoneReached } = attempt.passed ? recordStreakDay(progress.streak, rules) : { streak: { ...progress.streak }, milestoneReached: undefined };
 
 	const cardChanges: AttemptOutcome["cardChanges"] = [];
 	const patternCards = { ...progress.patternCards };
@@ -149,7 +159,7 @@ export function recordAttempt(progress: PlayerProgress, rules: RulesSnapshot, at
 		role: { before: before.role, after: after.role },
 		cardChanges,
 		skillChanges,
-		spree: { current: spree.current, best: spree.best, armorUsed: false },
+		spree: { current: spree.current, best: spree.best, armorUsed },
 		streak: { count: streak.count, ...(milestoneReached ? { milestoneReached } : {}) },
 		...(chest ? { chest } : {}),
 		unlockedQuestIds: [],

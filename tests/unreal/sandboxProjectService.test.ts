@@ -133,7 +133,7 @@ describe("SandboxProjectService", () =>
 	{
 		const { service } = createService("5.8.3", undefined, { ...TEMPLATE_FILES, "/Picked/DojoSandbox/keep.txt": "mine" });
 
-		await expect(service.create("/Engines/UE", "/Picked", () => undefined, new AbortController().signal)).rejects.toMatchObject({ appError: { code: "sandbox-copy-failed" } });
+		await expect(service.create("/Engines/UE", "/Picked", () => undefined, new AbortController().signal)).rejects.toMatchObject({ appError: { code: "sandbox-copy-failed", suggestedAction: expect.stringContaining("Choose another folder") } });
 	});
 
 	it("throws run-cancelled when the build is cancelled", async () =>
@@ -158,7 +158,7 @@ describe("SandboxProjectService", () =>
 
 		expect(result.ok).toBe(true);
 		expect(fileSystem.removedFolders).toEqual(["/S/Binaries", "/S/Intermediate", "/S/Saved", "/S/DerivedDataCache"]);
-		await expect(service.rebuild("/Engines/UE", "/Empty", () => undefined, new AbortController().signal)).rejects.toMatchObject({ appError: { code: "sandbox-not-ready" } });
+		await expect(service.rebuild("/Engines/UE", "/Empty", () => undefined, new AbortController().signal)).rejects.toMatchObject({ appError: { code: "sandbox-not-ready", suggestedAction: expect.stringContaining("Set up the sandbox again") } });
 	});
 
 	it("calls the build hooks once around create and rebuild, before a rebuild deletes anything (M1.4b)", async () =>

@@ -63,6 +63,18 @@ export function visualStudioTooOld(displayName: string, version: string): AppErr
 	};
 }
 
+/** No Windows SDK new enough for Unreal: none installed, or only older ones (A1315). */
+export function windowsSdkMissing(minimumVersion: string, newestFound: string | null): AppError
+{
+	return {
+		code: "toolchain-missing",
+		message: newestFound
+			? `The newest Windows SDK on this computer is ${newestFound}, which is older than Unreal needs (${minimumVersion} or newer).`
+			: `No Windows SDK is installed. Unreal needs one (${minimumVersion} or newer) to compile C++ on Windows.`,
+		suggestedAction: "Open the Visual Studio Installer, choose Modify, open Individual components, tick the newest Windows 11 SDK listed, and install.",
+	};
+}
+
 /** `xcode-select -p` failed: no developer folder is selected. */
 export function xcodeNotSelected(): AppError
 {
@@ -166,7 +178,7 @@ export function pathTooLongForBuild(detail: string): AppError
 	return {
 		code: "sandbox-path-too-long",
 		message: "The build failed because a file path in the sandbox is too long for Windows. This is not a problem in your code.",
-		suggestedAction: "Create the sandbox again in a short folder such as C:\\Dojo from Settings, then run again.",
+		suggestedAction: "Open Settings, choose Set up the sandbox again, and pick a short folder such as C:\\Dojo. Then run again.",
 		detail,
 	};
 }

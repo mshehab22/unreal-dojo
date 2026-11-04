@@ -1,4 +1,4 @@
-// The Studio's "today" block: due drill count with its start button, the streak, and the next due times.
+// The Studio's "today" block: due drill count with its start button, the streak, the spree with its armor, and the next due times.
 import { PlayIcon } from "lucide-react";
 
 import type { GlossaryEntry } from "@shared/types/content";
@@ -6,6 +6,7 @@ import type { DrillSummary, PlayerProgress, RulesSnapshot } from "@shared/types/
 
 import { useNavigate } from "@/app/router/useRoute";
 import { Panel } from "@/components/Panel";
+import { SpreeMeter } from "@/components/SpreeMeter";
 import { StreakFlame } from "@/components/StreakFlame";
 import { Button } from "@/components/ui/button";
 import { formatDue, humanizeId } from "@/lib/formatting";
@@ -19,7 +20,7 @@ interface TodayPanelProps
 	readonly glossary: readonly GlossaryEntry[] | undefined;
 }
 
-/** Due drills, streak, and what comes due next. */
+/** Due drills, streak, spree, and what comes due next. */
 export function TodayPanel({ progress, rules, drills, glossary }: TodayPanelProps)
 {
 	const navigate = useNavigate();
@@ -43,6 +44,7 @@ export function TodayPanel({ progress, rules, drills, glossary }: TodayPanelProp
 				</Button>
 			</div>
 			<StreakFlame count={progress.streak.count} freezes={progress.streak.freezes} maxFreezes={rules.maxFreezes} milestones={rules.streakMilestones} windowDays={rules.streakWindowDays} />
+			<SpreeMeter current={progress.spree.current} best={progress.spree.best} armor={progress.spree.armor} bonusThreshold={rules.spreeBonusThreshold} className="border-t border-line pt-3" />
 			{upcoming.length > 0 && (
 				<div className="flex flex-col gap-1.5 border-t border-line pt-3">
 					<span className="font-mono text-2xs tracking-widest text-paper-faint uppercase">Next due</span>
