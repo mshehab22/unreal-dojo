@@ -106,6 +106,64 @@ A harbor fireworks festival: a spawn-cost concept, the worked rocket rack, the c
 ### A1650 2026-11-03 Pack 2 World 16 decision block (author-patterns, M4.P2.16)
 The Lead gave World 16 (Object Pool) the block A1650 to A1669 and the branch `claude/m4-p2-world16`, cut from main 184100a. A1650 to A1659 are used; the rest stay free for fix rounds. Reverse cost: none.
 
+### A1680 2026-11-03 World 17 fix round 1 (author-patterns, M4.P2.17)
+The reviewer's verdict was FIXES NEEDED with no compile error found. Changed:
+- The deliberate failure (a child left old when its parent moves) was hinted in the world's summary, the card's when-not field, the quest 4 rubric ("depend on it"), and a concept bullet ("unrelated joints"). All reworded; the first place that says it is now quest 4's hint ladder and quest 6.
+- `FMath::RoundToInt` on a double returns `int64` in 5.8 and was printed with `%d`; the director uses `RoundToInt32`, and the oil expiry times are `double`.
+- Boss tests the review showed to be missing: the whole label at three moments (so `Shaky` is checked), a guard of exactly 40 being steady, oil removed before the guard is read, the oil's length, drinks that stack, a drink still working when the round ends, a rig the watch is given, and the first gust's time. The boss now has eight tests.
+- The quest 4 test rig has a sixth joint, Stray, whose parent index (6) is higher than its own and names a joint that exists (a seventh, Late), so the rubric bullet about a parent index that is not lower is tested.
+- The reference game is now the character sheet of a Diablo-style action role-playing game; the RimWorld claim about when it recalculates mood could not be verified.
+- Smaller wording: "above" and "beneath" became "built on", one paraphrase of the research was reworded, the boss feel no longer asks for a gust to be tuned, a stale boss term was removed, and the editor steps say to place the Blueprint and print vectors as X=, Y=, Z=.
+- Left: the key bindings are untested because the test world has no player controller (as in World 13), and a gust timing between 2 and 3 seconds is pinned only loosely.
+Reverse cost: low.
+
+### A1679 2026-11-03 World 17 was written without the engine; the proof is the Lead's (author-patterns, M4.P2.17)
+The task said no engine, so every C++ file, test, starter, and mutation copy was written and read but never compiled. It uses only long-stable calls (`UActorComponent`, `TMap`/`TArray` loops and `IndexOfByPredicate`, `mutable` members, `SetTimer` with a first delay, `SpawnActorDeferred`, `InputComponent->BindKey`, `FVector::Equals`), copied in shape from the merged Pack 2 solutions. Expect the first engine run to find any compile slip. Reverse cost: none.
+
+### A1678 2026-11-03 The first quest requires World 13's last teaching quest (author-patterns, M4.P2.17)
+Worlds 14 to 16 are being written in parallel and their ids are not on main, so `p17-recompute-every-frame` requires `p13-bytecode-when-not`. When those worlds merge the Lead may point it at World 16's last quest. No quest here mentions another world's ids. Reverse cost: one line.
+
+### A1677 2026-11-03 Glossary and card changes for Dirty Flag (author-patterns, M4.P2.17)
+Added `mutable-member` (cpp idiom; aliases mutable specifier, mutable keyword; no bare `mutable`) and `render-state-dirty` (components; aliases MarkRenderTransformDirty, MarkRenderDynamicDataDirty, render state dirty), both checked against every existing term and alias on main first. `mutable-member` is taught in `p17-recompute-every-frame` and `render-state-dirty` in the card. The Dirty Flag card in `patterns.json` was audited: the intent no longer leads with a world transform (the chapter's example), the problem is the guard rating, the Unreal form and when-not were reworded, and I added `-recall-4` and `-5`, `-scenario-3` (a tower read by a camera, a light, and a sound) and `-scenario-4` (a multiple-choice when-not: one multiplication is cheaper than a flag). Use cases: `p17-guard-rating` and `p17-tower-rig`. No card item says a child must follow a moved parent, which is the deliberate failure (A1673); the card names the scene component's cached transform without saying how it is refreshed. Reverse cost: low.
+
+### A1676 2026-11-03 The boss counts every sum, and its timers keep every event half a second apart (author-patterns, M4.P2.17)
+The checks run at 0.5, 1.5, and so on, the gusts at 2, 7, and so on, the player's presses at whole seconds, and the round ends at 36, so no two events share a moment and the counts do not depend on timer order. The expected counts, worked by hand, are: round 1 works the guard out 4 times (the round-start label read, then one check after armour, one after oil, one after the oil wears off) and the tower 24 times (3 joints at the start and 3 after each of 7 gusts); round 2 works the guard out 5 times (its reset takes the armour off, and it takes it off again at 29 seconds) and the tower 24 times. `UpdateLabel` reads both values when a round starts, which is why the first sum happens there and not at the first check. Oil wears off at the next check at or after its time, and the check removes it before it reads the guard. Reverse cost: low.
+
+### A1675 2026-11-03 The cache members are mutable, and the counters are part of each piece's public interface (author-patterns, M4.P2.17)
+The readers are `const` (`GetGuard`, `GetPosition`, `GetRating`), so the remembered answer, the flag, and the counts are `mutable`, as the first quest explains. Each piece exposes how many times it has worked its value out, because the counts are the observable the whole world tests; the engine proof's mutations are written against those counts. Reverse cost: low.
+
+### A1674 2026-11-03 The tower marks the joints below a moved joint in one forward pass (author-patterns, M4.P2.17)
+Options for keeping a child's position right when its parent moves: mark every joint that hangs from the moved one when it moves (parents come before children in the list, so one forward pass finds them); carry a "parent was recomputed" stamp down on each read, as the chapter's traversal does; keep no cache and add up the chain on each read. Chosen for the reference: the first. The second is in the quest's Alternative, the third in its Alternative too. The tests check positions and counters, not which of the first two is used. Reverse cost: low.
+
+### A1673 2026-11-03 World 17's deliberate failure: a flag on each joint that only the moved joint sets (author-patterns, M4.P2.17)
+Options:
+- A second way to change the data that forgets the flag (a buff that wears off by time): taught openly in the card and in a card item.
+- A flag that is never cleared: the first quest's counter shows it at once.
+- A tower with a kept position and a flag on each joint, where `SetLocalOffset` marks only the joint that moved.
+
+Chosen: the last, which is the chapter's central subtlety. The header gives the three caches (kept positions, a validity flag for each joint, and counters), and the brief says only that a position is its parent's position plus its own offset and that positions are kept and worked out again when they have to be. `ChildrenFollowTheirParent` moves the base and then expects the lantern and platform to follow, each worked out once however many moves came first; a version that marks only the moved joint passes the other three tests and fails this one. Neither the brief, the rubric, the card, the first quests, nor the glossary mentions a child being left old; the first place that says so is the hint ladder, and the when-not quest (after the failure) names it. Engine check pending (A1679). Reverse cost: low.
+
+### A1672 2026-11-03 Dirty Flag arc, built away from the source's examples (author-patterns, M4.P2.17)
+Not used in briefs, cards, choices, distractors, or the card's items: a ship, a mast, a pirate and a parrot, a render pass that carries a parent's flag down, or the chapter's remarks on graphics. The tower of joints is a small tree of the same family as a transform hierarchy, which the engine's own scene component uses; its joints, numbers, and tests are original. The originality check ran against the research's Dirty Flag section (6 and 5 word runs; the first pass found the research's phrasing in the card, the glossary, and the old card items, which were reworded; none are left); the source PDF is gone, so a direct check is pending. The arc, all in the dojo:
+- `p17-recompute-every-frame` (concept, no pattern name).
+- `p17-guard-rating` (worked: a guard component with a flag; the learner writes `GetGuard`).
+- `p17-dirty-flag-card`.
+- `p17-tower-rig` (stub: a tower of joints with kept positions; deliberate failure A1673).
+- `p17-ladder-refactor` (a rating re-sorted in every setter becomes one worked out on read).
+- `p17-dirty-flag-when-not`.
+- `p17-boss-night-watch` (boss, with an A67 integration).
+
+Reverse cost: low.
+
+### A1671 2026-11-03 Pack 2 World 17 ids (author-patterns, M4.P2.17)
+- Folder `17-dirty-flag`; world id `dirty-flag`, unique across packs (A73).
+- Quest ids `p17-<slug>`; classes `UDojoP17GuardStats` (with `FDojoP17GuardBuff`), `ADojoP17TowerRig` (with `FDojoP17RigNode`), `UDojoP17Ladder`, `ADojoP17NightWatch`; tests `Dojo.P17.<Quest>.<Case>` (`GuardRating`, `TowerRig`, `LadderRefactor`, `NightWatch`).
+- No enums. Locals and parameters avoid the names of `AActor`, `UActorComponent`, and `UObject` members (A1050, A1060): `Worn`, `Total`, `Buff`, `Candidate`, `Later`, `ParentOfLater`, `ParentOfIndex`, `ParentPosition`, `Best`, `Place`, `Now`, `Lantern`, `NewRig`.
+
+Reverse cost: medium once learners have progress saved.
+
+### A1670 2026-11-03 Decision block A1670 to A1689 from the Lead (author-patterns, M4.P2.17)
+Assigned under A71; this world uses A1670 to A1680. Reverse cost: none.
 ### A1591 2026-11-03 World 15 fix round 1 (author-patterns, M4.P2.15)
 The reviewer's verdict was FIXES NEEDED with no compile error found. Changed:
 - Quest 4's Parsons block practised `CallOut`, the failing function, so it was the fix itself. It now practises the tracer's `Announce`, with one valid order.
