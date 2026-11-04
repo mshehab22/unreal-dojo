@@ -2376,8 +2376,10 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Also: no new glossary entries and no change to the pattern cards. A follow-up list of the later patterns each boss should add is in A1805.
 - Proof so far:
   - Content verifier: no problems.
-  - Engine proof: not run. The task did not allow the engine, so nothing in this world has been compiled (A1809). Queued for the Lead: the three boss folders and the mutation copies.
-- Not done: the engine proof and the mutation run. No screenshots. Decisions A1798 to A1809 (A1798 is the fix round).
+  - Engine proof on UE 5.8.4 (one hold, 04:29 to 06:35, no stalls): all three boss references build and pass (arena night, ghost drill, trap hall), no content changes were needed.
+  - Mutations: 29 of 30 caught. The survivor is t02 (the ballista is shown a target whether or not a fighter is in reach). The hall looks every half second and the ballista fires on the whole second, so the wrong spot and drop always cancelled out before a fire order, and the reach test only looked on whole seconds. A check just after a look (5.3 s after the start) would catch it; the test change is written (notes folder, p23-t02-reach-sample.patch) but not yet run on the engine, so it is not in the branch.
+  - Several mutations fail more tests than the mutation README listed (for example t01 also fails AnyTrapClassWillDo); all are caught.
+- Not done: the stronger reach test needs a short second engine hold (the trap hall reference, then t02). No screenshots. Decisions A1798 to A1809 (A1798 is the fix round).
 ## M4.P2.20 Pack 2 World 20, Strategy (content-patterns, author-patterns)
 - What changed: a twentieth Patterns world, "Choose the rule, keep the actor", with the full arc for Strategy (six teaching quests and a boss), set around a practice yard: a launcher that picks its target, dummies that move, and a turret with an aim switch. Each way of doing one job becomes a child class behind one shared function, and the object that needs the job holds one and calls it. Unreal forms: an abstract `UObject` base with `Instanced` and `EditInlineNew` so a designer picks and tunes the rule in Details, and a `TSubclassOf` with `NewObject` so code picks the class and swaps it while the game runs. How it differs from State and Subclass Sandbox is taught in the card, the when-not, and the card's items (A1732).
 - The quests and their observables:
