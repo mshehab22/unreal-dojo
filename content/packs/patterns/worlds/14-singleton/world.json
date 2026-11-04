@@ -1,0 +1,5 @@
+{
+	"id": "singleton",
+	"title": "Who owns the one and only",
+	"summary": "The trial circuit needs one lap board, one set of start lights, and one table of standings, and every one of them is tempting to make reachable from anywhere. Learn what a thing that is one of a kind for the whole program costs in Unreal, and give each of them an owner instead: the code that sets up the race, the world it runs in, or a subsystem the engine makes and destroys for you."
+}

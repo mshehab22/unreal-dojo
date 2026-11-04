@@ -20,7 +20,7 @@ concepts:
 
 When you place a plate that needs two things and press Play, its label reads 0 / 2; a runner stepping on makes it 1 / 2, a crate beside the runner makes it 2 / 2 and the plate pressed, and when either steps off it drops back to 1 / 2 and is no longer pressed; a crate that is destroyed while standing on it counts as stepping off.
 
-Two classes are in this quest. The crate, `ADojoM3Crate`, is given in full: a solid box body, a small grab handle on top for later grabbers, and a home it can be sent back to. Write the bodies of `BeginPlay`, both handlers, and `RefreshLabel` in `ADojoM3Plate`; the getters are written for you. Rules:
+Two classes are in this quest. The crate, `ADojoM3Crate`, is given in full, with a home it can be sent back to. Write the bodies of `BeginPlay`, both handlers, and `RefreshLabel` in `ADojoM3Plate`; the getters are written for you. Rules:
 
 - The plate listens for shapes arriving on its zone and leaving it.
 - `GetCount` is the number of things standing on the plate. A runner is one thing and a crate is one thing.

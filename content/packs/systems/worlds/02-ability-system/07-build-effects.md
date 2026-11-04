@@ -41,7 +41,7 @@ This is the last piece of the Sparring Ring boss.
 
 ## See it in the editor
 
-Place a `BP_Sparrer` and three cubes, add the actor tag `Target` to two of them in Details under Actor, Tags, and put them about 200 units from the sparrer. In the level Blueprint, on the 1 key, Construct Object from Class with `DojoS2PushEffect` and call Apply with the sparrer; on the 2 key do the same with `DojoS2DashEffect`. Press Play: 1 shoves the two tagged cubes 300 away and leaves the untagged one, and 2 moves the sparrer 300 ahead. Then open `DA_Dash` and look for an Effects field: there is none yet, because the boss adds it.
+Place a `BP_Sparrer` with a cube mesh added to it, so you can see it, and three cubes. Set each cube's Mobility to Movable in Details, because a Static actor cannot be moved. Add the actor tag `Target` to two of them in Details under Actor, Tags, and put them about 200 units from the sparrer. In the level Blueprint, on the 1 key, Construct Object from Class with `DojoS2PushEffect` and call Apply with the sparrer; on the 2 key do the same with `DojoS2DashEffect`. Press Play: 1 shoves the two tagged cubes 300 away and leaves the untagged one, and 2 moves the sparrer 300 ahead. Then open `DA_Dash` and look for an Effects field: there is none yet, because the boss adds it.
 
 # Files
 
@@ -246,7 +246,7 @@ bool FDojo_S2_Effects_FamilyShape::RunTest(const FString& Parameters)
 # Hints
 
 - Start with the base: one public function that refuses a missing or destroyed user and otherwise calls the hook, a hook with an empty body, and the two tools. Then each kind is a few lines that only call tools.
-- `TActorIterator<AActor>` from `EngineUtils.h` walks every actor in a world, `ActorHasTag` checks an actor tag, and `AddActorWorldOffset` moves an actor by an offset. `GetActorForwardVector` is the way an actor faces.
+- `TActorIterator<AActor>` from `EngineUtils.h` walks every actor in a world, and an effect has no world of its own, so take the world from the actor you were handed; `ActorHasTag` checks an actor tag, `AddActorWorldOffset` moves an actor by an offset, and `GetActorForwardVector` is the way an actor faces.
 - For the push, take the vector from the user to the target, set its Z to 0, and normalize it with `GetSafeNormal`; `IsNearlyZero` tells you when there is no direction to normalize.
 
 # Rubric

@@ -6,7 +6,7 @@ kind: breakdown
 difficulty: 3
 patterns: []
 skills: [planning, movement]
-terms: [tick, deltatime, timer-manager, scene-component, ftransform]
+terms: [tick, deltatime, timer-manager]
 prerequisites: [m1-boss-drone-handoff]
 xp: 80
 estimatedMinutes: 20

@@ -7,7 +7,7 @@ scaffold: blank
 difficulty: 4
 patterns: []
 skills: [math, movement]
-terms: [interpolation, frotator, fvector, tick, deltatime, add-actor-offset, kismet-math-library]
+terms: [interpolation, frotator, fvector, tick, deltatime, add-actor-offset]
 prerequisites: [m2-lift]
 xp: 120
 estimatedMinutes: 30
@@ -36,7 +36,7 @@ This dart is the last piece of the Clockwork Hall boss, where it is fired at the
 
 ## See it in the editor
 
-Place a `DojoM2Dart` at the origin facing along X, and a crate 1500 units away along Y. In the level Blueprint, on BeginPlay, call Launch on the dart with the crate. Press Play: the dart curves toward the crate in a wide arc. Select the dart and lower Turn Rate to 30 for a wider arc, or raise it to 360 for a sharp one. In the level Blueprint, on the 1 key, call Destroy Actor on the crate: the dart carries straight on. In the level Blueprint's Event Tick, add a Draw Debug Line from the dart's location to the crate's location to see where it aims.
+Place a `DojoM2Dart` at the origin facing along X, and a crate 1500 units away along Y. Select the dart, then right-click in the level Blueprint and choose Create a Reference to Selected Actor; do the same for the crate. On BeginPlay call Launch on the dart with the crate, and in Event Tick add a Draw Debug Line from the dart's location to the crate's location, so you can see where it aims. The dart has only a scene root and an arrow that is hidden in game, so you read its path from numbers: press Play, press F8 to eject, select the dart in the World Outliner, and watch its Rotation and Location in Details as it curves toward the crate in a wide arc. Stop, select the dart, and set Turn Rate to 30 for a wider arc, or 360 for a sharp one. On the 1 key call Destroy Actor on the crate: the dart carries straight on.
 
 # Files
 
