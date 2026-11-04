@@ -24,7 +24,7 @@ Write `ADojoM5Laser` from nothing. It has a scene root with an arrow, no tick, a
 
 The tests use this public interface, so keep these names:
 
-- `UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 MaxBounces = 5;` the most bounces, 0 or more.
+- `UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 MaxBounces = 4;` the most bounces, 0 or more.
 - `UPROPERTY(EditAnywhere, BlueprintReadWrite) float SegmentLength = 2000.f;` the longest straight piece, in units.
 - `UPROPERTY(EditAnywhere, BlueprintReadWrite) FName MirrorTag = TEXT("Mirror");` the actor tag that makes a surface bounce the beam.
 - `UFUNCTION(BlueprintCallable) void Fire();` fires once and replaces the last path.
@@ -38,7 +38,7 @@ This laser is the second piece of the Watchtower boss, where it crosses the yard
 
 ## See it in the editor
 
-Place a `DojoM5Laser` and two cubes turned 45 degrees about Z, one ahead of it and one to the side of the first so the beam would reach it after turning. Select each cube, open Actor in Details, and add the tag Mirror under Tags. Call Fire from the level Blueprint on BeginPlay: the red beam turns at each cube. Remove the tag from the second cube and the beam stops on it. Select the laser and lower Max Bounces to 1 to see it stop turning, or set Segment Length to 500 to see a short beam in open air. Put two tagged cubes facing each other on either side of the laser for a beam that zigzags until the bounces run out.
+Place a `DojoM5Laser` and two cubes, each scaled to a thin wall (X 0.2, Y 3, Z 2) and then turned 45 degrees about Z, one ahead of the laser and one to the side of the first so the beam would reach it after turning. Select each wall, open Actor in Details, and add the tag Mirror under Tags. Call Fire from the level Blueprint on the 1 key, press Play and press 1: the red beam turns at each wall. It stays on screen for one second, so press 1 again to look again. Remove the tag from the second wall and the beam stops on it. Select the laser and lower Max Bounces to 1 to see it stop turning, or set Segment Length to 500 to see a short beam in open air. Put two tagged walls facing each other on either side of the laser for a beam that zigzags until the bounces run out.
 
 # Files
 
@@ -113,7 +113,7 @@ bool FDojo_M5_Laser_FollowsTwoMirrorsToAWall::RunTest(const FString& Parameters)
 	FDojoTestWorld TestWorld;
 
 	BuildBend(TestWorld);
-	ADojoM5Laser* Laser = SpawnLaser(TestWorld, 5, 2000.f);
+	ADojoM5Laser* Laser = SpawnLaser(TestWorld, 4, 2000.f);
 	if (!TestNotNull(TEXT("Laser spawned"), Laser)) return false;
 
 	TestWorld.Tick(1);
@@ -163,7 +163,7 @@ bool FDojo_M5_Laser_StopsBouncingAtTheLimit::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M5_Laser_FacingMirrorsKeepItBouncing, "Dojo.M5.Laser.FacingMirrorsKeepItBouncing", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** Fires between two facing mirrors with a limit of five bounces and checks the zigzag. */
+/** Fires between two facing mirrors with a limit of four bounces and checks the zigzag. */
 bool FDojo_M5_Laser_FacingMirrorsKeepItBouncing::RunTest(const FString& Parameters)
 {
 	using namespace DojoM5LaserTest;
@@ -173,16 +173,16 @@ bool FDojo_M5_Laser_FacingMirrorsKeepItBouncing::RunTest(const FString& Paramete
 	const FVector Panel(20.f, 400.f, 200.f);
 	SpawnPanel(TestWorld, FVector(500.0, 0.0, 0.0), 0.f, Panel, TEXT("Mirror"));
 	SpawnPanel(TestWorld, FVector(-500.0, 0.0, 0.0), 0.f, Panel, TEXT("Mirror"));
-	ADojoM5Laser* Zigzag = SpawnLaser(TestWorld, 5, 2000.f);
+	ADojoM5Laser* Zigzag = SpawnLaser(TestWorld, 4, 2000.f);
 	if (!TestNotNull(TEXT("Laser spawned"), Zigzag)) return false;
 
 	TestWorld.Tick(1);
 	Zigzag->Fire();
-	if (!TestEqual(TEXT("Between two facing mirrors the beam touches the start and six surfaces"), Zigzag->GetPointCount(), 7)) return false;
-	TestEqual(TEXT("and it bounced five times"), Zigzag->GetBounceCount(), 5);
+	if (!TestEqual(TEXT("Between two facing mirrors the beam touches the start and five surfaces"), Zigzag->GetPointCount(), 6)) return false;
+	TestEqual(TEXT("and it bounced four times"), Zigzag->GetBounceCount(), 4);
 	TestTrue(TEXT("The first touch is the near mirror"), Zigzag->GetPoint(1).Equals(FVector(480.0, 0.0, 0.0), 3.0));
 	TestTrue(TEXT("the second is the far one"), Zigzag->GetPoint(2).Equals(FVector(-480.0, 0.0, 0.0), 3.0));
-	TestTrue(TEXT("and the sixth, the last, is the far one again"), Zigzag->GetPoint(6).Equals(FVector(-480.0, 0.0, 0.0), 3.0));
+	TestTrue(TEXT("and the fifth, the last, is the near one again"), Zigzag->GetPoint(5).Equals(FVector(480.0, 0.0, 0.0), 3.0));
 
 	return true;
 }
@@ -196,7 +196,7 @@ bool FDojo_M5_Laser_OnlyTaggedSurfacesBounce::RunTest(const FString& Parameters)
 
 	FDojoTestWorld TestWorld;
 
-	ADojoM5Laser* Laser = SpawnLaser(TestWorld, 5, 700.f);
+	ADojoM5Laser* Laser = SpawnLaser(TestWorld, 4, 700.f);
 	if (!TestNotNull(TEXT("Laser spawned"), Laser)) return false;
 
 	TestWorld.Tick(1);
@@ -230,9 +230,9 @@ bool FDojo_M5_Laser_OnlyTaggedSurfacesBounce::RunTest(const FString& Parameters)
 
 # Hints
 
-- Fire is a loop. Each turn of the loop is one straight piece of the beam, and the loop needs three ways to stop: the beam met nothing, the beam met a surface that does not bounce, and the bounces have run out.
-- A bounce changes the heading, not the position. The new heading is the old one mirrored about the surface's normal, and the next piece starts at the impact, a little off the surface, so it does not find the surface again at distance zero.
-- `FMath::GetReflectionVector(Direction, SurfaceNormal)` or `FVector::MirrorByVector`; `AActor::ActorHasTag` reads the tag; `FHitResult::ImpactPoint` and `ImpactNormal`; `TArray<FVector>` holds the path.
+- Fire is a loop with one trace per turn, so ask what can end a turn and what the next turn needs from the last.
+- What happens if the next trace starts exactly on the surface the last one hit?
+- `FMath::GetReflectionVector` or `FVector::MirrorByVector` turns the heading, `AActor::ActorHasTag` reads the tag, and `FHitResult::ImpactPoint` and `ImpactNormal` give the rest.
 
 # Rubric
 
@@ -240,8 +240,8 @@ bool FDojo_M5_Laser_OnlyTaggedSurfacesBounce::RunTest(const FString& Parameters)
 - A surface bounces the beam only when its actor has the mirror tag and bounces remain; any other surface ends the beam on its face.
 - The new heading is the old heading mirrored about the surface's impact normal, and the next piece starts just off the surface.
 - A beam that meets nothing ends at the full segment length, and the loop always ends: at open air, at a plain surface, or at the bounce limit.
-- The path and the bounce count are replaced on every `Fire`, and `GetPoint` is safe for any index.
-- The beam is drawn piece by piece as a debug line, and the limits and the tag are properties a designer can tune.
+- The path and the bounce count are replaced on every `Fire`, `GetPoint` is safe for any index, and the limits and the tag are properties a designer can tune.
+- The beam is drawn piece by piece as a debug line; the laser reads tags on whatever it hits, and the surfaces know nothing about the laser.
 
 # Alternative
 

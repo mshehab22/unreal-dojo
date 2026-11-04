@@ -4,6 +4,30 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1837 2026-11-03 Engine re-proof list for fix round 3 (M4.y fix round 3)
+Quests whose starter, solution or test changed: `m5-laser` (MaxBounces 4: solution header, brief, tests), `m5-piercer` (stub starter), `m4-chain` (stub starter), `s4-boss-village-gate` (solution formatting only), `s4-dialogue-runner` (a comment in the quest's tests section). `m5-boss-watchtower` only compiles against the laser header and sets its own `MaxBounces = 0`, so it is optional. Everything else is text. Not changed, and why: the villager and door prompts keep `FText::FromString` (a solution and test change for a Note); `@explain` marks were not added to the faded quests that have none (optional).
+
+### A1836 2026-11-03 Pack 4 World 4 text, plans and boss (M4.y fix round 3)
+The self-explanation reason for `SetGenerateOverlapEvents` is now true: a box already has overlap events on, and the code states the dependency instead of relying on the default (`PrimitiveComponent.cpp:398`). The dialogue runner brief says only that two ready-made listeners are given; the concept no longer names the refusal; the rubric says the runner holds no pointer to any listener, villager or hero. The boss keeps its class defaults fixed and tuning means the reach in the interactor's Details and the placed actors, with the tried values reported. Breakdown plan 2 gains a gate-reaction piece that listens to the save and unlocks the gate, and the `mode` labels in both plans say the player controller's `SetIgnoreMoveInput` stops walking. The reference game for flag-gated answers is Morrowind's topic list, not Skyrim's guards.
+
+### A1835 2026-11-03 Pack 3 World 5: laser bounces and the lookout's title (M4.y fix round 3)
+`MaxBounces` is 4, not 5, because the research's Laser Mirror idea says up to five reflections. The zigzag test now expects 6 points, 4 bounces and the last point at (480, 0, 0): by the solution loop the points alternate +480 and -480, so the finding's "5 points, last at -480" was recomputed and replaced. Quest 04 is retitled "A lookout that sees only what it can really see" because "Sentry eye" is the course exercise's name; the class and header comment keep "sentry's eye" so the starter is unchanged. The piercer stub has empty bodies and the world summary says the piercer stands on its own.
+
+### A1834 2026-11-03 Glossary hover cards describe the term, not a quest's fix (M4.y fix round 3; follows A1822)
+`line-trace` and `collision-query-params` lose their by-object-type sentences; `object-type-query` (an alias for `FCollisionObjectQueryParams`) carries that idea. Their docs links are now API pages (`FCollisionQueryParams`, `FCollisionObjectQueryParams`), checked against `CollisionQueryParams.h` in the 5.8 source. `spawn-actor-deferred` says the construction script and `BeginPlay` are deferred, not the native constructor.
+
+### A1833 2026-11-03 The tracing sentry states outcomes; the line is drawn per trace (M4.y fix round 3; follows A1230)
+The concept reads "Seeing is an angle test first and a trace second", and the rubric says a pillar or another character hides the hero and a hero in the open is seen. Because the solution returns before the trace for out-of-range and out-of-cone looks, the brief, editor step and rubric now say a line is drawn per trace (no line when the cone test stops the look) and the solution is unchanged. The `true-is-not-enough` explanation says only a hit whose actor is the player means it is seen.
+
+### A1832 2026-11-03 Parsons lines have one valid order and stubs have empty bodies (M4.y fix round 3)
+`rack-slot` loses the `Bombs.Add(Bomb);` line, the sightline block uses one `AddObjectTypesToQuery(ECC_Pawn)` line and states the order, and the piercer prompt names the order. The chain and piercer stubs carry empty bodies with the rules in the brief. Hints in all three worlds are three one-sentence steps, each narrower than the last. Answer positions and lengths were rebalanced where flagged.
+
+### A1831 2026-11-03 Pack 3 World 4 timer wording and scatter steps (M4.y fix round 3; follows A1821)
+`SetTimerForNextTick` fires at the next timer update, normally the next frame and always after the code that set it has finished; from an actor's own tick it can run later in the same frame (`TimerManager.cpp:58-62`, `:759`). The boss text, plan label and rubric that said "one frame after the last blast" now say "on the next timer update"; the boss sets the timer from inside a timer callback, where it holds. The predict question says the timer was set just before the long frame; the card example no longer logs the remaining time of the timer that is running; the shared-handle bug uses the handle name `FireTimer`; the scatter editor step calls `Scatter` from the level Blueprint on Begin Play. `m4-keeper` is a prerequisite of the boss. The keeper's "next frame" first refill stays: it starts from `BeginPlay`, where the claim holds in practice.
+
+### A1830 2026-11-03 Fix round 3 scope and what was left (M4.y fix round 3)
+All 5 Must and 24 Should from spot-check 3 are fixed or answered, with the cheap Notes. Left on purpose: the boss end-check mechanism wording in `m4-boss-fuse-yard` (a design call, as in World 3); `@explain` marks on faded quests that have none; the scatter-versus-rack gap sizes; the `FText::Format` suggestion (solution change for a Note).
+
 ### A1823 2026-11-03 Spot-check 3 does not change spot-check 2's severity rules (qa, M4.y spot-check 3)
 Options: keep the A1621 meaning (Must fix is a wrong fact taught as true, copied wording, or the solution or deliberate failure given away beside the brief; Should fix is a promise the learner cannot see, a broken spec rule, a hint with code or length, a tell; Note is the rest); loosen it now that the deliberate-failure leaks are rarer. Kept it, so the counts compare across rounds: 2 Must fix in spot-check 2, 5 in spot-check 3. No reviewer rating was changed this round and no finding was dropped; I re-read the file or engine line behind every Must fix.
 

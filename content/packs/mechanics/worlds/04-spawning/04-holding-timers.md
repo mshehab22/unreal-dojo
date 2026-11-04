@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: []
 skills: [time]
-terms: [timer-manager, timer-handle, endplay, deltatime]
+terms: [timer-manager, timer-handle, endplay]
 prerequisites: [m4-scatter]
 xp: 30
 estimatedMinutes: 9
@@ -20,7 +20,7 @@ concepts:
 ```yaml
 id: predict
 type: multiple-choice
-prompt: "Guess, no penalty: a looping timer is set to run every 0.1 seconds, and one frame takes 0.45 seconds. How many times does its function run during that frame?"
+prompt: "Guess, no penalty: a looping timer that was set just before a long frame runs every 0.1 seconds, and that frame takes 0.45 seconds. How many times does its function run during the frame?"
 choices:
   - Once, because a timer runs at most once a frame
   - Four times, to catch up on the time that passed
@@ -43,7 +43,7 @@ A handle holds **one** timer. Calling `SetTimer` again with a handle that alread
 
 Timers run in game time. They stop while the game is paused, and they stretch under time dilation, so after `slomo 0.25` in the console a 2 second timer takes 8 real seconds. A **looping** timer whose period is shorter than a frame catches up: it runs as many times in that frame as periods have passed. A function that only redraws a label does not mind; a function that spawns something does, and should be written knowing it can run several times in one frame.
 
-`FirstDelay` lets a looping timer fire sooner, or later, the first time: `SetTimer(Handle, this, &AThing::Fire, 2.f, true, 0.f)` fires on the next frame and then every 2 seconds. `SetTimerForNextTick(this, &AThing::Fire)` waits exactly one frame, which helps when something must happen after every actor has run its `BeginPlay`.
+`FirstDelay` lets a looping timer fire sooner, or later, the first time: `SetTimer(Handle, this, &AThing::Fire, 2.f, true, 0.f)` fires at the next timer update, normally the next frame, and then every 2 seconds. `SetTimerForNextTick(this, &AThing::Fire)` also waits for the next timer update, normally the next frame, and always runs after the code that set it has finished, which helps when something must happen after every actor has run its `BeginPlay`. It is not a promise of a whole frame: set from inside an actor's own tick, it can run later in that same frame.
 
 The timer manager does not call into an actor that has been destroyed, but an actor should still clear its own timers in `EndPlay`: it says plainly that the actor's jobs end with it, and it stops a timer that was meant to be cancelled for some other reason.
 
@@ -61,7 +61,7 @@ void ADojoSprinkler::StartWatering(float Seconds)
 void ADojoSprinkler::StopWatering()
 {
 	GetWorldTimerManager().ClearTimer(SprayTimer);
-	UE_LOG(LogTemp, Log, TEXT("Watered; stop timer has %.1f s left"), GetWorldTimerManager().GetTimerRemaining(StopTimer));
+	UE_LOG(LogTemp, Log, TEXT("Watered; the spray timer is cleared"));
 }
 ```
 
@@ -74,8 +74,8 @@ void ADojoSprinkler::StopWatering()
   code: |
     void ADojoTurret::Arm()
     {
-    	GetWorldTimerManager().SetTimer(TurretTimer, this, &ADojoTurret::Fire, 0.5f, true);
-    	GetWorldTimerManager().SetTimer(TurretTimer, this, &ADojoTurret::Disarm, 10.f, false);
+    	GetWorldTimerManager().SetTimer(FireTimer, this, &ADojoTurret::Fire, 0.5f, true);
+    	GetWorldTimerManager().SetTimer(FireTimer, this, &ADojoTurret::Disarm, 10.f, false);
     }
   bugLine: 4
   fix: Give the switch-off its own FTimerHandle member, because setting a second timer on the same handle cancels the firing timer.
