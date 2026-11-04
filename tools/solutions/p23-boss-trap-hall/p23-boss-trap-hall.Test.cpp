@@ -204,6 +204,11 @@ bool FDojo_P23_TrapHall_OutOfReachNeverWakesTheBallista::RunTest(const FString& 
 	TestEqual(TEXT("It shot nothing"), Hall->GetBolts(), 0);
 	TestEqual(TEXT("The fighter is untouched"), HealthOf(Hall, 0), 100.f);
 
+	// The hall looks every half second, so check again just after a look, when a wrongly spotted target would show.
+	TickUntil(TestWorld, Start + 5.3f);
+	TestFalse(TEXT("Still no target just after a look"), Hall->GetBallista()->HasTarget());
+	TestTrue(TEXT("Still idle just after a look"), InMode(Hall, UDojoP7BallistaIdle::StaticClass()));
+
 	TickUntil(TestWorld, Start + 12.5f);
 	TestEqual(TEXT("The fighter stands, so the hall held"), Hall->GetResult(), FString(TEXT("HELD")));
 	TestEqual(TEXT("The label shows it"), Hall->Label->Text.ToString(), FString(TEXT("Round 1  Bolts 0  Standing 1  HELD")));
