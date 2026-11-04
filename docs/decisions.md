@@ -4,6 +4,78 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1704 2026-11-03 World 18 review round 1 (author-patterns, M4.P2.18)
+A fresh reviewer found one blocker and five should-fixes, all fixed:
+- The swarm's rubric had a bullet about the work a step adds for moths that stayed in their cell, which pointed at the fix for the deliberate failure; it is gone (five bullets remain).
+- The boss's Blueprint plan could not give the keeper 250 unit cells, because its grid is built at BeginPlay; `CellSize` is now `ExposeOnSpawn` (A1701).
+- The when-not quest's spot-the-bug pointed at a correct line with the bug being a missing one; it now refiles before the move, a present wrong line.
+- A1702 promised mutation copies and an iterations entry that were not yet written; both now exist.
+- "5,000 fish" in a when-not choice came from the research's use case; it is 3,000 starlings.
+- The renderer does not cull through its primitive octree by default in UE 5.8; the first quest, the card, and the pattern card now say it finds what each light and shadow touches.
+
+Nits also fixed: the card's map-with-changing-keys analogy was reworded, "each way" now means one thing, Parsons lines keep one loop per line, and the lantern editor steps wait 0.2 seconds so the keeper has filed its lanterns before the Level Blueprint asks. Left as it is, noted: any two invalid weak pointers compare equal, so removing a destroyed actor from `FDojoP18Grid` may take another destroyed actor's entry; dead entries are skipped by every query, so no answer changes. No boss test catches a master that measures every moth against every lantern; the integration rubric does. Reverse cost: none.
+
+### A1703 2026-11-03 `patterns.json` changed outside the Lead's list, for the Spatial Partition card only (author-patterns, M4.P2.18)
+The Lead's brief listed the world folder, its solutions, new glossary entries, the board row, and this decision block. The Pack 2 mini-arc rule in `docs/systems/content-authoring.md` also asks for the pattern card's recognize items and use cases, and World 17 did the same for its card (A1677). Only the `spatial-partition` entry changed: its use cases, its Unreal form and when-not, one reworded recall explanation, and two recall and two scenario items added (A1700). No other card was touched, so the parallel worlds' cards cannot conflict with it. Reverse cost: one entry.
+
+### A1702 2026-11-03 World 18 was written without the engine; the proof is the Lead's (author-patterns, M4.P2.18)
+By the Lead's order no engine run was made. The verifier, typecheck, and unit tests pass, and 20 mutation copies of the references are prepared in this session's scratch folder for the Lead's queue; the iterations entry lists each and the test it should fail. Not proven yet: that the four piece references and the boss compile on UE 5.8, that every test passes with the references, that the starters fail as designed, and that each mutation is caught. Unverified on macOS (A75). Reverse cost: none.
+
+### A1701 2026-11-03 The pieces expose what the boss's Blueprint plan needs (author-patterns, M4.P2.18)
+A Blueprint master cannot reach a plain C++ grid or a function that is not a `UFUNCTION`, and Blueprint has no deferred spawn. So the lantern keeper gains `FindLanternsNear` (the lanterns near a spot, lit or not), the swarm's `FindNear` is a `UFUNCTION`, the swarm's `Count`, `Seed`, and `HalfSize` and the keeper's `CellSize` carry `ExposeOnSpawn`, so Spawn Actor from Class sets them before the swarm scatters and the keeper builds its grid at BeginPlay. The C++ reference master uses the grid and `SpawnActorDeferred` directly. Reverse cost: low.
+
+### A1700 2026-11-03 Six glossary entries and the Spatial Partition card (author-patterns, M4.P2.18)
+Added `overlap-query`, `physics-broadphase`, `navigation-octree`, `uniform-grid`, `fintpoint`, and `toctree2`, all first taught in `p18-every-pair`; every term and alias was checked against every entry on main first (no bare `grid`, `cell`, or `hash` aliases; `octree` is an alias of `toctree2`). Facts checked in UE 5.8 source: `UWorld::OverlapMultiByChannel` calls `FPhysicsInterface::GeomOverlapMulti` (`WorldCollision.cpp`), whose low level query reads the Chaos scene's `GetSpacialAcceleration()` (`SceneQueryLowLevel.cpp`, the engine's spelling); `FBroadPhaseConfig` defaults to `Tree` and the console variable `p.BroadphaseType` selects grid and tree variants (`PBDRigidsEvolution.h` and `.cpp`); `FNavigationOctree` derives from `TOctree2<FNavigationOctreeElement, FNavigationOctreeSemantics>` and `UNavigationSystemV1::GetNavOctree` returns it; `FScenePrimitiveOctree` is a `TOctree2` (`PrimitiveSceneInfo.h`), which the renderer uses to find the primitives a light or a shadow touches, while view frustum culling does not use it by default (`r.Visibility.FrustumCull.UseOctree`); `TOctree2` has `AddElement`, `RemoveElement` by `FOctreeElementId2`, and `FindElementsWithBoundsTest`; `GetTypeHash(TIntPoint)` exists, so `FIntPoint` keys a `TMap`; `FOverlapResult::GetActor` returns the owner of the hit component. The card's use cases are `p18-lantern-grid` and `p18-moth-swarm`; its Unreal form now names the broadphase tree, the navigation octree, and the plain-struct case; two recall items (half the neighbors, weak pointers) and two scenarios (8,000 ants as structs, 25 statues with collision) were added. Reverse cost: low.
+
+### A1699 2026-11-03 The boss asks from the side with fewer askers, and flies the swarm itself (author-patterns, M4.P2.18)
+Scoring a second could ask the lantern grid once per moth (2,000 questions) or the swarm once per burning lantern (a handful). Chosen: the second, with a bool array so a moth near two flames counts once; `CountsEachMothOnce` lights two lanterns under 120 apart and checks the count against the union, not the sum. The lantern grid answers the keeper's E (300 lanterns). The master turns the swarm's own tick off and calls `Step` in its `Tick`, then puts out lanterns that have burnt 8 seconds, then scores any whole second reached, so a test that ticks one frame at a time sees moths, flames, and score in step and can recount every second by measuring all moths against all lanterns. Numbers: 300 lanterns from seed 81, 2,000 moths from seed 18, a meadow 2,000 each way, 250 unit lantern cells, 150 to light, 250 to draw, 8 seconds of burning, 30 scored seconds. Reference game: Flower. Reverse cost: low.
+
+### A1698 2026-11-03 The refactor prescribes cells as wide as the reach, rounded down, so the measured bound is exact (author-patterns, M4.P2.18)
+The weaver's refactor brief names the cells (LinkRange wide, coordinates rounded down) and the rule (each cell against its own pairs and four of its eight neighbors). With that layout, the pairs a correct weave measures are exactly the pairs in the same or touching cells, which the tests count by brute force (`NearbyCellPairs`), so `MeasuresEachNearbyPairOnce` can assert "at most that many" and a weave that measures all eight neighbors fails it. Options considered: a loose budget (a fraction of all pairs), which an eight-neighbor weave would pass; a sort and sweep, kept in the Alternative. Reverse cost: low.
+
+### A1697 2026-11-03 Every grid query reports how many things it measured (author-patterns, M4.P2.18)
+A grid that answers correctly by looping over everything passes every correctness test, so each piece exposes its work: `FDojoP18Grid::FindNear` and the swarm's `FindNear` return the number measured, the keeper and the weaver keep `GetLastMeasured`. The tests bound it (under 100 of 1,000 lanterns, under 100 of 2,000 moths, at most the nearby pairs). Returning the count keeps the queries `const` without a `mutable` member. Reverse cost: low.
+
+### A1696 2026-11-03 The grids work on the ground plane, with floor for cells (author-patterns, M4.P2.18)
+The meadow is flat, so every grid and every distance ignores height (`FVector::Dist2D`, `FVector2D`). Cells use `FMath::FloorToInt32`, so the cells left of and below zero are as wide as the rest; the worked quest explains why on a marked line, and the swarm and weaver tests place things on both sides of zero. A cast that rounds toward zero would still give correct answers in the grid and swarm (the mapping stays monotonic) but would fail the weaver's exact measured bound, which the brief warns about. Reverse cost: low.
+
+### A1695 2026-11-03 Lanterns have no collision and moths are not actors, on purpose (author-patterns, M4.P2.18)
+The Lead asked to show when Unreal already answers the question and when a hand-made grid is worth it. Every quest that builds a grid builds it for something the physics scene cannot see: lanterns with only a scene root, and 2,000 moths as structs in one array. The first quest, the card, the when-not quest, and each build's Alternative say that actors with collision shapes should use an overlap query or an overlap event instead, and that the navigation octree and the renderer's octree are the engine's own partitions for its own jobs. Reverse cost: low.
+
+### A1694 2026-11-03 World 18's deliberate failure: the given Step flies the moths but does not refile them (author-patterns, M4.P2.18)
+Options:
+- A grid that never removes destroyed actors: the worked quest's weak pointers already handle it.
+- Cells smaller than the radius with only one ring visited: the worked quest's corner-to-corner loop already handles any radius.
+- Measuring all eight neighbors for pairs: a refactor requirement, stated in its brief.
+- The stub swarm whose written-for-you `Step` moves every moth and leaves the grid as it was.
+
+Chosen: the last. A learner who writes `FileAll`, `CellOf`, and `FindNear` passes three of four tests; `StaysRightAsMothsFly` fails after two seconds of flight. The brief and the rubric state only the outcome (FindNear answers for where the moths are when asked); the first place that names the cause is the hint ladder, and the when-not quest's spot-the-bug comes after. One honest limit: the worked quest's keeper refiles a lantern it moves, and the card says moving objects must be refiled, so the trap is applying a known fact to code the learner did not write, as World 2's and Pack 3 World 4's were (A1133, A1404). Reverse cost: low.
+
+### A1693 2026-11-03 The first quest requires World 13's last teaching quest (author-patterns, M4.P2.18)
+Worlds 14 to 17 are being written in parallel and their ids are not on main, so `p18-every-pair` requires `p13-bytecode-when-not`, as Worlds 14 to 17 did. The research's dependency (Spatial Partition after Update Method) is met. When those worlds merge the Lead may point it at World 17's last quest. No quest here names another world's ids. Reverse cost: one line.
+
+### A1692 2026-11-03 Spatial Partition arc, built away from the source's examples (author-patterns, M4.P2.18)
+Not used in briefs, cards, choices, distractors, or the card's items: armies, units, soldiers, a battle line, melee, or intrusive linked lists. The meadow of lanterns and moths, its numbers, and its tests are original. The originality check ran against the research's Spatial Partition section in 5-word windows; the first pass found three phrases from the old card and one of mine (a cell's list, keys that change, a distractor's wording), which were reworded; none are left. The arc:
+- `p18-every-pair` (concept, no pattern name: the square cost, overlap queries and the broadphase, the navigation octree).
+- `p18-lantern-grid` (worked: lanterns with no collision in an `FDojoP18Grid`; the learner writes `FindNear`).
+- `p18-spatial-partition-card`.
+- `p18-moth-swarm` (stub: 2,000 moths as structs; deliberate failure A1694).
+- `p18-thread-refactor` (a weaver that measures every pair becomes one that measures nearby pairs once).
+- `p18-spatial-partition-when-not`.
+- `p18-boss-moth-meadow` (boss, with an A67 integration).
+
+Reverse cost: low.
+
+### A1691 2026-11-03 Pack 2 World 18 ids (author-patterns, M4.P2.18)
+- Folder `18-spatial-partition`; world id `spatial-partition`, unique across packs (A73).
+- Quest ids `p18-<slug>`; types `FDojoP18Grid`, `ADojoP18Lantern`, `ADojoP18LanternKeeper`, `ADojoP18MothSwarm` (with `FDojoP18Moth`), `ADojoP18ThreadWeaver` (with `FDojoP18Thread`), `ADojoP18Meadow`; tests `Dojo.P18.<Quest>.<Case>` (`LanternGrid`, `MothSwarm`, `ThreadRefactor`, `MothMeadow`).
+- No enums. Locals avoid the names of `AActor`, `UActorComponent`, and `UObject` members (A1050, A1060): `Under`, `Was`, `Reach`, `Candidate`, `Measured`, `Middle`, `Spot`, `From`, `Here`, `There`, `Mine`, `Theirs`.
+
+Reverse cost: medium once learners have progress saved.
+
+### A1690 2026-11-03 Decision block A1690 to A1709 from the Lead (author-patterns, M4.P2.18)
+Assigned under A71; this world uses A1690 to A1704 so far. Reverse cost: none.
+
 ### A1659 2026-11-03 World 16 review fix round 1 (author-patterns, M4.P2.16)
 Reviewer verdict FIXES NEEDED on bfb3a2f (one Must fix). The boss abort test checks that no shell has burst after the abort, but quest 04 never said a resting shell is not burst, so a correct learner shell that kept its burst flag at rest would pass quest 04 and fail the boss. Options: make "not burst" part of the resting rule; check only the shells lent at the abort. Chose the rule: quest 04's brief, the `HasBurst` comment, rubric bullet 1, and a new assertion in `AWokenShellStartsClean` (after `RestInPool`, before `WakeFromPool`) now say it; the obvious rest still fails only `AShellSentBackEarlyStaysQuiet`. Also: scenario 3 now says Unreal Insights, not stat game, shows widget creation; the `set-actor-hidden-in-game` hover no longer names an editor setting that 5.8 does not expose and points at the Outliner's eye icon instead; the full-pool sentences in the card and the ripple Alternative were rewritten away from the book's shape; quest 01 says a component's own tick has its own switch; the runner guards both `Release` calls; quest 04's terms swap `isvalid` for `tick`. Reverse cost: low.
 
