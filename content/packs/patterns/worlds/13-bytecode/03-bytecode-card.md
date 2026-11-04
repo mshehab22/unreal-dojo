@@ -25,11 +25,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: a teammate wants each step of a potion to be its own UObject with a virtual Apply function, built as a tree in the Details panel, instead of a flat array of small structs. What is the main cost of the tree?"
 choices:
-  - Nothing; trees and flat arrays cost the same
-  - A tree cannot be edited in the Details panel
-  - Every step is a separate object to create, track, and follow by pointer, which is heavier to load and slower to walk than one flat array
-  - A tree cannot express addition
-answerIndex: 2
+  - Each step is a separate object reached by pointer, so it is heavier to load and slower to walk
+  - Nothing at all; a tree of objects and a flat array cost the same to load and to walk
+  - A tree of objects cannot be shown or edited in the Details panel at all, so it is useless
+  - A tree of objects cannot express addition, because only a flat array can hold an Add step
+answerIndex: 0
 explanation: An object per step works and is easy to read, but a recipe becomes many small allocations walked through pointers and virtual calls. A flat array of structs is one block of memory walked by one loop.
 ```
 
@@ -87,10 +87,10 @@ Machine.Run(Recipe, Stats);
   type: multiple-choice
   prompt: "Which Unreal feature is itself an example of the Bytecode pattern?"
   choices:
-    - Gameplay Tags
-    - Level Streaming
-    - Blueprint, whose graphs compile to script bytes the engine's interpreter runs
-    - The Asset Manager
+    - Gameplay Tags, the hierarchical names used to label states and events
+    - Level Streaming, which loads and unloads parts of a map as the player moves
+    - Blueprint, whose graphs compile to script bytes the interpreter runs
+    - The Asset Manager, which decides when assets are loaded and kept in memory
   answerIndex: 2
   explanation: Blueprint graphs are compiled to script bytes stored on each UFunction and stepped through by FFrame.
 - id: spot-runaway

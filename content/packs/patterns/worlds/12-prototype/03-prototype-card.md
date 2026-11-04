@@ -42,7 +42,7 @@ What you built for the blades and the trials is the **Prototype** pattern. A new
 - `FActorSpawnParameters::Template` starts a spawned actor from any actor of the same class. `DuplicateObject` copies a non-actor object.
 - A Blueprint child class keeps the parent's defaults and stores only the values it changed, and a Material Instance does the same with its parent material's parameters.
 
-**Borrowing from a record.** In the data form a record names another record as its parent and sets only the fields that differ. Anything it leaves unset comes from the parent. The trial book was this. There is no need for a bare abstract "base" record: the plain Basic trial was a real trial and the parent of the others.
+**Borrowing from a record.** In the data form a record names another record as its parent and sets only the fields that differ. Anything it leaves unset comes from the parent. The trial book was this. Keep the parent a trial players can actually run, so designers can test the parent as well as its children.
 
 **Decisions you make each time.**
 
@@ -97,10 +97,10 @@ World->SpawnActor<ADojoBlade>(TunedBlade->GetClass(), Where, FRotator::ZeroRotat
   type: multiple-choice
   prompt: "Which sentence best tells copying an example from a shared kind record?"
   choices:
-    - Both are the same and differ only in name
-    - The copy reads the example every time it needs a number
-    - A copy starts with the example's state and then changes on its own, where objects of a shared kind keep pointing at one record
-    - A shared kind record can only hold text
+    - Both are the same idea, and the only difference between them is what each one is called
+    - The copy goes back to the example every single time it needs to read one of its numbers
+    - A copy starts from the example's state and changes alone; kind-record objects share one record
+    - A shared kind record can only ever hold text, never a number or a reference to an object
   answerIndex: 2
   explanation: A copy is a snapshot that becomes independent. Objects that point at a kind record keep reading it, so an edit to the record reaches all of them.
 - id: spot-wrong-class

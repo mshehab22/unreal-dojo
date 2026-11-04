@@ -222,8 +222,8 @@ bool FDojo_M4_Keeper_StopAndNoClass::RunTest(const FString& Parameters)
 
 # Hints
 
-- Three pieces of state are enough: which bomb, if any, stands in each slot; how many have been made; and the handle of the refill timer. The live count follows from the slots.
-- The refill is a looping timer whose first call comes on the next frame. Each refill spawns deferred so the bomb begins play lit, and listens for that bomb leaving so its slot can be emptied.
+- Three pieces of state are enough: which bomb stands in each slot, how many have been made, and the refill timer's handle.
+- Each refill spawns the bomb deferred so it begins play lit, and listens for that bomb leaving so its slot can be emptied.
 - `SetTimer` with a first delay of 0, `SpawnActorDeferred` and `FinishSpawning`, `OnDestroyed.AddDynamic`, and `ClearTimer` cover it; `GetActorRightVector` gives the slots' direction.
 
 # Rubric
@@ -237,4 +237,4 @@ bool FDojo_M4_Keeper_StopAndNoClass::RunTest(const FString& Parameters)
 
 # Alternative
 
-The keeper could count live bombs with a number, adding one at each spawn and taking one away in `OnDestroyed`, and spawn every new bomb at the same spot. That is shorter, but a spot can still be occupied by a bomb that has not blown, which needs either a spawn that refuses blocked spots and a count that knows it, or bombs standing inside each other. Slots make the place part of the budget. The step after this is a pool: keep the three bombs, hide and reset them instead of destroying, and light them again, which the patterns pack's Object Pool world covers.
+The keeper could count live bombs with a number, adding one at each spawn and taking one away in `OnDestroyed`, and spawn every new bomb at the same spot. That is shorter, but a spot can still be occupied by a bomb that has not blown, which needs either a spawn that refuses blocked spots and a count that knows it, or bombs standing inside each other. Slots make the place part of the budget. The step after this is a pool: keep the three bombs, hide and reset them instead of destroying, and light them again, which the patterns pack covers later as the Object Pool pattern.

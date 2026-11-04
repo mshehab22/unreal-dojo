@@ -1,0 +1,5 @@
+{
+	"id": "spatial-partition",
+	"title": "Finding what is near",
+	"summary": "At dusk the meadow fills with paper lanterns and thousands of moths, and every rule in it asks the same question: what is close to here? Learn when Unreal's own overlap queries and the physics scene already answer it, and how to file things by the cells of a grid when they do not, so a question looks only at the few things nearby instead of at everything in the level."
+}
