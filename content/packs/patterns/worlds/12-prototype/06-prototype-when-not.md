@@ -64,20 +64,20 @@ TObjectPtr<UDataTable> BladeKinds;
   prompt: "Which job is the poorest fit for copying a hidden template actor?"
   choices:
     - Laying blades that start with a hand-tuned look
-    - Keeping sixty kinds of blade that differ only in numbers
+    - Keeping fifty kinds of blade that differ only in numbers
     - Starting a copy with a template's tuned components
     - Spawning one pre-equipped challenger
   answerIndex: 1
-  explanation: Sixty kinds of pure numbers are rows or assets; a template for each is sixty actors to place and edit one at a time.
+  explanation: Fifty kinds of pure numbers are rows or assets; a template for each is fifty actors to place and edit one at a time.
 - id: when-not-snapshot
   type: multiple-choice
   prompt: "A blade was laid from a tuned template at Damage 40. The designer then raises the template to 60. What does the blade already laid have?"
   choices:
-    - 60, because it follows its template
     - 40, because a copy is a snapshot
+    - 60, because it follows its template
     - 10, the class default
     - 0 until it is woken
-  answerIndex: 1
+  answerIndex: 0
   explanation: A copy takes the template's values at the moment it is made and never looks back.
 - id: spot-class-default
   type: spot-the-bug
@@ -96,10 +96,10 @@ TObjectPtr<UDataTable> BladeKinds;
   prompt: "A teammate wants to hand-write a Clone function on a UObject subclass that copies each field. What is the main risk compared with DuplicateObject?"
   choices:
     - It can only copy integers
-    - A field added later is silently left out of the copy
     - It cannot run during play
+    - A field added later is silently left out of the copy
     - It makes the class abstract
-  answerIndex: 1
+  answerIndex: 2
   explanation: A field-by-field copy has to be updated with every new field, and nothing fails when someone forgets.
 - id: explain-when-not
   type: explain-in-one-sentence

@@ -389,7 +389,8 @@
       "p1-bounty-board",
       "p1-tutorial-sign",
       "s2-energy",
-      "s2-ability-component"
+      "s2-ability-component",
+      "s3-save-system"
     ],
     "recall": [
       {
@@ -435,6 +436,19 @@
           "AddUniqueDynamic()"
         ],
         "explanation": "AddDynamic would add a second copy of the same binding, so the handler would run twice per broadcast; the unique form checks the list first."
+      },
+      {
+        "id": "observer-recall-5",
+        "type": "multiple-choice",
+        "prompt": "A save system announces OnLoaded. Several saveable actors are restored during the load. When should the announcement go out?",
+        "choices": [
+          "Before the first actor is restored, so listeners can prepare",
+          "Once per restored actor",
+          "Once, after every actor is restored",
+          "Only when a listener asks for it"
+        ],
+        "answerIndex": 2,
+        "explanation": "A listener that reads the level when it hears OnLoaded must find it fully restored, so the sender announces once, after the work is done."
       }
     ],
     "scenarios": [
@@ -1065,7 +1079,9 @@
       "p9-arena-parts",
       "p9-sprint-parts",
       "s2-energy",
-      "s2-ability-component"
+      "s2-ability-component",
+      "s3-saveable",
+      "s3-door"
     ],
     "recall": [
       {
@@ -1198,6 +1214,33 @@
           }
         ],
         "explanation": "A stamina part, and separate sprint and health parts, can be added to any of them in whatever mix each needs."
+      },
+      {
+        "id": "component-scenario-4",
+        "type": "which-pattern",
+        "prompt": "Doors, coins, lanterns, and the player must all be saved and loaded, and designers keep adding new kinds of actor that should be saved too, without the saving code changing. Which pattern gives every kind the same way in?",
+        "choices": [
+          "component",
+          "type-object",
+          "subclass-sandbox",
+          "observer"
+        ],
+        "answer": "component",
+        "distractorNotes": [
+          {
+            "choice": "type-object",
+            "why": "Type Object shares data between instances of one kind; the need here is one capability added to many unrelated actor classes."
+          },
+          {
+            "choice": "subclass-sandbox",
+            "why": "A shared saveable base class would force doors, coins, and the player into one hierarchy they do not otherwise share."
+          },
+          {
+            "choice": "observer",
+            "why": "The save system can announce saves and loads to listeners, but that does not give each actor a way to be saved."
+          }
+        ],
+        "explanation": "A saveable component that any actor can carry turns saving into a part, so a new kind only adds the part and marks its saved properties."
       }
     ]
   },
@@ -1597,7 +1640,7 @@
       {
         "id": "prototype-scenario-2",
         "type": "which-pattern",
-        "prompt": "Designers want sixty blade kinds that differ only in numbers, edited side by side in a spreadsheet view. A teammate proposes sixty hidden template blades in the level. Which pattern is the better fit?",
+        "prompt": "Designers want thirty-five blade kinds that differ only in numbers, edited side by side in a spreadsheet view. A teammate proposes thirty-five hidden template blades in the level. Which pattern is the better fit?",
         "choices": [
           "flyweight",
           "prototype",
@@ -1624,7 +1667,7 @@
       {
         "id": "prototype-scenario-3",
         "type": "which-pattern",
-        "prompt": "The trial book has forty trials, each written as the basic trial plus one or two changes. The designers want to retune the basic trial and have all forty follow. Which pattern?",
+        "prompt": "Every trial in the hall's book starts from the Basic trial's time limit and reward and sets only its own blade count. The designers want to raise the Basic reward and have every other trial follow. Which pattern?",
         "choices": [
           "flyweight",
           "command",
@@ -1836,11 +1879,14 @@
   {
     "id": "singleton",
     "title": "Singleton",
-    "intent": "Make a class responsible for there only ever being one of it, and let any code fetch that one object through the class itself. In Unreal you mostly learn it to spot it and swap it for a subsystem with a real owner.",
-    "problem": "Some things feel naturally single (the audio device, the save system), so a static GetInstance looks convenient. The trouble is that global access lets any code reach in from anywhere, hides dependencies, makes order of initialization fragile, and makes tests share state.",
-    "unrealForm": "Gameplay code should rarely write a classic singleton. Unreal gives scoped, engine-managed single instances instead: UGameInstanceSubsystem lives as long as the game, UWorldSubsystem per world, ULocalPlayerSubsystem per local player, and UEngineSubsystem for the engine. Reach them with GetSubsystem<T>() from the right owner. Existing roots like the Game Mode, Game State, and Game Instance already hold per-game objects.",
-    "whenNot": "Almost always skip the full pattern. If the real need is convenient access, pass the object in or use a subsystem with a defined lifetime. A static pointer to a UObject outside UPROPERTY can be garbage collected and leave a dangling pointer.",
-    "useCaseQuestIds": [],
+    "intent": "Make a class guarantee there is only one of it and let any code reach that one through the class itself. In Unreal you learn it mostly to recognize it, and to give the one instance a real owner instead.",
+    "problem": "A lap board, the standings, the start lights: some things feel naturally single, and a static Get saves passing them around. But the static belongs to the whole program, so in the editor it outlives every play session and is shared by worlds running together; its pointer is invisible to the garbage collector; every caller hides a dependency; and access from anywhere also rules out the second instance a practice mode or a test needs.",
+    "unrealForm": "Subsystems give single instances an owner and a lifetime the engine manages: UEngineSubsystem for the program, UGameInstanceSubsystem for the game session, UWorldSubsystem for each world, ULocalPlayerSubsystem for each local player, each found through its owner (GetSubsystem<T>() on the world, the game instance, or the local player, and GEngine->GetEngineSubsystem<T>() for the engine). The game instance, the game state, each player controller, and on the server the game mode are owners that already exist. A subsystem may decline to be created, so check what GetSubsystem returns. Code that only needs access is handed the object by whoever sets it up.",
+    "whenNot": "Almost always skip the classic form. If the need is access, hand the object in or find it through its owner. If the need is one instance, enforce it where the instance comes into being, without global access. A manager that only does other objects' work should become behavior on those objects, a subsystem needs the owner whose lifetime matches its data, and stateless helpers belong in a function library.",
+    "useCaseQuestIds": [
+      "p14-lap-log",
+      "p14-start-lights"
+    ],
     "recall": [
       {
         "id": "singleton-recall-1",
@@ -1858,7 +1904,7 @@
       {
         "id": "singleton-recall-2",
         "type": "spot-the-bug",
-        "prompt": "This score manager is a hand-rolled singleton. Which line risks a crash after garbage collection or between play sessions?",
+        "prompt": "This score manager is a hand-rolled singleton. Which line declares the pointer that risks a crash after garbage collection or between play sessions?",
         "code": "UDojoScoreManager* UDojoScoreManager::Get()\n{\n    static UDojoScoreManager* Instance = nullptr;\n    if (!Instance) { Instance = NewObject<UDojoScoreManager>(); }\n    return Instance;\n}",
         "bugLine": 3,
         "fix": "Use a UGameInstanceSubsystem and GetSubsystem<UDojoScoreManager>() so the engine owns the lifetime.",
@@ -1874,13 +1920,39 @@
           "Mentions coupling, testing, or reasoning difficulty"
         ],
         "explanation": "The single instance is rarely the problem; the global access is."
+      },
+      {
+        "id": "singleton-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A finish line must write practice laps and ranked laps into different logs. What lets the same line class do both?",
+        "choices": [
+          "The line is handed its log by whoever sets up the race",
+          "A static Get on the log class, rooted so it stays alive",
+          "A UEngineSubsystem that holds every log for the program",
+          "A check at startup that only one log exists"
+        ],
+        "answerIndex": 0,
+        "explanation": "A line that is handed its log can be handed either one; a log reached through the class can only ever be the one."
+      },
+      {
+        "id": "singleton-recall-5",
+        "type": "multiple-choice",
+        "prompt": "When does a UWorldSubsystem's Initialize run, compared with a classic Singleton made on first use?",
+        "choices": [
+          "When some code first calls GetSubsystem for it, like a Singleton",
+          "Every frame, just before Tick runs on the world",
+          "Only when the game is packaged for release",
+          "When its world is created, such as at a level load"
+        ],
+        "answerIndex": 3,
+        "explanation": "The engine makes a world subsystem together with its world, so heavy setup runs at level load instead of in the middle of play when some code first asks."
       }
     ],
     "scenarios": [
       {
         "id": "singleton-scenario-1",
         "type": "which-pattern",
-        "prompt": "Your quest tracker needs to live across level loads and be reachable from any widget or actor. A teammate writes a static GetInstance. Which Unreal form should replace it?",
+        "prompt": "Your quest tracker needs to live across level loads and be reachable from any widget or actor. A teammate writes a static GetInstance, and a game instance subsystem found by type with GetSubsystem replaces it. Which pattern is that replacement closest to?",
         "choices": [
           "facade",
           "observer",
@@ -1907,7 +1979,7 @@
       {
         "id": "singleton-scenario-2",
         "type": "which-pattern",
-        "prompt": "A class named UDojoEnemyManager has grown functions for moving, damaging, and animating every enemy, and every enemy calls it. Which pattern smell is this, and which pattern points to the fix?",
+        "prompt": "A class named UDojoEnemyManager has grown functions for moving, damaging, and animating every enemy, and every enemy calls it. Which pattern points to the fix?",
         "choices": [
           "component",
           "flyweight",
@@ -1930,27 +2002,70 @@
           }
         ],
         "explanation": "Move the behavior onto the enemies through components; a manager that only exists to operate on other objects is a singleton smell."
+      },
+      {
+        "id": "singleton-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A platform's achievement service must have exactly one wrapper per game session, because two would both sync and overwrite each other's progress. Every system that unlocks achievements needs to reach it. A teammate writes a class with a private constructor and a static Instance function. Which pattern is that?",
+        "choices": [
+          "singleton",
+          "service-locator",
+          "observer",
+          "component"
+        ],
+        "answer": "singleton",
+        "distractorNotes": [
+          {
+            "choice": "service-locator",
+            "why": "A locator answers how callers find a service, not how to make sure only one exists; it is a fair choice for the access half."
+          },
+          {
+            "choice": "observer",
+            "why": "Systems could announce unlocks as events, but something still has to own the one wrapper."
+          },
+          {
+            "choice": "component",
+            "why": "The wrapper is not part of any actor; it belongs to the game session."
+          }
+        ],
+        "explanation": "It is a Singleton. Keep the one instance, owned by the game session as a game instance subsystem, and replace the static access with finding it through that owner or handing it in."
+      },
+      {
+        "id": "singleton-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A WeatherManager is a UGameInstanceSubsystem that holds the current level's rain and fog. After a level change the new level starts in the old level's storm. What is the fix?",
+        "choices": [
+          "Make it a static Get so it is easier to reset",
+          "Call AddToRoot on it so the level cannot free it",
+          "Make it a UWorldSubsystem so each level gets its own",
+          "Make it a UEngineSubsystem that lives for the program"
+        ],
+        "answerIndex": 2,
+        "explanation": "The owner decides the lifetime. Weather that belongs to a level needs the level's world as its owner."
       }
     ]
   },
   {
     "id": "service-locator",
     "title": "Service Locator",
-    "intent": "Let code ask a central registry for \"the audio service\" or \"the analytics service\" by interface and get back whichever implementation was registered (real, silent, or a test double), without knowing which class that is.",
-    "problem": "Audio, analytics, and haptics are needed from all over the codebase. Passing them through every function is tedious, and a singleton welds callers to one concrete class, which blocks swapping in a silent or logging version for tests or a different platform.",
-    "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem can hold a provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's literal locator for plugin features. Always provide a null provider so callers never check for nullptr.",
-    "whenNot": "If the dependency can be passed in through a constructor or function parameter, do that; it stays visible. Do not use a locator for something that should only be reachable in one context or phase, because a global lookup cannot enforce that.",
-    "useCaseQuestIds": [],
+    "intent": "Let code ask one place for \"the announcer\" or \"the scoreboard\" by interface and get back whichever provider was set up (loud, recording, or silent), without knowing which class that is.",
+    "problem": "The gong, the bout timer, and the score screen all need to announce lines. Passing an announcer through every function is tedious, and letting each create its own welds them to one concrete class, which blocks swapping in a silent or recording version for tests or a different build.",
+    "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem may keep its current provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's own registry for plugin features, and you ask whether a feature exists before asking for it. Use a null provider so callers never check for nullptr.",
+    "whenNot": "If the dependency can be passed in through a constructor or function parameter, do that; it stays visible. A global lookup also cannot keep a facility to one context or phase, so do not use a locator for something that may only be reached there.",
+    "useCaseQuestIds": [
+      "p15-announcer-desk",
+      "p15-gong-refactor"
+    ],
     "recall": [
       {
         "id": "service-locator-recall-1",
         "type": "multiple-choice",
-        "prompt": "What does a null service provide?",
+        "prompt": "What is the point of a null provider in a located service?",
         "choices": [
-          "A crash when used, to catch bugs",
-          "A cached copy of the last service",
-          "A network fallback",
-          "A do-nothing implementation so callers never have to check for a missing service"
+          "A crash when it is used, to catch bugs early",
+          "A cached copy of the last service that was used",
+          "A network fallback for when the service is offline",
+          "A do-nothing version, so callers need no checks"
         ],
         "answerIndex": 3,
         "explanation": "The null object keeps code working when no real provider is registered, such as in tests or a dedicated server."
@@ -1975,6 +2090,28 @@
           "Contrasts with a single concrete class"
         ],
         "explanation": "Same global reach, but the concrete class is no longer baked in."
+      },
+      {
+        "id": "service-locator-recall-4",
+        "type": "fill-blank",
+        "prompt": "A subsystem found with GetWorld()->GetSubsystem<T>() lives as long as its ___.",
+        "acceptedAnswers": [
+          "world"
+        ],
+        "explanation": "A world subsystem is created and destroyed with its world. A game instance subsystem lives as long as the game instance."
+      },
+      {
+        "id": "service-locator-recall-5",
+        "type": "multiple-choice",
+        "prompt": "Which of these is a service locator's three-part shape?",
+        "choices": [
+          "A base class, a component to attach it, and a delegate to call it",
+          "An interface, its providers, and a place that hands out the one in use",
+          "A factory that builds it, a prototype to copy it, and a pool to reuse it",
+          "A header that declares it, a source file, and a build file that compiles it"
+        ],
+        "answerIndex": 1,
+        "explanation": "Callers use the interface, providers implement it, and the locator hands out whichever is in place."
       }
     ],
     "scenarios": [
@@ -2008,26 +2145,69 @@
       {
         "id": "service-locator-scenario-2",
         "type": "multiple-choice",
-        "prompt": "A trap is spawned by a spawner that already holds a reference to the audio subsystem. The trap needs audio. What is the better choice than having the trap look the service up globally?",
+        "prompt": "A bell is spawned by a bout director that already holds a reference to the announcer desk. The bell needs to announce. What is the better choice than having the bell look the service up globally?",
         "choices": [
-          "Have the spawner pass the audio interface to the trap when it spawns it",
-          "Make the audio subsystem a static singleton",
-          "Broadcast a delegate asking someone to play the sound",
-          "Queue the sound request for the next frame"
+          "Have the director pass the announcer to the bell at spawn",
+          "Make the announcer desk a static singleton that the bell can call",
+          "Broadcast a delegate that asks someone else to speak the line",
+          "Queue the line and have the next frame find a speaker for it"
         ],
         "answerIndex": 0,
-        "explanation": "When a caller already has the dependency, passing it in keeps it visible in the trap's interface. A locator is the fallback when passing in is impractical, not the default."
+        "explanation": "When a caller already has the dependency, passing it in keeps it visible in the bell's interface. A locator is the fallback when passing in is impractical, not the default."
+      },
+      {
+        "id": "service-locator-scenario-3",
+        "type": "which-pattern",
+        "prompt": "Automated bout tests must run without sound and must be able to read back every line the bouts announce. The gong, the timer, and the score screen all announce. Which pattern?",
+        "choices": [
+          "strategy",
+          "singleton",
+          "service-locator",
+          "observer"
+        ],
+        "answer": "service-locator",
+        "distractorNotes": [
+          {
+            "choice": "singleton",
+            "why": "A singleton gives one concrete announcer, and the test needs a recording one in its place."
+          },
+          {
+            "choice": "strategy",
+            "why": "A strategy swaps one algorithm inside one object; here many callers share one swappable service."
+          },
+          {
+            "choice": "observer",
+            "why": "Subscribing the tests to every source works, but every source would have to be wired, where a located announcer needs one Install call."
+          }
+        ],
+        "explanation": "The callers use an announcer interface, and the test provides a recording announcer once."
+      },
+      {
+        "id": "service-locator-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A rival's strike needs the health of the one fighter it is hitting. Is a service locator the right way to reach it?",
+        "choices": [
+          "Yes; anything that many classes need belongs in a locator, so use one",
+          "No; the target belongs to this one strike, so pass it in",
+          "Yes, but only if it is registered through a game instance subsystem",
+          "No; a fighter's health should be a console variable instead"
+        ],
+        "answerIndex": 1,
+        "explanation": "A locator is for a few cross-cutting services. A dependency that belongs to one relationship should stay visible in the code that uses it."
       }
     ]
   },
   {
     "id": "object-pool",
     "title": "Object Pool",
-    "intent": "Spawn a batch of projectiles, effects, or enemies up front, then lend them out and take them back as play needs them, so the busiest moments of a fight never pay the cost of spawning and destroying actors.",
-    "problem": "A minigun fires 20 bullets per second. Spawning an actor for each runs construction, component registration, and BeginPlay, then destroying it feeds the garbage collector. The hitches show up exactly when the action is most intense.",
-    "unrealForm": "Actor spawning is expensive, so pooling actors is a standard optimization. Niagara already pools its components. You write a pool as a UWorldSubsystem or a manager actor holding a TArray of inactive actors per class, with an explicit reset protocol: hide with SetActorHiddenInGame, disable collision and tick, clear timers and delegates, then fully reinitialize on acquire.",
-    "whenNot": "If objects are created rarely, or vary wildly in size and type, the pool wastes memory and adds a reset burden. Measure spawn cost before pooling. Forgetting to reset a field gives bugs that look almost right.",
-    "useCaseQuestIds": [],
+    "intent": "Make a fixed set of objects once and lend them out and take them back as play needs them, so the busiest moments of a game never pay for creating and destroying them.",
+    "problem": "A finale fires three hundred rockets in twenty seconds. Spawning each one builds an actor from its class, registers its components with rendering and physics, and runs BeginPlay; destroying it takes all that apart again and leaves the memory for a later garbage collection. The cost lands exactly when the screen is fullest.",
+    "unrealForm": "Actor spawning is the expensive part, so pools of actors are the common case: a manager actor or a UWorldSubsystem spawns the actors when play begins and keeps them in UPROPERTY arrays. Lending one resets it and turns drawing, collision, and ticking back on; taking it back turns all three off with SetActorHiddenInGame, SetActorEnableCollision, and SetActorTickEnabled. Niagara effects already have a pool: spawn them with the AutoRelease pooling method.",
+    "whenNot": "Skip it for things made a few times a level, for actors too complex to reset with certainty, and whenever stat game or Unreal Insights does not show spawning as the cost. A pool holds memory all the time and needs a reset that misses nothing; give it a size, a limit, and a deliberate choice for when it runs out.",
+    "useCaseQuestIds": [
+      "p16-rocket-rack",
+      "p16-shell-fuse"
+    ],
     "recall": [
       {
         "id": "object-pool-recall-1",
@@ -2061,6 +2241,32 @@
           "Says the policy is a deliberate design choice"
         ],
         "explanation": "There is no free answer; each policy has a visible gameplay cost."
+      },
+      {
+        "id": "object-pool-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A pool keeps its resting rockets in a TArray and lends from the end with Pop. Why from the end?",
+        "choices": [
+          "Pop is the only way to read a TArray",
+          "Taking the last element moves nothing else, so lending takes the same time however many rockets rest",
+          "The first element is always invalid",
+          "It makes the rockets spawn faster"
+        ],
+        "answerIndex": 1,
+        "explanation": "Removing from the end of an array shifts no other element, which gives the same constant-time take and return that a free list gives."
+      },
+      {
+        "id": "object-pool-recall-5",
+        "type": "multiple-choice",
+        "prompt": "A rocket comes back to the rack twice without being lent in between, and the rack adds it to the resting list both times. What goes wrong?",
+        "choices": [
+          "Nothing, the second return is ignored by the engine",
+          "The rack later lends the same rocket to two users at once",
+          "The rocket is destroyed",
+          "The rack spawns a replacement"
+        ],
+        "answerIndex": 1,
+        "explanation": "A rocket listed twice is handed out twice. A pool takes back only what it lent and has not yet taken back."
       }
     ],
     "scenarios": [
@@ -2103,17 +2309,60 @@
         ],
         "answerIndex": 2,
         "explanation": "Pool things created and destroyed often. A once-per-level spawn does not justify reset logic and a pool's memory."
+      },
+      {
+        "id": "object-pool-scenario-3",
+        "type": "which-pattern",
+        "prompt": "Damage numbers float up from every hit in a brawler, thirty a second in a busy fight, each a small widget that lives for a second. Unreal Insights shows widget creation spiking during fights. Which pattern fits?",
+        "choices": [
+          "object-pool",
+          "flyweight",
+          "observer",
+          "dirty-flag"
+        ],
+        "answer": "object-pool",
+        "distractorNotes": [
+          {
+            "choice": "flyweight",
+            "why": "The numbers could share a font and style, but each widget is still created and removed thirty times a second."
+          },
+          {
+            "choice": "observer",
+            "why": "Hits could announce themselves as events, which says who hears about a hit, not where the widgets come from."
+          },
+          {
+            "choice": "dirty-flag",
+            "why": "Caching a derived value does not stop a widget from being created for every hit."
+          }
+        ],
+        "explanation": "Keep a fixed set of damage number widgets, lend one per hit, and take it back when it fades."
+      },
+      {
+        "id": "object-pool-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A grenade pool spawns one more grenade whenever it is empty and never removes any. After an hour-long match it holds 400 grenades, though at most 12 were ever in the air at once. What should change?",
+        "choices": [
+          "Nothing, a bigger pool is always better",
+          "Give the pool a limit near the real peak and choose what happens at the limit, such as refusing or recycling the oldest",
+          "Destroy the pool every minute",
+          "Replace it with a static array of 1000 grenades"
+        ],
+        "answerIndex": 1,
+        "explanation": "Growing without a limit spawns during play and keeps every grenade forever. Size the pool for the real peak and decide what the limit means."
       }
     ]
   },
   {
     "id": "dirty-flag",
     "title": "Dirty Flag",
-    "intent": "When an expensive result (final stats, a total weight, a world transform) depends on inputs that change often, just raise a flag on each change and do the real recompute once, the next time someone asks for the result.",
-    "problem": "A character's final stats depend on base stats, ten equipment slots, and active buffs. Recomputing every time any input changes wastes work when several changes land in one frame, while recomputing every Tick wastes work when nothing changed.",
-    "unrealForm": "The engine uses dirty flags everywhere: scene components cache world transforms and mark them stale when local transforms change, MarkRenderStateDirty tells the render thread what to resend, packages track unsaved changes, and push-model replication marks properties dirty. In gameplay code you keep a bStatsDirty bool, set it in every setter, and recompute inside the getter when it is set.",
-    "whenNot": "When a running total is simpler (adding and subtracting one value), keep the total. When deferring could lose work or cause a hitch at a bad moment, compute eagerly. The risk is missing a mutation path, so route every change through a small set of functions.",
-    "useCaseQuestIds": [],
+    "intent": "When an expensive result (a guard rating, a ladder rating, a tower joint's position) depends on inputs that change now and then, raise a flag on each change and do the real recompute once, the next time someone asks for the result.",
+    "problem": "A fighter's guard rating depends on a base guard, the worn items, and the active buffs, and the screen, the damage code, and the enemy all read it every frame. Recomputing on every read repeats a sum whose answer cannot have changed, and recomputing on every change repeats it for answers nobody reads when several changes land together.",
+    "unrealForm": "Dirty flags run all through the engine: a scene component keeps its component-to-world transform ready and refreshes it after a change, MarkRenderStateDirty has the renderer pick up new data later, packages carry an unsaved bit, Slate widgets invalidate, and push-model replication marks properties. In gameplay code you keep a bStatsDirty bool, set it in every setter, and recompute inside the getter when it is set.",
+    "whenNot": "When adding or subtracting one value keeps a running total correct, keep the total. When the value is cheap to work out, or when deferring could lose work or cause a hitch at a bad moment, compute eagerly. The main risk is a mutation path that forgets the flag, so route every change through a small set of functions.",
+    "useCaseQuestIds": [
+      "p17-guard-rating",
+      "p17-tower-rig"
+    ],
     "recall": [
       {
         "id": "dirty-flag-recall-1",
@@ -2147,6 +2396,28 @@
         ],
         "answerIndex": 3,
         "explanation": "If you can update the result incrementally for free, a flag only adds a branch and a chance to forget."
+      },
+      {
+        "id": "dirty-flag-recall-4",
+        "type": "fill-blank",
+        "prompt": "A const function may refresh a remembered answer if the member that holds it is marked ___.",
+        "acceptedAnswers": [
+          "mutable"
+        ],
+        "explanation": "A mutable member can be written through a const function, which is how a read can store the answer it has just worked out."
+      },
+      {
+        "id": "dirty-flag-recall-5",
+        "type": "multiple-choice",
+        "prompt": "Which engine call tells the renderer that a component's data must be rebuilt later instead of right now?",
+        "choices": [
+          "MarkRenderStateDirty",
+          "DestroyComponent",
+          "SetTickEnabled",
+          "RegisterComponent"
+        ],
+        "answerIndex": 0,
+        "explanation": "MarkRenderStateDirty sets a flag on the component, and the engine rebuilds its render state once at a safe point."
       }
     ],
     "scenarios": [
@@ -2203,6 +2474,46 @@
           }
         ],
         "explanation": "Cache the result and invalidate it when a point is spent."
+      },
+      {
+        "id": "dirty-flag-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A tower's lantern position is read by a camera, a light, and a sound every frame, and the wind moves the tower's base only now and then. Which pattern?",
+        "choices": [
+          "update-method",
+          "dirty-flag",
+          "observer",
+          "double-buffer"
+        ],
+        "answer": "dirty-flag",
+        "distractorNotes": [
+          {
+            "choice": "update-method",
+            "why": "Working the position out in every tick is the repeated work you want to avoid."
+          },
+          {
+            "choice": "observer",
+            "why": "Telling the camera, the light, and the sound at every move would make each of them recompute separately."
+          },
+          {
+            "choice": "double-buffer",
+            "why": "There is no reader and writer racing over one value."
+          }
+        ],
+        "explanation": "Keep each joint's position and work it out when it is read, instead of on every frame for every follower."
+      },
+      {
+        "id": "dirty-flag-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A hit's damage is the fighter's strength times two, and it is read whenever a hit lands. Should the product be cached behind a dirty flag?",
+        "choices": [
+          "No; one multiplication is cheaper than a stored copy, a flag, and every setter that must set it",
+          "Yes; every number that is read should be cached",
+          "Yes, but only with a timer",
+          "No; damage should be recomputed in Tick"
+        ],
+        "answerIndex": 0,
+        "explanation": "A flag pays when the work is worth saving. For a single multiplication the flag costs more and adds a path that can be forgotten."
       }
     ]
   },
