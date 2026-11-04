@@ -1836,11 +1836,14 @@
   {
     "id": "singleton",
     "title": "Singleton",
-    "intent": "Make a class responsible for there only ever being one of it, and let any code fetch that one object through the class itself. In Unreal you mostly learn it to spot it and swap it for a subsystem with a real owner.",
-    "problem": "Some things feel naturally single (the audio device, the save system), so a static GetInstance looks convenient. The trouble is that global access lets any code reach in from anywhere, hides dependencies, makes order of initialization fragile, and makes tests share state.",
-    "unrealForm": "Gameplay code should rarely write a classic singleton. Unreal gives scoped, engine-managed single instances instead: UGameInstanceSubsystem lives as long as the game, UWorldSubsystem per world, ULocalPlayerSubsystem per local player, and UEngineSubsystem for the engine. Reach them with GetSubsystem<T>() from the right owner. Existing roots like the Game Mode, Game State, and Game Instance already hold per-game objects.",
-    "whenNot": "Almost always skip the full pattern. If the real need is convenient access, pass the object in or use a subsystem with a defined lifetime. A static pointer to a UObject outside UPROPERTY can be garbage collected and leave a dangling pointer.",
-    "useCaseQuestIds": [],
+    "intent": "Make a class guarantee there is only one of it and let any code reach that one through the class itself. In Unreal you learn it mostly to recognize it, and to give the one instance a real owner instead.",
+    "problem": "A lap board, the standings, the start lights: some things feel naturally single, and a static Get saves passing them around. But the static belongs to the whole program, so in the editor it outlives every play session and is shared by worlds running together; its pointer is invisible to the garbage collector; every caller hides a dependency; and access from anywhere also rules out the second instance a practice mode or a test needs.",
+    "unrealForm": "Subsystems give single instances an owner and a lifetime the engine manages: UEngineSubsystem for the program, UGameInstanceSubsystem for the game session, UWorldSubsystem for each world, ULocalPlayerSubsystem for each local player, each found through its owner (GetSubsystem<T>() on the world, the game instance, or the local player, and GEngine->GetEngineSubsystem<T>() for the engine). The game instance, game mode, game state, and player controllers are owners that already exist. Code that only needs access is handed the object by whoever sets it up.",
+    "whenNot": "Almost always skip the classic form. If the need is access, hand the object in or find it through its owner. If the need is one instance, enforce it where the instance comes into being, without global access. A manager that only does other objects' work should become behavior on those objects, a subsystem needs the owner whose lifetime matches its data, and stateless helpers belong in a function library.",
+    "useCaseQuestIds": [
+      "p14-lap-log",
+      "p14-start-lights"
+    ],
     "recall": [
       {
         "id": "singleton-recall-1",
@@ -1874,6 +1877,32 @@
           "Mentions coupling, testing, or reasoning difficulty"
         ],
         "explanation": "The single instance is rarely the problem; the global access is."
+      },
+      {
+        "id": "singleton-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A finish line must write practice laps and ranked laps into different logs. What lets the same line class do both?",
+        "choices": [
+          "A static Get on the log class",
+          "The line is handed the log it writes into by whoever sets up the race",
+          "A UEngineSubsystem that holds every log",
+          "A check that only one log exists"
+        ],
+        "answerIndex": 1,
+        "explanation": "A line that is handed its log can be handed either one; a log reached through the class can only ever be the one."
+      },
+      {
+        "id": "singleton-recall-5",
+        "type": "multiple-choice",
+        "prompt": "When does a UWorldSubsystem's Initialize run, compared with a classic Singleton made on first use?",
+        "choices": [
+          "Whenever some code first calls GetSubsystem for it, like a Singleton",
+          "When its world is created, so its setup happens at a moment the game controls, such as a level load",
+          "Every frame, before Tick",
+          "Only when the game is packaged"
+        ],
+        "answerIndex": 1,
+        "explanation": "The engine makes a world subsystem together with its world, so heavy setup runs at level load instead of in the middle of play when some code first asks."
       }
     ],
     "scenarios": [
@@ -1930,6 +1959,46 @@
           }
         ],
         "explanation": "Move the behavior onto the enemies through components; a manager that only exists to operate on other objects is a singleton smell."
+      },
+      {
+        "id": "singleton-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A platform's achievement service must have exactly one wrapper per game session, because two would both sync and overwrite each other's progress. Every system that unlocks achievements needs to reach it. A teammate writes a class with a private constructor and a static Instance function. Which pattern is that?",
+        "choices": [
+          "singleton",
+          "service-locator",
+          "observer",
+          "component"
+        ],
+        "answer": "singleton",
+        "distractorNotes": [
+          {
+            "choice": "service-locator",
+            "why": "A locator answers how callers find a service, not how to make sure only one exists; it is a fair choice for the access half."
+          },
+          {
+            "choice": "observer",
+            "why": "Systems could announce unlocks as events, but something still has to own the one wrapper."
+          },
+          {
+            "choice": "component",
+            "why": "The wrapper is not part of any actor; it belongs to the game session."
+          }
+        ],
+        "explanation": "It is a Singleton. Keep the one instance, owned by the game session as a game instance subsystem, and replace the static access with finding it through that owner or handing it in."
+      },
+      {
+        "id": "singleton-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A WeatherManager is a UGameInstanceSubsystem that holds the current level's rain and fog. After a level change the new level starts in the old level's storm. What is the fix?",
+        "choices": [
+          "Make it a static Get so it is easier to reset",
+          "Make it a UWorldSubsystem, so each level gets its own weather and it is destroyed with the level",
+          "Call AddToRoot on it",
+          "Make it a UEngineSubsystem"
+        ],
+        "answerIndex": 1,
+        "explanation": "The owner decides the lifetime. Weather that belongs to a level needs the level's world as its owner."
       }
     ]
   },
