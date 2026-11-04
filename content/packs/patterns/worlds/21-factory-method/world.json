@@ -1,0 +1,5 @@
+{
+	"id": "factory-method",
+	"title": "Ask for a result, not a class",
+	"summary": "The Ember Range fires bolts and sends waves of critters, and every place that makes one names its class and sets it up by hand. Learn to put the making of a thing in one function that decides which class to build and prepares it before it comes to life, as a creator with a virtual function or as a class a designer picks in data, and to see that SpawnActor, NewObject, and CreateDefaultSubobject are already such functions."
+}

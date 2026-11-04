@@ -4856,6 +4856,25 @@
     "firstQuestId": "p22-facade-card"
   },
   {
+    "id": "virtual-function",
+    "term": "Virtual function",
+    "aliases": [
+      "virtual functions",
+      "overriding a function",
+      "override a virtual function"
+    ],
+    "category": "cpp idiom",
+    "short": "A member function that is looked up on the real object when it is called, so a child class can replace what it does.",
+    "long": "Mark a function virtual in a base class and a child class can override it with its own version. When code calls the function through a pointer to the base class, the call runs the child's version if the object really is a child. This is what lets a launcher hold one pointer to a rule base class and ask it a question without knowing which rule it holds. In Unreal, write override after the child's declaration so the compiler checks that it matches, call Super to run the parent's version as well, and use a BlueprintNativeEvent when Blueprint children should be able to override the function too.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/epic-cplusplus-coding-standard-for-unreal-engine?application_version=5.8",
+    "related": [
+      "uclass",
+      "abstract-specifier",
+      "blueprintnativeevent"
+    ],
+    "firstQuestId": "p20-one-function-every-aim"
+  },
+  {
     "id": "overlap-query",
     "term": "Overlap query",
     "aliases": [
