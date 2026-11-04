@@ -25,7 +25,7 @@ Most of `ADojoM1Turntable` is written for you. Explain the marked lines, then fi
 1. `ADojoM1Turntable::SetupPlayerInputComponent`: bind the Turn action to `Turn` for the moment the pushed value is not zero.
 2. `ADojoM1Turntable::Turn`: read the pushed value and turn the pawn by it, scaled by `DegreesPerSecond` and by the time the frame took, so the speed does not depend on the frame rate.
 
-Dependency direction: the pawn holds its own action and its own context and reaches the local player's subsystem only at the moment a controller arrives or leaves. The controller and the engine hold no pointer to this class.
+Dependency direction: the pawn holds its own action and its own context and reaches the local player's subsystem only at the moment a controller arrives or leaves. No code in the controller or the engine names this class.
 
 `DojoM1InputRig.h` is provided for the tests. It builds a pretend local player so a test can possess a pawn and press keys; do not change it.
 
@@ -33,7 +33,7 @@ This turntable is the first piece of the drone handoff boss.
 
 ## See it in the editor
 
-Place a `DojoM1Turntable` in the sandbox map, set Auto Possess Player to Player 0 in its Details panel, and press Play. Hold D: the turntable turns right at 90 degrees per second. Hold A: it turns left. Open the console with the tilde key and type `ShowDebug EnhancedInput` to see the Turn action's live value: 1 while D is down, -1 while A is down, 0 otherwise.
+Place a `DojoM1Turntable` in the sandbox map, set Auto Possess Player to Player 0 in its Details panel, and press Play. Hold D for one second, then A for two seconds, and let go. The pawn has no mesh and the camera does not follow it, so you read the result instead of watching it: press F8 to eject, select the turntable in the World Outliner, and Rotation Z in its Details reads about -90 (a 270 means the same angle). Run it again holding only D for one second and Rotation Z reads about 90. Open the console with the tilde key and type `ShowDebug EnhancedInput` to see the Turn action's live value: 1 while D is down, -1 while A is down, 0 otherwise.
 
 # Files
 
@@ -415,9 +415,9 @@ bool FDojo_M1_Turntable_DesignersCanAssignAssets::RunTest(const FString& Paramet
 
 # Hints
 
-- Turn is two steps: take the number the player pushed out of the argument, then rotate by it. SetupPlayerInputComponent needs one line that names the action, the moment, the object, and the function.
-- The action was set up as a one-dimensional axis, so the value is read as a float. Rotating about the up axis is a change of yaw, and a speed in degrees per second becomes an angle by multiplying by the time the frame took.
-- `BindAction` takes the action, an `ETriggerEvent`, the object, and the address of the function. The event for every frame the pushed value is not zero is `Triggered`. `GetWorld()->GetDeltaSeconds()` is the frame time and `AddActorLocalRotation` takes an `FRotator`; both are covered in `Engine/World.h` and `GameFramework/Actor.h`.
+- Turn is two steps: take the number the player pushed out of the argument, then rotate by it.
+- The action is a one-dimensional axis, so the value is read as a float, and rotating about the up axis changes yaw.
+- The binding names the action, the event for every frame the value is not zero, the object, and the function, and the frame time comes from the world.
 
 # Rubric
 
@@ -425,7 +425,7 @@ bool FDojo_M1_Turntable_DesignersCanAssignAssets::RunTest(const FString& Paramet
 - The Turn action is bound to `Turn` for `Triggered`, inside `SetupPlayerInputComponent`, after the cast to the Enhanced Input component.
 - One action serves both keys: A reaches it through a Negate modifier, so the handler has no key-specific code.
 - The mapping context is added to the local player's subsystem when the pawn gets a controller and removed from the old player when it loses it.
-- The pawn holds its action and its context; neither the controller nor the engine holds a pointer to the pawn's input code.
+- The pawn holds its action and its context; no code in the controller or the engine names the pawn's input code.
 - The action and the context are properties a designer can assign in Details, with a default built in code only when none is assigned.
 
 # Alternative

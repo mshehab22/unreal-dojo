@@ -1,0 +1,5 @@
+{
+	"id": "save-and-load",
+	"title": "Save and load",
+	"summary": "A coin vault needs checkpoints. Plan a save system from scratch, then build its parts: a save record written to a slot, a component that turns an actor's saved properties into bytes and back, a world subsystem that gathers and applies every saveable, and a door that survives a reload, all brought together in one vault run."
+}

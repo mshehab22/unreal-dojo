@@ -39,7 +39,7 @@ Extensions, in order of importance:
 2. A text front end: a mod line such as `read gold, push 9, greater` becomes condition steps, and a line it cannot read is reported with its number before the round starts.
 3. A trace for broken scripts: when a potion fizzles, the label names the step that failed and what was on the stack.
 
-Feel: tune the corridor so that the order of potions matters and a player who drinks everything at once in the wrong order is short of the Vault door, but a player who reads the doors first opens the Vault door with about ten seconds to spare.
+Feel: tune the corridor by moving the spots of the standard entries or adding an entry of your own, so that the order of the stations matters: a champion who tries a door before the potions it asks for finds it shut and has to walk back, while one who reads the doors first walks the corridor once and wins well inside the 60 seconds. Report the spots you chose and the walking speed you tested at.
 
 # Required Pieces
 
@@ -122,4 +122,4 @@ Feel: tune the corridor so that the order of potions matters and a player who dr
 - The Cursed brew fizzles: it is counted, it changes no stat, and the round goes on; a door with a broken condition stays shut.
 - Opening every door wins with the time, Health, and Gold shown; 60 seconds without that shows TIME UP.
 - Round 1 starts with play, R starts later rounds only between rounds, and a round start destroys the old stations, resets the stats, and zeroes the counts, so round 2 plays like round 1.
-- The submission says why the master owns no rule about what a script means, and gives the tuned corridor with why the order of the potions mattered.
+- The submission says why the master owns no rule about what a script means, and gives the tuned corridor, with the walking speed tested at and why a door placed before its potions costs a walk back.

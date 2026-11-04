@@ -33,7 +33,7 @@ Compiles against earlier quests: m3-scale-plate (`Quests/m3-scale-plate/DojoM3Cr
 
 ## See it in the editor
 
-Place a `DojoM4Scatter` at the origin, set Spawn Class to `DojoM3Crate` and Count to 20 in Details, and place a `DojoM2Wall` with its Box extent set to X 500, Y 250 and its location at Y 250, so it covers half of the scatter area. Type `show Collision` and press Play: the crates land only on the free half. In the level Blueprint, on the 1 key, print Get Skipped. Change Seed and press Play again for a new layout; change it back and the old layout returns. Then try one A/B change in the code: set the override to `AlwaysSpawn`, play, and see crates inside the wall.
+Place a `DojoM4Scatter` at the origin, set Spawn Class to `DojoM3Crate` and Count to 20 in Details, and place a `DojoM2Wall` with its Box extent set to X 500, Y 250 and its location at Y 250, so it covers half of the scatter area. With the scatterer selected, right-click in the level Blueprint and choose Create a Reference to Selected Actor, then call Scatter on it from Begin Play and, on the 1 key, print its Get Skipped. Type `show Collision` and press Play: the crates land only on the free half. Change Seed and press Play again for a new layout; change it back and the old layout returns. Then try one A/B change in the code: set the override to `AlwaysSpawn`, play, and see crates inside the wall.
 
 # Files
 
@@ -308,9 +308,9 @@ bool FDojo_M4_Scatter_SameSeedSameLayout::RunTest(const FString& Parameters)
 
 # Hints
 
-- The loop already has the point and the parameters. One call makes the actor, and its result says whether the world agreed to make it.
-- `SpawnActor` on the world takes the class, the location, the rotation, and the parameters, and hands back a pointer that is nullptr when the spot was refused.
-- `UWorld::SpawnActor` is in `Engine/World.h`; `FRotator::ZeroRotator` is no rotation.
+- Making the actor is one call on the world, and what it hands back is the only sign of whether the spot was accepted.
+- That call takes the class, a location, a rotation and the prepared parameters, and hands back nothing when the spot is refused.
+- The world's spawn function is declared in `Engine/World.h`, and no rotation means a rotator with every angle at zero.
 
 # Rubric
 

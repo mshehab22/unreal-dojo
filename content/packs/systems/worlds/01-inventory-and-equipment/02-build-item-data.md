@@ -105,7 +105,7 @@ public:
 
 int32 UDojoS1ItemData::GetStackLimit() const
 {
-	// Your code: return MaxStack, but never less than 1, even when a designer typed 0 or less.
+	// Your code: return MaxStack, but never less than 1, even when an old asset or other code holds 0 or less.
 	return 0;
 }
 
@@ -404,6 +404,7 @@ bool FDojo_S1_ItemData_DesignersCanEdit::RunTest(const FString& Parameters)
 - `Take` gives at most what the pile holds and never a negative number, and returns exactly what it gave.
 - The label always shows the pile's current count.
 - A pile that is emptied by a call leaves the world; asking for nothing never removes it.
+- The asset knows nothing about piles, and a pile knows nothing about bags.
 
 # Alternative
 
@@ -413,7 +414,7 @@ Each kind of item could be its own class, `ADojoS1Potion` and `ADojoS1Sword`, wi
 
 ```yaml
 - id: world-item-take
-  prompt: Put Take in order.
+  prompt: Put Take in order. The label is refreshed before the pile may leave the world.
   lines:
     - "int32 ADojoS1WorldItem::Take(int32 Amount)"
     - "{"
