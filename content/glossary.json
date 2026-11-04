@@ -1315,7 +1315,7 @@
       "deferred spawning"
     ],
     "category": "framework",
-    "short": "A spawn that hands you the new actor before its construction and BeginPlay run, so you can set it up first.",
+    "short": "A spawn that hands you the new actor before its construction script and BeginPlay run, so you can set it up first.",
     "long": "SpawnActor runs the whole start of an actor's life, construction script and BeginPlay included, before it returns, so anything BeginPlay reads must be set before that. GetWorld()->SpawnActorDeferred<T>(Class, Transform) stops just short: you get the actor, set its properties, and then call FinishSpawning(Transform) to run construction and BeginPlay with your values in place. A rack that loads bombs already burning, or a projectile told its speed before it starts moving, needs it. Every deferred spawn must be finished, or the actor never begins play.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UWorld?application_version=5.8",
     "related": [
@@ -2347,7 +2347,7 @@
     ],
     "category": "collision",
     "short": "Shooting an invisible ray between two points to find what it hits first, or everything it passes through.",
-    "long": "Traces answer questions like what is under the crosshair or is there a wall between the guard and the player. GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params) returns true and fills Hit if anything blocking the Visibility channel lies on the line. By-object-type versions test against object types like Pawn, and multi versions return every hit. Pair traces with DrawDebugLine while developing so you can see them. Fast projectiles often trace from last frame's position to this frame's to avoid skipping thin targets.",
+    "long": "Traces answer questions like what is under the crosshair or is there a wall between the guard and the player. GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params) returns true and fills Hit if anything blocking the Visibility channel lies on the line. Multi versions return every hit along the line. Pair traces with DrawDebugLine while developing so you can see them. Fast projectiles often trace from last frame's position to this frame's to avoid skipping thin targets.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/traces-in-unreal-engine---overview?application_version=5.8",
     "related": [
       "sweep",
@@ -2384,13 +2384,12 @@
     "term": "Collision Query Params",
     "aliases": [
       "FCollisionQueryParams",
-      "FCollisionObjectQueryParams",
       "AddIgnoredActor"
     ],
     "category": "collision",
-    "short": "Option structs passed to traces and sweeps to fine-tune them, such as which actors to ignore.",
-    "long": "Without extra options, a gun's trace starting inside the player will happily hit the player. FCollisionQueryParams Params; Params.AddIgnoredActor(this); fixes that, and also lets you request complex collision or a trace tag for debugging. FCollisionObjectQueryParams says which object types a by-object trace should look for, for example only ECC_Pawn so a fireball's trace ignores scenery. Build these once per call; they are cheap.",
-    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/using-a-single-line-trace-raycast-by-object-in-unreal-engine?application_version=5.8",
+    "short": "Option struct passed to traces and sweeps to fine-tune them, such as which actors to ignore.",
+    "long": "Without extra options, a gun's trace starting inside the player will happily hit the player. FCollisionQueryParams Params; Params.AddIgnoredActor(this); fixes that, and also lets you request complex collision or a trace tag for debugging. Build these once per call; they are cheap.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/FCollisionQueryParams?application_version=5.8",
     "related": [
       "line-trace",
       "sweep",
@@ -3709,7 +3708,28 @@
       "uproperty",
       "gameplay-statics",
       "gameplay-tags"
-    ]
+    ],
+    "firstQuestId": "s3-save-games"
+  },
+  {
+    "id": "savegame-property",
+    "term": "SaveGame properties",
+    "aliases": [
+      "UPROPERTY(SaveGame)",
+      "ArIsSaveGame",
+      "ArNoDelta",
+      "FObjectAndNameAsStringProxyArchive"
+    ],
+    "category": "reflection",
+    "short": "Properties marked with the SaveGame specifier, which an archive with ArIsSaveGame set writes into a save and reads back.",
+    "long": "Most of an actor's properties are settings or looks, not progress. Marking the progress ones UPROPERTY(SaveGame) lets one generic routine save any actor: wrap a memory writer in an FObjectAndNameAsStringProxyArchive, set ArIsSaveGame on it (and ArNoDelta, so values equal to the defaults are written too), and call the actor's Serialize, and only the marked properties are written, by name. Reading the bytes back with a memory reader and the same setup puts just those properties back and leaves the rest alone. A USaveGame object is written without the flag, so all of its properties are saved.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "savegame",
+      "uproperty",
+      "reflection"
+    ],
+    "firstQuestId": "s3-savegame-properties"
   },
   {
     "id": "gameplay-tags",
@@ -4610,13 +4630,14 @@
     "id": "object-type-query",
     "term": "Object Type Query",
     "aliases": [
+      "FCollisionObjectQueryParams",
       "AddObjectTypesToQuery",
       "ByObjectType"
     ],
     "category": "collision",
     "short": "A trace or overlap that asks what an object is, by its object type, instead of how it responds to a channel.",
     "long": "A by-channel trace asks which objects block a kind of question. A by-object-type query lists the object types you care about in an FCollisionObjectQueryParams, for example AddObjectTypesToQuery(ECC_Pawn), and matches objects whose own type is on that list. LineTraceSingleByObjectType and its sweep and overlap relatives take that struct in place of a channel. Choose it for questions like is there a pawn here, and a channel for questions like what blocks my sight.",
-    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/using-a-single-line-trace-raycast-by-object-in-unreal-engine?application_version=5.8",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/FCollisionObjectQueryParams?application_version=5.8",
     "related": [
       "line-trace",
       "collision-query-params",
@@ -4746,5 +4767,65 @@
       "ustruct"
     ],
     "firstQuestId": "p13-behavior-as-data"
+  },
+  {
+    "id": "static-variable",
+    "term": "Static variable",
+    "aliases": [
+      "static member variable",
+      "static local variable",
+      "function-local static",
+      "static data member"
+    ],
+    "category": "cpp idiom",
+    "short": "A variable that exists once for the whole program, instead of once per object, per call, or per world.",
+    "long": "A static member or a static local in C++ is made once and lives until the program closes, shared by every caller. In the Unreal editor the program is the editor itself, so a static holds its value across every Play In Editor session and is shared by every world running at the same time. A static pointer to a UObject is also invisible to the garbage collector: unless the object is rooted it can be destroyed while the pointer still holds its address, and if it is rooted it lives until the program ends. Keep statics for values that truly belong to the whole program, such as constants.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-object-handling-in-unreal-engine?application_version=5.8",
+    "related": [
+      "garbage-collection",
+      "add-to-root",
+      "play-in-editor",
+      "world-subsystem"
+    ],
+    "firstQuestId": "p14-reachable-from-anywhere"
+  },
+  {
+    "id": "add-to-root",
+    "term": "AddToRoot",
+    "aliases": [
+      "RemoveFromRoot",
+      "root set"
+    ],
+    "category": "memory",
+    "short": "Puts a UObject in the root set, so the garbage collector never destroys it until RemoveFromRoot is called.",
+    "long": "The garbage collector keeps every object it can reach from the root set and destroys the rest. AddToRoot adds an object to that set directly, which keeps it alive even when nothing else points at it through a UPROPERTY. It is meant for a few long-lived engine objects; in gameplay code it usually patches a static pointer, and it turns that object into one that outlives every level and play session unless something remembers to call RemoveFromRoot.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/UObjectBaseUtility/AddToRoot?application_version=5.8",
+    "related": [
+      "garbage-collection",
+      "uproperty",
+      "static-variable",
+      "uobject"
+    ],
+    "firstQuestId": "p14-reachable-from-anywhere"
+  },
+  {
+    "id": "dependency-injection",
+    "term": "Dependency injection",
+    "aliases": [
+      "injected dependency",
+      "injecting a dependency",
+      "constructor injection"
+    ],
+    "category": "cpp idiom",
+    "short": "Handing an object the things it depends on, instead of letting it reach out and find them itself.",
+    "long": "A class that is given its collaborators, through a function such as an Init or Use call, a constructor argument, or a property its owner sets, shows its dependencies in its interface and can be given a different one at any time: a practice log instead of the ranked log, or a test double in an automation test. The cost is wiring: whoever builds the object must make or find the dependency and pass it along. In Unreal, the owner that does the wiring is often a game mode, a director actor, or a subsystem that the engine creates with a known lifetime.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
+    "related": [
+      "world-subsystem",
+      "subsystem",
+      "uproperty",
+      "static-variable"
+    ],
+    "firstQuestId": "p14-reachable-from-anywhere"
   }
 ]

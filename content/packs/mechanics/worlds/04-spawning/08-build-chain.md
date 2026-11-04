@@ -113,32 +113,25 @@ ADojoM4Chain::ADojoM4Chain()
 
 void ADojoM4Chain::Watch(ADojoM4Bomb* Bomb)
 {
-	// Your code: ignore nullptr and bombs already watched; otherwise remember the bomb and listen for it leaving play.
 }
 
 int32 ADojoM4Chain::GetWatched() const
 {
-	// Your code: how many watched bombs are still in play.
 	return 0;
 }
 
 int32 ADojoM4Chain::GetBlasts() const
 {
-	// Your code: how many watched bombs have left play.
 	return 0;
 }
 
 void ADojoM4Chain::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	// Your code: stop listening to every bomb still watched.
-
 	Super::EndPlay(EndPlayReason);
 }
 
 void ADojoM4Chain::HandleBombDestroyed(AActor* DestroyedActor)
 {
-	// Your code: count the blast and stop watching the bomb that left.
-	// Your code: light every other watched bomb within Reach of where it stood with SparkDelay.
 }
 ```
 
@@ -284,9 +277,9 @@ bool FDojo_M4_Chain_WatchRules::RunTest(const FString& Parameters)
 
 # Hints
 
-- The chain needs to hear each watched bomb leave. Every actor has an event for that; bind to it when the bomb is first watched, and unbind from the ones still watched when the chain itself ends.
-- The handler is given the actor that left. It stands where it blew while the handler runs, so the distance to every other watched bomb can be measured from it. Remove the blown bomb from the list before sparking the others.
-- `OnDestroyed` is on `AActor` and takes a `UFUNCTION` with one `AActor*` parameter; `AddDynamic`, `RemoveDynamic`, `FVector::Dist`, and `TArray::Contains` and `Remove` are all you need.
+- Every actor announces when it leaves play, so the chain binds to that event for each bomb the moment it starts watching it.
+- The handler is given the actor that left, which still stands where it blew, so the other bombs can be measured from it once it is off the list.
+- The event is `OnDestroyed` on `AActor`, which calls a `UFUNCTION` taking one `AActor*`, and the unbinding in `EndPlay` mirrors the binding.
 
 # Rubric
 

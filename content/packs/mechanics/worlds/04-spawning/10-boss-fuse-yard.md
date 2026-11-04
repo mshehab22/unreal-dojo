@@ -7,12 +7,12 @@ difficulty: 5
 patterns: []
 skills: [planning, spawning, time, delegates]
 terms: [spawn-collision-handling, spawn-actor-deferred, on-destroyed, timer-manager, frandomstream, overlap-event]
-prerequisites: [m4-yard-plan, m4-scatter, m4-fuse, m4-chain, m3-checkpoint, m3-scale-plate, m2-bumper]
+prerequisites: [m4-yard-plan, m4-scatter, m4-fuse, m4-chain, m4-keeper, m3-checkpoint, m3-scale-plate, m2-bumper]
 xp: 300
 estimatedMinutes: 75
 concepts:
   - A yard laid out by a seeded scatter around obstacles, so every round is the same puzzle
-  - A round that ends when the last fuse is out, judged one frame after the last blast
+  - A round that ends when the last fuse is out, judged on the next timer update after the last blast
 pieces:
   - m4-scatter
   - m4-fuse
@@ -28,7 +28,7 @@ The fuse yard lies along the level's X axis, with the yard actor at the origin. 
 - A field of bombs: a scatter centered at X 1200 over an area 1600 long and 1000 wide, spawning `ADojoM4Bomb` with seed 5 and 14 tries, so no bomb stands inside a pillar or another bomb.
 - A chain with a reach of 350 and a spark of 0.4 seconds, watching every bomb in the field.
 
-The bombs start unlit and the board reads `ARMED 13 bombs` with the real number laid out. When the runner steps on the plate, and only the yard's runner, the bomb nearest the plate is lit with a 1 second fuse, the board reads `BURNING 0 blown`, and the chain does the rest; the board counts each blast as it happens. A step on the plate while the yard burns, or after it is over, does nothing. When a blast leaves no bomb burning, the round is over and the board reads `CHAIN 9 of 13` with the real numbers. The yard judges that one frame after the blast, with `SetTimerForNextTick`, because the chain's sparks are lit by another listener of the same blast and the order of listeners is not promised.
+The bombs start unlit and the board reads `ARMED 13 bombs` with the real number laid out. When the runner steps on the plate, and only the yard's runner, the bomb nearest the plate is lit with a 1 second fuse, the board reads `BURNING 0 blown`, and the chain does the rest; the board counts each blast as it happens. A step on the plate while the yard burns, or after it is over, does nothing. When a blast leaves no bomb burning, the round is over and the board reads `CHAIN 9 of 13` with the real numbers. The yard judges that on the next timer update after the blast, with `SetTimerForNextTick`, because the chain's sparks are lit by another listener of the same blast and the order of listeners is not promised.
 
 R (`PressRestart`) lays out a fresh yard, but only after the round is over; before that R does nothing. A fresh yard destroys every bomb, pillar, plate, scatter, and chain and lays them out again with the same seed, and puts the runner back at the origin, so the second round is the same puzzle and burns the same way. A C++ yard receives keys only after `EnableInput` with the player controller.
 
@@ -69,7 +69,7 @@ Feel: once the core round passes, change the reach and the spark on the yard you
   why: The mechanic itself, already built as a piece.
 - id: end
   kind: step
-  label: A check one frame after each blast that ends the round when no bomb is burning
+  label: A check on the next timer update after each blast that ends the round when no bomb is burning
   why: Every listener of the blast must have run before the yard decides it is over.
 - id: restart
   kind: step
@@ -125,7 +125,7 @@ Feel: once the core round passes, change the reach and the spark on the yard you
 - The pieces hold no pointer to the yard; the yard spawns them, configures the scatter before it begins play, and binds the events it needs.
 - The bombs come from a seeded scatter that refuses blocked spots, so none stands inside a pillar and the same seed lays out the same yard.
 - Only the yard's runner sets the yard off, once per round, by lighting the bomb nearest the plate.
-- The chain spreads the blast, and the yard ends the round one frame after a blast that leaves no bomb burning, never in the middle of a chain.
+- The chain spreads the blast, and the yard ends the round on the next timer update after a blast that leaves no bomb burning, never in the middle of a chain.
 - R does nothing until the round is over; a fresh yard destroys and lays out every piece again, so the second round burns exactly like the first.
 - The board changes only at the start, at the first spark, at each blast, and at the end, with the real counts.
 - Nothing ticks; the seed, the number of tries, the reach, the spark, and the first fuse are properties a designer can tune; every timer is cleared in `EndPlay` or when the yard is cleared; the submission gives the reach and spark it tuned in Details with one sentence on why.

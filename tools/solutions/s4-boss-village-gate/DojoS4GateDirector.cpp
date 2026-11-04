@@ -192,11 +192,30 @@ void ADojoS4GateDirector::HandleFlagSet(FName Flag)
 
 void ADojoS4GateDirector::HandleKey(FKey Key)
 {
-	if (Key == EKeys::E) PressInteract();
-	if (Key == EKeys::R) RestartRound();
-	if (Key == EKeys::One) PressChoice(1);
-	if (Key == EKeys::Two) PressChoice(2);
-	if (Key == EKeys::Three) PressChoice(3);
+	if (Key == EKeys::E)
+	{
+		PressInteract();
+	}
+
+	if (Key == EKeys::R)
+	{
+		RestartRound();
+	}
+
+	if (Key == EKeys::One)
+	{
+		PressChoice(1);
+	}
+
+	if (Key == EKeys::Two)
+	{
+		PressChoice(2);
+	}
+
+	if (Key == EKeys::Three)
+	{
+		PressChoice(3);
+	}
 }
 
 void ADojoS4GateDirector::StartRound()
