@@ -43,7 +43,7 @@ This is the last piece of the Expedition Pack boss.
 
 ## See it in the editor
 
-Place a `DojoS1BagView` in the level, and a Blueprint actor `BP_Carrier` with a bag and equipment. In the level Blueprint, get the carrier's components with Get Component by Class, and on BeginPlay call Use Bag on the equipment and Show on the view with the bag and the equipment. On the 1 key call Add on the bag with `DA_Sword` and then with `DA_Potion`, and on the 2 key call Equip with `DA_Sword`. Press Play: the view shows an empty bag; press a key to add a potion and the text changes in the same frame; press another to equip the sword and the sword moves from its slot line to `Hand: Sword`. Then call Destroy Actor on the view from the 3 key and check that the other keys still work.
+Place a `DojoS1BagView` in the level, and a Blueprint actor `BP_Carrier` with a bag and equipment. In the level Blueprint, get the carrier's components with Get Component by Class, and on BeginPlay call Use Bag on the equipment and Show on the view with the bag and the equipment. On the 1 key call Add on the bag with `DA_Sword`, on the 2 key call Add with `DA_Potion`, on the 3 key call Equip on the equipment with `DA_Sword`, and on the 4 key call Destroy Actor on the view. Press Play: the view shows an empty bag; press 1 and the sword's line appears in the same frame; press 2 and the potion's line appears; press 3 and the sword moves from its slot line to `Hand: Sword`. Then press 4 and check that keys 1 to 3 still work without errors.
 
 # Files
 
@@ -226,9 +226,9 @@ bool FDojo_S1_BagView_UnbindsWhenItLeaves::RunTest(const FString& Parameters)
 
 # Hints
 
-- The panel needs two handlers, one for each event, and both do the same thing: rebuild the text from the bag and equipment as they are now. Write one function that builds the text from scratch and let the handlers call it.
-- `AddUniqueDynamic` ignores a second identical binding, and `RemoveDynamic` takes the same object and function. Remember what you were showing, so a later `Show` can unbind from it, and unbind in `EndPlay` too. Keep the stored pointers in members with other names than the parameters, such as `ShownBag`: on Windows a member and a parameter sharing a name is compiler error C4458.
-- `UTextRenderComponent::SetText` takes an `FText`; `FString::Printf` and `FString::Join` build the lines, and `FText::FromString` wraps the result.
+- Both events need the same response, so write one function that rebuilds the whole text from the bag and equipment as they are now, and let both handlers call it.
+- `AddUniqueDynamic` ignores a second identical binding, and `RemoveDynamic` takes the same object and function that were bound.
+- Remember what you were showing so a later `Show` can unbind from it, and keep those pointers in members named differently from the parameters, such as `ShownBag`, because a member and a parameter sharing a name is compiler error C4458 on Windows.
 
 # Rubric
 

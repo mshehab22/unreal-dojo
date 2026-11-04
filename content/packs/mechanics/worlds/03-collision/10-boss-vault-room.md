@@ -49,7 +49,7 @@ Extensions, in order of importance:
 2. Two plates and two gates, where the second gate needs both plates pressed, wired entirely in the room.
 3. A best time and fewest falls across rounds, shown on the board.
 
-Feel: once the core round passes, move the chute (a property on the room) until carrying a crate from it past the pit feels like a small risk you choose to take, not a trap you cannot see.
+Feel: once the core round passes, move the chute (a property on the room) until the distance from the chute to the pit and on to the plate feels like a small risk you choose to take, not a trap you cannot see. Judge it by teleporting the runner along that route, or by playing it with the carry once Extension 1 is done.
 
 # Required Pieces
 

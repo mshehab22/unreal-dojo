@@ -1196,7 +1196,7 @@
     "category": "memory",
     "short": "A variable that holds a class rather than an object, limited to one base class and its children.",
     "long": "When a tower needs to know what to fire, you do not want an existing fireball; you want the fireball class so it can spawn new ones. UPROPERTY(EditAnywhere) TSubclassOf<ADojoProjectile> ProjectileClass; gives designers a dropdown that only lists projectile classes, including Blueprint children. You then pass it to SpawnActor. This is the clean replacement for hardcoding asset paths in a constructor, which breaks the moment someone renames or moves the Blueprint.",
-    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TSubclassOf?application_version=5.8",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/TSubclassOf?application_version=5.8",
     "related": [
       "spawnactor",
       "blueprint-class",
@@ -1301,6 +1301,87 @@
       "destroy"
     ],
     "firstQuestId": "f2-tsubclassof-and-spawning"
+  },
+  {
+    "id": "spawn-collision-handling",
+    "term": "Spawn Collision Handling",
+    "aliases": [
+      "ESpawnActorCollisionHandlingMethod",
+      "SpawnCollisionHandlingOverride",
+      "DontSpawnIfColliding",
+      "AdjustIfPossibleButDontSpawnIfColliding"
+    ],
+    "category": "framework",
+    "short": "The spawn setting that says what to do when a new actor's shapes would sit inside something they block.",
+    "long": "Every spawn decides what to do at a blocked spot. AlwaysSpawn, the usual default, places the actor anyway, inside a wall if need be; the two Adjust methods look for a nearby free spot and then either spawn regardless or give up; DontSpawnIfColliding gives up at once. Set it per spawn with FActorSpawnParameters::SpawnCollisionHandlingOverride, or per class with the actor's SpawnCollisionHandlingMethod. When a spawn gives up, SpawnActor returns nullptr, so a scatterer must check the result before counting or using it. The check uses the new actor's own shapes and responses, so a trigger that only overlaps can appear anywhere.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/ESpawnActorCollisionHandlingMethod?application_version=5.8",
+    "related": [
+      "spawnactor",
+      "spawn-actor-deferred",
+      "collision-response",
+      "isvalid"
+    ],
+    "firstQuestId": "m4-spawning-with-care"
+  },
+  {
+    "id": "spawn-actor-deferred",
+    "term": "SpawnActorDeferred",
+    "aliases": [
+      "SpawnActorDeferred()",
+      "FinishSpawning",
+      "deferred spawn",
+      "deferred spawning"
+    ],
+    "category": "framework",
+    "short": "A spawn that hands you the new actor before its construction script and BeginPlay run, so you can set it up first.",
+    "long": "SpawnActor runs the whole start of an actor's life, construction script and BeginPlay included, before it returns, so anything BeginPlay reads must be set before that. GetWorld()->SpawnActorDeferred<T>(Class, Transform) stops just short: you get the actor, set its properties, and then call FinishSpawning(Transform) to run construction and BeginPlay with your values in place. A rack that loads bombs already burning, or a projectile told its speed before it starts moving, needs it. Every deferred spawn must be finished, or the actor never begins play.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UWorld?application_version=5.8",
+    "related": [
+      "spawnactor",
+      "beginplay",
+      "spawn-collision-handling",
+      "on-construction"
+    ],
+    "firstQuestId": "m4-spawning-with-care"
+  },
+  {
+    "id": "frandomstream",
+    "term": "FRandomStream",
+    "aliases": [
+      "random stream",
+      "seeded random"
+    ],
+    "category": "math",
+    "short": "A random number generator built from a seed, which gives the same sequence every time for that seed.",
+    "long": "FMath::FRandRange and its friends draw from the engine's shared generator, so their results depend on everything else that used it first and change from run to run. An FRandomStream built with a seed has its own sequence: FRandomStream Stream(Seed) followed by Stream.FRandRange(Min, Max), Stream.RandRange(Min, Max), or Stream.RandPointInBox(Box) gives the same numbers for the same seed every time. That lets a designer replay a layout by its seed, lets two clients agree on a layout from one number, and lets a test rely on random placement.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/FRandomStream?application_version=5.8",
+    "related": [
+      "fmath",
+      "fvector",
+      "spawnactor"
+    ],
+    "firstQuestId": "m4-spawning-with-care"
+  },
+  {
+    "id": "on-destroyed",
+    "term": "OnDestroyed",
+    "aliases": [
+      "OnDestroyed.AddDynamic",
+      "FActorDestroyedSignature",
+      "Event Destroyed"
+    ],
+    "category": "framework",
+    "short": "The actor event that tells every listener the actor has left play, whoever destroyed it.",
+    "long": "Every actor broadcasts OnDestroyed, a dynamic multicast delegate with the departing actor as its one parameter, when Destroy runs or its life span ends. The actor's own EndPlay has already run by then, and its location can still be read in the handler, but it is on its way out and must not be kept afterwards. A spawner that binds each new actor's OnDestroyed with AddDynamic, and removes it from its list in the handler, always knows exactly which of its actors are in play without checking them every frame.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/AActor?application_version=5.8",
+    "related": [
+      "destroy",
+      "endplay",
+      "adddynamic",
+      "dynamic-multicast-delegate",
+      "isvalid"
+    ],
+    "firstQuestId": "m4-hearing-it-go"
   },
   {
     "id": "createdefaultsubobject",
@@ -2284,7 +2365,7 @@
     ],
     "category": "collision",
     "short": "Shooting an invisible ray between two points to find what it hits first, or everything it passes through.",
-    "long": "Traces answer questions like what is under the crosshair or is there a wall between the guard and the player. GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params) returns true and fills Hit if anything blocking the Visibility channel lies on the line. By-object-type versions test against object types like Pawn, and multi versions return every hit. Pair traces with DrawDebugLine while developing so you can see them. Fast projectiles often trace from last frame's position to this frame's to avoid skipping thin targets.",
+    "long": "Traces answer questions like what is under the crosshair or is there a wall between the guard and the player. GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params) returns true and fills Hit if anything blocking the Visibility channel lies on the line. Multi versions return every hit along the line. Pair traces with DrawDebugLine while developing so you can see them. Fast projectiles often trace from last frame's position to this frame's to avoid skipping thin targets.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/traces-in-unreal-engine---overview?application_version=5.8",
     "related": [
       "sweep",
@@ -2292,7 +2373,8 @@
       "collision-channel",
       "collision-query-params",
       "world"
-    ]
+    ],
+    "firstQuestId": "m5-lines-and-hits"
   },
   {
     "id": "sweep",
@@ -2320,18 +2402,18 @@
     "term": "Collision Query Params",
     "aliases": [
       "FCollisionQueryParams",
-      "FCollisionObjectQueryParams",
       "AddIgnoredActor"
     ],
     "category": "collision",
-    "short": "Option structs passed to traces and sweeps to fine-tune them, such as which actors to ignore.",
-    "long": "Without extra options, a gun's trace starting inside the player will happily hit the player. FCollisionQueryParams Params; Params.AddIgnoredActor(this); fixes that, and also lets you request complex collision or a trace tag for debugging. FCollisionObjectQueryParams says which object types a by-object trace should look for, for example only ECC_Pawn so a fireball's trace ignores scenery. Build these once per call; they are cheap.",
-    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/using-a-single-line-trace-raycast-by-object-in-unreal-engine?application_version=5.8",
+    "short": "Option struct passed to traces and sweeps to fine-tune them, such as which actors to ignore.",
+    "long": "Without extra options, a gun's trace starting inside the player will happily hit the player. FCollisionQueryParams Params; Params.AddIgnoredActor(this); fixes that, and also lets you request complex collision or a trace tag for debugging. Build these once per call; they are cheap.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/FCollisionQueryParams?application_version=5.8",
     "related": [
       "line-trace",
       "sweep",
       "collision-channel"
-    ]
+    ],
+    "firstQuestId": "m5-lines-and-hits"
   },
   {
     "id": "collision-enabled",
@@ -3644,7 +3726,28 @@
       "uproperty",
       "gameplay-statics",
       "gameplay-tags"
-    ]
+    ],
+    "firstQuestId": "s3-save-games"
+  },
+  {
+    "id": "savegame-property",
+    "term": "SaveGame properties",
+    "aliases": [
+      "UPROPERTY(SaveGame)",
+      "ArIsSaveGame",
+      "ArNoDelta",
+      "FObjectAndNameAsStringProxyArchive"
+    ],
+    "category": "reflection",
+    "short": "Properties marked with the SaveGame specifier, which an archive with ArIsSaveGame set writes into a save and reads back.",
+    "long": "Most of an actor's properties are settings or looks, not progress. Marking the progress ones UPROPERTY(SaveGame) lets one generic routine save any actor: wrap a memory writer in an FObjectAndNameAsStringProxyArchive, set ArIsSaveGame on it (and ArNoDelta, so values equal to the defaults are written too), and call the actor's Serialize, and only the marked properties are written, by name. Reading the bytes back with a memory reader and the same setup puts just those properties back and leaves the rest alone. A USaveGame object is written without the flag, so all of its properties are saved.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
+    "related": [
+      "savegame",
+      "uproperty",
+      "reflection"
+    ],
+    "firstQuestId": "s3-savegame-properties"
   },
   {
     "id": "gameplay-tags",
@@ -4059,6 +4162,111 @@
     "firstQuestId": "p7-state-card"
   },
   {
+    "id": "bt-task-node",
+    "term": "Behavior Tree task",
+    "aliases": [
+      "UBTTaskNode",
+      "ExecuteTask",
+      "TickTask",
+      "FinishLatentTask",
+      "EBTNodeResult"
+    ],
+    "category": "AI",
+    "short": "A leaf of a behavior tree that does the actual work and reports success, failure, or that it is still running.",
+    "long": "A task is where a behavior tree acts: move, wait, attack, play a sound. In C++ you derive from UBTTaskNode and override ExecuteTask, which returns Succeeded or Failed at once, or InProgress for work that takes several frames. An InProgress task gets TickTask calls when bNotifyTick is set (the INIT_TASK_NODE_NOTIFY_FLAGS macro sets it when TickTask is overridden) and ends itself with FinishLatentTask. One task object is shared by every AI that runs the tree, so per-AI state goes in node memory, not in member variables.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTTaskNode?application_version=5.8",
+    "related": [
+      "behavior-tree",
+      "node-memory",
+      "bt-decorator",
+      "bt-service",
+      "blackboard"
+    ],
+    "firstQuestId": "s6-walk-beat"
+  },
+  {
+    "id": "node-memory",
+    "term": "Node memory",
+    "aliases": [
+      "NodeMemory",
+      "GetInstanceMemorySize",
+      "CastInstanceNodeMemory",
+      "InitializeNodeMemory"
+    ],
+    "category": "AI",
+    "short": "A small block of bytes a behavior tree keeps for each node and each AI running it, where shared nodes store per-AI state.",
+    "long": "Behavior tree nodes are not copied per AI: ten guards running one tree share one task object. Anything a node must remember for one guard, such as where that guard is walking, lives in node memory instead. The node says how many bytes it needs with GetInstanceMemorySize, the tree hands each run a NodeMemory pointer to that guard's block, and CastInstanceNodeMemory turns the pointer into your struct. InitializeNodeMemory and CleanupNodeMemory build and tear the struct down properly. Setting bCreateNodeInstance makes a separate node object per AI instead, at a memory cost.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTNode?application_version=5.8",
+    "related": [
+      "bt-task-node",
+      "behavior-tree"
+    ],
+    "firstQuestId": "s6-walk-beat"
+  },
+  {
+    "id": "bt-service",
+    "term": "Behavior Tree service",
+    "aliases": [
+      "UBTService",
+      "TickNode",
+      "OnBecomeRelevant"
+    ],
+    "category": "AI",
+    "short": "A node attached to a branch that runs on an interval while the branch is active, usually to refresh blackboard keys.",
+    "long": "A service sits on a composite or a task and wakes up every Interval seconds, plus or minus a random deviation, for as long as that part of the tree is running. Its job is to keep the blackboard current: copy what perception or a component knows into keys, so decorators and tasks only read keys. Override TickNode for the periodic work and OnBecomeRelevant for work when the branch starts, and call the parent version so the timer keeps running.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTService?application_version=5.8",
+    "related": [
+      "behavior-tree",
+      "blackboard",
+      "bt-decorator",
+      "bt-task-node"
+    ],
+    "firstQuestId": "s6-memory-service"
+  },
+  {
+    "id": "bt-decorator",
+    "term": "Behavior Tree decorator",
+    "aliases": [
+      "UBTDecorator",
+      "CalculateRawConditionValue",
+      "FlowAbortMode",
+      "observer aborts",
+      "UBTDecorator_BlackboardBase"
+    ],
+    "category": "AI",
+    "short": "A condition attached to a behavior tree node that decides whether its branch may run and can interrupt running branches when its answer changes.",
+    "long": "A decorator gates the node under it: CalculateRawConditionValue returns true to let the branch run. On its own it is checked only when the tree reaches that node. Its FlowAbortMode adds observing: Self aborts its own branch when the condition turns false, LowerPriority aborts branches to its right when it turns true, and Both does both. UBTDecorator_BlackboardBase registers for changes to one blackboard key and, when an abort mode is set, asks the tree to check the condition again whenever that key changes.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTDecorator?application_version=5.8",
+    "related": [
+      "behavior-tree",
+      "blackboard",
+      "bt-service",
+      "bt-task-node"
+    ],
+    "firstQuestId": "s6-clue-decorator"
+  },
+  {
+    "id": "ai-stimulus",
+    "term": "AI stimulus",
+    "aliases": [
+      "FAIStimulus",
+      "OnTargetPerceptionUpdated",
+      "WasSuccessfullySensed",
+      "ReportNoiseEvent",
+      "GetSenseClassForStimulus"
+    ],
+    "category": "AI",
+    "short": "One piece of news from AI perception: which sense noticed something, where, and whether it is being sensed now or was just lost.",
+    "long": "When a perception component's view of an actor changes, OnTargetPerceptionUpdated fires with the actor and an FAIStimulus. The stimulus holds StimulusLocation, Strength, an optional Tag, and the sense that produced it, which UAIPerceptionSystem::GetSenseClassForStimulus turns into a class such as UAISense_Sight. WasSuccessfullySensed is true while sight still sees the actor and false in the update that says it was lost. Hearing stimuli come from UAISense_Hearing::ReportNoiseEvent, which game code calls wherever a noise happens.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/FAIStimulus?application_version=5.8",
+    "related": [
+      "ai-perception",
+      "ai-controller",
+      "blackboard"
+    ],
+    "firstQuestId": "s6-sense-memory"
+  },
+  {
     "id": "abstract-specifier",
     "term": "UCLASS(Abstract)",
     "aliases": [
@@ -4376,6 +4584,127 @@
     "firstQuestId": "m1-triggers-and-events"
   },
   {
+    "id": "debug-draw",
+    "term": "Debug Draw",
+    "aliases": [
+      "DrawDebugLine",
+      "DrawDebugSphere",
+      "DrawDebugBox",
+      "DrawDebugPoint",
+      "DrawDebugHelpers"
+    ],
+    "category": "debugging",
+    "short": "Helper functions that draw lines, spheres, boxes, and points into the world so you can see what code is doing.",
+    "long": "Include DrawDebugHelpers.h and call DrawDebugLine(World, Start, End, Color, bPersistent, LifeTime) to draw a line, with DrawDebugSphere, DrawDebugBox, and DrawDebugPoint for other marks. A positive lifetime keeps the drawing on screen for that many seconds, and a persistent drawing stays until the level is reset. Colouring by result, green for a hit and red for a miss, turns a trace from an invisible guess into something you can read at a glance. The helpers are compiled out of shipping builds, so they are safe to leave in while developing; wrap them in a bool toggle so they can be switched off.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/traces-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "line-trace",
+      "sweep",
+      "fhitresult",
+      "on-screen-debug-message"
+    ],
+    "firstQuestId": "m5-lines-and-hits"
+  },
+  {
+    "id": "multi-trace",
+    "term": "Multi Trace",
+    "aliases": [
+      "SweepMultiByChannel",
+      "multi line trace"
+    ],
+    "category": "collision",
+    "short": "A trace that returns an array of everything along its path, nearest first, up to the first thing that blocks.",
+    "long": "LineTraceMultiByChannel fills a TArray of FHitResult instead of a single one. The array is ordered by distance, and objects whose response is Overlap appear as hits with bBlockingHit false. If something responds Block, it is the last element and nothing beyond it is tested. The function returns true only when a blocking hit was found, so loop over the array and decide what each entry means. A shot that passes through glass and stops at a wall is the classic use.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/traces-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "line-trace",
+      "fhitresult",
+      "sweep",
+      "collision-channel"
+    ],
+    "firstQuestId": "m5-shapes-and-queries"
+  },
+  {
+    "id": "collision-shape",
+    "term": "Collision Shape",
+    "aliases": [
+      "MakeSphere",
+      "MakeBox",
+      "MakeCapsule"
+    ],
+    "category": "collision",
+    "short": "A small struct describing the sphere, box, or capsule that a sweep or overlap query carries through the world.",
+    "long": "Build one with FCollisionShape::MakeSphere(Radius), MakeBox(HalfExtent), or MakeCapsule(Radius, HalfHeight) and hand it to SweepSingleByChannel or OverlapMultiByChannel along with an FQuat rotation. Box and capsule sizes are half sizes measured from the centre outward, which is an easy thing to get wrong by a factor of two. The shape is only the question being asked; it is not an object in the level and nothing is drawn unless you draw it. Match it to the thing you care about, such as the footprint of a door or the width of a character.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/traces-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "sweep",
+      "line-trace",
+      "fquat",
+      "fvector"
+    ],
+    "firstQuestId": "m5-shapes-and-queries"
+  },
+  {
+    "id": "object-type-query",
+    "term": "Object Type Query",
+    "aliases": [
+      "FCollisionObjectQueryParams",
+      "AddObjectTypesToQuery",
+      "ByObjectType"
+    ],
+    "category": "collision",
+    "short": "A trace or overlap that asks what an object is, by its object type, instead of how it responds to a channel.",
+    "long": "A by-channel trace asks which objects block a kind of question. A by-object-type query lists the object types you care about in an FCollisionObjectQueryParams, for example AddObjectTypesToQuery(ECC_Pawn), and matches objects whose own type is on that list. LineTraceSingleByObjectType and its sweep and overlap relatives take that struct in place of a channel. Choose it for questions like is there a pawn here, and a channel for questions like what blocks my sight.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/FCollisionObjectQueryParams?application_version=5.8",
+    "related": [
+      "line-trace",
+      "collision-query-params",
+      "collision-channel",
+      "sweep"
+    ],
+    "firstQuestId": "m5-shapes-and-queries"
+  },
+  {
+    "id": "dot-product",
+    "term": "Dot Product",
+    "aliases": [
+      "dot",
+      "FVector::DotProduct",
+      "DotProduct"
+    ],
+    "category": "math",
+    "short": "A single number from two vectors that tells how closely they point the same way.",
+    "long": "For two unit vectors, the dot product is the cosine of the angle between them: 1 when they point the same way, 0 when they are at right angles, and -1 when they are opposite. FVector::DotProduct(A, B) computes it, and the vectors must be normalised first for that reading to hold. Comparing the result with a threshold is the cheap way to ask whether something is inside a viewing cone or in front of you, with no angle function needed. Dot a direction with a surface normal and the sign tells which side faces you.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TVector?application_version=5.8",
+    "related": [
+      "fvector",
+      "fmath",
+      "line-trace"
+    ],
+    "firstQuestId": "m5-lines-and-hits"
+  },
+  {
+    "id": "reflection-vector",
+    "term": "Reflection Vector",
+    "aliases": [
+      "GetReflectionVector",
+      "MirrorByVector",
+      "reflect",
+      "bounce direction"
+    ],
+    "category": "math",
+    "short": "The direction an incoming heading takes after bouncing off a surface, found by mirroring it about the surface normal.",
+    "long": "Given a heading and the ImpactNormal from a hit, FMath::GetReflectionVector(Heading, Normal) or Heading.MirrorByVector(Normal) returns the heading after a perfect bounce, with the angle out equal to the angle in. A laser that bounces between walls traces, reflects, starts the next segment at the impact point, and repeats up to a limit. Start the next trace just off the surface or ignore the surface hit, so the new line does not immediately strike the wall it left.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/FMath?application_version=5.8",
+    "related": [
+      "fvector",
+      "fmath",
+      "fhitresult",
+      "line-trace"
+    ],
+    "firstQuestId": "m5-shapes-and-queries"
+  },
+  {
     "id": "stack-machine",
     "term": "Stack machine",
     "aliases": [
@@ -4456,5 +4785,103 @@
       "ustruct"
     ],
     "firstQuestId": "p13-behavior-as-data"
+  },
+  {
+    "id": "static-variable",
+    "term": "Static variable",
+    "aliases": [
+      "static member variable",
+      "static local variable",
+      "function-local static",
+      "static data member"
+    ],
+    "category": "cpp idiom",
+    "short": "A variable that exists once for the whole program, instead of once per object, per call, or per world.",
+    "long": "A static member or a static local in C++ is made once and lives until the program closes, shared by every caller. In the Unreal editor the program is the editor itself, so a static holds its value across every Play In Editor session and is shared by every world running at the same time. A static pointer to a UObject is also invisible to the garbage collector: unless the object is rooted it can be destroyed while the pointer still holds its address, and if it is rooted it lives until the program ends. Keep statics for values that truly belong to the whole program, such as constants.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-object-handling-in-unreal-engine?application_version=5.8",
+    "related": [
+      "garbage-collection",
+      "add-to-root",
+      "play-in-editor",
+      "world-subsystem"
+    ],
+    "firstQuestId": "p14-reachable-from-anywhere"
+  },
+  {
+    "id": "add-to-root",
+    "term": "AddToRoot",
+    "aliases": [
+      "RemoveFromRoot",
+      "root set"
+    ],
+    "category": "memory",
+    "short": "Puts a UObject in the root set, so the garbage collector never destroys it until RemoveFromRoot is called.",
+    "long": "The garbage collector keeps every object it can reach from the root set and destroys the rest. AddToRoot adds an object to that set directly, which keeps it alive even when nothing else points at it through a UPROPERTY. It is meant for a few long-lived engine objects; in gameplay code it usually patches a static pointer, and it turns that object into one that outlives every level and play session unless something remembers to call RemoveFromRoot.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/UObjectBaseUtility/AddToRoot?application_version=5.8",
+    "related": [
+      "garbage-collection",
+      "uproperty",
+      "static-variable",
+      "uobject"
+    ],
+    "firstQuestId": "p14-reachable-from-anywhere"
+  },
+  {
+    "id": "dependency-injection",
+    "term": "Dependency injection",
+    "aliases": [
+      "injected dependency",
+      "injecting a dependency",
+      "constructor injection"
+    ],
+    "category": "cpp idiom",
+    "short": "Handing an object the things it depends on, instead of letting it reach out and find them itself.",
+    "long": "A class that is given its collaborators, through a function such as an Init or Use call, a constructor argument, or a property its owner sets, shows its dependencies in its interface and can be given a different one at any time: a practice log instead of the ranked log, or a test double in an automation test. The cost is wiring: whoever builds the object must make or find the dependency and pass it along. In Unreal, the owner that does the wiring is often a game mode, a director actor, or a subsystem that the engine creates with a known lifetime.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
+    "related": [
+      "world-subsystem",
+      "subsystem",
+      "uproperty",
+      "static-variable"
+    ],
+    "firstQuestId": "p14-reachable-from-anywhere"
+  },
+  {
+    "id": "null-object",
+    "term": "Null Object",
+    "aliases": [
+      "null provider",
+      "null service",
+      "do-nothing provider"
+    ],
+    "category": "cpp idiom",
+    "short": "A do-nothing implementation of an interface that stands in when no real one has been provided.",
+    "long": "When a service might not have been set up yet, the usual answers are to return nullptr and make every caller check, or to assert and stop the game. A null object is a third answer: a real implementation of the same interface that quietly does nothing, such as an announcer that drops every line. Whoever asks always receives something callable, and a feature is switched off by providing nothing. The price is that a mistake can hide, so a good null object counts or logs what it drops.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/interfaces-in-unreal-engine?application_version=5.8",
+    "related": [
+      "uinterface",
+      "iinterface",
+      "subsystem",
+      "isvalid"
+    ],
+    "firstQuestId": "p15-who-do-i-call"
+  },
+  {
+    "id": "tscriptinterface",
+    "term": "TScriptInterface",
+    "aliases": [
+      "TScriptInterface<T>"
+    ],
+    "category": "object model",
+    "short": "A pointer to a UObject that is known to implement a given interface, usable as a UPROPERTY.",
+    "long": "A plain pointer to an interface class cannot be a UPROPERTY, and a plain UObject pointer does not say which interface its object promises. TScriptInterface holds the object together with its interface pointer, so a property can say TScriptInterface<IDojoAnnouncer> and the garbage collector still sees the object. You call functions through it with the arrow operator, and a locator can store its current provider this way. A common alternative is to keep a UObject pointer and cast it to the interface when needed.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/TScriptInterface?application_version=5.8",
+    "related": [
+      "uinterface",
+      "iinterface",
+      "tobjectptr",
+      "cast"
+    ],
+    "firstQuestId": "p15-service-locator-card"
   }
 ]

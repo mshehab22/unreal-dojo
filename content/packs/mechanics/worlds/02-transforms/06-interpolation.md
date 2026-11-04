@@ -35,7 +35,7 @@ explanation: Each frame closes a share of the remaining gap, and the gap shrinks
 A thing that has to get from where it is to where it should be, over several frames, uses an **interpolation** helper from `FMath`. They all take the current value, the target, the frame's `DeltaTime`, and a speed, and return the value for this frame. Two families:
 
 - **Ease out:** `FInterpTo` for a float, `VInterpTo` for a vector, `RInterpTo` for a rotator. Each frame closes a share of the remaining gap, `DeltaTime * InterpSpeed` of it, never more than all of it. It starts fast and slows as it nears, like a door settling shut. The speed is a rate, not units per second: a speed of 5 closes most of a gap in about a second. Because `DeltaTime` is in the share, a 30 frames per second game and a 120 frames per second game end up in nearly the same place after the same time.
-- **Constant:** `FInterpConstantTo`, `VInterpConstantTo`, `RInterpConstantTo`. Each frame moves a fixed amount, `Speed * DeltaTime`, and never overshoots: it lands exactly on the target. For the vector version the speed is units per second; for the rotator version it is degrees per second, limited on each axis separately, so it is the natural tool for a speed limit or a turn-rate limit. A speed of 0 or less means no limit at all: the helper jumps straight to the target.
+- **Constant:** `FInterpConstantTo`, `VInterpConstantTo`, `RInterpConstantTo`. Each frame moves a fixed amount, `Speed * DeltaTime`, and never overshoots: it lands exactly on the target. For the vector version the speed is units per second; for the rotator version it is degrees per second, limited on each axis separately, so it is the natural tool for a speed limit or a turn-rate limit. For the rotator version, a speed of 0 or less jumps straight to the target; the float and vector versions do not move at all.
 
 Easing is not the same as `FMath::Lerp(A, B, Alpha)`. A lerp blends by an alpha you choose and has no idea of time. Calling `Lerp(Current, Target, 0.1f)` every frame looks like an ease-out, but the share is per frame, not per second, so it closes far more of the gap each second at 120 frames per second than at 60.
 
@@ -48,7 +48,7 @@ Choose by feel: ease out for things that should settle (lifts, doors, cameras), 
 # Example
 
 ```cpp
-void ADojoHoverCamera::Tick(float DeltaSeconds)
+void ADojoM2HoverCamera::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
@@ -74,7 +74,7 @@ void ADojoHoverCamera::Tick(float DeltaSeconds)
   type: spot-the-bug
   prompt: A platform eases up to its target height, but at 120 frames per second it arrives much sooner than at 30. Which line is wrong?
   code: |
-    void ADojoRiser::Tick(float DeltaSeconds)
+    void ADojoM2Riser::Tick(float DeltaSeconds)
     {
     	const float Height = FMath::Lerp(GetActorLocation().Z, TargetHeight, 0.1f);
     	SetActorLocation(FVector(GetActorLocation().X, GetActorLocation().Y, Height));

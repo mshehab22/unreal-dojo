@@ -28,7 +28,7 @@ choices:
   - Canceled
   - Nothing, because the hold never finished
 answerIndex: 2
-explanation: The action began to be evaluated but never reached Triggered, so letting go is announced as Canceled.
+explanation: The hold was still waiting for its time when the key came up, so the action never reached Triggered and letting go is announced as Canceled.
 ```
 
 # Card
@@ -45,7 +45,7 @@ With no triggers, an action counts whenever its value is not zero. A **trigger**
 
 The common triggers: **Pressed** fires once when the key goes down; **Released** once when it comes up; **Down** is the default, firing every frame the key is down; **Hold** is ongoing until the key has been held for `HoldTimeThreshold` seconds and then triggered; **Hold And Release** triggers on release after that time; **Tap** triggers only if the key is released within a short time; **Repeated Tap** needs several taps; **Pulse** triggers again at a fixed interval while held; **Chorded Action** counts only while another action is also active. The old Combo trigger is deprecated in 5.8. A trigger can sit on one key's mapping or on the action itself.
 
-Only triggers that take time can be ongoing, so only they announce `Ongoing` and `Canceled`. With a Hold trigger, a key released early is `Canceled`, and a key released after the threshold is `Completed`, because by then it was triggered. Holding the key past the threshold fires `Triggered` on every frame unless the trigger's `bIsOneShot` is set.
+Pressed and Down answer at once, so they never announce `Ongoing`. Triggers that wait on time or on the key coming up can be ongoing: Hold, Tap, and Pulse, and also Released, which stays ongoing while the key is down and triggers when it comes up. With a Hold trigger, a key released early is `Canceled`, and a key released after the threshold is `Completed`, because by then it was triggered. Holding the key past the threshold fires `Triggered` on every frame unless the trigger's `bIsOneShot` is set.
 
 A handler can ask for more than the value. If it takes a **`const FInputActionInstance&`**, it can call `GetValue()`, `GetElapsedTime()`, the seconds the action has been started, ongoing, or triggered, and `GetTriggeredTime()`, the seconds it has been triggered. That is how a charge bar can follow how long a key has been held:
 
@@ -80,12 +80,11 @@ Mapping.Triggers.Add(Hold);
   type: multiple-choice
   prompt: "Which trigger can make an action announce Ongoing?"
   choices:
-    - Pressed
-    - Released
-    - Down
     - Hold
-  answerIndex: 3
-  explanation: Only triggers that take time have an ongoing state; Pressed, Released, and Down answer at once.
+    - Pressed
+    - Down
+  answerIndex: 0
+  explanation: Hold waits for its time, so it is ongoing until the threshold passes. Pressed and Down answer at once.
 - id: wrong-time
   type: spot-the-bug
   prompt: The charge bar fills to full the moment the key goes down and never shows anything in between. Which line is wrong?
