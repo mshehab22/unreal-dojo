@@ -106,6 +106,22 @@ describe("EngineCrashReader", () =>
 		expect(crash?.reason).toBe("the engine hit a fatal error");
 	});
 
+	it("keeps a message that starts with letters like Log but is not a log category, such as LogicError or Login (M5.1n)", () =>
+	{
+		const logic = reader.read(["LogWindows: Error: appError called: Fatal error: [File:a.cpp] [Line: 1] ", "LogicError: door has no owner"], []);
+		const login = reader.read(["LogWindows: Error: appError called: Fatal error: [File:a.cpp] [Line: 1] ", "Login: no player"], []);
+
+		expect(logic?.reason).toBe("LogicError: door has no owner");
+		expect(login?.reason).toBe("Login: no player");
+	});
+
+	it("does not take the critical error banner as the message of an empty check (M5.1n)", () =>
+	{
+		const crash = reader.read(["LogWindows: Error: appError called: Assertion failed: P [File:a.cpp] [Line: 1]", "LogWindows: Error: === Critical error: ==="], []);
+
+		expect(crash?.reason).toBe("a check in the code failed: P");
+	});
+
 	it("still reads the message from an engine error line in the critical error block", () =>
 	{
 		const crash = reader.read([

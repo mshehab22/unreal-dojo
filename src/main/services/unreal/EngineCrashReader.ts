@@ -26,7 +26,7 @@ const MESSAGE_LOOKAHEAD_LINES = 3;
 const LINE_PREFIX = /^(?:\[[\d.:-]+\]\[\s*\d+\])?(?:Log(?:Windows|Core|OutputDevice|Mac|Apple|Linux|Unix|HAL):\s*(?:Error|Fatal):\s*)?/;
 
 /** A line that still starts with a log category after its prefix is removed, or that starts another fatal error: never the message of the fatal error before it. */
-const NOT_A_MESSAGE_LINE = /^(?:Log\w+:|\[Callstack\]|appError called:|Fatal error:|Assertion failed:|Unhandled Exception:|Caught signal)/;
+const NOT_A_MESSAGE_LINE = /^(?:Log[A-Z]\w*:|===|\[Callstack\]|appError called:|Fatal error:|Assertion failed:|Unhandled Exception:|Caught signal)/;
 
 /** `Fatal error: [File:...] [Line: 523] message`, where the message may be empty and printed on the next line. */
 const FATAL_ERROR_WITH_FILE = /^Fatal error:\s*\[File:[^\]]*\]\s*\[Line:\s*\d+\]\s*(.*)$/;
