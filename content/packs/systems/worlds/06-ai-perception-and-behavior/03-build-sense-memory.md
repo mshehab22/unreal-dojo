@@ -1,14 +1,14 @@
 ---
 id: s6-sense-memory
 title: A memory that turns perception into facts
-order: 2
+order: 3
 kind: build
 scaffold: worked
 difficulty: 2
 patterns: [component, observer]
 skills: [ai, components, delegates]
 terms: [ai-perception, ai-stimulus, actor-component, dynamic-multicast-delegate, adddynamic, tweakobjectptr, endplay]
-prerequisites: [s6-guard-plan, p7-state-when-not, p1-observer-when-not]
+prerequisites: [s6-senses-blackboard, s6-guard-plan, p7-state-when-not, p1-observer-when-not]
 xp: 60
 estimatedMinutes: 15
 concepts:
@@ -32,7 +32,7 @@ This is the first piece of the Night Shift boss.
 
 ## See it in the editor
 
-Make a Blueprint class from AIController called `BP_Watcher`. Add an AIPerception component, give it an AI Sight config with Sight Radius 1200 and Detection by Affiliation ticked for neutrals, and add a `DojoS6SenseMemoryComponent`. On BeginPlay call Watch on the memory with the perception component, and bind a custom event to its On Memory Changed that prints Is Target Visible and Get Clue Location. Place a Pawn in the level with AI Controller Class set to `BP_Watcher` and Auto Possess AI set to Placed in World or Spawned. Press Play and walk in front of it: it prints true and where you stood; step behind it and it prints false and the last place it saw you.
+Make a Blueprint class from AIController called `BP_Watcher`. Add an AIPerception component, give it an AI Sight config with Sight Radius 1200 and Detection by Affiliation ticked for neutrals, and add a `DojoS6SenseMemoryComponent`. On BeginPlay call Watch on the memory with the perception component, and bind a custom event to its On Memory Changed that prints Is Target Visible and Get Clue Location. Make a Character Blueprint called `BP_WatchedGuard`, add a Cube static mesh to it as a body, and add a second, smaller Cube pushed out along its forward (X) direction as a nose, so you can see where it stands and which way it looks. Set its AI Controller Class to `BP_Watcher` and Auto Possess AI to Placed in World or Spawned, and place it in the level. Press Play and walk in front of its nose: it prints true and where you stood; step behind it and it prints false and the last place it saw you.
 
 # Files
 
@@ -168,7 +168,7 @@ void UDojoS6SenseMemoryComponent::HandlePerception(AActor* Actor, FAIStimulus St
 
 	if (Sense == UAISense_Sight::StaticClass())
 	{
-		NoteSight(Actor, Stimulus.WasSuccessfullySensed(), Stimulus.StimulusLocation); // @explain: Sight sends one update when it starts seeing an actor and another, with WasSuccessfullySensed false, when it loses it, so one function handles both.
+		NoteSight(Actor, Stimulus.WasSuccessfullySensed(), Stimulus.StimulusLocation); // @explain: Sight sends one update when it starts seeing an actor and another, with WasSuccessfullySensed false, when it loses it, so one function handles both. When sight is lost the engine sends the stimulus it last sensed, marked as no longer sensed, so its location is the last place the actor was seen.
 	}
 	else if (Sense == UAISense_Hearing::StaticClass() && Stimulus.WasSuccessfullySensed())
 	{
@@ -427,6 +427,9 @@ bool FDojo_S6_SenseMemory_SightAndLoss::RunTest(const FString& Parameters)
 	TestNull(TEXT("A destroyed intruder is not kept alive"), Memory->GetTarget());
 	TestFalse(TEXT("A destroyed intruder is not in sight"), Memory->IsTargetVisible());
 
+	Memory->NoteNoise(FVector(700.f, 0.f, 0.f));
+	TestEqual(TEXT("With the intruder gone, a noise is heard again"), Memory->GetClueLocation(), FVector(700.f, 0.f, 0.f));
+
 	Memory->Forget();
 	TestFalse(TEXT("Forget clears the clue"), Memory->HasClue());
 	TestEqual(TEXT("A forgotten clue has age -1"), Memory->GetClueAge(), -1.f);
@@ -534,21 +537,21 @@ bool FDojo_S6_SenseMemory_ListensToPerception::RunTest(const FString& Parameters
 
 # Hints
 
-- Both gaps are guards first, then a change. Ask what would make the news meaningless, return early in that case, and only then touch the memory.
-- In the lost branch, compare the actor that went out of sight with the one the memory follows; a weak pointer's `Get` gives you the followed actor, or null. Returning early skips the clue and the notice, which is what "changes nothing" means.
-- In `NoteNoise`, the visible flag decides whether the noise matters. For the change itself there is already a private function that stores a clue with the current time, and the delegate is broadcast the same way `NoteSight` does it, after the clue is stored.
+- Both gaps are guards first and changes second, so ask what would make the news meaningless and return early in that case.
+- For the lost branch the question is whether the actor that went out of sight is the one the memory follows, and for the noise it is whether the followed actor is in sight right now.
+- A weak pointer's `Get` gives the followed actor to compare, `IsTargetVisible` answers the sight question, and after the guards the change is stored and announced the way `NoteSight` ends.
 
 # Rubric
 
 - A sighting makes its actor the followed one and puts it in sight; losing sight of the followed actor keeps it followed, takes it out of sight, and moves the clue to where it was lost.
 - Losing sight of an actor the memory is not following, and a noise while the followed actor is in sight, change nothing and send no notice.
 - A noise out of sight becomes the newest clue with a fresh age, and every real change sends exactly one notice, after the memory holds the news.
-- The memory points at the perception component only to unbind, never keeps a destroyed actor alive, and stops listening when it leaves play.
+- The memory binds to the perception component and unbinds from it again, never keeps a destroyed actor alive, and stops listening when it leaves play.
 - The perception component and the listeners hold no knowledge of the memory's rules; the sense of each update is read from the stimulus, not guessed from the actor.
 
 # Alternative
 
-The guard could read the perception component directly whenever it decides, with `GetCurrentlyPerceivedActors` or `GetActorsPerception`, and skip the memory. That works for one decision in one place, but every decision then repeats the same rules (which sense counts, whether sight beats hearing, how old a clue may be), and nothing announces a change, so something must poll. The memory puts those rules in one component and turns perception into three facts the rest of the guard reads. It is the Component pattern from Pack 2's "Actors built from parts" world, holding one concern for any controller, and the Observer pattern twice: it listens to perception, and it announces its own changes to whoever subscribes.
+The guard could read the perception component directly whenever it decides, with `GetCurrentlyPerceivedActors` or `GetActorsPerception`, and skip the memory. That works for one decision in one place, but every decision then repeats the same rules (which sense counts, whether sight beats hearing, how old a clue may be), and if decisions read those getters directly, nothing in the guard announces a change, so something must poll. The memory puts those rules in one component and turns perception into three facts the rest of the guard reads. It is the Component pattern from Pack 2's "Actors built from parts" world, holding one concern for any controller, and the Observer pattern twice: it listens to perception, and it announces its own changes to whoever subscribes.
 
 # Parsons
 
@@ -558,7 +561,7 @@ The guard could read the perception component directly whenever it decides, with
   lines:
     - "void UDojoS6SenseMemoryComponent::NoteNoise(FVector NoiseLocation)"
     - "{"
-    - "	if (bTargetVisible)"
+    - "	if (IsTargetVisible())"
     - "	{"
     - "		return;"
     - "	}"

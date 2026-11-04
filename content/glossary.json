@@ -3065,7 +3065,8 @@
       "nav-mesh",
       "pawn-sensing",
       "possession"
-    ]
+    ],
+    "firstQuestId": "s6-senses-blackboard"
   },
   {
     "id": "behavior-tree",
@@ -3103,7 +3104,8 @@
       "behavior-tree",
       "ai-controller",
       "pawn-sensing"
-    ]
+    ],
+    "firstQuestId": "s6-senses-blackboard"
   },
   {
     "id": "nav-mesh",
@@ -3160,7 +3162,8 @@
       "ai-controller",
       "blackboard",
       "behavior-tree"
-    ]
+    ],
+    "firstQuestId": "s6-senses-blackboard"
   },
   {
     "id": "replication",
@@ -4164,7 +4167,7 @@
       "bt-service",
       "blackboard"
     ],
-    "firstQuestId": "s6-walk-beat"
+    "firstQuestId": "s6-tree-nodes"
   },
   {
     "id": "node-memory",
@@ -4177,13 +4180,13 @@
     ],
     "category": "AI",
     "short": "A small block of bytes a behavior tree keeps for each node and each AI running it, where shared nodes store per-AI state.",
-    "long": "Behavior tree nodes are not copied per AI: ten guards running one tree share one task object. Anything a node must remember for one guard, such as where that guard is walking, lives in node memory instead. The node says how many bytes it needs with GetInstanceMemorySize, the tree hands each run a NodeMemory pointer to that guard's block, and CastInstanceNodeMemory turns the pointer into your struct. InitializeNodeMemory and CleanupNodeMemory build and tear the struct down properly. Setting bCreateNodeInstance makes a separate node object per AI instead, at a memory cost.",
+    "long": "Behavior tree nodes are not copied per AI: ten guards running one tree share one task object. Anything a node must remember for one guard, such as where that guard is walking, lives in node memory instead. The node says how many bytes it needs with GetInstanceMemorySize, and the tree hands each run a NodeMemory pointer to that guard's block, which your code reads as its own struct. Setting bCreateNodeInstance makes a separate node object per AI instead, at a memory cost.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTNode?application_version=5.8",
     "related": [
       "bt-task-node",
       "behavior-tree"
     ],
-    "firstQuestId": "s6-walk-beat"
+    "firstQuestId": "s6-tree-nodes"
   },
   {
     "id": "bt-service",
@@ -4203,7 +4206,7 @@
       "bt-decorator",
       "bt-task-node"
     ],
-    "firstQuestId": "s6-memory-service"
+    "firstQuestId": "s6-tree-nodes"
   },
   {
     "id": "bt-decorator",
@@ -4211,13 +4214,11 @@
     "aliases": [
       "UBTDecorator",
       "CalculateRawConditionValue",
-      "FlowAbortMode",
-      "observer aborts",
       "UBTDecorator_BlackboardBase"
     ],
     "category": "AI",
-    "short": "A condition attached to a behavior tree node that decides whether its branch may run and can interrupt running branches when its answer changes.",
-    "long": "A decorator gates the node under it: CalculateRawConditionValue returns true to let the branch run. On its own it is checked only when the tree reaches that node. Its FlowAbortMode adds observing: Self aborts its own branch when the condition turns false, LowerPriority aborts branches to its right when it turns true, and Both does both. UBTDecorator_BlackboardBase registers for changes to one blackboard key and, when an abort mode is set, asks the tree to check the condition again whenever that key changes.",
+    "short": "A condition attached to a behavior tree node that decides whether its branch may run.",
+    "long": "A decorator gates the node under it: its CalculateRawConditionValue returns true to let the branch run and false to keep it closed. It sits on a composite or a task. UBTDecorator_BlackboardBase is the ready-made base for a condition on one blackboard key. Several decorators on one node must all agree before the branch may run.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTDecorator?application_version=5.8",
     "related": [
       "behavior-tree",
@@ -4225,7 +4226,7 @@
       "bt-service",
       "bt-task-node"
     ],
-    "firstQuestId": "s6-clue-decorator"
+    "firstQuestId": "s6-tree-nodes"
   },
   {
     "id": "ai-stimulus",
@@ -4246,7 +4247,7 @@
       "ai-controller",
       "blackboard"
     ],
-    "firstQuestId": "s6-sense-memory"
+    "firstQuestId": "s6-senses-blackboard"
   },
   {
     "id": "abstract-specifier",
