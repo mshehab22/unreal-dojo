@@ -2607,3 +2607,10 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Mutations: all 29 recipes were applied one at a time to a fresh copy and run with `--pack mechanics --quest <quest>`. All 29 made the run fail (none was a NOT CAUGHT, none stalled, none was skipped), and for each the log names the test the recipe expected: light 7, fuse box 3, exit gate 3, alert meter 4, clock 3, boss 9 (the boss folder holds the director only, so no second copy needed editing). No mutation produced a build error.
 - Slowest steps: the unmutated run (1493 s, almost all of it the 10 starter checks) and `meter-catches-repeatedly` (854 s); every other mutation took 80 to 272 s.
 
+
+## M3.2c m3-cracking-wall original numbers (content-mechanics, author-mechanics)
+- What changed: the cracking wall now takes 4 hits instead of 3, and when it breaks every channel overlaps its box instead of collision being switched off. The ball still leaves through it, and the box can still tell what is inside it. This closes the item A1637 left open (A2030).
+- What the learner sees: the label counts CRACKS 1 / 4 up to 3 / 4, then BROKEN, and the ball rolls through the rubble. The `NoCollision` route is now in the Alternative, with what it costs.
+- Tests: the same three cases, now also checking the default of 4, that three hits do not break the wall, that a pawn passes through, and that the rubble notices a shape stopped inside it.
+- Not done or left for later: engine proof pending; unverified on macOS (A75).
+- Decisions made: A2030 under "Awaiting Mohammad's review".
