@@ -6,7 +6,7 @@ import type { RunResult } from "@shared/types/run";
 
 import { levelStanding } from "../../lib/levels";
 
-import { todayLocal } from "./fixtures/fakeClock";
+import { localDayOf, todayLocal } from "./fixtures/fakeClock";
 
 /** What one attempt was, as the ledger needs it. */
 export interface LedgerAttempt
@@ -57,7 +57,7 @@ export function recordStreakDay(current: PlayerProgress["streak"], rules: RulesS
 {
 	const streak = { ...current, milestones: [...current.milestones] };
 
-	if (streak.lastActivityAt?.slice(0, 10) === todayLocal()) return { streak, milestoneReached: undefined };
+	if (streak.lastActivityAt && localDayOf(streak.lastActivityAt) === todayLocal()) return { streak, milestoneReached: undefined };
 
 	streak.count += 1;
 	streak.lastActivityAt = new Date().toISOString();

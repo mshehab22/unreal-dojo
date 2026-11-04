@@ -1,7 +1,7 @@
 // Save files for the fake: a learner part way through Pack 1, and a brand new learner.
 import type { AttemptRecord, DailyQuestState, PlayerProgress, QuestProgress } from "@shared/types/progress";
 
-import { daysFromNow, todayLocal } from "./fakeClock";
+import { daysFromNow, localDayOf, todayLocal } from "./fakeClock";
 import { MAP_FIXTURE, type StageFixture } from "./mapFixture";
 
 /** Every stage of the map, in map order. */
@@ -57,7 +57,7 @@ function dailyFixture(): DailyQuestState
 		offered: [{ kind: "drill" }, { kind: "concept", questId: "mechanics.input.actions" }, { kind: "build", questId: "foundations.memory.soft-mesh" }],
 		done: false,
 		monthBadges: ["2026-09"],
-		completedDates: [daysFromNow(-2), daysFromNow(-1)].map((iso) => iso.slice(0, 10)),
+		completedDates: [daysFromNow(-2), daysFromNow(-1)].map(localDayOf),
 	};
 }
 

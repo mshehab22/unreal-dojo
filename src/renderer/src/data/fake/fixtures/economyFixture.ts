@@ -2,7 +2,7 @@
 // today's three daily offers not chosen yet, and World 1 ready to test out, so every economy flow can be played from its start.
 import type { PlayerProgress } from "@shared/types/progress";
 
-import { daysFromNow, todayLocal } from "./fakeClock";
+import { daysFromNow, localDayOf, todayLocal } from "./fakeClock";
 import { questFlowProgressFixture } from "./questFlowFixture";
 
 /** The quest-flow save with the economy's starting points. */
@@ -21,7 +21,7 @@ export function economyProgressFixture(): PlayerProgress
 			offered: [{ kind: "drill" }, { kind: "concept", questId: "f1-uobject-and-actor" }, { kind: "build", questId: "f1-training-dummy" }],
 			done: false,
 			monthBadges: [],
-			completedDates: [daysFromNow(-1).slice(0, 10)],
+			completedDates: [localDayOf(daysFromNow(-1))],
 		},
 	};
 }
