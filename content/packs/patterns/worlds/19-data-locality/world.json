@@ -1,0 +1,5 @@
+{
+	"id": "data-locality",
+	"title": "Fireflies in a row",
+	"summary": "The summer meadow holds thousands of fireflies, and a fire basket throws up embers all evening. Making each of them an actor or an object scatters them across memory and buries the work under bookkeeping. Learn to keep them as small records side by side in one array that a single loop walks from front to back, to keep that array packed, to split what the loop reads from what it rarely needs, and to tell when none of this is worth the trouble."
+}

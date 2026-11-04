@@ -2677,11 +2677,14 @@
   {
     "id": "data-locality",
     "title": "Data Locality",
-    "intent": "Lay out the data a hot loop touches as tightly packed arrays it can walk front to back, so the CPU finds the next element already sitting in cache instead of stalling on pointer after pointer.",
-    "problem": "Updating 10,000 particles that each live in their own heap object means following 10,000 pointers to scattered memory. The CPU spends most of the frame waiting on cache misses, not doing math.",
-    "unrealForm": "Mass Entity is Unreal's data-oriented framework: fragments are plain structs stored in chunks per archetype, and processors iterate them in bulk. Niagara and instanced meshes keep packed buffers. In gameplay code you replace thousands of actors with one manager that holds a TArray of small structs, keeps active elements packed at the front, and splits rarely used fields into a separate array. Unreal Insights confirms whether it helped.",
-    "whenNot": "Code that runs rarely, or only for a handful of objects, gains nothing and loses readability, interfaces, and inheritance. Always profile first; this is an optimization with real design cost.",
-    "useCaseQuestIds": [],
+    "intent": "Lay out the data a frequently run loop reads side by side, in the order the loop reads it, so each fetch from memory brings the next records too.",
+    "problem": "Ten thousand fireflies as ten thousand actors are ten thousand ticks, ten thousand components, and ten thousand objects scattered across memory, each holding a few bytes the movement needs among many it never reads. The processor spends the frame fetching and dispatching instead of adding velocities.",
+    "unrealForm": "In gameplay code: one actor or subsystem holds a TArray of small USTRUCT records by value, walks it with one loop, keeps it packed, and moves rarely read fields to a second array. FVector3f keeps records small where doubles are not needed. At very large scale Mass Entity stores fragments in chunks by archetype and runs processors over them; Niagara and instanced static meshes keep their own packed buffers.",
+    "whenNot": "Skip it for a few dozen things, for anything that needs collision, physics, Blueprint behavior, or its own replication, and whenever a profiler does not show the loop's memory traffic as the cost. Records lose what made each thing an actor, so measure before and after.",
+    "useCaseQuestIds": [
+      "p19-firefly-swarm",
+      "p19-firefly-meadow"
+    ],
     "recall": [
       {
         "id": "data-locality-recall-1",
@@ -2715,6 +2718,32 @@
           "Mentions confirming the bottleneck with measurement"
         ],
         "explanation": "Measure, then reorganize."
+      },
+      {
+        "id": "data-locality-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A record holds a position and a velocity as FVector. How large are those two fields together in UE 5, and how large as FVector3f?",
+        "choices": [
+          "24 bytes, and 12 bytes",
+          "12 bytes, and 6 bytes",
+          "48 bytes, and 24 bytes",
+          "The same either way"
+        ],
+        "answerIndex": 2,
+        "explanation": "UE 5's FVector holds three doubles, 24 bytes, and FVector3f three floats, 12 bytes; two of each are 48 and 24 bytes."
+      },
+      {
+        "id": "data-locality-recall-5",
+        "type": "multiple-choice",
+        "prompt": "A packed array of 20,000 records must lose the record at index 10. Which call keeps it packed while moving only one other record?",
+        "choices": [
+          "RemoveAtSwap(10)",
+          "RemoveAt(10)",
+          "Empty()",
+          "SetNum(10)"
+        ],
+        "answerIndex": 0,
+        "explanation": "RemoveAtSwap moves the last record into index 10; RemoveAt shifts all 19,989 records after it down by one."
       }
     ],
     "scenarios": [
@@ -2757,6 +2786,46 @@
         ],
         "answerIndex": 3,
         "explanation": "Data Locality is for large, hot loops confirmed by a profiler. Thirty widgets are almost certainly slow for another reason."
+      },
+      {
+        "id": "data-locality-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A herding game has 50,000 sheep, each an actor whose Tick nudges it toward the flock. Unreal Insights shows the game thread spending most of its frame in those ticks, though each does very little math. Which pattern guides the rewrite?",
+        "choices": [
+          "data-locality",
+          "object-pool",
+          "flyweight",
+          "component"
+        ],
+        "answer": "data-locality",
+        "distractorNotes": [
+          {
+            "choice": "object-pool",
+            "why": "No sheep is spawned or destroyed during play; reusing actors would not shorten the per-frame walk over them."
+          },
+          {
+            "choice": "flyweight",
+            "why": "The sheep could share one mesh and one set of settings, but each still ticks as its own actor."
+          },
+          {
+            "choice": "component",
+            "why": "Splitting each sheep into components keeps one object per sheep, and adds more."
+          }
+        ],
+        "explanation": "Keep the sheep as small records in one array owned by one actor and update them in one loop; at this size Mass Entity is also worth a look."
+      },
+      {
+        "id": "data-locality-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A fire basket's embers are only seen: no gameplay code ever reads where they are. A teammate wants to write a hot and cold split for them. What is the better choice?",
+        "choices": [
+          "Write the split; embers are a classic case",
+          "Make each ember an actor so it can be seen",
+          "Store them in a TMap by ID",
+          "Use a Niagara system, which keeps its particles packed for you, and write no ember code at all"
+        ],
+        "answerIndex": 3,
+        "explanation": "Effects that are only seen belong in Niagara. Records of your own pay off when gameplay has to read or change them."
       }
     ]
   },

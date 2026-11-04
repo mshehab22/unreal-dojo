@@ -5094,5 +5094,100 @@
       "tick"
     ],
     "firstQuestId": "p17-dirty-flag-card"
+  },
+  {
+    "id": "cache-line",
+    "term": "Cache line",
+    "aliases": [
+      "cache lines",
+      "PLATFORM_CACHE_LINE_SIZE",
+      "cache miss"
+    ],
+    "category": "memory",
+    "short": "The block of memory the processor fetches at once, 64 bytes on PC, so data stored next to what you read arrives with it.",
+    "long": "The processor keeps recently used memory in small, fast caches and fills them a whole line at a time; Unreal names the size PLATFORM_CACHE_LINE_SIZE, 64 bytes on Windows. Reading something already in a cache is quick, while a cache miss waits for main memory, often for hundreds of steps of work. That is why a loop over records packed side by side in a TArray runs far faster than a loop that follows a pointer to a separate object for each element: every fetched line holds the next records instead of unrelated fields.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-insights-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tarray",
+      "ustruct",
+      "hot-cold-split",
+      "profiling"
+    ],
+    "firstQuestId": "p19-scattered-memory"
+  },
+  {
+    "id": "fvector3f",
+    "term": "FVector3f",
+    "aliases": [
+      "TVector<float>"
+    ],
+    "category": "math",
+    "short": "A vector of three floats, 12 bytes, next to the UE 5 FVector of three doubles, 24 bytes.",
+    "long": "UE 5 switched FVector to doubles so that very large worlds keep their precision far from the origin. FVector3f, which is UE::Math::TVector<float>, keeps the old three floats and half the size, which suits large arrays of small records such as particles or crowd agents that stay near the origin. Converting between the two is explicit, with FVector3f(SomeVector) and FVector(SomeVector3f). Floats lose precision far from the origin, so positions in a world many kilometers across are better kept as FVector or relative to a nearby origin.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TVector?application_version=5.8",
+    "related": [
+      "fvector",
+      "ustruct",
+      "cache-line"
+    ],
+    "firstQuestId": "p19-scattered-memory"
+  },
+  {
+    "id": "hot-cold-split",
+    "term": "Hot and cold split",
+    "aliases": [
+      "hot/cold split",
+      "hot-cold split",
+      "hot and cold data"
+    ],
+    "category": "memory",
+    "short": "Keeping the fields a frequent loop reads in small records, and moving the rarely read fields to a second array at the same index.",
+    "long": "A record's size decides how many records each cache line brings, so fields the loop never reads still slow it down. A hot and cold split keeps the per-frame fields, such as position and velocity, in the records the loop walks, and puts the rest, such as a name or a description, in a second array kept in step with the first. Split by what the loop really reads, measured, not by guess, and keep both arrays changing together on every add and removal.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/array-containers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "cache-line",
+      "tarray",
+      "ustruct"
+    ],
+    "firstQuestId": "p19-data-locality-card"
+  },
+  {
+    "id": "remove-at-swap",
+    "term": "RemoveAtSwap",
+    "aliases": [
+      "RemoveAtSwap()",
+      "RemoveSwap",
+      "RemoveAllSwap"
+    ],
+    "category": "containers",
+    "short": "Removes an element from a TArray by moving the last element into its place, so nothing after it shifts; the order changes.",
+    "long": "RemoveAt keeps the order of a TArray by shifting every later element down one place, which costs more the longer the array is. RemoveAtSwap fills the gap with the last element instead, so only one element moves however long the array is, and the array stays packed. Use it when the order of the elements does not matter, as in a swarm of particles; use RemoveAt when it does. RemoveSwap does the same for an element found by value, and RemoveAllSwap for every element a predicate matches.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/array-containers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tarray",
+      "hot-cold-split"
+    ],
+    "firstQuestId": "p19-data-locality-card"
+  },
+  {
+    "id": "mass-entity",
+    "term": "Mass Entity",
+    "aliases": [
+      "MassEntity",
+      "FMassFragment",
+      "UMassProcessor",
+      "FMassEntityManager"
+    ],
+    "category": "framework",
+    "short": "Unreal's framework for simulating very many entities as plain data: fragments stored in chunks by archetype and processed in bulk.",
+    "long": "In Mass an entity is only an ID, and its data are fragments, plain structs deriving from FMassFragment. Entities with the same set of fragments share an archetype, whose fragments are stored together in chunks, and a UMassProcessor runs over those chunks in bulk, often across threads. It is built for tens of thousands of agents, such as large crowds and traffic. It brings its own concepts and setup, so a single swarm with one loop is usually simpler as a TArray of structs in one actor.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/overview-of-mass-entity-in-unreal-engine?application_version=5.8",
+    "related": [
+      "ustruct",
+      "tarray",
+      "cache-line",
+      "subsystem"
+    ],
+    "firstQuestId": "p19-data-locality-card"
   }
 ]
