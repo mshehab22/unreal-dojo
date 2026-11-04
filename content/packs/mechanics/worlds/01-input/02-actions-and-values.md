@@ -86,7 +86,7 @@ ZoomOut.Modifiers.Add(NewObject<UInputModifierNegate>(ZoomContext));
     void ADojoWalker::Move(const FInputActionValue& Value)
     {
     	const float Push = Value.Get<float>();
-    	AddActorLocalOffset(FVector(0.f, Push * Speed, 0.f));
+    	AddActorLocalOffset(FVector(0.f, Push * Speed * GetWorld()->GetDeltaSeconds(), 0.f));
     }
   bugLine: 3
   fix: Read the value as an FVector2D, because the action produces a pair, and use both of its parts.

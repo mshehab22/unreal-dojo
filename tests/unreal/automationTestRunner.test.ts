@@ -68,6 +68,50 @@ describe("AutomationTestRunner", () =>
 		expect(outcome.pipelineError).toMatch(/before writing a test report \(exit code 139\)/);
 	});
 
+	it("shows the engine's fatal reason, and blames the learner's code, when the run crashed inside the quest's test", async () =>
+	{
+		const crashLines = readFileSync(join(__dirname, "fixtures", "engine-crash", "farchive-object-ptr-windows.txt"), "utf8").split(/\r?\n/);
+		const launcher = new FakeProcessLauncher([{ exitCode: 3, lines: crashLines }]);
+		const runner = new AutomationTestRunner(new MacPlatformPaths("/Users/learner"), launcher, new FakeTimer(), new FakeSandboxFileSystem());
+
+		const outcome = await runner.run({ ...REQUEST, testNames: ["Dojo.S3.Saveable.OnlySaveGameTravels"], signal: new AbortController().signal });
+
+		expect(outcome.tests).toEqual([]);
+		expect(outcome.exitCode).toBe(3);
+		expect(outcome.pipelineError).toBe("Your code stopped the engine while the test OnlySaveGameTravels was running, so no test report was written (exit code 3). The engine said: FArchive does not support FObjectPtr serialization. Use FArchiveUObject instead.");
+	});
+
+	it("keeps the plain exit code message when the output has no fatal line, so a stall or an outside kill is not called the learner's crash", async () =>
+	{
+		const { outcome } = await runOnMac({ exitCode: 1, lines: ["LogInit: Display: Engine is initialized.", "LogOutputDevice: Warning: Script Stack (0 frames) :"] });
+
+		expect(outcome.pipelineError).toBe("The engine stopped before writing a test report (exit code 1).");
+	});
+
+	it("never reads a log file: an earlier run's fatal error left in the sandbox does not reach this run's message", async () =>
+	{
+		const staleLog = "[2026.11.03-22.30.08:553][598]LogWindows: Error: appError called: Fatal error: [File:a.cpp] [Line: 1] \nAn old crash.";
+		const fileSystem = new FakeSandboxFileSystem({ "/Sandbox/Saved/Logs/Dojo.log": staleLog });
+
+		const { outcome } = await runOnMac({ exitCode: 3, lines: [] }, fileSystem);
+
+		expect(outcome.pipelineError).toBe("The engine stopped before writing a test report (exit code 3).");
+	});
+
+	it("reports a timeout as a timeout even when the output carries a fatal-looking line", async () =>
+	{
+		const timer = new FakeTimer();
+		const launcher = new FakeProcessLauncher([{ hangs: true, lines: ["LogWindows: Error: appError called: Fatal error: [File:a.cpp] [Line: 1] old noise"] }]);
+		const runner = new AutomationTestRunner(new MacPlatformPaths("/Users/learner"), launcher, timer, new FakeSandboxFileSystem());
+
+		const timing = runner.run({ ...REQUEST, signal: new AbortController().signal });
+		timer.advance(TEST_RUN_TIMEOUT_MS);
+		const outcome = await timing;
+
+		expect(outcome.pipelineError).toMatch(/10 minutes/);
+		expect(outcome.pipelineError).not.toMatch(/Your code/);
+	});
+
 	it("explains a run where none of the quest's tests ran", async () =>
 	{
 		const fileSystem = new FakeSandboxFileSystem({ "/tmp/report-1/index.json": "{\"tests\": []}" });
