@@ -2285,6 +2285,30 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
 - Decisions made: A1350 to A1358.
 - Still open: macOS is unverified (no engine there, A75). The board is a text render, not a widget. The director binds 1 to 3, the arrows, and R when a player controller exists; the headless tests have none, so they call its press functions and the key binding itself is unverified, as in World 1.
 
+## M4.P2.16 Pack 2 World 16, Object Pool (content-patterns, author-patterns)
+- What changed: a sixteenth Patterns world, "Lend it out, take it back", with the full mini-arc for Object Pool (six quests and a boss), set at a harbor fireworks festival. Actors are kept out of play instead of destroyed: hidden, not colliding, not ticking, and reset on every loan (A1651).
+- The quests and their observables:
+  - What one rocket costs (concept): what SpawnActor and Destroy do, why the cost lands in the busiest moment, `stat game` and Unreal Insights, and the three switches that take an actor out of play. The pattern is not named yet (A64).
+  - A rack that lends rockets and takes them back (build, worked): the learner writes `Release`. The rack spawns four rockets once; a rocket taken back mid-flight stops where it is and never bursts; a second return, nullptr, and a stranger are refused (A1652).
+  - The Object Pool card (concept): the four questions, free lists, the reset, full-pool policies, Unreal's forms and Niagara's own pooling, and Flyweight versus pool.
+  - Shells that rest and wake clean (build, stub): the learner writes `RestInPool` and `WakeFromPool`. Its deliberate failure: the fuse is a timer, so a shell sent to rest mid-fuse bursts at rest or in its next use unless the rest clears it (A1653).
+  - Ripples that come back (refactor): from a spawn and a lifespan per splash to ripples kept, faded, and shown again; forty splashes spawn at most three ripples, counted by the world's spawn handler (A1654).
+  - When keeping actors costs more than spawning them (concept): the clean-up Destroy did for free, BeginPlay once per actor, resting actors and the garbage collector, when to spawn, Niagara, and limits (A1655).
+  - Boss, the harbor finale (A67 integration): 12 cues from a rack and a pool set up at BeginPlay, every burst handed back, duds when empty, X aborts with nothing left burning, R plays a second clean show. Two reference plans and an 8-bullet rubric. Five tests, two full shows (A1656).
+- Also: four glossary entries (`set-actor-hidden-in-game`, `set-actor-enable-collision`, `free-list`, `niagara-component-pool`) and the Object Pool card rewritten with two recall items and two scenarios (A1657).
+- Proof: `npm run typecheck` passes; `npm test` 102 files passed, 6 skipped, 1321 tests passed, 32 skipped; `npx tsx tools/verify-content.ts` no problems and 12 warnings; `--pack patterns` no problems.
+- Engine proof (UE 5.8.4, headless `-NullRHI`, default verify workspace, `dojo-engine.lock` with an owner file, one hold of 17 minutes, scratch solutions folder with only the World 16 references, at 917f200, A1658): all eight World 16 files ok; the four references build and pass and the three starters fail as designed; first build 42.2 s, solution tests 15.1 s, starter checks 133.2 s.
+- Mutations (each run alone with `--quest`): 18 planned, 18 caught, each by an assertion, none by a build error, no stalls.
+  - Shell: the deliberate failure, the fuse left burning (`AShellSentBackEarlyStaysQuiet` only), rest keeps ticking (`ARestingShellIsOutOfPlay`), burst remembered and wake without collision (`AWokenShellStartsClean`).
+  - Rack: a second release accepted (`ReleasingTwiceLendsItOnce`), rest keeps ticking (`ARestingRocketIsOutOfPlay`).
+  - Refactor: never reuses a faded ripple and a lifespan kept on the ripple (`ABusyNightSpawnsOnlyWhatShows`, `TheSameRippleComesBack`), a recycled ripple keeps its old time (`ARippleThatGaveWayShowsItsFullTime`), recycles the newest (`AFullWaterLetsTheOldestGo`).
+  - Boss: burst rockets not handed back, a dud spawns, an abort leaves shells out, an abort keeps the show running, a restart keeps the burst count, a restart while running, cues 0.6 seconds apart, the show over before the bursts are back.
+- After the merge with main: `npm run typecheck` passes; `npm test` 103 files passed, 6 skipped, 1346 passed, 32 skipped, 0 failed; `npx tsx tools/verify-content.ts` no problems and 37 warnings, none attached to a World 16 file.
+- Originality: the 6-word check against the research notes matches only Epic doc URLs and test boilerplate. The book check is owed (D13, problems.md).
+- Review: a fresh reviewer, FIXES NEEDED on bfb3a2f (A1659): the boss's abort check needed a rule quest 04 did not state (a resting shell is not burst), one scenario named the wrong stat command, one hover named an editor setting 5.8 does not show, and two full-pool sentences followed the book's shape. Re-review on 13e8cb0: PASS.
+- Tester (fresh agent, 13e8cb0): `npm run typecheck` passes; `npm test` 102 files passed, 6 skipped, 1321 tests passed, 32 skipped, 0 failed; `npx tsx tools/verify-content.ts` no problems and 12 warnings (the only one naming World 16 is the clay thrower's forward link to the card, A72); `--pack patterns` no problems, no warnings.
+- Not done: the book check; macOS; the boss's key bindings (headless tests have no player controller). No screenshots (content only). Decisions A1650 to A1659.
+
 ## M4.P2.15 Pack 2 World 15, Service Locator (content-patterns, author-patterns)
 - What changed: a fifteenth Patterns world, "A phone book for services", with the full arc for Service Locator (six teaching quests and a boss), set around the dojo's announcer. Callers reach a service through an interface that one place hands out, so a test, a silent build, or a tracer can stand in without changing a caller. Unreal forms: a world subsystem as the locator, a native `UINTERFACE`, a null object, and a decorator; game instance subsystems are taught in text (A1584). Built away from the source chapter's audio example (A1582, A1588).
 - The quests and their observables:

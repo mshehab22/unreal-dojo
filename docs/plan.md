@@ -194,7 +194,7 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.P2.14 Pack 2 World 14 (Singleton) | content-patterns | author-patterns (session "p2-world13-bytecode") | merged (ede8ff3) | merged | A1440 to A1459 |
 | M4.P2.15 Pack 2 World 15 (Service Locator) | content-patterns | author-patterns (session "p2-world12-prototype") | merged (14bd3c1) | merged | A1580 to A1599; engine through the Lead queue |
 | M4.P3.8 Pack 3 World 8 (Gameplay Moment) | content-mechanics | author-mechanics (session "p3-world1-input") | merged (85dbd07) | merged | A1600 to A1619; engine through the Lead queue |
-| M4.P2.16 Pack 2 World 16 (Object Pool) | content-patterns | author-patterns (session "p2-world13-bytecode") | claude/m4-p2-world16 | review PASS, tester PASS at 1ff0dac; engine and 18 mutations through the Lead queue | A1650 to A1669 |
+| M4.P2.16 Pack 2 World 16 (Object Pool) | content-patterns | author-patterns (session "p2-world13-bytecode") | merged (56ec190) | merged | A1650 to A1669 |
 | M4.P2.17 Pack 2 World 17 (Dirty Flag) | content-patterns | author-patterns (session "p2-world12-prototype") | claude/m4-p2-world17 | review PASS, tester PASS at abc09ca; engine and 30 mutations through the Lead queue | A1670 to A1689 |
 | M4.P2.18 Pack 2 World 18 (Spatial Partition) | content-patterns | author-patterns (session "p3-world3-collision") | claude/m4-p2-world18 | review PASS, tester PASS at d865dff; engine and 20 mutations through the Lead queue | A1690 to A1709 |
 | M4.P2.19 Pack 2 World 19 (Data Locality) | content-patterns | author-patterns (session "p2-world13-bytecode") | claude/m4-p2-world19 | review PASS, tester PASS; engine through the Lead queue | A1710 to A1729 |
