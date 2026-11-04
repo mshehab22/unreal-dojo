@@ -53,7 +53,7 @@ Acceptance:
 - id: gate
   kind: class
   label: A gate that blocks runners while shut and crates always, and waits for the doorway to clear before shutting
-  why: Opening for one kind of thing and not another is a response per object type, not collision on or off.
+  why: The gate lets runners through while a crate never gets past, and the doorway must never shut on a runner.
 - id: pit
   kind: class
   label: A pit that sends a crate back to the chute and a runner back to its respawn point
@@ -80,7 +80,7 @@ Acceptance:
   pieces:
     - { id: shapes, kind: data, label: The flag and pit and plate are query only triggers while the gate and crates block and the runner's body has the Pawn object type, covers: [shapes] }
     - { id: flag, kind: class, label: A flag actor with an overlap sphere that answers only pawns and calls SetRespawnPoint on a runner, covers: [flag] }
-    - { id: plate, kind: class, label: A plate actor with a box trigger that counts the actors on it and broadcasts OnCountChanged, covers: [plate] }
+    - { id: plate, kind: class, label: A plate actor with a box trigger that counts what stands on it and broadcasts OnCountChanged, covers: [plate] }
     - { id: gate, kind: class, label: A gate actor with a blocking box whose Pawn response turns to Overlap when open and back to Block once no pawn is inside, covers: [gate] }
     - { id: pit, kind: class, label: A pit actor with a box trigger that calls Respawn on a runner and ReturnHome on a crate, covers: [pit] }
     - { id: chute, kind: step, label: The room spawns a crate at the chute on the lever key while fewer than two are alive, covers: [chute] }
@@ -90,7 +90,6 @@ Acceptance:
     - { from: room, to: plate, label: binds OnCountChanged }
     - { from: room, to: gate, label: Open and Close }
     - { from: room, to: pit, label: binds the trigger's begin overlap }
-    - { from: flag, to: pit, label: sets where the pit sends a runner }
     - { from: room, to: board, label: writes }
 - id: plate-drives-gate
   title: The plate drives its gate and the room only keeps score
@@ -98,7 +97,7 @@ Acceptance:
     - { id: shapes, kind: data, label: Trigger shapes overlap everything they care about and solid shapes block everything with only the gate changing at runtime, covers: [shapes] }
     - { id: flag, kind: class, label: A flag with an overlap sphere that casts the other actor to the runner and stores itself as its respawn point, covers: [flag] }
     - { id: plate, kind: class, label: A plate with a gate pointer set in Details that opens the gate at two things and closes it below two, covers: [plate] }
-    - { id: gate, kind: class, label: A gate that ignores nothing and only changes its response to the Pawn channel and checks for pawns inside before shutting, covers: [gate] }
+    - { id: gate, kind: class, label: A gate that lets runners through while open and keeps crates out and checks the doorway for runners before shutting, covers: [gate] }
     - { id: pit, kind: class, label: A pit trigger that sends crates to their home and runners to their respawn point, covers: [pit] }
     - { id: chute, kind: step, label: A lever actor that spawns a crate at the chute when fewer than two crates exist, covers: [chute] }
     - { id: room, kind: class, label: A room that builds the level and keeps the falls and the clock and listens for the vault and the pit, covers: [room] }
@@ -112,7 +111,7 @@ Acceptance:
 
 # Rubric
 
-- Every shape in the plan says whether it blocks, overlaps, or ignores runners and crates, and the gate's change when it opens is a change to one object type's response.
+- Every shape in the plan says whether it blocks, overlaps, or ignores runners and crates, and the gate lets runners pass while it is open, never lets a crate pass, and is never shut on a runner.
 - The flag, plate, gate, and pit each react only to their own shapes' events and hold no pointer to the room.
 - The plan says who tells the gate to open, and the direction of that dependency is stated.
 - The pit treats runners and crates differently, and the plan says where each one goes back to.

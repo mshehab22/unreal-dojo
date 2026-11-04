@@ -25,11 +25,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: the vault's potions are C++ functions, one per potion. A designer wants a new potion that adds twice your Stamina to your Health, and modders want to share potions of their own. What does each new potion cost today?"
 choices:
-  - Nothing; a C++ function can be changed in the Details panel
-  - A programmer, a C++ change, a compile, and a new build for every player, and modders cannot add one at all
-  - Only a restart of the editor
-  - A new Blueprint child of the potion for each one, with no code at all
-answerIndex: 1
+  - Nothing; a C++ function can be changed in the Details panel and works at once
+  - Only a restart of the editor, which reloads every C++ function when it opens again
+  - A new Blueprint child of the potion for each one, which needs a new build for everyone
+  - A programmer, a compile, and a new build for every player; modders cannot add one
+answerIndex: 3
 explanation: Behavior in C++ moves only with a compile and a shipped build, and nobody outside the team can add to it safely. Numbers can live in data; until now, behavior could not.
 ```
 
@@ -74,11 +74,11 @@ struct FPotionStep
   type: multiple-choice
   prompt: "What does storing a potion's effect as a list of steps buy over a C++ function per potion?"
   choices:
-    - Faster code, because a loop is faster than a function
-    - New potions without a compile, written by people who never touch C++, and unable to reach past what the steps allow
-    - Nothing; the two are the same
-    - Automatic replication of every potion
-  answerIndex: 1
+    - New potions without a compile, and a modder's potion can only do what the steps allow
+    - Faster code, because one loop over a list is always quicker than calling a function
+    - Nothing at all; a list of steps and a C++ function per potion are the same in practice
+    - Automatic replication of every potion to every connected client with no extra work
+  answerIndex: 0
   explanation: The list is data, so it moves without a compile, and the loop that reads it decides everything a step can do.
 - id: fill-stack
   type: fill-blank
@@ -114,20 +114,20 @@ struct FPotionStep
   type: multiple-choice
   prompt: "On a step struct, what does meta = (EditCondition = \"Op == EPotionOp::EPO_PushNumber\", EditConditionHides) do to the Number field?"
   choices:
-    - It deletes Number from the struct when Op is not PushNumber
+    - It deletes the Number field from the struct whenever Op is not PushNumber
+    - It makes Number read only in C++ code on every row that is not a PushNumber
     - It shows Number in the Details panel only on rows whose Op is PushNumber
-    - It makes Number read only in C++
-    - It sets Number to zero at runtime
-  answerIndex: 1
+    - It sets Number to zero at runtime for every row that is not a PushNumber one
+  answerIndex: 2
   explanation: EditCondition decides when a property can be edited, and EditConditionHides hides it instead of greying it out. The field still exists in memory.
 - id: blueprint-runs
   type: multiple-choice
   prompt: "How does a Blueprint graph run when the game plays?"
   choices:
-    - It is turned into C++ and compiled each time it changes
-    - Its compiled script bytes, stored on its UFunction, are read token by token by the engine's script interpreter
-    - Each node is a separate actor that ticks
-    - The graph is drawn and read off the screen
+    - It is turned into C++ and compiled again each time the graph changes
+    - Its compiled script bytes are read token by token by the engine's interpreter
+    - Each node is a separate actor that ticks once every frame while playing
+    - The graph is drawn and then read back off the screen as it runs
   answerIndex: 1
   explanation: The Blueprint compiler writes script bytes into UStruct::Script, and FFrame steps through them while the game runs.
 - id: explain-steps
