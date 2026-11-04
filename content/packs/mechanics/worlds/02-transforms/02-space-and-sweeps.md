@@ -56,7 +56,7 @@ A sweep covers the whole move, so a fast mover cannot skip through a thin wall i
 # Example
 
 ```cpp
-void ADojoPusher::Tick(float DeltaSeconds)
+void ADojoM2Pusher::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
@@ -85,7 +85,7 @@ void ADojoPusher::Tick(float DeltaSeconds)
   type: spot-the-bug
   prompt: A marker is meant to step 100 units ahead of itself, but it only does that when it happens to face along the level's X axis. Which line is wrong?
   code: |
-    void ADojoMuzzleMarker::StepAhead()
+    void ADojoM2MuzzleMarker::StepAhead()
     {
     	const FVector Ahead(100.f, 0.f, 0.f);
     	AddActorWorldOffset(Ahead);

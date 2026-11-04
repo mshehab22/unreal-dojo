@@ -21,13 +21,20 @@ concepts:
 
 When you possess the charger and hold Space, the meter climbs from 0 to 1 over one second; let go early and it fires a Light shot below one half and a Medium shot from one half up; hold for the full second, let go, and it fires a Heavy shot. After each shot the meter is empty again.
 
-`ADojoM1Charger` has its header written for you, including the shot tiers and the private functions to fill. Everything in the `.cpp` except the constructor is yours:
+Write `ADojoM1Charger` from nothing: a pawn with a scene root that owns its own Charge action and context. The tests use this public interface, so keep these names:
 
-1. `PreInitializeComponents`: build the yes or no Charge action and a context that maps Space to it through a Hold trigger whose threshold is `FullChargeSeconds`.
-2. `NotifyControllerChanged` and `SetupPlayerInputComponent`: put the context on the player's subsystem as a controller arrives, take it off the one that left, and bind the five trigger events to the five private functions.
-3. The five stage functions, `Fire`, `TierForMeter`, and the four getters.
+- `enum class EDojoM1ShotTier : uint8` (a `UENUM(BlueprintType)`) with the values `EST_None`, `EST_Light`, `EST_Medium`, and `EST_Heavy`.
+- `UPROPERTY(EditAnywhere) float FullChargeSeconds = 1.f;` is how long Space must be held for a full charge, set by a designer before the pawn finishes spawning (the tests change it between `SpawnActorDeferred` and `FinishSpawning`).
+- `UPROPERTY(EditAnywhere) TObjectPtr<UInputAction> ChargeAction;` and `UPROPERTY(EditAnywhere) TObjectPtr<UInputMappingContext> ChargeContext;` are filled in with defaults by the time the pawn finishes spawning when a designer has not assigned them: a yes or no action, and a context that maps Space to it through a Hold trigger whose threshold is `FullChargeSeconds`.
+- `UFUNCTION(BlueprintPure) float GetMeter() const` is how full the charge is, from 0 to 1.
+- `UFUNCTION(BlueprintPure) bool IsCharging() const` is true from the moment Space goes down until it is let go.
+- `UFUNCTION(BlueprintPure) EDojoM1ShotTier GetLastShot() const` is the tier of the last shot, or `EST_None` before the first.
+- `UFUNCTION(BlueprintPure) int32 GetShotsFired() const` counts the shots.
+- `static EDojoM1ShotTier TierForMeter(float MeterValue)` is the tier a meter value earns: below one half is Light, below full is Medium, full is Heavy.
 
-Dependency direction: the charger holds its own action and context and reaches the local player's subsystem only as a controller arrives or leaves; nothing else points at it.
+Everything else is yours to design: how the context reaches the player's subsystem as a controller arrives and leaves, and which functions the five trigger events run.
+
+Dependency direction: the charger holds its own action and context and reaches the local player's subsystem only as a controller arrives or leaves; no code in the controller or the engine names this class.
 
 Compiles against earlier quests: m1-turntable (`Quests/m1-turntable/DojoM1InputRig.h`, the test rig).
 
@@ -35,208 +42,20 @@ This charger is the fourth piece of the drone handoff boss.
 
 ## See it in the editor
 
-Place a `DojoM1Charger`, set Auto Possess Player to Player 0, and press Play. Hold Space and open the console with the tilde key: `ShowDebug EnhancedInput` shows the Charge action moving from Ongoing to Triggered after one second. Add a Print String of Get Meter and Get Last Shot on a one second Set Timer by Event to watch the numbers while you hold, then let go at different times to see each tier.
+Make a Blueprint subclass of `DojoM1Charger`, place it in the sandbox map, set Auto Possess Player to Player 0, and press Play. Hold Space and open the console with the tilde key: `ShowDebug EnhancedInput` shows the Charge action moving from Ongoing to Triggered after one second. In the Blueprint's Event Graph add a Print String of Get Meter and Get Last Shot on a one second Set Timer by Event from Event Begin Play to watch the numbers while you hold, then let go at different times to see each tier.
 
 # Files
 
 ## DojoM1Charger.h
 
 ```cpp
-#pragma once
-
-#include "CoreMinimal.h"
-#include "GameFramework/Pawn.h"
-#include "DojoM1Charger.generated.h"
-
-class UInputAction;
-class UInputMappingContext;
-struct FInputActionInstance;
-
-/** How hard a charged shot was. */
-UENUM(BlueprintType)
-enum class EDojoM1ShotTier : uint8
-{
-	EST_None UMETA(DisplayName = "None"),
-	EST_Light UMETA(DisplayName = "Light"),
-	EST_Medium UMETA(DisplayName = "Medium"),
-	EST_Heavy UMETA(DisplayName = "Heavy")
-};
-
-/** A pawn that charges while Space is held and fires when it is let go: a short hold is a light shot, half a charge is medium, a full charge is heavy. */
-UCLASS()
-class ADojoM1Charger : public APawn
-{
-	GENERATED_BODY()
-
-public:
-	/** Creates the scene root a pawn needs to have a place in the world, and turns ticking off. */
-	ADojoM1Charger();
-
-	/** How long Space must be held for a full charge, in seconds. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Charger", meta = (ClampMin = "0.01"))
-	float FullChargeSeconds = 1.f;
-
-	/** The yes or no Charge action; filled in with a default if a designer has not assigned one. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Charger|Input")
-	TObjectPtr<UInputAction> ChargeAction;
-
-	/** The context that maps Space to the Charge action with a Hold trigger; filled in with a default if a designer has not assigned one. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Charger|Input")
-	TObjectPtr<UInputMappingContext> ChargeContext;
-
-	/** How full the charge is, from 0 to 1. */
-	UFUNCTION(BlueprintPure, Category = "Charger")
-	float GetMeter() const;
-
-	/** True from the moment Space goes down until it is let go. */
-	UFUNCTION(BlueprintPure, Category = "Charger")
-	bool IsCharging() const;
-
-	/** The tier of the last shot, or None before the first. */
-	UFUNCTION(BlueprintPure, Category = "Charger")
-	EDojoM1ShotTier GetLastShot() const;
-
-	/** How many shots have been fired. */
-	UFUNCTION(BlueprintPure, Category = "Charger")
-	int32 GetShotsFired() const;
-
-	/** The tier a meter value earns: below one half is Light, below full is Medium, full is Heavy. */
-	static EDojoM1ShotTier TierForMeter(float MeterValue);
-
-protected:
-	/** Builds the default action and context, with the Hold trigger, when none were assigned, before the pawn can be possessed. */
-	virtual void PreInitializeComponents() override;
-
-	/** Takes this pawn's context off the old player and puts it on the new one. */
-	virtual void NotifyControllerChanged() override;
-
-	/** Binds the five stages of the charge to their functions. */
-	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
-
-private:
-	/** The key just went down: start from an empty meter. */
-	void BeginCharge();
-
-	/** Still holding, below full: set the meter from how long the action has been going. */
-	void ContinueCharge(const FInputActionInstance& Instance);
-
-	/** The hold reached its threshold: the meter is full. */
-	void ReachFullCharge();
-
-	/** The key was let go early: fire the tier the meter had reached. */
-	void ReleaseEarly();
-
-	/** The key was let go after a full charge: fire a heavy shot. */
-	void ReleaseFull();
-
-	/** Records a shot of this tier and empties the meter. */
-	void Fire(EDojoM1ShotTier Tier);
-
-	float Meter = 0.f;
-
-	bool bCharging = false;
-
-	EDojoM1ShotTier LastShot = EDojoM1ShotTier::EST_None;
-
-	int32 ShotsFired = 0;
-};
+// Declare ADojoM1Charger and EDojoM1ShotTier here.
 ```
 
 ## DojoM1Charger.cpp
 
 ```cpp
-#include "DojoM1Charger.h"
-
-#include "Components/SceneComponent.h"
-#include "EnhancedInputComponent.h"
-#include "EnhancedInputSubsystems.h"
-#include "Engine/LocalPlayer.h"
-#include "GameFramework/PlayerController.h"
-#include "InputAction.h"
-#include "InputMappingContext.h"
-#include "InputTriggers.h"
-
-ADojoM1Charger::ADojoM1Charger()
-{
-	PrimaryActorTick.bCanEverTick = false;
-
-	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-}
-
-void ADojoM1Charger::PreInitializeComponents()
-{
-	// Your code: if no action was assigned, make one as a yes or no action.
-	// Your code: if no context was assigned, make one that maps Space to the action through a Hold trigger set to FullChargeSeconds.
-
-	Super::PreInitializeComponents();
-}
-
-void ADojoM1Charger::NotifyControllerChanged()
-{
-	// Your code: take ChargeContext off the player that is leaving, call Super, then add it at priority 0 to the player that arrived.
-}
-
-void ADojoM1Charger::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	// Your code: bind Started, Ongoing, Triggered, Canceled, and Completed of the Charge action to the five stage functions.
-}
-
-float ADojoM1Charger::GetMeter() const
-{
-	return 0.f;
-}
-
-bool ADojoM1Charger::IsCharging() const
-{
-	return false;
-}
-
-EDojoM1ShotTier ADojoM1Charger::GetLastShot() const
-{
-	return EDojoM1ShotTier::EST_None;
-}
-
-int32 ADojoM1Charger::GetShotsFired() const
-{
-	return 0;
-}
-
-EDojoM1ShotTier ADojoM1Charger::TierForMeter(float MeterValue)
-{
-	return EDojoM1ShotTier::EST_None;
-}
-
-void ADojoM1Charger::BeginCharge()
-{
-	// Your code.
-}
-
-void ADojoM1Charger::ContinueCharge(const FInputActionInstance& Instance)
-{
-	// Your code.
-}
-
-void ADojoM1Charger::ReachFullCharge()
-{
-	// Your code.
-}
-
-void ADojoM1Charger::ReleaseEarly()
-{
-	// Your code.
-}
-
-void ADojoM1Charger::ReleaseFull()
-{
-	// Your code.
-}
-
-void ADojoM1Charger::Fire(EDojoM1ShotTier Tier)
-{
-	// Your code.
-}
+// Define ADojoM1Charger here.
 ```
 
 # Tests
@@ -410,9 +229,9 @@ bool FDojo_M1_ChargeMeter_ControlsFollowTheController::RunTest(const FString& Pa
 
 # Hints
 
-- Think of the key's life as five moments and give each its own small function: it goes down, it is still going, the time is up, it is let go early, it is let go after the time is up. The Hold trigger is added to the mapping that `MapKey` returns, and the function that reads time takes the action instance.
-- The trigger is `UInputTriggerHold` with a `HoldTimeThreshold`, created with `NewObject` and the context as outer, then added to the mapping's `Triggers`. The five moments are `Started`, `Ongoing`, `Triggered`, `Canceled`, and `Completed`. The instance's `GetElapsedTime()` is how long the action has been going. `NotifyControllerChanged` is built like the walker's.
-- The Ongoing bind has the same shape as the other four: the action, the event, the object, and the address of the function; only the function that takes the instance differs. The meter is the elapsed time divided by `FullChargeSeconds`, kept between 0 and 1. A heavy shot is the only one that follows `Completed`.
+- Think of the key's life as five moments, each with its own small function: it goes down, it is still going, the time is up, it is let go early, it is let go after the time is up.
+- The Hold trigger is made with `NewObject` using the context as its outer and added to the mapping that `MapKey` returns, and the function that reads time takes the action instance; `NotifyControllerChanged` is built like the turntable's.
+- Each of the five moments is its own trigger event on the Charge action, and the meter comes from the instance's elapsed time, kept between 0 and 1.
 
 # Rubric
 
@@ -421,11 +240,11 @@ bool FDojo_M1_ChargeMeter_ControlsFollowTheController::RunTest(const FString& Pa
 - The meter is read from the action instance's elapsed time divided by `FullChargeSeconds` and clamped between 0 and 1, and it is full once the trigger fires.
 - An early release fires the tier the meter had reached; a release after the threshold fires Heavy; each shot empties the meter.
 - The context follows the controller: added to the new player's subsystem and removed from the old one.
-- The charger holds its action and context; nothing else points at its input code, and the tier rule is a function that can be tested on its own.
+- The charger holds its action and context; no other class names its input code, and the tier rule is a function that can be tested on its own.
 
 # Alternative
 
-The charger could skip the Hold trigger and count time itself: start a counter on `Started`, add the frame time in `Tick`, and fire on `Completed`. That works for a plain key, but it moves a rule the input system already knows into a second place that has to stay in step with it, and it needs ticking while nothing is held. Letting the trigger own the timing means the same Hold settings can be changed on the mapping asset without touching code. This shape, a thing that is idle, charging, or has just fired and reacts to events by moving between those, is the State pattern, as in Pack 2's State world.
+The charger could skip the Hold trigger and count time itself: start a counter on `Started`, add the frame time in `Tick`, and fire on `Completed`. That works for a plain key, but it moves a rule the input system already knows into a second place that has to stay in step with it, and it needs ticking while nothing is held. Letting the trigger own the timing means the same Hold settings can be changed on the mapping asset without touching code. This shape, a thing that is idle, charging, or has just fired and reacts to events by moving between those, is close to the State pattern from Pack 2's State world, only with two flags and five handlers in place of separate state objects.
 
 # Parsons
 
@@ -442,7 +261,7 @@ The charger could skip the Hold trigger and count time itself: start a counter o
     - line: "	Meter = Instance.GetValue().Get<float>();"
       mistake: A key's value is only ever 0 or 1; how long it has been held comes from GetElapsedTime on the instance.
 - id: charger-bind
-  prompt: Put the five bindings in order.
+  prompt: "Put the five bindings in the order the moments of a charge happen: down, still going, time up, let go early, let go after the time. These are the reference's function names."
   lines:
     - "EnhancedInput->BindAction(ChargeAction, ETriggerEvent::Started, this, &ADojoM1Charger::BeginCharge);"
     - "EnhancedInput->BindAction(ChargeAction, ETriggerEvent::Ongoing, this, &ADojoM1Charger::ContinueCharge);"

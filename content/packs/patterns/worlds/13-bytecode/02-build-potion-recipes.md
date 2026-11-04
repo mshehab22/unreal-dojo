@@ -487,7 +487,7 @@ bool FDojo_P13_PotionRecipes_MachineRunsAgainAfterAFault::RunTest(const FString&
 # Hints
 
 - Every step already has its own code in `Execute`, which says with true or false whether the step worked. What does `Run` do with that answer, and when should it stop asking?
-- The stats must come back unchanged when the fifth step fails, even though the second step wrote to them. Where can the steps write while you do not yet know whether the whole recipe will work?
+- The stats must come back unchanged when a later step fails after an earlier one has written to them; where can the steps write while you do not yet know whether the whole recipe will work?
 - The machine is reused. After a recipe gave up with values still on the stack, what does the next recipe find there unless `Run` does something first?
 
 # Rubric

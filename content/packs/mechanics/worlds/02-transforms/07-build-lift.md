@@ -132,8 +132,7 @@ void ADojoM2Lift::BeginPlay()
 
 bool ADojoM2Lift::CallTo(int32 FloorIndex)
 {
-	// Your code: refuse when the lift is moving, the floor does not exist, or it is already there.
-	// Your code: otherwise set the target, start moving, turn ticking on, refresh the label, and say yes.
+	// Your code.
 	return false;
 }
 
@@ -156,13 +155,12 @@ void ADojoM2Lift::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	// Your code: ease the lift's height toward the target floor's height, keeping its X and Y.
-	// Your code: within ArriveTolerance of the floor, land exactly on it, stop moving, turn ticking off, and refresh the label.
+	// Your code.
 }
 
 void ADojoM2Lift::RefreshLabel()
 {
-	// Your code: show FLOOR and the current floor at rest, or GOING TO and the target floor while moving.
+	// Your code.
 }
 ```
 
