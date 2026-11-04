@@ -4,6 +4,70 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1591 2026-11-03 World 15 fix round 1 (author-patterns, M4.P2.15)
+The reviewer's verdict was FIXES NEEDED with no compile error found. Changed:
+- Quest 4's Parsons block practised `CallOut`, the failing function, so it was the fix itself. It now practises the tracer's `Announce`, with one valid order.
+- `UDojoP15RecordingAnnouncer`, `UDojoP15NullAnnouncer`, `UDojoP15TracingAnnouncer`, and the boss scoreboards are `UCLASS(BlueprintType)`, because Construct Object from Class and the casts in the editor steps need it (Pack 2 worlds 10 to 13 do the same).
+- Hints of the failure before it happens were removed: the brief's "placed once" sentence, the neutral `BeginPlay` and `CallOut` comments, and the "each time it is needed" wording in a quest 2 note.
+- `CrierCallsOutThroughTheDesk` makes the crier after the announcer is provided, so only `ChangesReachTheCrier` separates the two versions.
+- The editor steps name objects with Get Object Name and join arrays before printing.
+- Correct-answer positions in quests 3 and 6 were spread, quest 6's predict no longer repeats a card scenario, and two close paraphrases of the research were reworded.
+- Test objects the desk stops referencing after a swap are held by `TStrongObjectPtr`.
+- Boss tests added for what the reviewer found uncaught: the chosen classes are what is provided, one crier exists, no hit or line after the round ends, the round is still running at 29.5 seconds, the label while a round runs, and the round length, rival interval, and win points are properties.
+- Left: a `MustImplement` filter on the boss class slots (the path string is an engine detail best checked in the editor); the slots list every UObject class, and a wrong choice is refused by Provide.
+Reverse cost: low.
+
+### A1590 2026-11-03 World 15 was written without the engine; the proof is the Lead's (author-patterns, M4.P2.15)
+The task said not to touch the engine, so every C++ file, test, starter, and mutation copy was written and read but never compiled. It uses only long-stable calls (`UWorld::GetSubsystem`, `UObject::Implements`, `Cast` to an interface, `NewObject`, `FTimerManager::SetTimer`, `SpawnActorDeferred`, `InputComponent->BindKey`), copied in shape from the merged Pack 1 and Pack 2 solutions. Expect the first engine run to find any compile slip. Reverse cost: none.
+
+### A1589 2026-11-03 The boss tests keep every press away from the rival's hits (author-patterns, M4.P2.15)
+The rival hits at 4, 8, 12 seconds and so on. Every player press in the tests is at least a second from those times (1, 2, 3, 5, 6, 7, 9, 10, 11, 13), so the order of the announced lines does not depend on which timer fires first within a frame. `ExpectedLines` rebuilds the expected sequence from those times. Reverse cost: none.
+
+### A1588 2026-11-03 Glossary and card changes for Service Locator (author-patterns, M4.P2.15)
+Added `null-object` (cpp idiom; aliases null provider, null service, do-nothing provider) and `tscriptinterface` (object model; alias TScriptInterface<T>); both checked against every existing term and alias first. `null-object` is taught in `p15-who-do-i-call` and `tscriptinterface` in the card. The Service Locator card in `patterns.json` was audited: the old intent and problem used the chapter's audio example and were rewritten around the announcer; `service-locator-recall-1`, the Unreal form, and scenario 2 were reworded; added `-recall-4` and `-5`, `-scenario-3` (tests need a silent and a recording announcer) and `-scenario-4` (a multiple-choice when-not: the target of one strike). Use cases: `p15-announcer-desk` and `p15-crier-trace`. No card item says a caller must ask again each time, which is the deliberate failure (A1583). The research's claim that `IModularFeatures` has null-safe queries is wrong in 5.8 (`GetModularFeature` asserts when the feature is missing, so you check `IsModularFeatureAvailable` first), and the card says so. Reverse cost: low.
+
+### A1587 2026-11-03 The first quest requires World 13's last teaching quest, not World 14 (author-patterns, M4.P2.15)
+World 14 (Singleton) is being written in parallel and its ids are not on main, so `p15-who-do-i-call` requires `p13-bytecode-when-not`, not the boss. When World 14 merges the Lead may point it at that world's last quest. Singleton is mentioned once in the card and once in a card item, without any of World 14's ids. Reverse cost: one line.
+
+### A1586 2026-11-03 The boss builds a second service, and its desk forwards calls (author-patterns, M4.P2.15)
+Options: reuse only the announcer in the boss; add a second service so the learner builds the whole shape alone. Chosen: the scoreboard, as an interface, a do-nothing provider that counts, a memory provider, and a world subsystem. Its desk forwards `AddPoints` and `GetPoints` as Blueprint functions instead of handing out the interface, which a Blueprint director needs (a native-only interface cannot be called from Blueprint) and which also removes the temptation to keep a provider. The announcer desk keeps `Get()` returning the interface, because that is the shape in which the deliberate failure can happen. Reverse cost: low.
+
+### A1585 2026-11-03 The announcer is a native-only interface, held as an object pointer and a cast (author-patterns, M4.P2.15)
+Options: `UFUNCTION(BlueprintNativeEvent)` interface functions called through `Execute_` (as Pack 1's `f5-interfaces` does), or plain pure virtual functions in the `I` class. Chosen: the second. It is called with a pointer, needs no `_Implementation` functions, and lets providers be `UObject`s that inherit `IDojoP15Announcer`. The desk stores `TObjectPtr<UObject>` and casts with `Cast<IDojoP15Announcer>` each time (the card also names `TScriptInterface`). A native-only interface cannot be called from Blueprint, so the desks, the recording announcer, the tracer, and the crier expose Blueprint functions for the editor steps. Reverse cost: medium.
+
+### A1584 2026-11-03 The desks are world subsystems; the game instance subsystem is taught in text (author-patterns, M4.P2.15)
+`FDojoTestWorld` has no game instance, so a `UGameInstanceSubsystem` cannot be found in a test world. Options: build the desks as game instance subsystems and test them by constructing a game instance; build them as world subsystems, which Pack 1's `f4-registry` already proves work in the test world. Chosen: world subsystems. `p15-who-do-i-call` and the card say which host fits which service (a profile that survives a level change belongs on the game instance), and a card item asks it. Reverse cost: low.
+
+### A1583 2026-11-03 World 15's deliberate failure: a crier that keeps the announcer it first fetched (author-patterns, M4.P2.15)
+Options:
+- Locating a service in a constructor or from the class default object: taught openly in the card.
+- A null provider that crashes: taught openly in the first quest.
+- A crier that keeps the announcer it fetched in `BeginPlay`.
+
+Chosen: the last, the research's "caching a located provider pointer across a provider swap". `ChangesReachTheCrier` spawns a crier, calls out one line, slips a tracer in front of the announcer in place, calls out another, then provides a second announcer and calls out a third. A crier that kept the first announcer sends the second and third lines to the first announcer only. The crier's header gives `BeginPlay` and no stored pointer, and the brief says only that a crier is placed once and called out through many times. Neither the brief, the rubric, the card, nor the glossary says to ask again each time; the first place that says so is the hint ladder, and the when-not quest (after the failure) gives the reason. Engine check pending (A1590). Reverse cost: low.
+
+### A1582 2026-11-03 Service Locator arc, built away from the source's examples (author-patterns, M4.P2.15)
+Not used in briefs, cards, choices, distractors, or the card's items: the chapter's audio service (the locator's audio getter, a logged audio decorator, and the null audio service). The originality check ran against the research's Service Locator section (6 and 5 word runs; the first pass found the research's own phrasing in the card, which was reworded; none are left); the source PDF is gone, so a direct check is pending. The arc, all in the dojo:
+- `p15-who-do-i-call` (concept, no pattern name).
+- `p15-announcer-desk` (worked: interface, null and recording announcers, and a world subsystem desk; the learner writes `Provide`).
+- `p15-service-locator-card`.
+- `p15-crier-trace` (stub: a tracing decorator and a crier that announces through the desk; deliberate failure A1583).
+- `p15-gong-refactor` (a gong that makes its own speaker is moved onto the desk).
+- `p15-service-locator-when-not`.
+- `p15-boss-tournament-booth` (boss, with a second service and an A67 integration).
+
+Reverse cost: low.
+
+### A1581 2026-11-03 Pack 2 World 15 ids (author-patterns, M4.P2.15)
+- Folder `15-service-locator`; world id `service-locator`, unique across packs (A73).
+- Quest ids `p15-<slug>`; classes `UDojoP15Announcer` and `IDojoP15Announcer`, `UDojoP15NullAnnouncer`, `UDojoP15RecordingAnnouncer`, `UDojoP15AnnouncerDesk`, `UDojoP15TracingAnnouncer`, `ADojoP15Crier`, `UDojoP15LoudSpeaker`, `ADojoP15Gong`, `UDojoP15Scoreboard` and `IDojoP15Scoreboard`, `UDojoP15NullScoreboard`, `UDojoP15MemoryScoreboard`, `UDojoP15ScoreboardDesk`, `ADojoP15TournamentDirector`; tests `Dojo.P15.<Quest>.<Case>` (`AnnouncerDesk`, `CrierTrace`, `GongRefactor`, `TournamentBooth`).
+- No enums. Locals and parameters avoid the names of `AActor`, `UActorComponent`, and `UObject` members (A1050, A1060): `Desk`, `Board`, `Behind`, `Announcer`, `Provider`, `Collection`, `Fighter`, `Total`, `Winner`, `Text`.
+
+Reverse cost: medium once learners have progress saved.
+
+### A1580 2026-11-03 Decision block A1580 to A1599 from the Lead (author-patterns, M4.P2.15)
+Assigned under A71; this world uses A1580 to A1591. Reverse cost: none.
+
 - **A1870 (Lead, fake data):** the fake now compares local calendar days through `localDayOf` in `fakeClock.ts`. Reason: `lastActivityAt.slice(0, 10)` is the UTC day, so from 19:00 to midnight in New York the fake saw yesterday's activity as today's and the 7 day milestone never fired. The real `StreakRules` already uses local days through `calendarDaysBetween`, so learners were not affected; only the fake, its tests and e2e were. Not chosen: pinning the test clock, which would hide the same mistake elsewhere.
 - **A1871 (Lead, merge script):** `tools/lead/merge.sh` now exits 5 when typecheck, unit tests, the verifier, the build or e2e fail. It used to exit 0 after printing the failure, so two merges stacked on a failing main. The merge commit still stays on main, as before; the exit code stops the next merge and the push.
 ### A1450 2026-11-03 World 14 review fix round 1 (author-patterns, M4.P2.14)
