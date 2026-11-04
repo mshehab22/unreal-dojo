@@ -69,6 +69,53 @@ describe("EngineCrashReader", () =>
 		expect(reader.read([], [SAVE_TEST])).toBeUndefined();
 	});
 
+	it("reads the message of a failed check from the line after it when none is on the same line (M5.1n)", () =>
+	{
+		const crash = reader.read([
+			"LogWindows: Error: appError called: Assertion failed: Index >= 0 && Index < ArrayNum [File:D:\\build\\Array.h] [Line: 749]",
+			"Array index out of bounds: 3 from an array of size 3",
+			"",
+		], []);
+
+		expect(crash?.reason).toBe("a check in the code failed: Index >= 0 && Index < ArrayNum (Array index out of bounds: 3 from an array of size 3)");
+	});
+
+	it("keeps a failed check's own message over the next line, and does not take another log message for it", () =>
+	{
+		const sameLine = reader.read(["Assertion failed: A [File:a.cpp] [Line: 1] Own words", "Next line"], []);
+		const otherLog = reader.read(["Assertion failed: A [File:a.cpp] [Line: 1]", "LogWindows: Windows GetLastError: The operation completed successfully. (0)"], []);
+
+		expect(sameLine?.reason).toBe("a check in the code failed: A (Own words)");
+		expect(otherLog?.reason).toBe("a check in the code failed: A");
+	});
+
+	it("does not read a learner's own category that only starts with an engine category name (A1862, M5.1n)", () =>
+	{
+		const lines = ["LogCoreGame: Error: Fatal error: mine", "LogMacGuffin: Error: Assertion failed: x [File:a.cpp] [Line: 1]", "LogWindowsPlus: Error: Unhandled Exception: EXCEPTION_ACCESS_VIOLATION"];
+
+		expect(reader.read(lines, [])).toBeUndefined();
+	});
+
+	it("does not take another log message after an empty fatal message as the reason (M5.1n)", () =>
+	{
+		const crash = reader.read([
+			"LogWindows: Error: appError called: Fatal error: [File:a.cpp] [Line: 1] ",
+			"LogWindows: Windows GetLastError: The operation completed successfully. (0)",
+		], []);
+
+		expect(crash?.reason).toBe("the engine hit a fatal error");
+	});
+
+	it("still reads the message from an engine error line in the critical error block", () =>
+	{
+		const crash = reader.read([
+			"LogWindows: Error: Fatal error: [File:a.cpp] [Line: 1] ",
+			"LogWindows: Error: FArchive does not support FObjectPtr serialization.",
+		], []);
+
+		expect(crash?.reason).toBe("FArchive does not support FObjectPtr serialization.");
+	});
+
 	it("shows only the first fatal line when there are several", () =>
 	{
 		const crash = reader.read(["LogWindows: Error: appError called: Assertion failed: A [File:a.cpp] [Line: 1]", "LogWindows: Error: Unhandled Exception: EXCEPTION_ACCESS_VIOLATION"], []);

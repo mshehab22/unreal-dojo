@@ -2328,4 +2328,10 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
   - 16 new tests: the real excerpt, the shapes from the engine source, no fatal line, a learner's own error text, two fatal lines, a very long line, a stale log in the sandbox, and a timeout carrying a fatal-looking line.
 - Proof (Windows 11, from main a245224, no engine run): `npm run typecheck` passes; `npm test` 103 files, 1337 passed, 32 skipped; `npx tsx tools/verify-content.ts` no problems, 37 warnings (all existing). No screenshot: the change is a message string.
 - Not done: running it against the real engine (not allowed here), so the real `-stdout` text is unchecked; the macOS fatal shapes. Both are in problems.md.
-- Decisions made: A1860, A1861, A1862.
+- Decisions made: A1860, A1861, A1862, A1863.
+- Review round 1 (FAIL, one Must and three Shoulds, all fixed):
+  - Must: a crash from the learner's own `UE_LOG(LogTemp, Fatal, "Door opening did not start")` told them "Not your code". The crash message now holds the learner's words, and `BuildFailureExplainer`'s unanchored regexes read them. It now cuts the pipeline error at "The engine said:" before matching (A1863); two new explainer tests (the door text, and engine text containing "took longer than" and "stopped while starting").
+  - A failed check now takes its message from the next line when none is on the same line (the shape is the engine's `checkf` output as the reviewer recalled it; no real sample exists in `~/.unreal-dojo/verify/5.8`, which was searched).
+  - Engine categories are matched exactly, so `LogCoreGame` and `LogMacGuffin` are the learner's.
+  - An empty fatal message no longer takes the next line when it is another log message, a callstack or another fatal line.
+  - 5 new reader tests and 2 explainer cases. Proof (from the same base): `npm run typecheck` passes; `npm test` 1342 passed, 32 skipped, and 2 failed in `tests/renderer/economyScreens.test.ts` (fake streak day), a file this change does not touch and that passed earlier the same day; `npx tsx tools/verify-content.ts` no problems, 37 warnings.

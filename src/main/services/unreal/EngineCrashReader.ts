@@ -16,11 +16,17 @@ export interface EngineCrash
 /** The longest reason shown to the learner, in characters. A fatal line can carry a whole expression or a path. */
 export const MAX_CRASH_REASON_LENGTH = 200;
 
+/** The words that introduce the engine's own text in a crash message; the build failure explainer cuts the message here (A1863). */
+export const ENGINE_SAID_MARKER = "The engine said:";
+
 /** How many lines after a fatal line are searched for its message, which the engine prints on the line that follows. */
 const MESSAGE_LOOKAHEAD_LINES = 3;
 
 /** The start of a line: an optional log timestamp and frame number, then an optional engine error category. A learner's own category (`LogTemp`) is not in the list, so it never matches. */
-const LINE_PREFIX = /^(?:\[[\d.:-]+\]\[\s*\d+\])?(?:Log(?:Windows|Core|OutputDevice|Mac|Apple|Linux|Unix|HAL)\w*:\s*(?:Error|Fatal):\s*)?/;
+const LINE_PREFIX = /^(?:\[[\d.:-]+\]\[\s*\d+\])?(?:Log(?:Windows|Core|OutputDevice|Mac|Apple|Linux|Unix|HAL):\s*(?:Error|Fatal):\s*)?/;
+
+/** A line that still starts with a log category after its prefix is removed, or that starts another fatal error: never the message of the fatal error before it. */
+const NOT_A_MESSAGE_LINE = /^(?:Log\w+:|\[Callstack\]|appError called:|Fatal error:|Assertion failed:|Unhandled Exception:|Caught signal)/;
 
 /** `Fatal error: [File:...] [Line: 523] message`, where the message may be empty and printed on the next line. */
 const FATAL_ERROR_WITH_FILE = /^Fatal error:\s*\[File:[^\]]*\]\s*\[Line:\s*\d+\]\s*(.*)$/;
@@ -85,7 +91,7 @@ export class EngineCrashReader
 
 		const assertion = ASSERTION_FAILED.exec(body);
 
-		if (assertion) return assertionReason(assertion[1] ?? "", assertion[2] ?? "");
+		if (assertion) return assertionReason(assertion[1] ?? "", nonEmpty(assertion[2]) ?? followingMessage(lines, index) ?? "");
 
 		const fatalPlain = FATAL_ERROR_PLAIN.exec(body);
 
@@ -134,7 +140,7 @@ export class EngineCrashReader
 export function describeEngineCrash(crash: EngineCrash, exitCode: number | null): string
 {
 	const code = String(exitCode);
-	const said = `The engine said: ${endedWithPunctuation(crash.reason)}`;
+	const said = `${ENGINE_SAID_MARKER} ${endedWithPunctuation(crash.reason)}`;
 
 	if (crash.runningTest !== undefined) return `Your code stopped the engine while the test ${crash.runningTest} was running, so no test report was written (exit code ${code}). ${said}`;
 
@@ -157,14 +163,14 @@ function nonEmpty(text: string | undefined): string | undefined
 	return trimmed === "" ? undefined : trimmed;
 }
 
-/** The first non-blank line after a fatal line, which holds the message the engine printed on its own line. */
+/** The first non-blank line after a fatal line, which holds the message the engine printed on its own line. A callstack line, another log message or another fatal error is not that message. */
 function followingMessage(lines: readonly string[], index: number): string | undefined
 {
 	for (let offset = 1; offset <= MESSAGE_LOOKAHEAD_LINES; offset += 1)
 	{
 		const text = nonEmpty(bodyOf(lines[index + offset] ?? ""));
 
-		if (text !== undefined) return text.startsWith("[Callstack]") ? undefined : text;
+		if (text !== undefined) return NOT_A_MESSAGE_LINE.test(text) ? undefined : text;
 	}
 
 	return undefined;
