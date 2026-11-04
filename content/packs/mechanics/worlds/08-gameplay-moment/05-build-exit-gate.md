@@ -33,7 +33,7 @@ This gate is the third piece of the Blackout Escape boss.
 
 ## See it in the editor
 
-Place a `DojoM8ExitGate` and a `DojoM8EscapeLog`, and call Listen on the log with the gate on BeginPlay in the level Blueprint. Press 1 to call Set Powered with true on the gate. Press Play, walk the player pawn into the zone and print the log's Get Escape Count: it stays 0. Press 1 while standing in the zone and it becomes 1; leave and come back and it stays 1.
+Place a `DojoM8ExitGate` and a `DojoM8EscapeLog` near the player start; the gate's zone is an invisible box, so switch on Show, then Collision in the viewport to see it. Add references to both in the level Blueprint, call Listen on the log with the gate on BeginPlay, and on the 1 key call Set Powered with true on the gate and print the log's Get Escape Count; on the 2 key print Get Escape Count without changing anything. Press Play, walk the player pawn into the zone, and press 2: it prints 0. Press 1 while standing in the zone and it prints 1; walk out and back in, press 2, and it still prints 1.
 
 # Files
 
@@ -415,9 +415,9 @@ bool FDojo_M8_ExitGate_BlueprintsCanListen::RunTest(const FString& Parameters)
 
 # Hints
 
-- Both ways out go through one function, `LetOut`, so the power check and the once-only check live in one place. `SetPowered` has to look at who is already inside, because an overlap that began earlier will not begin again.
-- A shape can list the actors it overlaps right now; the function is on the primitive component. The overlap handler is already written and calls `LetOut`.
-- Ask the zone for the actors it overlaps right now and send each one through `LetOut`. In `LetOut`, three plain conditions come first, then the flag and the announcement.
+- Send both ways out through the one function `LetOut`, so the power check and the once-only check are written in a single place.
+- An overlap that began earlier will not begin again, so `SetPowered` has to ask the zone who is inside right now.
+- In `LetOut`, put the plain refusals first, then the flag, then the announcement.
 
 # Rubric
 
@@ -430,7 +430,7 @@ bool FDojo_M8_ExitGate_BlueprintsCanListen::RunTest(const FString& Parameters)
 
 # Alternative
 
-The gate could check power in the overlap handler only and ignore pawns already inside. That is simpler, but a hero who reaches the exit a moment before the last fuse is collected would stand in the open exit and never get out, because no overlap begins again. Asking the zone who is inside at the moment of power closes that gap. This shape, an object whose answer depends on whether it is powered, is the State pattern, as in Pack 2's State world, with two states kept in one flag.
+The gate could check power in the overlap handler only and ignore pawns already inside. That is simpler, but a hero who reaches the exit a moment before the last fuse is collected would stand in the open exit and not get out until they stepped out and back in, because no overlap begins again. Asking the zone who is inside at the moment of power closes that gap. This shape, an object whose answer depends on whether it is powered, is the State pattern, as in Pack 2's "One mode at a time" world, with two states kept in one flag.
 
 # Parsons
 
@@ -459,6 +459,6 @@ The gate could check power in the overlap handler only and ignore pawns already 
     - "	OnEscaped.Broadcast(Candidate);"
     - "}"
   distractors:
-    - line: "	OnEscaped.Broadcast(Candidate);"
-      mistake: The announcement belongs after the checks and after the flag is set, not before them.
+    - line: "	if (!bPowered && !bEscaped && !IsValid(Candidate)) return;"
+      mistake: With && the function returns only when all three conditions fail together, so an unpowered gate, a second escape, or an invalid pawn would still get through.
 ```

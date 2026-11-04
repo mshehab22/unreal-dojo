@@ -23,21 +23,21 @@ concepts:
 ```yaml
 id: predict
 type: multiple-choice
-prompt: "Guess, no penalty: a DartManager moves every dart on the track each frame, checks whether each one left the track, and destroys it. A teammate turns it into a UWorldSubsystem so it is no longer a static. Is the design fixed?"
+prompt: "Guess, no penalty: a TyreManager wears down every tyre in the garage each frame, checks whether each one is worn out, and retires it. A teammate turns it into a UWorldSubsystem so it is no longer a static. Is the design fixed?"
 choices:
-  - Yes; a subsystem is never a problem
-  - Only the lifetime is fixed; moving and checking a dart is the dart's own behavior, and still lives in a manager
-  - No; subsystems cannot hold arrays
-  - Yes, as long as the subsystem ticks
+  - Yes, because a subsystem is never a design problem
+  - Only partly; the tyres' own job still sits outside them
+  - No, because a subsystem cannot hold an array of objects
+  - Yes, provided that the subsystem is set to tick
 answerIndex: 1
-explanation: The subsystem fixes who owns the manager. It does not ask whether the manager should exist, and here each dart can move and check itself.
+explanation: The subsystem fixes who owns the manager. It does not ask whether the manager should exist, and here each tyre can wear and check itself.
 ```
 
 # Card
 
 Replacing a static with a subsystem fixes who owns a thing and how long it lives. It does not check whether the thing should exist, or whether it has the right owner. These are the common ways the old problem comes back.
 
-**The manager that should not exist.** A class named after other objects with "Manager" on the end, which only loops over them and does their work, usually holds behavior that belongs on them. Darts that move themselves and destroy themselves when they leave the track need no manager at all. Move the behavior onto the actor or into a component it carries, and keep a central object only for what is truly shared, such as a registry other code asks questions of.
+**The manager that should not exist.** A class named after other objects with "Manager" on the end, which only loops over them and does their work, usually holds behavior that belongs on them. Tyres that wear themselves down and retire themselves when they are worn out need no manager at all. Move the behavior onto the actor or into a component it carries, and keep a central object only for what is truly shared, such as a registry other code asks questions of.
 
 **The wrong owner.** A `UGameInstanceSubsystem` lives through level loads, so per-level data put there leaks into the next level, which is the old static problem with a shorter fuse. A `UWorldSubsystem` dies with its level, so a championship table kept there is lost at the first level change. Pick the owner by how long the data must live, not by which base class you used last.
 
@@ -52,13 +52,13 @@ Replacing a static with a subsystem fixes who owns a thing and how long it lives
 # Example
 
 ```cpp
-// The dart moves itself and leaves when it is off the track; no manager loops over darts.
-void ADart::Tick(float DeltaSeconds)
+// The tyre wears itself down and retires when it is worn out; no manager loops over tyres.
+void ATyre::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	AddActorWorldOffset(Velocity * DeltaSeconds);
-	if (!TrackBounds.IsInside(GetActorLocation())) Destroy();
+	Wear += WearPerSecond * DeltaSeconds;
+	if (Wear >= MaxWear) Destroy();
 }
 ```
 
@@ -69,31 +69,31 @@ void ADart::Tick(float DeltaSeconds)
   type: multiple-choice
   prompt: "Which of these is the strongest sign that a manager class should not exist?"
   choices:
-    - It is used by more than one level
-    - It only loops over other objects and does their work for them
-    - It has a UPROPERTY
-    - It is a UObject
-  answerIndex: 1
+    - It is shared by more than one level of the game
+    - It owns several UPROPERTY members of its own
+    - It is derived from UObject instead of AActor
+    - It loops over other objects and does their work
+  answerIndex: 3
   explanation: Work done to each object in turn is usually that object's own behavior; moving it onto the object removes the manager.
 - id: when-not-scope
   type: multiple-choice
   prompt: "Standings that must start empty in every level are kept in a UGameInstanceSubsystem. What goes wrong?"
   choices:
-    - Nothing; the game instance resets them on every level load
-    - The standings of the last level are still there in the next one, because the game instance outlives every level
-    - The standings are destroyed every frame
+    - The game instance resets them at every level load
+    - The standings are destroyed again on every frame
+    - Last level's standings are still there in the next
     - Game instance subsystems cannot be found from actors
-  answerIndex: 1
+  answerIndex: 2
   explanation: The owner decides the lifetime. Per-level data needs a per-level owner, the world.
 - id: when-not-helpers
   type: multiple-choice
   prompt: "A helper turns 83.4 seconds into the text \"1:23.4\" and keeps no state. Where should it live?"
   choices:
-    - In a UGameInstanceSubsystem so everyone can reach it
+    - In a UBlueprintFunctionLibrary or a plain function
+    - In a UGameInstanceSubsystem that everyone can reach
     - In a static Get that returns a formatter object
-    - In a UBlueprintFunctionLibrary or a plain function, because there is no object to own
-    - In every actor that shows a time
-  answerIndex: 2
+    - In every actor that shows a time on screen
+  answerIndex: 0
   explanation: A function with no state needs no instance, so a function library is simpler and says exactly what it is.
 - id: spot-gworld
   type: spot-the-bug
@@ -110,7 +110,7 @@ void ADart::Tick(float DeltaSeconds)
   explanation: GWorld is a global that points at whichever world the engine is working on, which with two players in Play In Editor, or in the editor itself, may not be this checkpoint's world.
 - id: spot-static-claim
   type: spot-the-bug
-  prompt: Only one save coordinator may run in each world. Which line breaks the rule when two worlds are open at once?
+  prompt: Only one save coordinator may run in each world. Which line makes the claim shared by every world open at once?
   code: |
     void ASaveCoordinator::BeginPlay()
     {

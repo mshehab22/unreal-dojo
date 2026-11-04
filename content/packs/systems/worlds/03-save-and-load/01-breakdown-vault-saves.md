@@ -18,7 +18,7 @@ concepts:
 
 # Spec
 
-A runner crosses a vault in a straight line. Five coins lie along the way and two doors block it; the runner opens a door with a lever when standing next to it and walks through. At any moment the player can save a checkpoint to a slot, and later load it: the runner is back where it stood with the coins it carried, each door is open or closed as it was, and the vault looks exactly as it did when the checkpoint was saved. A checkpoint must still load after the game is quit and started again.
+A runner crosses a vault in a straight line. Five coins lie along the way and two doors block it; the runner opens a door with a key press when standing next to it and walks through. At any moment the player can save a checkpoint to a slot, and later load it: the runner is back where it stood with the coins it carried, each door is open or closed as it was, and the vault looks exactly as it did when the checkpoint was saved. A checkpoint must still load after the game is quit and started again.
 
 Designers will add more doors, more coins, a lantern that can be lit, and a second vault, and none of that may need changes to the saving code. Each new kind of saveable thing may need a few lines of its own.
 

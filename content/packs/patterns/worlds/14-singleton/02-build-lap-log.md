@@ -335,9 +335,9 @@ bool FDojo_P14_LapLog_NoLogTimesNothing::RunTest(const FString& Parameters)
 
 # Hints
 
-- `CrossLine` has two jobs: finish the driver's lap if one is under way, and start the next. Where does the line already keep when each driver's lap started, and what does a missing entry there mean?
-- A finished lap is the difference between two times. Which of them is `Now`, and which one do you look up?
-- The refused crossing must not even start a lap. In what order do the check for a log and the bookkeeping have to come?
+- Look at what the line already stores for each driver, and decide what finding nothing there tells you.
+- A finished lap is the later time minus an earlier one, so work out which of the two you are holding and which one you must look up.
+- Do the check for a missing log before any bookkeeping, or a refused crossing would still start a lap.
 
 # Rubric
 

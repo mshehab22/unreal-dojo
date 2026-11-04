@@ -21,7 +21,7 @@ public:
 
 	/** Makes Provider the announcer; nullptr puts the do-nothing announcer back. Returns false, changing nothing, when Provider does not implement the announcer interface. */
 	UFUNCTION(BlueprintCallable, Category = "Announcer")
-	bool Provide(UObject* Provider);
+	bool Install(UObject* Provider);
 
 	/** The announcer now in place, as the interface; never empty. */
 	IDojoP15Announcer& Get() const; // @explain: The desk gives out the interface, so a caller can speak a line without knowing which class stands behind it.

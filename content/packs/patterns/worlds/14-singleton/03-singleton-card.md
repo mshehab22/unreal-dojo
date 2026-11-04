@@ -26,10 +26,10 @@ type: multiple-choice
 prompt: "Guess, no penalty: the circuit now keeps career records that must survive every level load for as long as the game runs, and many actors read them. Which owner fits best?"
 choices:
   - A static Get on the records class, rooted with AddToRoot
-  - A UGameInstanceSubsystem, made with the game instance and destroyed with it
-  - A UWorldSubsystem, so each level has its own records
-  - Each finish line making its own records object
-answerIndex: 1
+  - A UWorldSubsystem, which gives each level its own records
+  - Each finish line making and keeping its own records object
+  - A UGameInstanceSubsystem, which lives as long as the game
+answerIndex: 3
 explanation: The game instance lives from launch to quit and survives level loads, and the engine makes and destroys its subsystems with it. A world subsystem would lose the records at every level change, and a rooted static would outlive even the game session in the editor.
 ```
 
@@ -45,10 +45,10 @@ The lap board's static `Get` from the first quest is the **Singleton** pattern: 
 
 - `UEngineSubsystem`: one for the engine, alive as long as the program; rarely right for gameplay.
 - `UGameInstanceSubsystem`: one per game session, surviving level loads; career records, a save coordinator.
-- `UWorldSubsystem`: one per world, gone with the level; the standings of the race in this level.
+- `UWorldSubsystem`: one per game world, gone with the level; the standings of the race in this level.
 - `ULocalPlayerSubsystem`: one per local player, so split screen gets one each; a player's own settings.
 
-Each is found through its owner: `GetSubsystem<T>()` on the world, the game instance, or the local player, and `GEngine->GetEngineSubsystem<T>()` for the engine. The engine also has a few well-known owners that already exist once per game or per world: the game instance, the game mode, the game state, and each player controller. The engine keeps some true globals of its own, such as `GEngine` and `FModuleManager`, at the engine layer. Game code has no reason to add to them.
+Each is found through its owner: `GetSubsystem<T>()` on the world, the game instance, or the local player, and `GEngine->GetEngineSubsystem<T>()` for the engine. A subsystem is allowed to decline to be made, so check what `GetSubsystem` returns for null. The engine also has a few well-known owners that already exist: the game instance once for the game session, the game state once for each world, a player controller for each player, and the game mode once for each world on the server only, because clients have none. The engine keeps some true globals of its own, such as `GEngine` and `FModuleManager`, at the engine layer. Game code has no reason to add to them.
 
 **When only one is a rule.** Some things must be one of a kind: one set of start lights on a track, one coordinator for the save files. Enforce that rule where the instance comes into being, and still give it no global access: whoever owns the one instance hands it to the code that needs it.
 
@@ -80,10 +80,10 @@ UCareerRecords* Records = GetGameInstance()->GetSubsystem<UCareerRecords>();
   type: multiple-choice
   prompt: "Which two needs does the Singleton pattern bundle together?"
   choices:
-    - Fast access and low memory
-    - Exactly one instance, and access to it from anywhere
-    - Saving and loading
-    - Ticking and rendering
+    - Fast access to data, and low memory use
+    - One instance, reachable from anywhere
+    - Saving a game to disk, and loading it back
+    - Ticking every frame, and rendering the result
   answerIndex: 1
   explanation: The class both guarantees a single instance and hands it to any caller. Most code needs only one of the two, and the pattern forces both.
 - id: scope-standings
@@ -113,7 +113,7 @@ UCareerRecords* Records = GetGameInstance()->GetSubsystem<UCareerRecords>();
   explanation: The world hands out its own instance of each world subsystem class, so the caller names the owner instead of a global.
 - id: spot-unseen
   type: spot-the-bug
-  prompt: Career records are made the first time anyone asks for them. Which line lets the garbage collector destroy the records while code still uses them?
+  prompt: Career records are made the first time anyone asks for them. Which line declares the pointer that the garbage collector cannot see?
   code: |
     UCareerRecords* UCareerRecords::Get()
     {

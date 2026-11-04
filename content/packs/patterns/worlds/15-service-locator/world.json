@@ -1,5 +1,5 @@
 {
 	"id": "service-locator",
-	"title": "A phone book for services",
+	"title": "One desk for shared services",
 	"summary": "The dojo's gong, timers, and score screens all want the same few services: someone to announce, someone to keep score. Learn to ask for a service by its interface from one place that hands it out, so a test, a silent build, or a tracer can stand in without changing a caller, and learn when a subsystem is the right phone book and when asking it hides too much."
 }
