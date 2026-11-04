@@ -10,6 +10,7 @@ import type { AppErrorCode } from "@shared/types/errors";
 import { AppErrorException } from "../../src/main/errors/AppErrorException";
 import { BuildFailureExplainer, type EarlierQuestCode, type RunFailureEvidence } from "../../src/main/services/unreal/BuildFailureExplainer";
 import { locatedErrors, questIdsNamedIn } from "../../src/main/services/unreal/buildErrorLocations";
+import { describeEngineCrash } from "../../src/main/services/unreal/EngineCrashReader";
 import { STARTUP_CRASH_GIVE_UP_MESSAGE } from "../../src/main/services/unreal/UnrealBuilder";
 import { visualStudioWorkloadMissing } from "../../src/main/services/unreal/unrealErrors";
 
@@ -321,6 +322,8 @@ describe("BuildFailureExplainer rule 2: pipeline errors", () =>
 		{ name: "a startup crash text after the code compiled", pipelineError: STARTUP_CRASH_GIVE_UP_MESSAGE, compiled: true },
 		{ name: "a pipeline text nobody listed", pipelineError: "The run stopped unexpectedly: out of memory", compiled: false },
 		{ name: "a quest without tests", pipelineError: "This quest's tests declare no automation test, so there is nothing to run.", compiled: false },
+		{ name: "a crash from the learner's own UE_LOG(Fatal) whose text says the door 'did not start' (M5.1n)", pipelineError: describeEngineCrash({ reason: "Door opening did not start", runningTest: "OpensDoor", testsStarted: true }, 3), compiled: true },
+		{ name: "a crash whose engine text says 'took longer than' and 'stopped while starting' (M5.1n)", pipelineError: describeEngineCrash({ reason: "the loop took longer than expected and stopped while starting; none of this quest's tests ran", testsStarted: false }, 3), compiled: false },
 	];
 
 	it.each(staysWithTheQuest)("leaves the blame with the quest for $name (A1199)", async ({ pipelineError, compiled }) =>
