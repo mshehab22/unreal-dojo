@@ -350,9 +350,9 @@ bool FDojo_M4_Fuse_StartFuseLightsAtBeginPlay::RunTest(const FString& Parameters
 
 # Hints
 
-- `Light` has three cases: nothing left, a bomb that is not burning yet, and a bomb that is already burning. Only the last one needs to look at the fuse it already has before touching it.
-- A handle that already holds a running timer is replaced by the next `SetTimer` on it, from zero. Ask the timer manager how long the burning fuse has left, and only set the new one when it is shorter.
-- `GetTimerRemaining`, `IsTimerActive`, `SetTimer`, and `ClearTimer` are on `FTimerManager` in `TimerManager.h`, reached with `GetWorldTimerManager()`; the label timer loops, the fuse timer does not.
+- `Light` has three cases (nothing left, not burning yet, already burning), and only the last one has to look at the fuse it already has.
+- Setting a timer on a handle that is running replaces it from zero, so ask how long the burning fuse has left and set the new one only when it is shorter.
+- The remaining-time and active queries, `SetTimer` and `ClearTimer` are all on `FTimerManager`, reached with `GetWorldTimerManager()`, and only the label timer loops.
 
 # Rubric
 

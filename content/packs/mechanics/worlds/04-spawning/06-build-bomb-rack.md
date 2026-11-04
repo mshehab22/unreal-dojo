@@ -237,7 +237,7 @@ bool FDojo_M4_BombRack_RowFollowsTheRack::RunTest(const FString& Parameters)
 
 # Hints
 
-- The bomb reads `StartFuse` in its `BeginPlay`. Ask yourself when `BeginPlay` runs if you spawn the usual way, and what that means for a value you set on the bomb afterwards.
+- The bomb reads its fuse setting in `BeginPlay`, which runs as soon as an ordinary spawn finishes.
 - The world has a spawn that hands you the actor before it starts, and a call on the actor that starts it once you have set it up.
 - `SpawnActorDeferred` is a template on `UWorld` in `Engine/World.h` that takes the class and a transform; `FinishSpawning` is on `AActor` and takes the same transform.
 
@@ -257,14 +257,13 @@ The rack could spawn each bomb the usual way and then call `Light` on it. That r
 
 ```yaml
 - id: rack-slot
-  prompt: Put the body of one slot in order.
+  prompt: Put the spawning of one slot in order; keeping the bomb comes afterwards.
   lines:
     - "const FTransform Spot(GetActorRotation(), GetActorLocation() + GetActorRightVector() * Spacing * Slot);"
     - "ADojoM4Bomb* Bomb = GetWorld()->SpawnActorDeferred<ADojoM4Bomb>(BombClass, Spot);"
     - "if (!Bomb) continue;"
     - "Bomb->StartFuse = FirstFuse + FuseStep * Slot;"
     - "Bomb->FinishSpawning(Spot);"
-    - "Bombs.Add(Bomb);"
   distractors:
     - line: "ADojoM4Bomb* Bomb = GetWorld()->SpawnActor<ADojoM4Bomb>(BombClass, Spot);"
       mistake: SpawnActor runs BeginPlay before it returns, so a StartFuse set afterwards is never read.

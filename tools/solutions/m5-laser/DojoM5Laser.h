@@ -16,7 +16,7 @@ public:
 
 	/** How many times the beam may bounce before it stops at the next surface. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Laser", meta = (ClampMin = "0"))
-	int32 MaxBounces = 5;
+	int32 MaxBounces = 4;
 
 	/** How far one straight piece of the beam can fly, in units. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Laser", meta = (ClampMin = "1"))

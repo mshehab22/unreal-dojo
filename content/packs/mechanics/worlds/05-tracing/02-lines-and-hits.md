@@ -22,11 +22,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: a single line trace runs from a lamp to a floor. On the way it passes through a glass pane whose response to the trace's channel is Overlap, and the floor's response is Block. What does the trace report?"
 choices:
-  - It stops at the glass and reports the glass
-  - It reports the floor, because a single trace only reports a blocker
-  - It reports both the glass and the floor
-  - It reports nothing, because two objects confused it
-answerIndex: 1
+  - It stops at the glass and reports the glass instead
+  - It reports both the glass and the floor, nearest first
+  - It reports the floor, because a single trace reports one blocker
+  - It reports nothing, because two objects confused it at once
+answerIndex: 2
 explanation: An Overlap response lets the trace pass, and a single trace reports only the first thing that blocks. The glass is skipped and the floor is the answer.
 ```
 
@@ -103,19 +103,19 @@ void ADojoRangefinder::Measure()
   type: multiple-choice
   prompt: "A gun traces from the player's eye point, and the result keeps naming the player as the thing hit, at almost no distance. What is the best fix?"
   choices:
-    - Make the trace longer so it reaches past the player
+    - Make the trace much longer so it reaches past the player
+    - Turn on bTraceComplex so the trace tests the exact mesh
+    - Draw the line with a longer lifetime so it can be seen
     - Add the player to the query params as an ignored actor
-    - Turn on bTraceComplex
-    - Draw the line with a longer lifetime
-  answerIndex: 1
+  answerIndex: 3
   explanation: The line starts inside the shooter's own shape, which answered the channel. Ignoring that actor removes it from the question; length, complexity, and drawing do not.
 - id: both-sides
   type: multiple-choice
   prompt: "A crate stands squarely in the line, but a Visibility trace passes straight through it. Which is the most likely cause?"
   choices:
     - The crate's response to the Visibility channel is not Block
-    - Single traces cannot see static meshes
-    - The trace needs an FRotator to find anything
+    - Single traces cannot see static meshes, only moving actors
+    - The trace needs an FRotator before it can find anything
   answerIndex: 0
   explanation: An object takes part in a trace only through its response to the trace's channel. An Overlap or Ignore response lets the line through however large the object is.
 - id: explain-draw

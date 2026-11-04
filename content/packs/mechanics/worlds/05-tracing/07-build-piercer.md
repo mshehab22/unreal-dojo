@@ -113,30 +113,26 @@ ADojoM5Piercer::ADojoM5Piercer()
 
 void ADojoM5Piercer::Fire()
 {
-	// Your code: clear the last shot's results, and start with ShotLength at the whole Reach.
-	// Your code: trace from the actor's location along its forward for Reach units with a multi trace on the Visibility channel, leaving the piercer itself out.
-	// Your code: walk the hits in order: remember each thing that only overlaps in Pierced, and when a hit blocks, remember it in StoppedBy, take its distance as ShotLength, and stop.
-	// Your code: draw the shot's line for one second.
 }
 
 int32 ADojoM5Piercer::GetPiercedCount() const
 {
-	return 0; // Your code: how many things the last shot passed through.
+	return 0;
 }
 
 AActor* ADojoM5Piercer::GetPiercedAt(int32 Index) const
 {
-	return nullptr; // Your code: the Index-th pierced thing, or nullptr when there is none.
+	return nullptr;
 }
 
 AActor* ADojoM5Piercer::GetStoppedBy() const
 {
-	return nullptr; // Your code: the thing that stopped the shot.
+	return nullptr;
 }
 
 float ADojoM5Piercer::GetShotLength() const
 {
-	return 0.f; // Your code: how far the shot flew.
+	return 0.f;
 }
 ```
 
@@ -275,42 +271,41 @@ bool FDojo_M5_Piercer_ThingsThatIgnoreTheChannelAreNotCounted::RunTest(const FSt
 
 # Hints
 
-- The multi trace fills an array instead of a single result, and the order of the array is the order along the line. Decide what a hit that does not block means for the shot, and what the first one that does block means.
-- Each hit in the array says by itself whether it was a block. Look for the field on the hit result that tells a real stop from a thing the line only passed through.
-- `UWorld::LineTraceMultiByChannel` fills a `TArray<FHitResult>`; `FHitResult::bBlockingHit`, `GetActor`, and `Distance`; `TArray::IsValidIndex` guards the getter, and keep the results as `TWeakObjectPtr<AActor>`, which `Get` turns back into a pointer.
+- Ask what the shot should do for a hit that only overlaps, and what it should do for one that blocks.
+- Each hit in the array says by itself whether it was a block, in a field on the hit result.
+- `UWorld::LineTraceMultiByChannel` fills a `TArray<FHitResult>` whose hits carry `bBlockingHit`, `GetActor` and `Distance`, and `TArray::IsValidIndex` guards the getter.
 
 # Rubric
 
 - The shot is one multi trace on the Visibility channel from the actor along its forward, with the piercer left out.
-- Hits that do not block are listed as pierced in the order the trace gave them, and the first blocking hit ends the shot and is named as the stopper.
-- The shot's length is the stopper's distance, or the whole reach when nothing blocks.
+- Hits that do not block are listed as pierced in the order the trace gave them; the first blocking hit ends the shot, is named as the stopper, and sets the shot's length, which is the whole reach when nothing blocks.
 - Every `Fire` replaces the last shot's results, so nothing from an earlier shot or a destroyed actor is left behind.
 - `GetPiercedAt` returns nothing for an index outside the list, and the list holds weak pointers, so destroyed actors never dangle.
 - A debug line is drawn for the shot and a marker at each thing it passed through, and reach is a property a designer can tune.
+- The piercer reads only what the trace reports; the sheets and the wall know nothing about the piercer.
 
 # Alternative
 
-A single trace in a loop would do the same job: trace, note what overlapped, and trace again from just past that point until something blocks. It costs one query per thing pierced and has to nudge the start forward each time, and a thin thing can be skipped by the nudge. The multi trace asks the physics scene once and hands back the whole ordered list, which is why it is the tool for this. A trace by object type with several types would also list the things, but it would not tell an overlap from a block, which is the one fact this quest needs.
+A single trace in a loop would do the same job: trace, note what overlapped, and trace again from just past that point until something blocks. It costs one query per thing pierced and has to nudge the start forward each time, and a thin thing can be skipped by the nudge. The multi trace asks the physics scene once and hands back the whole ordered list, which is why it is the tool for this. A multi trace by object type also lists things, but it asks what they are rather than how they answer a channel, so it is a different question from the one this quest asks.
 
 # Parsons
 
 ```yaml
 - id: piercer-walk
-  prompt: Put the walk through the hits in order.
+  prompt: Put the walk through the hits in order. A blocking hit takes the shot's length and ends the walk.
   lines:
     - "for (const FHitResult& Hit : Hits)"
     - "{"
     - "	if (Hit.bBlockingHit)"
     - "	{"
-    - "		StoppedBy = Hit.GetActor();"
     - "		ShotLength = Hit.Distance;"
     - "		break;"
     - "	}"
     - "	Pierced.Add(Hit.GetActor());"
     - "}"
   distractors:
-    - line: "	if (!Hit.bBlockingHit) break;"
-      mistake: This stops at the first thing that only overlaps, which is exactly what the shot should pass through.
+    - line: "	Pierced.Add(Hit.GetComponent());"
+      mistake: The list holds the actors the shot passed through, and a component pointer is not an actor.
     - line: "	if (Hit.bBlockingHit) Pierced.Add(Hit.GetActor());"
       mistake: This lists the thing that blocks as pierced and drops the things the shot passed through.
 ```

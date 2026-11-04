@@ -100,14 +100,16 @@ Acceptance:
   pieces:
     - { id: eye, kind: class, label: A sentry class that looks on its own timer and broadcasts Spotted and Lost, covers: [eyes, blockers, drawing] }
     - { id: look, kind: step, label: The look rejects by range and angle first and then traces from the eye to the target, covers: [cone, blockers] }
-    - { id: beam, kind: class, label: A laser class with a sweep of its path and a broadcast when something crosses it, covers: [fence] }
+    - { id: beam, kind: class, label: A laser class with a sweep of its path and an OnZap broadcast when something crosses it, covers: [fence] }
     - { id: awareness, kind: component, label: An awareness component that counts how many sentries see the hero and fills and drains on its own timer and broadcasts OnAlarm, covers: [meter, checks, alarm] }
     - { id: tower, kind: class, label: A tower that listens to OnAlarm and counts the alarms and the zaps and runs the round, covers: [round] }
     - { id: settings, kind: data, label: A data asset of rates and ranges read by the tower and the sentries, covers: [tunables] }
   edges:
     - { from: eye, to: awareness, label: Spotted and Lost }
     - { from: awareness, to: tower, label: OnAlarm }
-    - { from: settings, to: tower, label: read at the start of a round }
+    - { from: beam, to: tower, label: OnZap when something crosses the beam }
+    - { from: tower, to: settings, label: reads the numbers at the start of a round }
+    - { from: eye, to: settings, label: reads its range and angle }
 ```
 
 # Rubric

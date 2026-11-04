@@ -32,7 +32,7 @@ This feeler is the extension of the Watchtower boss: a gate that closes after an
 
 ## See it in the editor
 
-Place a `DojoM5Feeler` and two cubes either side of its line, 100 units apart and 500 units ahead. In the level Blueprint, on the 1 key, call Probe and print the returned Boolean and Get Clear Distance. Press Play and press 1 with Radius 40: true and the full travel distance, with a green ball drawn at the end. Select the feeler and change Radius to 60 in Details, and press 1 again: false, a shorter clear distance, and a red ball stopped in front of the cubes. Replace the cubes with one wall and read Get Stop Location and Get Impact Point: they differ by exactly the radius.
+Place a `DojoM5Feeler` and two cubes, one either side of its line and 500 units ahead, with a gap of 100 units between the cube faces (the cube centres are 200 apart, since a default cube is 100 wide). In the level Blueprint, on the 1 key, call Probe and print the returned Boolean and Get Clear Distance. Press Play and press 1 with Radius 40: true and the full travel distance, with a green ball drawn at the end. Select the feeler and change Radius to 60 in Details, and press 1 again: false, a shorter clear distance, and a red ball stopped in front of the cubes. Replace the cubes with one wall across the line, add a Print String of Get Stop Location and another of Get Impact Point after the Probe, and press 1: the two points differ by exactly the radius.
 
 # Files
 
@@ -290,9 +290,9 @@ bool FDojo_M5_Feeler_ShortPathsAreClear::RunTest(const FString& Parameters)
 
 # Hints
 
-- A sweep needs three things a line does not: a shape, a rotation for the shape, and the same start and end. Decide the shape from the radius, and the rotation can be none.
-- The sweep reports two positions. One is where the moving shape came to rest, and the other is the spot on the surface it touched. The hit result also says how far the shape travelled.
-- `UWorld::SweepSingleByChannel`, `FCollisionShape::MakeSphere`, and `FQuat::Identity`; `FHitResult::Location`, `ImpactPoint`, and `Distance`; the shape type is in `CollisionShape.h`.
+- Think about what the probe has that a line does not, and what the call needs to be told about it.
+- The sweep reports two positions, where the moving shape came to rest and the spot on the surface it touched, and the hit result also says how far the shape travelled.
+- `UWorld::SweepSingleByChannel` takes a shape from `FCollisionShape::MakeSphere` and a rotation from `FQuat::Identity`, and the hit holds `Location`, `ImpactPoint` and `Distance`.
 
 # Rubric
 
@@ -301,7 +301,7 @@ bool FDojo_M5_Feeler_ShortPathsAreClear::RunTest(const FString& Parameters)
 - The stop location is the centre of the stopped ball and the impact point is on the surface, and both are the end of the path when it is clear.
 - The blocking actor is remembered when there is one and cleared when there is not, so a later clear probe never names an old blocker.
 - A debug sphere is drawn at the start and at the stop location on every probe, red when blocked and green when clear.
-- Radius and travel distance are properties a designer can tune, and the feeler probes when asked, not every frame.
+- Radius and travel distance are properties a designer can tune, and the feeler probes when asked, not every frame, while the world and whatever uses the answer know nothing about the feeler.
 
 # Alternative
 
