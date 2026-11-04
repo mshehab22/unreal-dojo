@@ -16,6 +16,22 @@ The self-explanation reason for `SetGenerateOverlapEvents` is now true: a box al
 ### A1835 2026-11-03 Pack 3 World 5: laser bounces and the lookout's title (M4.y fix round 3)
 `MaxBounces` is 4, not 5, because the research's Laser Mirror idea says up to five reflections. The zigzag test now expects 6 points, 4 bounces and the last point at (480, 0, 0): by the solution loop the points alternate +480 and -480, so the finding's "5 points, last at -480" was recomputed and replaced. Quest 04 is retitled "A lookout that sees only what it can really see" because "Sentry eye" is the course exercise's name; the class and header comment keep "sentry's eye" so the starter is unchanged. The piercer stub has empty bodies and the world summary says the piercer stands on its own.
 
+### A1884 2026-11-03 The 25 new term-order warnings are fixed in the content, not in the rule (qa, M4.y spot-check 4)
+All 25 are `termOrderCheck` (A72) warnings in Pack 4 World 6, all "never taught by a concept quest", for eight terms (`ai-controller` 5, `blackboard` 5, `ai-perception` 3, `ai-stimulus` 3, `bt-service` 3, `bt-decorator` 2, `bt-task-node` 2, `node-memory` 2). The world has no concept quest (A1565). Options: count a build quest that defines a term as teaching it (silences the check in every world); add two short concept quests (senses and the blackboard before `s6-sense-memory`; the nodes of a tree before `s6-walk-beat`) and point the five `firstQuestId` values at them (Pack 4 World 2 did this, A1351). Chose the second as the recommendation: four of the terms (`ai-controller`, `ai-perception`, `ai-stimulus`, `blackboard`) and the tree vocabulary are used before any visible text defines them, so the gap is real. The concept quest on decorators must not teach the abort modes (A1564). Not applied: this session may not change content. Reverse cost: low.
+
+### A1883 2026-11-03 The `bt-decorator` hover card and the breakdown's "interruption for free" are Must fix (qa, M4.y spot-check 4)
+The card (`short` and `long`) names `FlowAbortMode` and its three values, which is the fix to the world's deliberate failure (A1564), and it shows inside Q05 (A1822). The breakdown's "its decorators give interruption for free" is false (`FlowAbortMode` defaults to `None`, `BTDecorator.cpp:12`) and teaches the opposite of Q05. Options: Note because the card is reference text; Must fix. Chose Must fix on A1822 and A1621.
+
+### A1882 2026-11-03 Two false hints in the memory service quest are Must fix (qa, M4.y spot-check 4)
+Hint 1 says a service only ticks if the tree is told to (`UBTService` sets `bNotifyTick = true`, `BTService.cpp:11`); hint 2 says skipping the parent `TickNode` stops the service after one copy (it then ticks every frame, `BTAuxiliaryNode.cpp:62-70`). Engine proofs run the solution, so the prose was never tested (A1622). Both are wrong facts taught as true, so Must fix (A1621).
+
+### A1881 2026-11-03 The Hold task's "ends only when a decorator aborts it" comment is Should fix, not Must fix (qa, M4.y spot-check 4)
+The reviewer rated it Must fix because the comment sits two quests before the failing one. Options: Must fix (it says decorators abort branches); Should fix (it does not say a decorator needs an abort mode set, which is the failure, and the learner still has to find the setting). Chose Should fix, so Must fix keeps meaning "gives the failure or its fix away" (A1621). Counts: 4 Must fix, not 5.
+
+### A1880 2026-11-03 Spot-check 4 reads the whole of Pack 4 World 6 (qa)
+The world has 6 quests, so no sampling and no seed. Two read-only reviewers in parallel (quests 01, 02, 06 and 03, 04, 05), each told the engine source is at `C:/Program Files/Epic Games/UE_5.8` and the recurring Should-fix kinds. Main was 6bb2ea2 as the brief said. I re-read the file or engine line behind every Must fix and the `NoteNoise` finding. Severity rules unchanged from A1621 and A1823. Findings are in `docs/reviews/m4y-spotcheck-4.md`; no content, solution or test file was changed.
+
+
 ### A1834 2026-11-03 Glossary hover cards describe the term, not a quest's fix (M4.y fix round 3; follows A1822)
 `line-trace` and `collision-query-params` lose their by-object-type sentences; `object-type-query` (an alias for `FCollisionObjectQueryParams`) carries that idea. Their docs links are now API pages (`FCollisionQueryParams`, `FCollisionObjectQueryParams`), checked against `CollisionQueryParams.h` in the 5.8 source. `spawn-actor-deferred` says the construction script and `BeginPlay` are deferred, not the native constructor.
 
