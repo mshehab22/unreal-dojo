@@ -195,9 +195,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.P2.15 Pack 2 World 15 (Service Locator) | content-patterns | author-patterns (session "p2-world12-prototype") | merged (14bd3c1) | merged | A1580 to A1599; engine through the Lead queue |
 | M4.P3.8 Pack 3 World 8 (Gameplay Moment) | content-mechanics | author-mechanics (session "p3-world1-input") | merged (85dbd07) | merged | A1600 to A1619; engine through the Lead queue |
 | M4.P2.16 Pack 2 World 16 (Object Pool) | content-patterns | author-patterns (session "p2-world13-bytecode") | merged (56ec190) | merged | A1650 to A1669 |
-| M4.P2.16 Pack 2 World 16 (Object Pool) | content-patterns | author-patterns (session "p2-world13-bytecode") | claude/m4-p2-world16 | review PASS, tester PASS at 1ff0dac; engine and 18 mutations through the Lead queue | A1650 to A1669 |
 | M4.P2.17 Pack 2 World 17 (Dirty Flag) | content-patterns | author-patterns (session "p2-world12-prototype") | merged (01e1f73) | merged | A1670 to A1689 |
-| M4.P2.18 Pack 2 World 18 (Spatial Partition) | content-patterns | author-patterns (session "p3-world3-collision") | claude/m4-p2-world18 | review PASS, tester PASS, engine proof passed on UE 5.8.4 at 141835b (4 of 4 quests, 20 of 20 mutations caught); ready to merge | A1690 to A1709 |
+| M4.P2.18 Pack 2 World 18 (Spatial Partition) | content-patterns | author-patterns (session "p3-world3-collision") | merged (b84f0e0) | merged | A1690 to A1709 |
 | M4.P2.19 Pack 2 World 19 (Data Locality) | content-patterns | author-patterns (session "p2-world13-bytecode") | claude/m4-p2-world19 | review PASS, tester PASS; engine through the Lead queue | A1710 to A1729 |
 | M4.P2.20 Pack 2 World 20 (Strategy) | content-patterns | author-patterns (session "p2-world12-prototype") | claude/m4-p2-world20 | review PASS, tester PASS; engine through the Lead queue | A1730 to A1749 |
 | M4.P2.21 Pack 2 World 21 (Factory Method) | content-patterns | author-patterns (session "p4-world1-inventory") | claude/m4-p2-world21 | review PASS, tester PASS; engine through the Lead queue | A1750 to A1769 |
