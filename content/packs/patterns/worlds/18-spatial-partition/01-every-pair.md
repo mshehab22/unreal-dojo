@@ -6,8 +6,8 @@ kind: concept
 difficulty: 3
 patterns: []
 skills: [spatial-partition, performance]
-terms: [overlap-query, physics-broadphase, navigation-octree, toctree2, uniform-grid, fintpoint, tmap]
-prerequisites: [p13-bytecode-when-not]
+terms: [overlap-query, physics-broadphase, navigation-octree, toctree2, uniform-grid, fintpoint]
+prerequisites: [p17-boss-night-watch]
 xp: 25
 estimatedMinutes: 10
 concepts:
@@ -27,7 +27,7 @@ prompt: "Guess, no penalty: 2,000 moths each want to know which other moths fly 
 choices:
   - About 2,000, one per moth
   - About 4,000, two per moth
-  - About 4 million, every moth against every other moth
+  - About 4 million, every pair
   - About 50, one per unit of range
 answerIndex: 2
 explanation: Each of 2,000 moths measures 1,999 others, close to four million checks a frame. Doubling the moths quadruples the work, and nearly every check is between moths on opposite sides of the meadow.
@@ -37,11 +37,11 @@ explanation: Each of 2,000 moths measures 1,999 others, close to four million ch
 
 The meadow has 2,000 moths, and a moth only cares about moths within 50 units of it. Measuring every pair works for twenty moths and collapses at two thousand: the checks grow with the square of the count, and almost every one of them is between moths so far apart that the answer was obvious before measuring.
 
-**Sort them by place first.** Lay a grid of square cells over the meadow and keep, for each cell, the list of moths inside it. A moth that wants its neighbors within 50 looks only in its own cell and the cells around it, a handful of moths instead of thousands. A grid line is not a wall: when a moth flies across one, its index has to leave the list it was in and join the list of the cell it entered, or questions about its new place will not find it.
+**Sort them by place first.** Lay a grid of square cells over the meadow and keep, for each cell, the list of moths inside it. A moth that wants its neighbors within 50 looks only in its own cell and the cells around it, a handful of moths instead of thousands. A grid line is not a wall, and the lists are only right for as long as they match where things stand.
 
-**For things with collision, Unreal already did it.** `UWorld::OverlapMultiByChannel` with an `FCollisionShape::MakeSphere(50.f)` returns every collision shape inside that sphere. It does not loop over the level: it asks the physics scene, whose broadphase keeps every shape's bounding box in its own tree of boxes (an AABB tree by default in UE 5.8), so the query walks only the branches near the sphere. Overlap events, sweeps, and line traces use the same structure. If the things you are looking for are actors with a collision shape, an overlap query is usually the whole answer.
+**For things with collision, Unreal already did it.** `UWorld::OverlapMultiByChannel` with an `FCollisionShape::MakeSphere(50.f)` returns every collision shape that overlaps that sphere. It does not loop over the level: it asks the physics scene, whose broadphase keeps every shape's bounding box in its own tree of boxes (an AABB tree by default in UE 5.8), so the query walks only the branches near the sphere. Overlap events, sweeps, and line traces use the same structure. If the things you are looking for are actors with a collision shape, an overlap query is usually the whole answer.
 
-**The engine keeps other structures too.** The navigation system files every piece of geometry that matters for the nav mesh in its own octree, `FNavigationOctree`, so rebuilding a nav tile only gathers the geometry in that tile. The renderer keeps an octree of primitives, `FScenePrimitiveOctree`, to find what each light and shadow touches. `TOctree2` is the template behind both, and you may use it yourself. These are built for the engine's own jobs; you read about them to recognize the pattern, not to file gameplay data in them.
+**The engine keeps other structures too.** The navigation system files every piece of geometry that matters for the nav mesh in its own octree, `FNavigationOctree`, so rebuilding a nav tile only gathers the geometry in that tile. The renderer keeps an octree of primitives, `FScenePrimitiveOctree`, to find what each light and shadow touches. `TOctree2` is the template behind both, and you may use it yourself. These are built for the engine's own jobs; you read about them to recognize the idea, not to file gameplay data in them.
 
 **When you build your own.** Some things have no collision shape: 2,000 moths kept as plain structs in one array, or lanterns that are actors with no shape at all. The physics scene has never heard of them, so no overlap query can find them. Making each moth an actor with a sphere just so physics can find it would cost far more than the question saves. That is when you write the grid yourself, as the next quest does.
 
@@ -67,11 +67,11 @@ TMap<FIntPoint, TArray<int32>> MothsInCell;
   type: multiple-choice
   prompt: "Comparing every moth with every other moth costs about 4 million checks for 2,000 moths. About how many for 4,000 moths?"
   choices:
-    - About 8 million
     - About 16 million
+    - About 8 million
     - About 4 million, the same
     - About 6 million
-  answerIndex: 1
+  answerIndex: 0
   explanation: The cost grows with the square of the count, so twice the moths is four times the checks.
 - id: fill-cell
   type: fill-blank
@@ -83,31 +83,31 @@ TMap<FIntPoint, TArray<int32>> MothsInCell;
   prompt: "Which of these can UWorld::OverlapMultiByChannel find?"
   choices:
     - Every actor in the level, whatever it is made of
-    - Collision shapes whose response to the channel lets the query find them, through the physics scene
     - Plain structs stored in an array on an actor
-    - Only actors that tick
-  answerIndex: 1
+    - Only actors that are ticking this frame
+    - Collision shapes the physics scene files
+  answerIndex: 3
   explanation: An overlap query asks the physics scene, which only knows about shapes with collision. Structs in an array and actors with no shape are invisible to it.
 - id: broadphase-what
   type: multiple-choice
   prompt: "Why is an overlap query not a loop over every actor in the level?"
   choices:
-    - It caches the last answer and returns it again
-    - The physics scene keeps the shapes' bounding boxes in a tree, so the query only walks branches near the shape
-    - It only checks actors that moved this frame
-    - It runs on the GPU
-  answerIndex: 1
+    - It remembers the last answer it gave and hands that back again
+    - It checks only the actors that moved at some point this frame
+    - The shapes' boxes sit in a tree, so it walks nearby branches
+    - It runs the whole query on the graphics card, not on the CPU
+  answerIndex: 2
   explanation: The broadphase is a spatial structure of its own; the overlap query asks it instead of looking at everything.
 - id: nav-octree-for
   type: multiple-choice
   prompt: "What is FNavigationOctree for?"
   choices:
-    - Storing the moths of a gameplay swarm
-    - Filing the geometry that matters for the nav mesh, so the navigation system can gather what lies in one tile quickly
-    - Replicating actors to clients
-    - Drawing debug lines
-  answerIndex: 1
-  explanation: It is the navigation system's own spatial index, an octree of nav-relevant geometry. It shows the pattern; gameplay data does not belong in it.
+    - Keeping the moths of a gameplay swarm in cells for questions
+    - Sending every change to actors out to the connected clients
+    - Filing nav mesh geometry so a tile can be gathered fast
+    - Drawing the debug lines of a path on screen for a designer
+  answerIndex: 2
+  explanation: It is the navigation system's own spatial index, an octree of nav-relevant geometry. It shows the idea; gameplay data does not belong in it.
 - id: explain-why-grid
   type: explain-in-one-sentence
   prompt: In one sentence, say when you would write your own grid instead of using an overlap query.

@@ -13,7 +13,7 @@ xp: 110
 estimatedMinutes: 30
 concepts:
   - A resting shell is out of play in every way, and a woken shell starts exactly like a fresh one
-  - A shell can be sent to rest at any moment of its flight, and its next use must not notice
+  - A shell can be sent to rest at any moment, and its next use must start clean
   - The shell knows how to rest and how to wake; the pool only decides when
   - Every switch that waking turns on, resting turns off
   - Fire, Tick, and the burst are given and stay as they are
@@ -31,7 +31,7 @@ Write the obvious version first and run the tests. One of them fails on purpose 
 
 ## See it in the editor
 
-Place a `DojoP16ShellPool`. In the Level Blueprint, on Begin Play, call Acquire on it four times, Fire each shell with a fuse of 1 second, and call Acquire a fifth time: print Is Valid of the fifth result, false. After a Delay of 1.5 seconds, print Has Burst on each of the four, true four times, then call Release on each and Acquire four times again: Is Valid prints true four times. Press Play, then press F8 to eject: the Outliner lists four `DojoP16Shell` actors the whole time.
+Place a `DojoP16ShellPool`. In the Level Blueprint, on Begin Play, first wait a Delay of 0.2 seconds so the pool has spawned its shells, then call Acquire on it four times, store each result in a variable, Fire each shell with a fuse of 1 second, and call Acquire a fifth time: print Is Valid of the fifth result, false. After a Delay of 1.5 seconds, print Has Burst on each of the four stored shells, true four times, then call Release on each and Acquire four times again: Is Valid prints true four times. Press Play, then press F8 to eject: the Outliner lists four `DojoP16Shell` actors the whole time.
 
 # Files
 
@@ -481,14 +481,14 @@ bool FDojo_P16_ShellFuse_FourShellsMakeAShow::RunTest(const FString& Parameters)
 
 # Hints
 
-- The failing test sends shells to rest in the middle of their fuse. Read its message: which shell burst, and how long after it was sent to rest?
-- Hiding a shell and stopping its Tick change what the shell does each frame. What did `Fire` start that does not happen in the shell's Tick at all?
-- A destroyed actor's pending timer never fires, but a resting shell is alive. What should resting do about a fuse that is still burning?
+- Read the failing test's message for which shell burst and when it was sent to rest.
+- Hiding a shell and stopping its Tick only change what it does each frame, so find what else `Fire` set going.
+- Resting has to undo whatever `Fire` handed to the world, as well as the shell's own switches.
 
 # Rubric
 
 - A resting shell is hidden, does not collide, does not tick, is not flying, is not burst, and refuses to fire.
-- A resting shell never bursts, and a woken shell bursts only after it is fired again.
+- A resting shell stays quiet until it is fired.
 - A woken shell is in play at the spot it was given, not resting, not flying, and not burst, and waits to be fired.
 - Every switch WakeFromPool turns on, RestInPool turns off.
 - Fire, Tick, and the burst are unchanged, and the shell knows nothing about the pool.

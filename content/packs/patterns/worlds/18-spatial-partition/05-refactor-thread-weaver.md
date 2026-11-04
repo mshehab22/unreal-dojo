@@ -7,7 +7,7 @@ scaffold: stub
 difficulty: 4
 patterns: [spatial-partition]
 skills: [spatial-partition, refactoring]
-terms: [uniform-grid, fintpoint, tmap, tick, profiling]
+terms: [uniform-grid, fintpoint, tmap, tick]
 prerequisites: [p18-moth-swarm]
 xp: 110
 estimatedMinutes: 30
@@ -337,9 +337,9 @@ bool FDojo_P18_ThreadRefactor_FollowsTheRangeAndTheDrift::RunTest(const FString&
 
 # Hints
 
-- A thread is at most `LinkRange` long. If the cells are exactly that wide, how far apart, in cells, can two lanterns in reach be?
-- If every cell measures against all eight of its neighbors, how many times is a pair in two touching cells measured? Which four directions cover every touching pair exactly once?
-- Cells left of zero and below it are as real as the others. What does rounding toward zero do to the lanterns between minus one cell and plus one cell?
+- If the cells are exactly as wide as the longest thread, how many cells apart can two lanterns in reach be?
+- If every cell measured against all eight of its neighbors, how many times would a touching pair be measured, and which four directions avoid that?
+- What does a plain integer cast do to the lanterns on either side of zero?
 
 # Rubric
 
@@ -358,7 +358,7 @@ Filing the lanterns once and refiling each one as it drifts, as the swarm does, 
 
 ```yaml
 - id: weave-cells
-  prompt: Put the neighbor part of the new Weave in order. It runs inside the loop over Cells, where Here is the current cell's indices and the cell's own pairs are already measured.
+  prompt: Put the neighbor part of the new Weave in order. It runs inside the loop over Cells, where Pair is the current entry, Here holds its indices, Ahead holds the four offsets to measure ahead, and Measure(First, Second) measures one pair; the cell's own pairs are already measured. For each offset, find the cell there, then pair every index of this cell with every index of that one, this cell's index on the outside.
   lines:
     - "		for (const FIntPoint& Offset : Ahead)"
     - "		{"
@@ -373,6 +373,6 @@ Filing the lanterns once and refiling each one as it drifts, as the swarm does, 
     - "			}"
     - "		}"
   distractors:
-    - line: "		GetWorld()->OverlapMultiByChannel(Overlaps, FVector(Pair.Key, 0.0), FQuat::Identity, ECC_WorldDynamic, FCollisionShape::MakeSphere(LinkRange));"
+    - line: "		GetWorld()->OverlapMultiByChannel(Overlaps, FVector(Pair.Key.X, Pair.Key.Y, 0.0), FQuat::Identity, ECC_WorldDynamic, FCollisionShape::MakeSphere(LinkRange));"
       mistake: The floats are plain positions in an array, not collision shapes, so the physics scene cannot find them; the cells are the only place the lanterns are filed.
 ```

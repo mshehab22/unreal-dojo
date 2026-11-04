@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: [dirty-flag]
 skills: [dirty-flag, architecture]
-terms: [mutable-member, render-state-dirty, tick]
+terms: [render-state-dirty, tick]
 prerequisites: [p17-ladder-refactor]
 xp: 25
 estimatedMinutes: 8
@@ -23,21 +23,21 @@ concepts:
 ```yaml
 id: predict
 type: multiple-choice
-prompt: "Guess, no penalty: a supply cart's item count goes up by one whenever a crate is loaded and down by one whenever one is unloaded. A teammate proposes a dirty flag so the count is recounted only when it is read. Is that the right tool?"
+prompt: "Guess, no penalty: a scoreboard's goal tally goes up by one whenever a goal is scored and down by one whenever a goal is called back. A teammate proposes a dirty flag so the tally is recounted only when it is read. Is that the right tool?"
 choices:
-  - Yes, any number that is read should have a flag
-  - Yes, but only if the count is stored in a TMap
-  - No; keep a running count that each load and unload adds to or subtracts from
-  - No; recount every frame instead
+  - Yes, every number that is read often deserves a flag
+  - Yes, but only once the tally is stored in a TMap
+  - No; keep a tally that each goal adds to or takes from
+  - No; recount every goal on the board each frame
 answerIndex: 2
-explanation: Each change can be applied to the answer directly, so there is nothing to refresh later. A running count has no flag to forget.
+explanation: Each change can be applied to the answer directly, so there is nothing to refresh later. A running tally has no flag to forget.
 ```
 
 # Card
 
 A flag is a way to avoid recomputing, and it has a price. Leave it out in these cases.
 
-**When a running total is easy.** If each change can be applied to the answer directly, such as adding a crate to a count or a weight to a total, do that. It is cheaper than a flag, it is always right, and there is no path that can forget to set anything. The flag earns its keep when a change cannot be applied that way, like the best three of a list, where removing a score means searching again.
+**When a running total is easy.** If each change can be applied to the answer directly, such as adding a goal to a tally or a weight to a total, do that. It is cheaper than a flag, it is always right, and there is no path that can forget to set anything. The flag earns its keep when a change cannot be applied that way, like the best three of a list, where removing a score means searching again.
 
 **When the value is cheap.** Adding two numbers costs less than keeping a stored copy, a flag, and every function that sets it. A flag also adds a bug path. Measure before caching something that takes a few instructions.
 
@@ -56,10 +56,10 @@ A flag is a way to avoid recomputing, and it has a price. Leave it out in these 
 # Example
 
 ```cpp
-// Right-sized: each load or unload adds to the answer directly, so there is nothing to refresh later.
-void ADojoCart::Load(int32 Crates)
+// Right-sized: each goal adds to the answer directly, so there is nothing to refresh later.
+void ADojoScoreboard::GoalScored(int32 Goals)
 {
-	CrateCount += Crates;
+	GoalTally += Goals;
 }
 ```
 
@@ -70,20 +70,20 @@ void ADojoCart::Load(int32 Crates)
   type: multiple-choice
   prompt: "Which of these is the best fit for a running total instead of a flag?"
   choices:
-    - The number of crates on a cart, changed one at a time
-    - The sum of the best three bout scores
-    - A joint's position in a tower of joints
-    - The shortest path across a changing map
+    - A scoreboard's goal tally, changed one by one
+    - The sum of the best three bout scores on a ladder
+    - A joint's position in a tower of linked joints
+    - The shortest path across a map that keeps changing
   answerIndex: 0
-  explanation: Each load or unload can be added to or taken from the count directly. The other three are results that must be worked out again from the data after a change.
+  explanation: Each goal scored or called back can be added to or taken from the tally directly. The other three can need working out again from the data after a change.
 - id: when-not-tree
   type: multiple-choice
   prompt: "Each joint of a tower keeps its position, with a flag for each joint. The base moves. Which joints must be marked out of date?"
   choices:
-    - Only the base
-    - The base and every joint that hangs from it
-    - Only the joint that is read next
-    - Every joint in the world
+    - Only the base, since it is the one that moved
+    - The base and all the joints hanging from it
+    - Only the joint that is read next, when it is read
+    - Every joint in the world, whichever tower it is in
   answerIndex: 1
   explanation: A joint's kept position is built from its parent's, so everything built on the base is old once the base moves. Marking only the base leaves its children reporting the old place.
 - id: spot-flag-every-update
@@ -102,10 +102,10 @@ void ADojoCart::Load(int32 Crates)
   type: multiple-choice
   prompt: "Another thread reads a remembered value while the game thread is refreshing it. What can go wrong?"
   choices:
-    - Nothing; reads are always safe
-    - The value is refreshed twice
-    - The flag is cleared early on purpose
-    - The reader can see a half-updated value or a flag that disagrees with it
+    - Nothing goes wrong, because reads are always safe
+    - The value is refreshed twice, once by each thread
+    - The flag is cleared early, which is done on purpose
+    - A reader can see the value and flag out of step
   answerIndex: 3
   explanation: The refresh writes the value and the flag in two steps, so a reader in between sees them out of step unless access is protected.
 - id: explain-when-not

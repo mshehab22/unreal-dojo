@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: [dirty-flag]
 skills: [dirty-flag, performance]
-terms: [mutable-member, render-state-dirty, scene-component, tick]
+terms: [render-state-dirty, scene-component]
 prerequisites: [p17-guard-rating]
 xp: 25
 estimatedMinutes: 9
@@ -25,10 +25,10 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: five different pieces of code change a fighter's gear and buffs. Which design makes it hardest to forget to mark the guard rating out of date?"
 choices:
-  - Each piece of code that changes a part sets the flag itself after the change
-  - A comment on the guard member saying that the flag must be set
-  - The parts are private, and a few functions on the component are the only way to change them, each setting the flag
-  - A timer that marks the rating out of date every few seconds
+  - Each piece of code that changes a part sets the flag itself afterwards
+  - A comment beside the guard member saying that the flag must be set by hand
+  - Private parts, changed only through a few functions that each set the flag
+  - A timer that marks the rating out of date every few seconds, whatever changed
 answerIndex: 2
 explanation: If the only way to change a part is a function that also sets the flag, the flag cannot be forgotten. Setting it from outside depends on every caller remembering.
 ```
@@ -58,7 +58,7 @@ What you built for the guard rating is the **Dirty Flag** pattern. Some data is 
 - An actor component calls `MarkRenderStateDirty`, `MarkRenderTransformDirty`, or `MarkRenderDynamicDataDirty` to tell the engine what to resend to the renderer, which does the work later.
 - An asset package carries a dirty bit, set by `MarkPackageDirty` and read by `IsDirty`, that decides what the editor offers to save.
 - Slate widgets call `Invalidate` with a reason, and layout is redone once for the frame.
-- Push-model replication marks a property dirty with the `MARK_PROPERTY_DIRTY` macros, and only marked properties are checked for sending.
+- Push-model replication lets a property that is set up as push based be marked dirty with the `MARK_PROPERTY_DIRTY` macros, and only the marked ones among those are checked for sending.
 
 **What it is not for.** If each change can be applied to the answer directly, as adding an item's weight to a running total, keep the running total. It is simpler and has no flag to forget.
 
@@ -91,11 +91,11 @@ int32 UDojoGuard::GetGuard() const
   type: multiple-choice
   prompt: "Which list names the parts of a dirty flag?"
   choices:
-    - A producer, a consumer, a queue, and a lock
-    - Primary data, a derived value, a flag set by changes and cleared by the recompute, and a narrow way to change the data
-    - A base class, a component, a delegate, and a timer
-    - An interface, providers, a locator, and a null object
-  answerIndex: 1
+    - A producer, a consumer, a queue, and a lock to protect the queue
+    - A base class, a component, a delegate, and a timer to drive all three
+    - An interface, several providers, a locator, and a null object
+    - Primary data, a derived value, a flag, and a narrow way in
+  answerIndex: 3
   explanation: The flag links the two kinds of data. The narrow way in is what stops a change from slipping past it.
 - id: fill-mark-dirty
   type: fill-blank
@@ -106,17 +106,17 @@ int32 UDojoGuard::GetGuard() const
   type: multiple-choice
   prompt: "Refreshing a dirty value during a loading screen has one weakness. What is it?"
   choices:
-    - The value is worked out for data nobody reads
-    - The player might never reach a loading screen before the value is needed
-    - Loading screens run on another machine
-    - The flag cannot be set during a load
+    - The refresh is wasted on data that nobody reads
+    - A read can come before the loading screen does
+    - Loading screens run on a different machine from the game
+    - The flag cannot be set while a level is loading
   answerIndex: 1
   explanation: A checkpoint hides the work, but you cannot promise it will come before the next read, so something must still handle a stale value.
 - id: fine-or-coarse
   type: multiple-choice
   prompt: "One flag covers the whole fog-of-war grid. What is the cost?"
   choices:
-    - A single changed cell makes the whole grid be reworked
+    - One changed cell makes the whole grid be reworked
     - Cells cannot be changed at all
     - The grid needs more memory than one flag for each cell
     - The flag cannot be cleared

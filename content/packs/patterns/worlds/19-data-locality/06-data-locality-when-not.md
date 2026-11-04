@@ -25,12 +25,12 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: the village has 24 lanterns that each glow when the player walks past, can be knocked over by physics, and run a little Blueprint script. A teammate wants to turn them into a struct array in one actor for speed. What is the best answer?"
 choices:
-  - Do it; struct arrays are always faster
-  - Do it, and add a hot and cold split as well
-  - Keep them as actors; 24 lanterns cost almost nothing, and collision, physics, and Blueprint scripting are exactly what an actor gives them
-  - Move them to Mass Entity
-answerIndex: 2
-explanation: The pattern pays when one loop walks thousands of records. Two dozen lanterns that need what actors provide would only lose those features for a gain no profiler would show.
+  - Do it, because struct arrays are always faster than actors
+  - Keep them as actors; 24 lanterns cost almost nothing
+  - Do it, and add a hot and cold split to the records as well
+  - Move all of them into Mass Entity as a first step
+answerIndex: 1
+explanation: The pattern pays when one loop walks thousands of records. Two dozen lanterns need collision, physics, and Blueprint scripting, which is what an actor gives them, and would only lose those for a gain no profiler would show.
 ```
 
 # Card
@@ -51,7 +51,7 @@ Data Locality buys speed by giving up what made each thing an object. That trade
 
 **Two traps in packed records.** An index into a packed array is not a name for a record: removing from the middle moves another record into the gap, so anything that remembered an index must use a handle that survives the move, as the meadow's did. And `FVector3f` saves half the memory of `FVector` by using floats, which lose precision far from the world's origin; that is why UE 5 moved `FVector` to doubles. A meadow near the origin is fine with floats; records for a world many kilometers across may need doubles or positions kept relative to a nearby origin.
 
-**Other quiet costs.** A `TMap` lookup inside the hot loop jumps around memory as much as the pointers did. Sorting the whole array every frame to keep it in order costs more than keeping it packed as records come and go. And `UObject` pointers inside hot records bring back the scattered memory, and every one is something the garbage collector has to follow.
+**Other quiet costs.** A `TMap` lookup inside the hot loop can send it jumping around memory, much as the pointers did, unless the map is small enough to stay in the cache. Sorting the whole array every frame to keep it in order costs more than keeping it packed as records come and go. And `UObject` pointers inside hot records bring back the scattered memory, and every one is something the garbage collector has to follow.
 
 # Example
 
@@ -77,22 +77,22 @@ public:
   type: multiple-choice
   prompt: "A quest log keeps 40 quests as UObjects, and opening the log takes a moment. A teammate wants to move the quests into a hot and cold split of structs. What comes first?"
   choices:
-    - Write the split; quests are a classic case
-    - Move the quests to Mass Entity
-    - Make every quest an actor instead
-    - Profile; 40 objects read once when a menu opens are not a memory layout problem, so the delay is almost certainly somewhere else
-  answerIndex: 3
+    - Profile; forty objects read once are not a layout problem
+    - Write the hot and cold split first; quests suit it well
+    - Move the quests to Mass Entity to make the menu quicker
+    - Make every quest an actor instead, to give each one a tick
+  answerIndex: 0
   explanation: Forty objects read once cannot stall on memory long enough to notice. Find the real cost, such as loading or building the widgets, before changing the layout.
 - id: needs-actor
   type: multiple-choice
   prompt: "Which of these should stay an actor rather than become a record in an array?"
   choices:
-    - One of 10,000 ambient fireflies
-    - One of 5,000 embers from a fire basket
-    - An enemy with an AI controller, collision, and attacks that replicate
+    - One of 10,000 ambient fireflies that only drift
+    - One of 5,000 embers drifting up from a fire basket
     - One of 20,000 grass blades drawn by an instanced mesh
-  answerIndex: 2
-  explanation: The enemy needs the controller, collision, and replication an actor provides. The others are only numbers in a crowd.
+    - An enemy with an AI controller and collision
+  answerIndex: 3
+  explanation: The enemy needs the controller and the collision an actor provides. The others are only numbers in a crowd.
 - id: fill-niagara
   type: fill-blank
   prompt: "Embers that are only seen and never read by gameplay belong in a ___ system, which keeps its particles packed for you."
@@ -100,7 +100,7 @@ public:
   explanation: Niagara simulates particles in packed buffers on the processor or the graphics card.
 - id: spot-map
   type: spot-the-bug
-  prompt: A swarm's hot loop runs over 10,000 records every frame. Which line brings back scattered memory reads inside the loop?
+  prompt: A swarm's hot loop runs over 10,000 records every frame. Which line can bring back scattered memory reads inside the loop?
   code: |
     void ASwarm::Step(float DeltaSeconds)
     {
@@ -112,16 +112,16 @@ public:
     }
   bugLine: 5
   fix: Read the wind from an array indexed by cell, or from a value worked out once before the loop, instead of a TMap lookup per firefly.
-  explanation: Each FindRef hashes the key and jumps into the map's storage, which can be anywhere; the loop pays a scattered read for every firefly.
+  explanation: Each FindRef hashes the key and jumps into the map's storage, which can be anywhere; unless the map is small enough to stay in the cache, the loop pays a scattered read for every firefly.
 - id: float-far
   type: multiple-choice
   prompt: "A space game keeps ships 300 kilometers from the world's origin in records with FVector3f positions. What goes wrong?"
   choices:
-    - Floats lose precision far from the origin, so the ships' positions snap and jitter
-    - Nothing; floats are always precise enough
-    - The records become larger than FVector
-    - FVector3f cannot be stored in a TArray
-  answerIndex: 0
+    - Nothing; floats are always precise enough out there
+    - The records become larger than they would be with FVector
+    - Floats lose precision far out, so the ships jitter
+    - FVector3f cannot be stored in a TArray of records
+  answerIndex: 2
   explanation: Far from the origin a float can only hold positions some distance apart, which is why UE 5's FVector uses doubles. Use doubles there, or keep positions relative to a nearby origin.
 - id: explain-mass
   type: explain-in-one-sentence

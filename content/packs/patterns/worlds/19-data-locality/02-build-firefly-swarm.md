@@ -16,7 +16,7 @@ concepts:
   - One actor and one tick update the whole swarm with one loop from front to back
   - The loop changes the records through a reference; a copy would change nothing
   - A static_assert keeps the record at its size, so a careless new field fails the build instead of the frame rate
-  - The swarm depends on nothing; nothing in a firefly points anywhere
+  - The swarm depends on its firefly records, and a record points at nothing outside itself
 ---
 
 # Brief
@@ -29,7 +29,7 @@ Most of the code is written. First read the marked lines and say in a sentence w
 
 ## See it in the editor
 
-Place a `DojoP19Swarm` on the floor of the level, at a height of 0, and set Starting Fireflies to 1000 and Draw Debug to true in the Details panel. Press Play: a cloud of points drifts over the swarm, rising and falling between the floor and 300 units up, each point brightening and dimming. Press F8 to eject and look at the Outliner: one `DojoP19Swarm` and no firefly actors. Type `stat game` in the console to see how little the one tick costs.
+Place a `DojoP19Swarm` on the floor of the level, at a height of 0, and set Starting Fireflies to 1000 and Draw Debug to true in the Details panel. Press Play: a cloud of points drifts over the swarm, rising and falling between the floor and 300 units up, each point brightening and dimming. Press F8 to eject and look at the Outliner: one `DojoP19Swarm` and no firefly actors. Type `stat game` in the console to watch the world's tick time, then untick Draw Debug, because the drawing is most of it, and see it fall.
 
 # Files
 
@@ -64,7 +64,7 @@ struct FDojoP19Firefly
 	float GlowRate = 0.f;
 };
 
-static_assert(sizeof(FDojoP19Firefly) == 32, "A firefly must stay 32 bytes, two to a cache line."); // @explain: The record's size is what decides how many fireflies each cache line brings, so a field added without thinking fails the build here instead of quietly slowing the swarm.
+static_assert(sizeof(FDojoP19Firefly) == 32, "A firefly must stay 32 bytes, about two to a 64 byte line on PC."); // @explain: The record's size is what decides how many fireflies each cache line brings, so a field added without thinking fails the build here instead of quietly slowing the swarm.
 ```
 
 ## DojoP19Swarm.h
@@ -162,7 +162,7 @@ void ADojoP19Swarm::BeginPlay()
 
 	FRandomStream Stream(Seed);
 	const FVector Origin = GetActorLocation();
-	Fireflies.Reserve(StartingFireflies); // @explain: Reserving once makes the array take all its memory in one block before the loop, instead of growing and moving its records again and again while they are added.
+	Fireflies.Reserve(StartingFireflies); // @explain: Reserving once makes the array take all its memory in one block before the loop, instead of growing and moving its records several times while they are added.
 	for (int32 Index = 0; Index < StartingFireflies; ++Index)
 	{
 		const FVector Position = Origin + FVector(Stream.FRandRange(-Extent, Extent), Stream.FRandRange(-Extent, Extent), Stream.FRandRange(0.f, Ceiling));
@@ -350,9 +350,9 @@ bool FDojo_P19_Swarm_OneActorTicksTheWholeSwarm::RunTest(const FString& Paramete
 
 # Hints
 
-- `Step` is one loop over `Fireflies`. How must the loop name each firefly so that what it changes reaches the array?
-- Each turn has two conditions: past the edge, and still heading out. What goes wrong if a firefly turns only because it is past the edge?
-- Move first and check the edge after, then do the same for the glow. Which test pins that order?
+- How must the loop name each firefly so that what it changes reaches the array?
+- What would happen on the next frame to a firefly that has just turned but is still past the edge?
+- Move first and check the edge after, for the position and then for the glow, because the tests pin that order.
 
 # Rubric
 
@@ -360,7 +360,7 @@ bool FDojo_P19_Swarm_OneActorTicksTheWholeSwarm::RunTest(const FString& Paramete
 - A firefly below 0 still moving down, or above Ceiling still moving up, turns its vertical velocity around, and only then.
 - The glow changes by the glow rate times DeltaSeconds, and turns around above 1 while rising or below 0 while falling.
 - Step adds and removes no firefly and changes nothing else.
-- The whole swarm is one actor with one tick, and every firefly is a record by value in one array.
+- The whole swarm is one actor with one tick, every firefly is a record by value in one array, and a record refers to nothing outside itself.
 - The firefly record stays 32 bytes.
 
 # Alternative

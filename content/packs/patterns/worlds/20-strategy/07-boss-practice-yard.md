@@ -34,7 +34,7 @@ The launcher and the dummies know nothing about the director. The director never
 
 Compiles against earlier quests: p20-target-rules (`Quests/p20-target-rules/DojoP20Candidate.h`, `Quests/p20-target-rules/DojoP20TargetRule.h`, `Quests/p20-target-rules/DojoP20Launcher.h`) and p20-mover-rules (`Quests/p20-mover-rules/DojoP20MoveRule.h`, `Quests/p20-mover-rules/DojoP20Mover.h`).
 
-Core numbers are fixed: a 29 second round, a step every 0.5 seconds from 0.25, a shot every 2 seconds from 2, a hit worth 10 health, and the dummies' starting health of 30, 50, and 40.
+Core numbers are fixed: a 29 second round, a step every 0.5 seconds from 0.25, a shot every 2 seconds from 2, a hit worth 10 health, and the dummies' starting health of 30, 50, and 40. They are the defaults of three public properties on the director, `RoundSeconds`, `FireInterval`, and `HitDamage`, and the tests set those properties to other values: a round lasts `RoundSeconds`, a shot comes every `FireInterval` with the first after one interval, and a hit takes `HitDamage`.
 
 Extensions, in order of importance:
 
@@ -42,7 +42,7 @@ Extensions, in order of importance:
 2. A new targeting rule that aims at the standing dummy after the one it hit last. It remembers, so each launcher needs an object of its own, and adding it must change nothing in the director.
 3. A label line showing the shot log, so a swap can be seen in the order of the hits.
 
-Feel: tune the damage and the interval so that a player who never touches T clears the yard with only a little time to spare, and a player who swaps to the right rule at the right moment clears it earlier. Make the moment the circling crate comes close the moment a swap feels worth having.
+Feel: judge the fixed numbers by whether a player who never touches T clears the yard with only a little time to spare, and a player who swaps to the right rule at the right moment clears it earlier. Make the moment the circling crate comes close the moment a swap feels worth having.
 
 # Required Pieces
 
@@ -125,4 +125,4 @@ Feel: tune the damage and the interval so that a player who never touches T clea
 - Before each shot the launcher is given the dummies' current names, places, and health, a hit takes 10 health from the named dummy, and a shot at nothing is a miss that is logged.
 - A round lasts 29 seconds, the result is CLEARED when no dummy is standing and ESCAPED otherwise, and the label shows the round, the rule class in use, the hits, the dummies standing, and the result as specified.
 - R starts a round only between rounds, and a new round puts every dummy back at its start with full health, clears the hits, the log, and the result, restarts the timers, and keeps the rule the player chose.
-- The submission says which function decides each shot, why the director holds a list of classes instead of a switch, and gives the tuned damage and interval with the feel they produced.
+- The submission says which function decides each shot, why the director holds a list of classes instead of a switch, and says how the fixed damage and interval felt in play.

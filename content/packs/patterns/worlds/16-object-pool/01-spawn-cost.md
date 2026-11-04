@@ -7,7 +7,7 @@ difficulty: 3
 patterns: []
 skills: [object-pool, performance]
 terms: [spawnactor, destroy, garbage-collection, profiling, set-actor-hidden-in-game, set-actor-enable-collision]
-prerequisites: [p13-bytecode-when-not]
+prerequisites: [p15-service-locator-when-not]
 xp: 25
 estimatedMinutes: 10
 concepts:
@@ -26,11 +26,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: the harbor launcher spawns a rocket actor for every shot and destroys it when it bursts. The finale fires 300 rockets in 20 seconds, and the frame rate dips exactly during the finale. Where does most of the extra time go?"
 choices:
-  - Drawing the bursts, because rockets are bright
-  - Spawning and destroying the actors, because every spawn builds and registers a whole actor and every destroy takes one apart
-  - Nowhere; spawning is free in Unreal because the engine collects garbage for you
-  - The rockets' Tick, because each rocket ticks for its whole flight
-answerIndex: 1
+  - Drawing the bursts, because bright rockets are costly to render
+  - Nowhere in particular; spawning is free because the engine tidies up
+  - Spawning and destroying, since every shot builds and removes a whole actor
+  - The rockets' Tick, because each one ticks for its whole flight, all together
+answerIndex: 2
 explanation: Each spawn builds an actor from its class, registers its components with rendering and physics, and runs BeginPlay; each destroy runs EndPlay and unregisters them again, and leaves the memory for a later garbage collection. Three hundred of each in twenty seconds is the extra work.
 ```
 
@@ -40,7 +40,7 @@ The harbor festival ends with a finale: the launcher on the pier fires a rocket 
 
 **A spawn is a lot of work.** `SpawnActor` does far more than reserve memory. It makes the actor from its class, copying the class's defaults. It creates the actor's components and registers each one, which gives every visible or colliding component its own state in the renderer and in the physics scene. It runs its construction step (`OnConstruction`, and a Blueprint's construction script), initializes the components, and finally calls `BeginPlay`. All of that happens again for the next rocket, a beat later.
 
-**A destroy is work too, and some of it comes later.** `Destroy` runs `EndPlay`, unregisters the components so the renderer and the physics scene forget them, and takes the actor out of its level. The memory is not freed then. The actor waits until a later garbage collection finds that nothing points at it any more. A busy minute leaves hundreds of dead rockets for the collector to find.
+**A destroy is work too, and some of it comes later.** `Destroy` runs `EndPlay`, unregisters the components so the renderer and the physics scene forget them, and takes the actor out of its level. The memory is not freed then. A later garbage collection frees it and clears every reference to it, so a stored pointer to a destroyed rocket does not keep it alive. A busy minute leaves hundreds of dead rockets for the collector to find.
 
 **The bill arrives at the worst time.** The work is small for one rocket and large for three hundred, and the three hundred all come in the moment the player is watching most closely. A cost spread evenly over a level is easy to hide; a cost packed into the finale is a hitch.
 
@@ -71,22 +71,22 @@ Rocket->SetActorTickEnabled(true);
   type: multiple-choice
   prompt: "Which of these does SpawnActor do for every actor it spawns?"
   choices:
-    - Only reserves memory for the actor's fields
-    - Registers the actor's components with rendering and physics and calls BeginPlay
-    - Loads the level the actor belongs to
-    - Nothing until the actor's first Tick
-  answerIndex: 1
+    - Registers its components with rendering and physics, then runs BeginPlay
+    - Reserves memory for the fields and stops there, leaving the rest to Tick
+    - Loads the whole level that the actor belongs to before starting the actor
+    - Nothing at all until the actor's first Tick, when it is finally built
+  answerIndex: 0
   explanation: A spawn builds the actor from its class, registers its components, runs its construction step, initializes components, and calls BeginPlay, all before SpawnActor returns.
 - id: destroy-memory
   type: multiple-choice
   prompt: "A rocket calls Destroy on itself. When is its memory freed?"
   choices:
-    - At once, inside Destroy
-    - At the end of the frame, always
-    - In a later garbage collection, once nothing points at it any more
-    - Never, while the level is loaded
-  answerIndex: 2
-  explanation: Destroy takes the actor out of play and out of its level, but the object's memory is reclaimed by a later garbage collection.
+    - Immediately, inside the Destroy call, before it returns to the caller
+    - At the end of the same frame, always, whatever else is happening
+    - Never, for as long as the level it belonged to stays loaded in memory
+    - In a later garbage collection, which also clears references to it
+  answerIndex: 3
+  explanation: Destroy takes the actor out of play and out of its level, but its memory is reclaimed by a later garbage collection, which also clears every reference to it.
 - id: fill-collision
   type: fill-blank
   prompt: "A hidden rocket still blocks shots until you call ___(false) on it."
@@ -110,10 +110,10 @@ Rocket->SetActorTickEnabled(true);
   type: multiple-choice
   prompt: "Before changing how the launcher gets its rockets, what should you do?"
   choices:
-    - Rewrite it, because spawning is always the problem
-    - Measure, for example with stat game or Unreal Insights, to see whether spawning is where the time goes
-    - Lower the rocket count until the dip is gone
-    - Move the rockets' code to Blueprint
+    - Rewrite it with a pool straight away, because spawning is always the problem
+    - Measure with stat game or Unreal Insights to see where the time goes
+    - Lower the rocket count until the dip is gone, then call it solved
+    - Move the rockets' code from C++ to Blueprint, which is always lighter
   answerIndex: 1
   explanation: Keeping actors around costs memory and care. It only pays when the numbers show spawning and destroying are the cost.
 - id: explain-old-life

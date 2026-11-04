@@ -128,7 +128,7 @@ int32 UDojoP17Ladder::GetRecomputeCount() const
 void UDojoP17Ladder::Recompute()
 {
 	TArray<int32> Best = Scores;
-	Best.Sort([](const int32& A, const int32& B) { return A > B; });
+	Best.Sort([](const int32& Left, const int32& Right) { return Left > Right; });
 
 	int32 Total = 0;
 	for (int32 Place = 0; Place < FMath::Min(3, Best.Num()); Place++) Total += Best[Place];
@@ -184,11 +184,14 @@ bool FDojo_P17_LadderRefactor_RefusedRemovalsChangeNothing::RunTest(const FStrin
 {
 	UDojoP17Ladder* Ladder = NewObject<UDojoP17Ladder>(GetTransientPackage());
 	Ladder->AddScore(25);
+	TestEqual(TEXT("The rating is the one score"), Ladder->GetRating(), 25);
+	const int32 CountBefore = Ladder->GetRecomputeCount();
 
 	TestFalse(TEXT("No score at index 4"), Ladder->RemoveScore(4));
 	TestFalse(TEXT("No score at index -1"), Ladder->RemoveScore(-1));
 	TestEqual(TEXT("The score is still there"), Ladder->GetScoreCount(), 1);
 	TestEqual(TEXT("And the rating is unchanged"), Ladder->GetRating(), 25);
+	TestEqual(TEXT("A refused removal set no note, so reading worked nothing out"), Ladder->GetRecomputeCount(), CountBefore);
 
 	return true;
 }
@@ -225,9 +228,9 @@ bool FDojo_P17_LadderRefactor_RecomputesOnlyWhenRead::RunTest(const FString& Par
 
 # Hints
 
-- `RecomputesOnlyWhenRead` is the one that says the refactor is done. Read its message: when did the count go up?
-- A `const` function can call only `const` functions and can change only `mutable` members. `GetRating` stays `const`, so what has to change about `Recompute` and the members it writes?
-- Set the note in both `AddScore` and `RemoveScore`, but only when something really changed.
+- Read the message of `RecomputesOnlyWhenRead` and notice when the count went up.
+- `GetRating` stays `const`, so ask what has to change about `Recompute` and the members it writes.
+- Decide where the note is set so that a refused removal leaves it alone.
 
 # Rubric
 

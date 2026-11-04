@@ -24,11 +24,11 @@ pieces:
 
 The show runner plays the harbor festival's finale. When play begins it sets up one rocket rack holding `RocketsInRack` rockets, 4 by default, and one shell pool holding `ShellsInPool` shells, 4 by default, both at its own spot. Those eight are every rocket and shell of the evening: nothing is spawned or destroyed after that, however many shows are played.
 
-A show is 12 cues, half a second apart, the first at the moment the show starts. Counting from 0, even cues fire a rocket and odd cues fire a shell. A rocket cue borrows a rocket from the rack at the runner's spot and launches it straight up at 1500 units per second with a 1.2 second fuse. A shell cue borrows a shell from the pool at the runner's spot and fires it with a 2 second fuse. When the rack or the pool has nothing to lend, the cue is a dud: counted, and nothing else happens. Every rocket and shell that bursts is counted and handed back to its rack or pool at once, so the next cue can borrow it. The show is over when all 12 cues have come and nothing is out: the label shows `SHOW OVER: <bursts> bursts, <duds> duds`. While a show runs, the label shows the next cue, the bursts, and the duds. Reference game: the August fireworks shows of Animal Crossing: New Horizons, where shell after shell bursts over the island for the whole evening.
+A show is 12 cues, half a second apart, the first at the moment the show starts. Counting from 0, even cues fire a rocket and odd cues fire a shell. A rocket cue borrows a rocket from the rack at the runner's spot and launches it straight up at 1500 units per second with a 1.2 second fuse. A shell cue borrows a shell from the pool at the runner's spot and fires it with a 2 second fuse. When the rack or the pool has nothing to lend, the cue is a dud: counted, and nothing else happens. Every rocket and shell that bursts is counted and handed back to its rack or pool at once, so the next cue can borrow it. The show is over when all 12 cues have come and nothing is out: the label shows `SHOW OVER: <bursts> bursts, <duds> duds`. While a show runs, the label starts with `SHOW: cue` and shows the next cue, the bursts, and the duds. Reference game: the August fireworks shows of Animal Crossing: New Horizons, where shell after shell bursts over the island during a show.
 
 How shows start and stop: show 1 starts when play begins. R starts the next show from its first cue with the counts at zero, only while no show runs. X aborts the running show: no more cues come, every rocket and shell still out goes back to its rack or pool at once, and the label shows `ABORTED: <bursts> bursts, <duds> duds`; nothing that went back bursts afterwards, at rest or in a later show. X while no show runs does nothing. A C++ runner receives keys only after `EnableInput` with the player controller.
 
-Every piece is the earlier quests' own: the rockets come from an `ADojoP16RocketRack` with `Acquire` and `Release` and are launched with `Launch` and read with `HasBurst`; the shells come from an `ADojoP16ShellPool` with `Acquire` and `Release` and are fired with `Fire` and read with `HasBurst`. The runner spawns the rack and the pool and sets their sizes before they begin play. The pieces need no changes.
+Every piece is the earlier quests' own: the rockets come from an `ADojoP16RocketRack` with `Acquire` and `Release` and are launched with `Launch` and read with `HasBurst`; the shells come from an `ADojoP16ShellPool` with `Acquire` and `Release` and are fired with `Fire` and read with `HasBurst`. The runner spawns the rack and the pool and sets their sizes before they begin play. The pieces need no changes. The runner's public surface is what the tests use: a `Label` text render component, the `RocketsInRack` and `ShellsInPool` properties, `StartShow` and `AbortShow`, which each return whether they did anything, and `IsRunning`, `GetBurstCount`, `GetDudCount`, `GetRack` and `GetShellPool`.
 
 Compiles against earlier quests: p16-rocket-rack (`Quests/p16-rocket-rack/DojoP16Rocket.h`, `Quests/p16-rocket-rack/DojoP16RocketRack.h`) and p16-shell-fuse (`Quests/p16-shell-fuse/DojoP16Shell.h`, `Quests/p16-shell-fuse/DojoP16ShellPool.h`).
 
@@ -40,7 +40,7 @@ Extensions, in order of importance:
 2. A recycling rack: when the rack is empty, the cue takes back the rocket that has flown longest and fires it again, instead of being a dud; the label counts recycled rockets instead of duds.
 3. Sizes from data: the cue list, the fuses, and the rack and pool sizes come from a Data Asset, and a warning is logged the first time a show produces a dud, naming the size that ran out.
 
-Feel: tune the cues so that the sky is never empty and never so full that a burst is lost among others, and find the smallest rack and pool that play the tuned show with no duds.
+Feel: judge the fixed show, so that the sky is never empty and never so full that a burst is lost among others, and find the smallest rack and pool that play it with no duds.
 
 # Required Pieces
 
@@ -110,11 +110,11 @@ Feel: tune the cues so that the sky is never empty and never so full that a burs
 
 # Integration Rubric
 
-- The rocket rack, rocket, shell, and shell pool pieces are reused unchanged, and the runner reaches them only through their own functions.
+- The rocket rack, rocket, shell, and shell pool pieces are reused unchanged, the runner reaches them only through their own functions, and they know nothing about the runner.
 - The rack and the pool are spawned with their sizes when play begins, and no actor is spawned or destroyed during any show.
 - Twelve cues come half a second apart from the start of a show, rockets on even cues and shells on odd ones, with the fixed launch and fuses.
 - Every rocket and shell that bursts is counted and handed back to its rack or pool at once.
 - A cue that finds its rack or pool empty is a counted dud that spawns nothing.
 - The show is over when every cue has come and nothing is out, and the label shows the bursts and duds.
 - X sends everything back at once and nothing sent back bursts afterwards; R starts a show with zeroed counts only while none runs.
-- The submission says why nothing is spawned during a show and what a dud costs the player, and gives the smallest rack and pool that play its tuned show with no duds.
+- The submission says why nothing is spawned during a show and what a dud costs the player, and gives the smallest rack and pool that play the fixed show with no duds.

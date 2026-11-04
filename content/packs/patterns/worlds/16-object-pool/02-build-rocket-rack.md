@@ -31,7 +31,7 @@ Most of the code is written. First read the marked lines and say in a sentence w
 
 ## See it in the editor
 
-Place a `DojoP16RocketRack`. In the Level Blueprint, on Begin Play, call Acquire on it five times and print Is Valid of each result: true four times, then false. After a Delay of 1 second, call Release twice with the first result and print both answers: true, then false. Press Play, then press F8 to eject and look at the Outliner: it lists four `DojoP16Rocket` actors, and the number never changes while you play.
+Place a `DojoP16RocketRack`. In the Level Blueprint, on Begin Play, first wait a Delay of 0.2 seconds so the rack has spawned its rockets, then call Acquire on it five times, store the first result in a variable, and print Is Valid of each result: true four times, then false. After a Delay of 1 second, call Release twice with the stored result and print both answers: true, then false. Press Play, then press F8 to eject and look at the Outliner: it lists four `DojoP16Rocket` actors, and the number never changes while you play.
 
 # Files
 
@@ -463,9 +463,9 @@ bool FDojo_P16_RocketRack_ReleasingTwiceLendsItOnce::RunTest(const FString& Para
 
 # Hints
 
-- `Release` has two jobs: decide whether this rocket is one to take back at all, and then put it out of play. Which list already says whether the rack lent it?
-- Out of play means every switch `Acquire` turned on is off again. Count the switches in `Acquire`.
-- A rocket taken back mid-flight must stop where it is. Which of the switches stops it moving?
+- The list of lent rockets already tells you whether this one is the rack's to take back.
+- Read `Acquire` again, since taking a rocket back has to answer everything it turned on.
+- Whatever keeps a rocket moving through its flight has to be dealt with before it waits.
 
 # Rubric
 

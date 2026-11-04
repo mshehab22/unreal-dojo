@@ -35,7 +35,7 @@ int32 UDojoP17Ladder::GetRecomputeCount() const
 void UDojoP17Ladder::Recompute() const
 {
 	TArray<int32> Best = Scores;
-	Best.Sort([](const int32& A, const int32& B) { return A > B; });
+	Best.Sort([](const int32& Left, const int32& Right) { return Left > Right; });
 
 	int32 Total = 0;
 	for (int32 Place = 0; Place < FMath::Min(3, Best.Num()); Place++) Total += Best[Place];

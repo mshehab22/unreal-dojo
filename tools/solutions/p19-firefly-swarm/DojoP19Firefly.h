@@ -26,4 +26,4 @@ struct FDojoP19Firefly
 	float GlowRate = 0.f;
 };
 
-static_assert(sizeof(FDojoP19Firefly) == 32, "A firefly must stay 32 bytes, two to a cache line.");
+static_assert(sizeof(FDojoP19Firefly) == 32, "A firefly must stay 32 bytes, about two to a 64 byte line on PC.");

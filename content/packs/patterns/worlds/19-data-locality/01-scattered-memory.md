@@ -7,13 +7,13 @@ difficulty: 3
 patterns: []
 skills: [data-locality, performance]
 terms: [tarray, ustruct, cache-line, fvector3f, tick, profiling]
-prerequisites: [p13-bytecode-when-not]
+prerequisites: [p18-boss-moth-meadow]
 xp: 25
 estimatedMinutes: 10
 concepts:
   - The processor reads memory a cache line at a time, 64 bytes on PC, so data stored side by side arrives together
   - An array of pointers keeps the pointers side by side, but every object they point at can sit anywhere
-  - Every actor carries its own components, its own tick, and its own bookkeeping, which is a lot for a dot of light
+  - A ticking actor carries its own components, its own tick, and its own bookkeeping, which is a lot for a dot of light
   - A TArray of small structs keeps every record side by side, and one loop can walk them front to back
   - FVector is three doubles in UE 5, so a compact record often uses FVector3f
   - Only measuring says whether memory is the cost
@@ -26,11 +26,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: the meadow has 10,000 fireflies, each an actor with a sphere component that moves itself in Tick. The frame takes far too long and the fireflies' own math is tiny. Where does most of the time go?"
 choices:
-  - The square roots in the movement math
-  - Drawing the spheres, always
-  - Running 10,000 separate ticks and reaching 10,000 objects scattered across memory, each carrying far more than a position
-  - Nowhere in particular; 10,000 of anything is free on a modern PC
-answerIndex: 2
+  - The square roots in the movement math each frame
+  - Ten thousand ticks and objects scattered across memory
+  - Drawing the spheres, which is always the slowest part
+  - Nowhere in particular; ten thousand of anything is free
+answerIndex: 1
 explanation: Each actor's tick is dispatched on its own, and each firefly's few bytes of position sit inside a large object somewhere in memory. The processor spends the frame fetching and dispatching, not adding velocities.
 ```
 
@@ -42,9 +42,9 @@ The summer meadow needs ten thousand fireflies. The first version is the obvious
 
 **Pointers scatter.** A `TArray<AFirefly*>` keeps ten thousand pointers side by side, but each pointer leads somewhere else in memory, and each firefly's position sits inside a large object among fields the movement never reads. Walking the array means a fresh trip to memory for nearly every firefly.
 
-**An actor is heavy for a dot of light.** Every actor is a `UObject` with its own bookkeeping, its own root component, and its own tick function, which the world dispatches one by one. Ten thousand fireflies are ten thousand ticks, ten thousand components in the scene, and ten thousand objects for every garbage collection to look at. The movement math is the smallest part of the bill.
+**An actor is heavy for a dot of light.** Every actor is a `UObject` with its own bookkeeping and usually its own root component, and each one that ticks has its own tick function, which the world dispatches one by one. Ten thousand fireflies are ten thousand ticks, ten thousand components in the scene, and ten thousand objects for every garbage collection to look at. The movement math is the smallest part of the bill.
 
-**Records side by side.** A `USTRUCT` with just what the movement needs, kept by value in one `TArray`, stores every firefly's data next to the next one's. One actor owns the array and one loop walks it from front to back, so each cache line brings two whole fireflies at once. There is one tick for the whole meadow instead of ten thousand.
+**Records side by side.** A `USTRUCT` with just what the movement needs, kept by value in one `TArray`, stores every firefly's data next to the next one's. One actor owns the array and one loop walks it from front to back, so each cache line brings about two whole fireflies at once. There is one tick for the whole meadow instead of ten thousand.
 
 **Small types for small records.** In UE 5 `FVector` holds three doubles, 24 bytes, so that very large worlds keep their precision. A firefly's position and velocity as two `FVector`s are already 48 bytes. `FVector3f` holds three floats, 12 bytes, which is plenty for things that drift over one meadow, and brings a whole firefly down to 32 bytes.
 
@@ -53,7 +53,7 @@ The summer meadow needs ten thousand fireflies. The first version is the obvious
 # Example
 
 ```cpp
-// One small record per firefly: 32 bytes, so two fit in each 64 byte cache line.
+// One small record per firefly: 32 bytes, about two to a 64 byte line on PC.
 USTRUCT()
 struct FFirefly
 {
@@ -84,21 +84,21 @@ TArray<FFirefly> Fireflies;
   type: multiple-choice
   prompt: "Why does it help to keep the data one loop reads side by side in memory?"
   choices:
-    - The processor fetches a whole cache line at a time, so neighbors of the record it needs arrive for free
-    - Memory is cheaper when it is full
-    - Side by side data is never garbage collected
-    - The compiler refuses to loop over scattered data
-  answerIndex: 0
+    - Memory runs cheaper to read when a program fills it
+    - Side by side data is never visited by garbage collection
+    - Each fetch brings a whole line, so neighbors come free
+    - The compiler refuses to loop over data stored apart
+  answerIndex: 2
   explanation: A fetch brings a whole line, 64 bytes on PC, into the cache. Records packed together make every fetch useful.
 - id: pointer-array
   type: multiple-choice
   prompt: "A TArray<UFirefly*> stores its elements side by side. Why is walking it still slow for movement?"
   choices:
-    - TArray stores pointers out of order
-    - Pointers are larger than structs
-    - UObject pointers cannot be read in a loop
-    - Only the pointers are side by side; each firefly object sits somewhere else in memory among fields the loop never reads
-  answerIndex: 3
+    - Each pointer leads to an object stored elsewhere
+    - TArray keeps its pointers in a scrambled order
+    - Pointers take more room than the structs they name
+    - UObject pointers cannot be read inside a loop
+  answerIndex: 0
   explanation: The array of pointers is compact, but every dereference is another trip to a different place in memory.
 - id: fill-vector3f
   type: fill-blank

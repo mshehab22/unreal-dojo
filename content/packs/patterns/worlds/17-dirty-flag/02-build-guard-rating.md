@@ -351,9 +351,9 @@ bool FDojo_P17_GuardRating_ChangesThatChangeNothing::RunTest(const FString& Para
 
 # Hints
 
-- Three things must happen when the note is set: the sum, the store, and the count. Which order do they have to be in for the stored answer to be right?
-- The parts are `BaseGuard`, the values of `Equipment`, and the `Amount` of every entry in `Buffs`. A `TMap` loop gives pairs, and the bonus is the value half.
-- Clear the note only after the stored answer is in place, and do nothing about the note when it was already clear.
+- Everything `GetGuard` does besides returning the stored rating belongs inside a check of the note.
+- Walk both collections of parts, add what each entry is worth, and keep the total from going below zero.
+- Clear the note only after the stored answer is in place.
 
 # Rubric
 
