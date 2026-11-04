@@ -63,11 +63,11 @@ GetWorld()->OverlapMultiByObjectType(Overlaps, KeeperSpot, FQuat::Identity, Lant
   type: multiple-choice
   prompt: "Which job is the poorest fit for a grid of your own?"
   choices:
-    - Finding the closest of 30 shrines when a key is pressed
     - Finding the neighbors of each of 3,000 starlings stored as structs, every frame
+    - Finding the closest of 30 shrines when a player presses a key in the room
     - Scoring 4,000 cover points against guard positions every second
     - Finding crowd members near each of 2,000 crowd members every frame
-  answerIndex: 0
+  answerIndex: 1
   explanation: Thirty objects asked about once per key press is a tiny loop. The others are thousands of questions over thousands of objects.
 - id: when-not-collision
   type: multiple-choice

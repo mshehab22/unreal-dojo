@@ -27,7 +27,7 @@ prompt: "Guess, no penalty: a scoreboard's goal tally goes up by one whenever a 
 choices:
   - Yes, every number that is read often deserves a flag
   - Yes, but only once the tally is stored in a TMap
-  - No; keep a tally that each goal adds to or takes from
+  - No; keep a tally each goal adds to
   - No; recount every goal on the board each frame
 answerIndex: 2
 explanation: Each change can be applied to the answer directly, so there is nothing to refresh later. A running tally has no flag to forget.

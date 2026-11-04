@@ -34,7 +34,7 @@ The launcher and the dummies know nothing about the director. The director never
 
 Compiles against earlier quests: p20-target-rules (`Quests/p20-target-rules/DojoP20Candidate.h`, `Quests/p20-target-rules/DojoP20TargetRule.h`, `Quests/p20-target-rules/DojoP20Launcher.h`) and p20-mover-rules (`Quests/p20-mover-rules/DojoP20MoveRule.h`, `Quests/p20-mover-rules/DojoP20Mover.h`).
 
-Core numbers are fixed: a 29 second round, a step every 0.5 seconds from 0.25, a shot every 2 seconds from 2, a hit worth 10 health, and the dummies' starting health of 30, 50, and 40. They are the defaults of three public properties on the director, `RoundSeconds`, `FireInterval`, and `HitDamage`, and the tests set those properties to other values: a round lasts `RoundSeconds`, a shot comes every `FireInterval` with the first after one interval, and a hit takes `HitDamage`.
+Core numbers are fixed: a 29 second round, a step every 0.5 seconds from 0.25, a shot every 2 seconds from 2, a hit worth 10 health, and the dummies' starting health of 30, 50, and 40. They are the defaults of three public properties on the director, `RoundSeconds` and `FireInterval` (both `float`) and `HitDamage` (an `int32`), and the tests set those properties to other values: a round lasts `RoundSeconds`, a shot comes every `FireInterval` with the first after one interval, and a hit takes `HitDamage`.
 
 Extensions, in order of importance:
 

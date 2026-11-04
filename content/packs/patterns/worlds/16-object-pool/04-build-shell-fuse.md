@@ -483,7 +483,7 @@ bool FDojo_P16_ShellFuse_FourShellsMakeAShow::RunTest(const FString& Parameters)
 
 - Read the failing test's message for which shell burst and when it was sent to rest.
 - Hiding a shell and stopping its Tick only change what it does each frame, so find what else `Fire` set going.
-- Resting has to undo whatever `Fire` handed to the world, as well as the shell's own switches.
+- A shell sent back mid-flight must behave, when it is next fired, as if it had never been fired before.
 
 # Rubric
 

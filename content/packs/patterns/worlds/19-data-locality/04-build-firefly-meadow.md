@@ -361,7 +361,7 @@ bool FDojo_P19_Meadow_ABusyEveningStaysPacked::RunTest(const FString& Parameters
 # Hints
 
 - Read the failing test's messages: which handle found nothing, and which found a firefly that was not its own?
-- Removing from the middle moves a record, so ask what a handle that remembers an array position still says afterwards.
+- Removing from the middle moves a record, so ask what a handle still says about a record after it moves.
 - A handle needs something about its firefly that stays true when the firefly moves in the array.
 
 # Rubric

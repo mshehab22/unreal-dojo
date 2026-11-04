@@ -25,7 +25,7 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: the lantern grid has cells 200 units wide. A designer asks how many lanterns burn within 900 units of the keeper. How many cells does FindNear visit in each direction from the keeper's cell?"
 choices:
-  - About five, since the circle spans four or five cells each way
+  - About five, since the circle spans four or five cells each way out
   - One, the cells right next to it, as always, whatever the radius is
   - None; it looks only in the keeper's own cell and nowhere else at all
   - It gives up, because the radius is larger than a cell and cannot be used

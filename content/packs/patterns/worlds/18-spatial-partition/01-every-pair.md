@@ -103,10 +103,10 @@ TMap<FIntPoint, TArray<int32>> MothsInCell;
   prompt: "What is FNavigationOctree for?"
   choices:
     - Keeping the moths of a gameplay swarm in cells for questions
+    - Filing nav mesh geometry so a tile can be gathered quickly
     - Sending every change to actors out to the connected clients
-    - Filing nav mesh geometry so a tile can be gathered fast
     - Drawing the debug lines of a path on screen for a designer
-  answerIndex: 2
+  answerIndex: 1
   explanation: It is the navigation system's own spatial index, an octree of nav-relevant geometry. It shows the idea; gameplay data does not belong in it.
 - id: explain-why-grid
   type: explain-in-one-sentence

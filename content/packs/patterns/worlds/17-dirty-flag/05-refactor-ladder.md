@@ -179,7 +179,7 @@ bool FDojo_P17_LadderRefactor_RatingIsTheBestThree::RunTest(const FString& Param
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P17_LadderRefactor_RefusedRemovalsChangeNothing, "Dojo.P17.LadderRefactor.RefusedRemovalsChangeNothing", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** A removal of a score that is not there is refused and leaves the scores and the rating alone. */
+/** A removal of a score that is not there is refused, leaves the scores and the rating alone, and works nothing out. */
 bool FDojo_P17_LadderRefactor_RefusedRemovalsChangeNothing::RunTest(const FString& Parameters)
 {
 	UDojoP17Ladder* Ladder = NewObject<UDojoP17Ladder>(GetTransientPackage());

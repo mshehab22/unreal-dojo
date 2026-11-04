@@ -2262,8 +2262,8 @@
         "choices": [
           "Nothing, the second return is ignored by the engine",
           "The rack later lends the same rocket to two users at once",
-          "The rocket is destroyed",
-          "The rack spawns a replacement"
+          "The rocket is destroyed the next time it is lent out",
+          "The rack spawns a replacement for the missing rocket"
         ],
         "answerIndex": 1,
         "explanation": "A rocket listed twice is handed out twice. A pool takes back only what it lent and has not yet taken back."
@@ -2574,7 +2574,7 @@
           "Because four of the eight neighbors are always empty cells",
           "To keep the grid's memory use smaller for a very large pond",
           "Because diagonal cells can never hold a nearby object at all",
-          "So two touching cells are compared from one side only"
+          "So any two touching cells are compared from one side alone"
         ],
         "answerIndex": 3,
         "explanation": "If each of two touching cells compared against the other, every pair across them would be measured twice. Four directions, one from each opposite pair, cover each touching pair once."
