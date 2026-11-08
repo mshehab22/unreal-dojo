@@ -7,7 +7,7 @@ difficulty: 4
 patterns: [observer, state]
 skills: [planning, input, collision, delegates, timers, tracing]
 terms: [pawn, overlap-event, dynamic-multicast-delegate, timer-manager]
-prerequisites: [m1-boss-drone-handoff, m2-boss-clockwork-hall, m3-boss-vault-room, m4-boss-fuse-yard, m5-boss-watchtower, m6-boss-quest-system]
+prerequisites: [m1-boss-drone-handoff, m2-boss-clockwork-hall, m3-boss-vault-room, m4-boss-fuse-yard, m5-boss-watchtower, m6-boss-quest-system, m7-boss-shrine]
 xp: 120
 estimatedMinutes: 25
 concepts:

@@ -24,11 +24,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: World 3 left you a plate that counts what stands on it, and now a gate must open when a plate is pressed. What is the best first move?"
 choices:
-  - Copy the World 3 plate into a new file and start editing it
-  - Make the gate ask the World 3 plate whether it is pressed on every frame
-  - List what already exists and decide, piece by piece, whether to reuse it, change it, or build it new
+  - Copy the World 3 plate into a new file and start editing it, keeping its counting code exactly
+  - Make the gate ask the World 3 plate whether it is pressed, once on every frame that passes
   - Ignore the old plate and write everything from scratch, so nothing old gets in the way
-answerIndex: 2
+  - List what already exists and sort each piece into reuse, retrofit, or build new
+answerIndex: 3
 explanation: Before any code, a maker checks what the library already offers and sorts it into reuse as is, retrofit, or build new; copying, polling, or starting over are each the right answer only sometimes, and the audit tells you which.
 ```
 
@@ -46,7 +46,7 @@ Every mechanic in this world goes through the same five steps before the first l
 
 - **Reuse as is**: it already does the job. World 3's runner and crate stand on plates exactly as they are.
 - **Retrofit**: it almost does the job and changing it is cheap and yours to change.
-- **Build new**: changing it would break its own world, or it is the wrong shape. World 3's plate counts well but announces nothing, so a gate would have to ask it every frame; adding events would change World 3's file under every World 3 quest. So this world builds a new plate that announces itself and keeps World 3's counting idea.
+- **Build new**: changing it would break its own world, or it is the wrong shape. World 3's plate counts well but announces nothing, so a gate would have to ask it every frame; adding events would change World 3's file under every World 3 quest that compiles against it. So this world builds a new plate that announces itself and keeps World 3's counting idea.
 
 **5. Spike the unknown.** A **spike** is a small, throwaway build, usually under 20 minutes, in an empty level or a test, that answers one question and nothing else, such as "how do I move a panel exactly 300 cm in exactly 0.8 s?" You keep the answer and delete the spike, so the real build starts from knowledge, not hope.
 
@@ -83,29 +83,29 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDojoOnCoinCollected, int32, Value);
   type: multiple-choice
   prompt: "Pitch: the visitor steps on a bell plate, a bridge extends across the gap, but it retracts 4 seconds after the visitor steps off. Which part is the constraint?"
   choices:
-    - The visitor steps on a bell plate
-    - The bridge extends across the gap
     - It retracts 4 seconds after the visitor steps off
-  answerIndex: 2
+    - The visitor steps on a bell plate that sits in front of the gap
+    - The bridge extends across the gap so the visitor can walk over it
+  answerIndex: 0
   explanation: The action is stepping on the plate and the response is the bridge; the 4 second limit is what turns it into a decision about timing.
 - id: piece-kind
   type: multiple-choice
   prompt: "In a plan, which kind of piece is a plate's OnPlatePressed?"
   choices:
     - data
-    - event
     - step
+    - event
     - component
-  answerIndex: 1
+  answerIndex: 2
   explanation: It is a delegate the plate broadcasts so listeners can react without polling, which is an event piece.
 - id: audit-crate
   type: multiple-choice
   prompt: "World 7's tests need something heavy to stand on plates. World 3's crate has a solid body, a handle, and a home it can return to. What does the reuse audit say?"
   choices:
-    - Build new, because every world needs its own classes
-    - Retrofit, by adding a weight value to World 3's crate
-    - Reuse as is, because it already overlaps a plate's zone as one thing and can be sent home
-  answerIndex: 2
+    - Build new, because every world needs its own classes and cannot lean on another world's files
+    - Reuse as is, because it already stands on plates as one thing and can be sent home
+    - Retrofit, by adding a weight value to World 3's crate so a plate can tell how heavy it is
+  answerIndex: 1
   explanation: Nothing about the crate needs to change, so it is reused as it is and listed under the quests a build compiles against.
 - id: spike-name
   type: fill-blank

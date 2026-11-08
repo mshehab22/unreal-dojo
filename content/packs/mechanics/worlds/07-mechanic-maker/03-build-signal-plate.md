@@ -35,7 +35,7 @@ Compiles against earlier quests: m3-checkpoint (`Quests/m3-checkpoint/DojoM3Runn
 
 ## See it in the editor
 
-Place a `DojoM7SignalPlate` at the origin and a `DojoM7PlateLamp` at Y 400, and set the lamp's Plate to the plate in Details. Place a `DojoM3Crate` at Y -800 and a `DojoM3Runner` at Y -500. Type `show Collision` and press Play: the plate reads 0 and the lamp DARK. In the level Blueprint, on the 1 and 2 keys, add Set Actor Location for the crate to X -50, Y 0 and for the runner to X 50, Y 0; on the 3 and 4 keys, send each back where it started; on the 5 key, Print String the lamp's Get Presses and Get Releases. Press 1, 2, 3, 4, then 5: the lamp lit once and went dark once, though two things arrived and two left.
+Place a `DojoM7SignalPlate` at the origin and a `DojoM7PlateLamp` at Y 400, and set the lamp's Plate to the plate in Details. Place a `DojoM3Crate` at Y -800 and a `DojoM3Runner` at Y -500. Type `show Collision` and press Play: the plate reads 0 and the lamp DARK. In the level Blueprint, create a reference to the crate, the runner and the lamp (select each in the level, right-click the graph, and choose Create a Reference to it). On the 1 and 2 keys, add Set Actor Location for the crate to X -50, Y 0 and for the runner to X 50, Y 0; on the 3 and 4 keys, send each back where it started; on the 5 key, Print String the lamp's Get Presses and Get Releases. Press 1, 2, 3, 4, then 5: the lamp lit once and went dark once, though two things arrived and two left.
 
 # Files
 
@@ -484,9 +484,9 @@ bool FDojo_M7_SignalPlate_BlueprintCanListen::RunTest(const FString& Parameters)
 
 # Hints
 
-- The gap in `Recount` sits after the count is updated, and the line above it kept the old state; a press is the one change where the old state is empty and the new one is not, and a release is the opposite. When the state did not change, nothing is said.
-- Each event is fired with `Broadcast`, passing the same one value the event type was declared with. In the lamp, each event gets its own handler, bound with the macro that ignores a second identical binding.
-- `Broadcast` and `AddUniqueDynamic` come with the delegate macros you met in Pack 1's binding card; the event types are declared at the top of `DojoM7SignalPlate.h`.
+- The old state is still in hand just before the count changes, so compare it with the new one.
+- Each event is announced with the one value its type was declared with.
+- In the lamp, give each event its own handler and bind them in a way that ignores a repeat, using what Pack 1's binding card taught.
 
 # Rubric
 

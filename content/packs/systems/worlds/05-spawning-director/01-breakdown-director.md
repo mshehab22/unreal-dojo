@@ -13,7 +13,7 @@ estimatedMinutes: 25
 concepts:
   - Keeping the shape of every wave in data, so a harder night is a new asset
   - Deciding which piece owns the beetles, which owns the pacing, and who only listens
-  - Knowing how many beetles are loose from events, not by searching the level
+  - Knowing what is loose from events, not by searching the level
 ---
 
 # Spec
@@ -56,7 +56,7 @@ Acceptance:
   why: The pit does different things while a wave runs and while it rests, and one owner decides which.
 - id: budget
   kind: step
-  label: Counting live beetles and beetles still to come from the beetles' defeat events
+  label: Knowing how many beetles are loose and when a wave is over, from the beetles' defeat events
   why: The live limit needs to know what is loose, and someone must decide when a wave is over.
 - id: pacing
   kind: step
@@ -81,7 +81,7 @@ Acceptance:
     - { id: plan, kind: data, label: UDojoS5WavePlan data asset with a base count and a curve asset that scales it per wave and the interval and the live limit and the rest and the last wave, covers: [wave-data] }
     - { id: hatch, kind: class, label: ADojoS5Hatch actors with a minimum distance and a view angle that answer IsOutOfSight for a viewer, covers: [hatches] }
     - { id: pool, kind: component, label: UDojoS5PoolComponent holding every beetle it made and waking a sleeping one before spawning, covers: [pool] }
-    - { id: director, kind: class, label: ADojoS5WaveDirector with a state enum and the wave number and the live count and the count still to spawn, covers: [director, budget] }
+    - { id: director, kind: class, label: ADojoS5WaveDirector with a state enum and the wave number and the wave's beetle bookkeeping, covers: [director, budget] }
     - { id: timers, kind: step, label: A looping spawn timer during a wave and a one shot rest timer between waves, covers: [pacing] }
     - { id: events, kind: event, label: OnWaveStarted and OnWaveCleared and OnRestStarted broadcast after the director holds its new state, covers: [announcements] }
     - { id: banner, kind: class, label: A banner actor that binds to the three events and rewrites its text and unbinds when it leaves play, covers: [banner] }
@@ -100,7 +100,7 @@ Acceptance:
     - { id: points, kind: class, label: Target points tagged as spawn points whose visibility the director checks with the player's camera, covers: [hatches] }
     - { id: pool, kind: component, label: A world subsystem that keeps a pool per enemy class for every spawner in the level, covers: [pool] }
     - { id: director, kind: component, label: A director component on the game mode holding the current state object out of Resting and Fighting and Done, covers: [director] }
-    - { id: fighting, kind: step, label: The Fighting state counts spawned and defeated enemies and its own timer and asks to switch to Resting when both counts meet, covers: [budget, pacing] }
+    - { id: fighting, kind: step, label: The Fighting state tracks the wave's enemies and its own timer and asks to switch to Resting when the wave is over, covers: [budget, pacing] }
     - { id: channel, kind: event, label: An event channel subsystem that carries wave messages to anyone who subscribes, covers: [announcements] }
     - { id: banner, kind: class, label: A UMG widget that subscribes to the channel, covers: [banner] }
   edges:
@@ -116,7 +116,7 @@ Acceptance:
 - The numbers of a night live in one asset, and the director reads them instead of holding copies.
 - One piece owns the beetles and reuses them; the director asks it for a beetle and gives each one back after its defeat.
 - The director has one current state, and the plan says what each state does with a spawn, a defeat, and a timer.
-- The plan says how the director knows when a wave is over.
+- The plan says which piece decides that a wave is over.
 - The director announces wave changes with events, and the banner and the gate only listen and unbind when they leave play.
 - The plan says what a second pit with its own hatches needs.
 

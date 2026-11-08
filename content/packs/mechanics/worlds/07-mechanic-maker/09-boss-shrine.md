@@ -30,9 +30,13 @@ The door opening clears the round. A shrine director hears the unlock and nothin
 
 A board on the director reads three lines: `Rounds cleared: 1`, `Gate: OPEN` or `Gate: SHUT`, and `Resetting` while a reset is coming. It changes only when the gate reports it finished opening or closing, when a round is cleared, and when the reset runs.
 
-Dependency direction: the director holds pointers to the gate, the key pickup, the door, and the crates, and only listens to their events and calls their public functions. The pieces never know the director exists, and the plates and the gate never know about the key or the door.
+Dependency direction: the director holds pointers to the gate, the key pickup, the door, and the crates, and only listens to their events, the dynamic multicast delegates they broadcast, and calls their public functions. The pieces never know the director exists, and the plates and the gate never know about the key or the door.
+
+The reset pause is an editable number on the director, `ResetSeconds`, and its meta specifiers keep a designer from typing a negative one. The pause runs on the timer manager, and a director that is destroyed is done with unbinding delegates: it removes every binding it made and clears its pending timer.
 
 The pieces need no additions: the plate, the gate, the ring, the pickup, and the door are used as their quests left them. The runner and the crates are the ones from the collision world.
+
+The tests compile against `Quests/m7-boss-shrine/DojoM7ShrineDirector.h` and read this surface of `ADojoM7ShrineDirector`: a `Board` text render component whose lines are separated by a plain `\n`, never the platform's line ending; the editable `Gate`, `KeyPickup`, `Door`, `Crates` (a list) and `ResetSeconds` (a `float`), which the tests set before play begins; `OnRoundCleared`, a `BlueprintAssignable` event that carries the round count; `GetRoundsCleared`; `IsResetting`; and a handler named exactly `HandleDoorUnlocked`, bound to the door's `OnUnlocked`, because a test asks the door whether the director is still bound by that name.
 
 Reference game: the switch rooms of top-down adventure dungeons such as The Legend of Zelda: A Link to the Past, where a block pushed onto a floor switch holds a way open and a small key opens the last door.
 
@@ -46,7 +50,7 @@ Extensions, in order of importance:
 2. A visit timer from the first plate pressed to the unlock, with the best time kept on the board across rounds.
 3. Feedback through the events that already exist: a click when a plate is pressed, a rumble while the gate moves, and a chime on the unlock, none of them known to the piece that fires the event.
 
-Feel: once both rounds pass, tune the gate's open time and the reset pause until the gate rising reads as a reward you watch and the reset leaves you a moment to see the door shut behind you, not a wait you sit through. Note the two values you chose.
+Feel: once both rounds pass, judge the fixed numbers: the gate rising over 0.8 seconds should read as a reward you watch, and the 2 second pause as a moment to see the door shut behind you, not a wait you sit through. Try other pauses by changing `ResetSeconds` in Details, and note which one you would keep and why.
 
 # Required Pieces
 
@@ -121,10 +125,10 @@ Feel: once both rounds pass, tune the gate's open time and the reset pause until
 # Integration Rubric
 
 - The plate, the gate, the ring, the pickup, and the door are reused without changes, and each piece's own tests still pass.
-- The gate follows the plates through their events alone; the director has no code about plates and no copy of the all plates pressed rule.
+- The gate follows the plates through their events alone; the director has no code about plates and no copy of the all plates pressed rule. The director holds the pieces and listens to them, and no piece holds a pointer to the director.
 - A round is cleared only by the door's `OnUnlocked`, once per opening, and the visitor comes from the event, not from a search.
 - The reset is a one shot timer `ResetSeconds` after the unlock, never a check in Tick, and a pause of zero resets at once.
 - The reset sends every crate home, returns the key, relocks the door with its locked tries kept, and takes the key off the ring found on the visitor with `FindComponentByClass`.
 - The board changes only on the gate's `OnOpened` and `OnClosed`, a cleared round, and the reset.
 - Every binding made in `BeginPlay` is removed in `EndPlay`, where the pending reset timer is also cleared.
-- A second visit plays exactly like the first; `ResetSeconds` is `EditAnywhere` with `ClampMin` and `Units`, and the submission gives the tuned gate time and reset pause with one sentence on why.
+- A second visit plays exactly like the first; `ResetSeconds` is `EditAnywhere` with `ClampMin` and `Units`, and the submission names the fixed numbers it would change, with one sentence on why.

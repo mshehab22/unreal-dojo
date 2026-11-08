@@ -13,7 +13,7 @@ xp: 100
 estimatedMinutes: 35
 concepts:
   - One current state decides what a timer, a swat, and a start request do
-  - A live limit and a count still to come, both kept from events
+  - A live limit kept from events
   - Every announcement goes out after the director holds its new state
 ---
 
@@ -41,7 +41,7 @@ This is the third piece of the Beetle Pit boss.
 
 ## See it in the editor
 
-Place a `DojoS5WaveDirector`, a `BP_Burrow` with a pool, and four `DojoS5Hatch` actors 8 meters from the Player Start. In the level Blueprint, on BeginPlay call Setup with `DA_Night`, the pool, the player pawn, and the four hatches, bind custom events to On Wave Started, On Wave Cleared, and On Rest Started that print their values, and call Start Night. On the 1 key, get the pool's Get Awake Beetles and call Defeat on the first one. Press Play and watch beetles appear behind you and never in front. Swat every beetle of wave 1 with the 1 key and watch the printed rest, then wave 2.
+Place a `DojoS5WaveDirector`, a `BP_Burrow` with a pool, and four `DojoS5Hatch` actors 8 meters from the Player Start. In the level Blueprint, select the director, the burrow and the four hatches in the level, right-click the graph and choose Create References to Selected Actors; get the pool from the burrow with Get Component by Class, and the player with Get Player Pawn; keep `DA_Night` in a variable of type Dojo S5 Wave Plan whose default value you pick after compiling. On BeginPlay call Setup with `DA_Night`, the pool, the player pawn, and the four hatches, bind custom events to On Wave Started, On Wave Cleared, and On Rest Started that print their values, and call Start Night. On the 1 key, get the pool's Get Awake Beetles and call Defeat on the first one. Press Play and watch beetles appear behind you and never in front; the check uses the way the pawn itself faces, so turn the pawn by walking, not only the camera. Swat every beetle of wave 1 with the 1 key and watch the printed rest, then wave 2.
 
 # Files
 
@@ -643,8 +643,8 @@ bool FDojo_S5_WaveDirector_SightlinesAndStop::RunTest(const FString& Parameters)
 # Hints
 
 - Run the first failing test and read its message: it names a moment when the director moved on while the wave was not really over.
-- A swat can leave nothing loose in two different situations: every beetle of the wave has been swatted, or the player is simply faster than the spawn timer. Ask which of your two counts tells those apart.
-- Bind with `AddUniqueDynamic`, because a pooled beetle comes back wave after wave and an identical second binding would make one swat count twice. `SetTimer` with looping on drives the spawns, a second handle drives the rest, and `ClearTimer` stops each one.
+- A swat can leave nothing loose in two different situations, every beetle of the wave swatted or the player simply faster than the spawn timer, so ask what else you know that tells them apart.
+- Move to the rest only when that second fact also says the whole wave has come out, and keep the check in the one place every swat passes through.
 
 # Rubric
 
@@ -659,7 +659,7 @@ bool FDojo_S5_WaveDirector_SightlinesAndStop::RunTest(const FString& Parameters)
 
 A wave ends when its last beetle is swatted, and that needs two numbers: the beetles loose and the beetles still to come. The live count alone reaches zero whenever the player swats faster than the spawn timer sends, which is exactly the player the game should reward, so a director that checks only the live count hands a fast player a free rest in the middle of a wave. Keeping both counts in the director and moving to Rest only when both are zero is the fix.
 
-The state here is an enum with a check at the top of each function, the first shape from Pack 2's "One mode at a time" world. It suits four small states. When the rest gains its own behavior, such as opening doors and dropping supplies, each state becomes an object with its own enter, exit, and timer handling, the second shape from that world. The announcements are Observer from "The lens, then the first payoff": the director never learns that a banner or a gate exists.
+The state here is an enum with a check at the top of each function, the first shape from Pack 2's "One mode at a time" world. It suits four small states. When the rest gains its own behavior, such as opening doors and dropping supplies, each state becomes an object with its own enter, exit, and timer handling, the second shape from that world. Bind to each beetle with `AddUniqueDynamic`, because a pooled beetle comes back wave after wave and a second identical binding would make one swat count twice; `SetTimer` with looping drives the spawns, a second handle drives the rest, and `ClearTimer` stops each one. The announcements are Observer from "The lens, then the first payoff": the director never learns that a banner or a gate exists.
 
 # Parsons
 

@@ -23,11 +23,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: a gate's speed is OpenHeight / OpenSeconds, and OpenSeconds is EditAnywhere with no meta. A designer types 0 into it in Details. What happens when the gate opens?"
 choices:
-  - The editor refuses the 0 and keeps the old value
-  - The game crashes with a divide-by-zero error
-  - The speed becomes infinite, so the panel jumps fully open in a single frame
-  - The gate falls back to the default time
-answerIndex: 2
+  - The speed becomes infinite, so the panel jumps fully open at once
+  - The editor refuses the 0 and keeps the old value, because a time of zero makes no sense
+  - The game crashes with a divide-by-zero error the moment the gate starts to open
+  - The gate quietly falls back to its default time whenever a value of zero is typed
+answerIndex: 0
 explanation: Float division by zero gives infinity rather than a crash, and a step of infinite size jumps straight to the target; nothing in Details stops the 0 unless the property says where its range starts.
 ```
 
@@ -46,7 +46,7 @@ float OpenSeconds = 0.8f;
 - `UIMin` and `UIMax` only set the slider's range; a typed value can go past them. Use them for the usual range and the clamps for the limits.
 - `Units = "s"` (or `"cm"`) shows the unit next to the value, so nobody wonders whether 0.8 is seconds or frames.
 
-Metadata guards the **editor only**. Code, Blueprints, and tests that set `OpenSeconds` directly are not clamped, so a value the code cannot survive still deserves a guard in the code.
+Metadata, written as meta specifiers inside the macro, guards the **editor only**. Code, Blueprints, and tests that set `OpenSeconds` directly are not clamped, so a value the code cannot survive still deserves a guard in the code.
 
 **Acceptance first.** Before writing a mechanic, write what "done" means as sentences a test can check: a setup, an action, and a result with a number. "The gate opens smoothly" cannot be tested. "With OpenHeight 300 and OpenSeconds 0.8, the panel is fully open 0.8 s plus one frame after it starts rising, and not before 0.7 s" can. The signal plate's tests were written this way: one press when the first thing arrives, no release while something is still on it, exactly one release when the last one leaves. Writing these first turns the spec's numbers into tests, shows which numbers are knobs, and tells you when to stop coding.
 
@@ -86,9 +86,9 @@ public:
   type: multiple-choice
   prompt: "A designer types 9 into a property marked meta = (UIMin = \"0\", UIMax = \"5\"). What value is kept?"
   choices:
-    - 5, because UIMax caps every value
+    - 5, because UIMax caps every value the designer types
     - 9, because UIMin and UIMax only set the slider's range
-    - 0, because the value is out of range and resets
+    - 0, because the value is out of range and the property resets
   answerIndex: 1
   explanation: UIMin and UIMax shape the slider; only ClampMin and ClampMax refuse typed values past the limit.
 - id: magic-speed
@@ -109,20 +109,20 @@ public:
   type: multiple-choice
   prompt: "Which acceptance criterion can a test check?"
   choices:
-    - The gate feels heavy and satisfying
-    - The gate opens quickly enough for players
-    - With OpenHeight 300 and OpenSeconds 0.8, the panel is fully open 0.8 s plus one frame after it starts rising
-    - The gate code is clean and easy to read
-  answerIndex: 2
+    - The gate feels heavy and satisfying to every player who walks up to it in the stone shrine
+    - The gate opens quickly enough for the players to walk straight through it without slowing
+    - The gate code is clean, well named, and easy for a new teammate to read and change later
+    - With OpenSeconds 0.8, the panel is fully open 0.8 s plus a frame after it starts rising
+  answerIndex: 3
   explanation: A testable criterion names a setup, an action, and a result with a number; the others are wishes a test cannot measure.
 - id: code-not-clamped
   type: multiple-choice
   prompt: "OpenSeconds has meta = (ClampMin = \"0.05\"). A test spawns a gate and sets OpenSeconds = 0 in C++ before it finishes spawning. What value does the gate use?"
   choices:
+    - 0.05, because ClampMin applies to every value however it is set
+    - 0.8, because the default wins when a value is out of range
     - 0, because metadata only guards the Details panel
-    - 0.05, because ClampMin applies everywhere
-    - 0.8, because the default wins
-  answerIndex: 0
+  answerIndex: 2
   explanation: Metadata is read by the editor, not enforced on assignment, so code still needs its own guard against a value it cannot survive.
 - id: explain-knob
   type: explain-in-one-sentence

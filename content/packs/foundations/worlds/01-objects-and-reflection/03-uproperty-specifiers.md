@@ -6,7 +6,7 @@ kind: concept
 difficulty: 1
 patterns: []
 skills: [reflection]
-terms: [uproperty, editanywhere, visibleanywhere, blueprintreadwrite, blueprintreadonly, category-specifier, meta-specifier, allowprivateaccess, displayname-meta, tobjectptr]
+terms: [uproperty, editanywhere, visibleanywhere, blueprintreadwrite, blueprintreadonly, category-specifier, meta-specifier, clamp-min-meta, allowprivateaccess, displayname-meta, tobjectptr]
 prerequisites: [f1-reflection-and-uclass]
 xp: 25
 estimatedMinutes: 6
@@ -88,7 +88,7 @@ private:
   type: fill-blank
   prompt: "To stop a designer typing a negative radius, write meta = (___ = \"0.0\")."
   acceptedAnswers: [ClampMin]
-  explanation: ClampMin sets the lowest value the Details panel and Blueprint pins accept.
+  explanation: ClampMin sets the lowest value the Details panel accepts when a designer types one.
 - id: spot-private-blueprint
   type: spot-the-bug
   prompt: The header tool stops this build because a private field is offered to Blueprint without permission. Which line is wrong?

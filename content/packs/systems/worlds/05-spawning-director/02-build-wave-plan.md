@@ -31,7 +31,7 @@ This is the first piece of the Beetle Pit boss.
 
 ## See it in the editor
 
-In the Content Browser choose Add, Miscellaneous, Curve, pick Curve Float, and make `C_WaveScale` with two keys: time 1 value 1, and time 5 value 2. Then choose Add, Miscellaneous, Data Asset, pick `DojoS5WavePlan`, and make `DA_Night` with Base Count 3 and Count Scale `C_WaveScale`. Place four `DojoS5Hatch` actors 8 meters from the Player Start, one on each side. In the level Blueprint, on the 1 key loop from 1 to 5 and print Get Beetle Count from `DA_Night`: it prints 3, 4, 5, 5, 6. On the 2 key, for each hatch, print Is Out Of Sight with the player pawn: only the hatch you face, and any hatch you stand close to, print false. Turn around and press 2 again.
+In the Content Browser choose Add, Miscellaneous, Curve, pick Curve Float, and make `C_WaveScale`; open it, right-click the graph, choose Add Key twice, and set the keys in the key's details to time 1 value 1, and time 5 value 2. Then choose Add, Miscellaneous, Data Asset, pick `DojoS5WavePlan`, and make `DA_Night` with Base Count 3 and Count Scale `C_WaveScale`. Place four `DojoS5Hatch` actors 8 meters from the Player Start, one on each side. In the level Blueprint, add a variable `Night` of type Dojo S5 Wave Plan, compile, and pick `DA_Night` as its default value; select the four hatches in the level, right-click the graph and choose Create References to Selected Actors; use Get Player Pawn for the player. On the 1 key loop from 1 to 5 and print Get Beetle Count from `DA_Night`: it prints 3, 4, 5, 5, 6. On the 2 key, for each hatch, print Is Out Of Sight with the player pawn: only the hatch you face, and any hatch you stand close to, print false. Turn around and press 2 again.
 
 # Files
 
@@ -57,7 +57,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves", meta = (ClampMin = "1"))
 	int32 BaseCount = 3;
 
-	/** Multiplies the base count by wave number; 1 at wave 1 and 2 at wave 5 doubles the last wave. */
+	/** Read at the wave number to scale the base count; 1 at wave 1 and 2 at wave 5 doubles the last wave. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Waves")
 	TObjectPtr<UCurveFloat> CountScale = nullptr; // @explain: The curve is a separate asset drawn in the curve editor; the plan points at it, so several plans can share one difficulty shape, and a plan may have none.
 
@@ -303,9 +303,9 @@ bool FDojo_S5_WavePlan_DesignersCanEdit::RunTest(const FString& Parameters)
 
 # Hints
 
-- The curve answers one question: how many times bigger than the first wave is this one? The base count times that answer is the size, but it comes out as a fraction, and beetles are whole.
-- `GetFloatValue` reads a curve at a time, and here the time is the wave number. `FMath::RoundToInt` gives the nearest whole number and `FMath::Max` keeps it at 1 or more. A plan whose curve is missing behaves as if the curve were 1 everywhere.
-- For sight, answer the distance question first. The dot product of two vectors of length 1 is the cosine of the angle between them, so compare it with the cosine of the half angle; normalize the direction to the hatch first, and remember that `FMath::Cos` takes radians, which `FMath::DegreesToRadians` gives you.
+- The curve answers how many times bigger than the first wave this one is, so the size is the base count times that answer, kept whole.
+- Read the curve at the wave number, round to the nearest whole beetle, keep at least one from wave 1 on, and treat a missing curve as 1 everywhere.
+- For sight, settle the distance question first, then compare the angle between the way the viewer faces and the direction to the hatch with the half view angle.
 
 # Rubric
 
@@ -342,7 +342,7 @@ The wave sizes could be written out by hand, an array of five counts in the plan
     - "}"
   distractors:
     - line: "	const float Facing = FVector::DotProduct(Viewer->GetActorForwardVector(), ToHatch);"
-      mistake: Without normalizing, the dot product is the distance times the cosine, so a far hatch looks like a huge cosine and is never out of sight.
+      mistake: Without normalizing, the dot product is the distance times the cosine, so every far hatch in front of the viewer counts as in sight.
     - line: "	return Facing < FMath::Cos(ViewHalfAngle);"
       mistake: FMath::Cos takes radians, so 45 is read as about 7 turns of a circle and the cone has nothing to do with 45 degrees.
 ```
