@@ -23,7 +23,7 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: a gate's speed is OpenHeight / OpenSeconds, and OpenSeconds is EditAnywhere with no meta. A designer types 0 into it in Details. What happens when the gate opens?"
 choices:
-  - The speed becomes infinite, so the panel jumps fully open at once
+  - The speed becomes infinite, so the panel jumps fully open all at once with no slide
   - The editor refuses the 0 and keeps the old value, because a time of zero makes no sense
   - The game crashes with a divide-by-zero error the moment the gate starts to open
   - The gate quietly falls back to its default time whenever a value of zero is typed
@@ -112,16 +112,16 @@ public:
     - The gate feels heavy and satisfying to every player who walks up to it in the stone shrine
     - The gate opens quickly enough for the players to walk straight through it without slowing
     - The gate code is clean, well named, and easy for a new teammate to read and change later
-    - With OpenSeconds 0.8, the panel is fully open 0.8 s plus a frame after it starts rising
+    - With OpenSeconds 0.8, the panel is fully open 0.8 s plus one frame after it starts rising
   answerIndex: 3
   explanation: A testable criterion names a setup, an action, and a result with a number; the others are wishes a test cannot measure.
 - id: code-not-clamped
   type: multiple-choice
   prompt: "OpenSeconds has meta = (ClampMin = \"0.05\"). A test spawns a gate and sets OpenSeconds = 0 in C++ before it finishes spawning. What value does the gate use?"
   choices:
-    - 0.05, because ClampMin applies to every value however it is set
+    - 0.05, because ClampMin holds however the value is set
     - 0.8, because the default wins when a value is out of range
-    - 0, because metadata only guards the Details panel
+    - 0, because metadata only guards values typed in Details
   answerIndex: 2
   explanation: Metadata is read by the editor, not enforced on assignment, so code still needs its own guard against a value it cannot survive.
 - id: explain-knob

@@ -25,9 +25,9 @@ type: multiple-choice
 prompt: "Guess, no penalty: World 3 left you a plate that counts what stands on it, and now a gate must open when a plate is pressed. What is the best first move?"
 choices:
   - Copy the World 3 plate into a new file and start editing it, keeping its counting code exactly
-  - Make the gate ask the World 3 plate whether it is pressed, once on every frame that passes
+  - Make the gate ask the World 3 plate if it is pressed, once on every frame
   - Ignore the old plate and write everything from scratch, so nothing old gets in the way
-  - List what already exists and sort each piece into reuse, retrofit, or build new
+  - List what already exists, then sort each piece into reuse, retrofit, or build new
 answerIndex: 3
 explanation: Before any code, a maker checks what the library already offers and sorts it into reuse as is, retrofit, or build new; copying, polling, or starting over are each the right answer only sometimes, and the audit tells you which.
 ```
@@ -83,8 +83,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDojoOnCoinCollected, int32, Value);
   type: multiple-choice
   prompt: "Pitch: the visitor steps on a bell plate, a bridge extends across the gap, but it retracts 4 seconds after the visitor steps off. Which part is the constraint?"
   choices:
-    - It retracts 4 seconds after the visitor steps off
-    - The visitor steps on a bell plate that sits in front of the gap
+    - It retracts 4 seconds after the visitor steps off the plate
+    - The visitor steps on a bell plate in front of the gap
     - The bridge extends across the gap so the visitor can walk over it
   answerIndex: 0
   explanation: The action is stepping on the plate and the response is the bridge; the 4 second limit is what turns it into a decision about timing.
@@ -102,7 +102,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDojoOnCoinCollected, int32, Value);
   type: multiple-choice
   prompt: "World 7's tests need something heavy to stand on plates. World 3's crate has a solid body, a handle, and a home it can return to. What does the reuse audit say?"
   choices:
-    - Build new, because every world needs its own classes and cannot lean on another world's files
+    - Build new, because each world needs its own classes and cannot lean on another's
     - Reuse as is, because it already stands on plates as one thing and can be sent home
     - Retrofit, by adding a weight value to World 3's crate so a plate can tell how heavy it is
   answerIndex: 1

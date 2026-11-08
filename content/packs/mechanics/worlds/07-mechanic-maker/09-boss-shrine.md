@@ -32,7 +32,7 @@ A board on the director reads three lines: `Rounds cleared: 1`, `Gate: OPEN` or 
 
 Dependency direction: the director holds pointers to the gate, the key pickup, the door, and the crates, and only listens to their events, the dynamic multicast delegates they broadcast, and calls their public functions. The pieces never know the director exists, and the plates and the gate never know about the key or the door.
 
-The reset pause is an editable number on the director, `ResetSeconds`, and its meta specifiers keep a designer from typing a negative one. The pause runs on the timer manager, and a director that is destroyed is done with unbinding delegates: it removes every binding it made and clears its pending timer.
+The reset pause is an editable number on the director, `ResetSeconds`, and its meta specifiers, `ClampMin` and `Units = "s"`, keep a designer from typing a negative one. The pause runs on the timer manager, and a director that is destroyed is done with unbinding delegates: it removes every binding it made and clears its pending timer.
 
 The pieces need no additions: the plate, the gate, the ring, the pickup, and the door are used as their quests left them. The runner and the crates are the ones from the collision world.
 

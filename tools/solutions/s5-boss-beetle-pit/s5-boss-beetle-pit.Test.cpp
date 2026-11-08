@@ -104,7 +104,7 @@ namespace DojoS5BeetlePitTest
 		return FVector::DotProduct(Hero->GetActorForwardVector(), ToBeetle) > 0.9f;
 	}
 
-	/** Turns to each loose beetle with E and swats it with Space, until none is loose. */
+	/** Turns to each loose beetle with E and swats it with Space, until none is loose; call it only after PitIsBuilt has passed. */
 	void SwatEverythingLoose(const FPit& Pit)
 	{
 		for (int32 Guard = 0; Guard < 8; ++Guard)
