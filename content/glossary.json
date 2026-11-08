@@ -764,9 +764,7 @@
     "term": "meta specifiers",
     "aliases": [
       "meta=()",
-      "metadata specifiers",
-      "ClampMin",
-      "ClampMax"
+      "metadata specifiers"
     ],
     "category": "reflection",
     "short": "Extra key and value hints inside UPROPERTY, UFUNCTION, or UCLASS that change how the editor and Blueprints present something.",
@@ -780,6 +778,26 @@
       "category-specifier"
     ],
     "firstQuestId": "f1-uproperty-specifiers"
+  },
+  {
+    "id": "clamp-min-meta",
+    "term": "ClampMin",
+    "aliases": [
+      "ClampMax",
+      "UIMin",
+      "UIMax"
+    ],
+    "category": "reflection",
+    "short": "Metadata on a number property that sets the lowest value the Details panel accepts; ClampMax sets the highest.",
+    "long": "Write it inside the meta part of a UPROPERTY, as in meta = (ClampMin = \"0.05\", Units = \"s\"), and a designer who types 0 into the Details panel gets 0.05 instead, so a knob cannot reach a value that breaks the code, such as a time of zero that a speed is divided by. ClampMax caps the other end. UIMin and UIMax are softer: they only set the range the slider drags through, and a typed value can still go past them, so use them for the usual range and ClampMin or ClampMax for the hard limits. Like all metadata, the clamps guard the editor only: code, Blueprints, and tests that set the value directly are not clamped, so the code should still guard a value it cannot survive.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/metadata-specifiers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "meta-specifier",
+      "uproperty",
+      "editanywhere",
+      "category-specifier"
+    ],
+    "firstQuestId": "m7-tuning-knobs"
   },
   {
     "id": "allowprivateaccess",
@@ -2409,7 +2427,7 @@
     ],
     "category": "collision",
     "short": "The per-shape switch that says whether a shape takes part in queries, in physics, in both, or in neither.",
-    "long": "Collision Enabled is the first of a shape's three collision settings, before its object type and its responses. NoCollision takes part in nothing; QueryOnly answers sweeps, traces, and overlap checks but never pushes or is pushed, which suits triggers; PhysicsOnly lets simulated bodies push it without being found by queries; QueryAndPhysics does both, for solid things. SetCollisionEnabled changes it while the game runs, which is how a breakable wall stops being solid: its overlaps end and swept movers pass through. It is a different tool from changing one response, which lets one kind of thing through and keeps stopping the rest.",
+    "long": "Collision Enabled is the first of a shape's three collision settings, before its object type and its responses. NoCollision takes part in nothing; QueryOnly answers sweeps, traces, and overlap checks but never pushes or is pushed, which suits triggers; PhysicsOnly lets simulated bodies push it without being found by queries; QueryAndPhysics does both, for solid things. SetCollisionEnabled changes it while the game runs. NoCollision switches the shape off as a whole: swept movers pass through it, and it stops noticing anything too, so its overlaps end. When a shape should let things through but still notice them, such as rubble a runner can stand in, change its responses instead: SetCollisionResponseToAllChannels(ECR_Overlap) does that for every channel at once, and SetCollisionResponseToChannel does it for one kind of thing.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/collision-response-reference-in-unreal-engine?application_version=5.8",
     "related": [
       "collision-response",

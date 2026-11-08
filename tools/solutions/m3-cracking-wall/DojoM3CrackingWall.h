@@ -27,7 +27,7 @@ public:
 
 	/** How many hits break the wall. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cracking Wall", meta = (ClampMin = "1"))
-	int32 HitsToBreak = 3;
+	int32 HitsToBreak = 4;
 
 	/** Hits taken so far, never more than HitsToBreak. */
 	UFUNCTION(BlueprintPure, Category = "Cracking Wall")

@@ -56,8 +56,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 ### M4 Full curriculum (content sessions run in parallel, one world per task, alternating packs)
 - [x] M4.x content-foundations: Pack 1 worlds 2 to 6.
 - [x] M4.x content-patterns: Pack 2, 23 worlds (the list grew past the first eight). All merged.
-- [ ] M4.x content-mechanics: Pack 3 worlds 1 to 5, 7, 8. All merged except World 7, whose engine run the permission check refused (waiting on Mohammad).
-- [ ] M4.x content-systems: Pack 4 worlds 1 to 6. All merged except World 5, whose engine run the permission check refused (waiting on Mohammad).
+- [x] M4.x content-mechanics: Pack 3 worlds 1 to 8. All merged (World 7 at a346b5d after Mohammad approved its engine run).
+- [x] M4.x content-systems: Pack 4 worlds 1 to 6. All merged (World 5 at e25bdd6 after Mohammad approved its engine run).
 - [ ] M4.y qa: after each world merges, a fresh reviewer agent spot-checks 8 random quests for copied wording, solution leaks in starters or hints, UE API accuracy, and the fade ladder.
 
 ### M5 Release
@@ -188,9 +188,9 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.P4.3 Pack 4 World 3 (Save and load) | content-systems | author-systems (session "p4-world2") | merged (72ac71d) | merged | A1420 to A1439; first engine run found the ArNoDelta save bug (fixed 923f107) |
 | M4.P3.5 Pack 3 World 5 (Tracing) | content-mechanics | author-mechanics (session "p3-world2-movement") | claude/m4-p3-world5-tracing | merged ac3a6d8 (review PASS, tester PASS, engine proof on UE 5.8.4, 31 of 31 mutations after one rerun) | A1480 to A1499; engine through the Lead queue |
 | M4.P4.4 Pack 4 World 4 (Interaction and dialogue) | content-systems | author-systems (session "p4-world1-inventory") | claude/m4-p4-world4-interaction | merged c9f29d0 (review PASS, tester PASS, engine proof on UE 5.8.4, 19 of 19 mutations) | A1500 to A1519; engine through the Lead queue |
-| M4.P4.5 Pack 4 World 5 (Spawning director) | content-systems | author-systems (session "m5-1k-sandbox-setup") | claude/m4-p4-world5-director | review PASS, tests pass at da12af3; engine run refused by the permission check, waiting on Mohammad | A1520 to A1539 |
+| M4.P4.5 Pack 4 World 5 (Spawning director) | content-systems | author-systems (session "m5-1k-sandbox-setup") | merged (e25bdd6) | merged | A1520 to A1539 |
 | M4.P4.6 Pack 4 World 6 (AI perception and behavior) | content-systems | author-systems (session "windows-syntax-check") | claude/m4-p4-world6-ai | merged 41bace6 (review PASS after one round, tester PASS, engine proof on UE 5.8.4, 13 of 13 mutations) | A1560 to A1565; six quests (breakdown, worked, faded, stub, blank, boss), Behavior Tree built in code |
-| M4.P3.7 Pack 3 World 7 (Mechanic Maker) | content-mechanics | author-mechanics (session "m3-3-economy-ui") | claude/m4-p3-world7-mechanic-maker | review PASS, tests pass at fdcdb66; engine run refused by the permission check twice, waiting on Mohammad | A1540 to A1559; engine through the Lead queue |
+| M4.P3.7 Pack 3 World 7 (Mechanic Maker) | content-mechanics | author-mechanics (session "m3-3-economy-ui") | merged (a346b5d) | merged | A1540 to A1559; engine through the Lead queue |
 | M4.P2.14 Pack 2 World 14 (Singleton) | content-patterns | author-patterns (session "p2-world13-bytecode") | merged (ede8ff3) | merged | A1440 to A1459 |
 | M4.P2.15 Pack 2 World 15 (Service Locator) | content-patterns | author-patterns (session "p2-world12-prototype") | merged (14bd3c1) | merged | A1580 to A1599; engine through the Lead queue |
 | M4.P3.8 Pack 3 World 8 (Gameplay Moment) | content-mechanics | author-mechanics (session "p3-world1-input") | merged (85dbd07) | merged | A1600 to A1619; engine through the Lead queue |
@@ -210,7 +210,8 @@ Reviewers are spawned fresh per task; they do not own systems.
 | M4.y fix round 5 (spot-check 5 findings: Pack 4 World 3, Pack 2 Worlds 14 and 15, Pack 3 World 8) | content authors | session "m4-y-fix-round-five-merg" | merged (bafb56c) | merged | 3 Must and 52 Should fixed (A1920 to A1947); verifier 12 warnings unchanged; engine re-proof list: m8-moment-clock, p15-announcer-desk, p15-crier-trace, p15-gong-refactor, p15-boss-tournament-booth, p14-start-lights (optional s3-saveable); re-proofs through the Lead queue |
 | M4.y fix round 6 (spot-check 6 findings: Pack 2 Worlds 16 to 19; World 20 boss tuning gaps b12 and b13) | content authors | session "m4-y-fix-round-five-merg" | merged (38e1cd4) | merged | 3 Must and 60 Should fixed (A1960 to A1989); engine re-proof list: p18-boss-moth-meadow (+3 mutations), p20-boss-practice-yard (+ b12, b13 must now fail), p17-ladder-refactor, p19-firefly-swarm (optional); re-proofs through the Lead queue |
 | M4.y fix round 7 (spot-check 7 findings: Pack 2 Worlds 20 to 23; unchecked reads in boss tests) | content authors | session "m4-y-fix-round-five-merg" | claude/m4y-fix-round-7 | fixes committed; review and test next | 3 Must and 80 Should fixed (A2000 to A2029); boss and Q05 tests now guard every unchecked read; engine re-proof list: p20-boss-practice-yard, p20-turret-refactor, p21-boss-ember-range (m20 and m23 must fail named tests), p21-turret-refactor, p22-hit-feedback, p22-checkpoint-desk, p22-feedback-refactor, p22-boss-gauntlet, p23 three bosses, plus the new mutations; re-proofs through the Lead queue |
-| M3.2c m3-cracking-wall original numbers (A1637 follow-up) | content-mechanics | session "p3-world3-collision" | claude/m3-cracking-wall-numbers | building | A2030 to A2039 |
+| M3.2c m3-cracking-wall original numbers (A1637 follow-up) | content-mechanics | session "p3-world3-collision" | merged (f3f399d) | merged | A2030 to A2039 |
+| W17 Piece solutions tested against themselves, not the boss copy | content-engine | session "verifier-hardening" | claude/w17-piece-solutions-tested | building | A2040 to A2049; found by the W16 timing batch |
 | M4.y spot-check 6 (Pack 2 Worlds 16 to 19) | qa | session "qa-spotcheck" | claude/m4y-spotcheck-6 | review | All 28 quests read; 3 Must, 60 Should, 52 Note; docs/reviews/m4y-spotcheck-6.md; A1950 to A1955 |
 | M4.y spot-check 7 (Pack 2 Worlds 20 to 23) | qa | session "qa-spotcheck" | claude/m4y-spotcheck-7 | review | All 28 quests read; 3 Must, 80 Should, 53 Note; docs/reviews/m4y-spotcheck-7.md; A1990 to A1995 |
 | QA slow build-flow e2e (problems.md 2026-11-03) | qa | session "p3-world1-input" | claude/qa-slow-build-flow | merged bd89c89 (whole e2e suite 14 min to 4.6 min) | A1810 to A1819 |
