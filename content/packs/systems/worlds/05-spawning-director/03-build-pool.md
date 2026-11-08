@@ -7,8 +7,8 @@ scaffold: faded
 difficulty: 3
 patterns: [object-pool]
 skills: [spawning, components, containers]
-terms: [actor-component, spawnactor, tsubclassof, tarray, isvalid, endplay]
-prerequisites: [s5-wave-plan]
+terms: [object-pool, actor-component, spawnactor, tsubclassof, tarray, endplay]
+prerequisites: [s5-wave-plan, p16-object-pool-when-not]
 xp: 80
 estimatedMinutes: 25
 concepts:
@@ -494,7 +494,7 @@ bool FDojo_S5_Pool_PrewarmAndLeave::RunTest(const FString& Parameters)
 
 # Alternative
 
-The plain way is `SpawnActor` for every beetle and `Destroy` when it is swatted. It is shorter and fine for a few actors a minute, but each spawn runs constructors, registers components, and leaves garbage for the collector, and a busy wave pays that at the worst moment. The pool pays once, up front with `Prewarm` or on first use, and later waves cost only a move and two flags. The price is that a woken beetle must be reset by hand: anything the last fight changed, such as health or a timer, has to be put back in `Wake`, or the old fight leaks into the new one. This is the Object Pool pattern, and Unreal has no general actor pool built in, so games write one like this, often as a world subsystem shared by every spawner.
+The plain way is `SpawnActor` for every beetle and `Destroy` when it is swatted. It is shorter and fine for a few actors a minute, but each spawn runs constructors, registers components, and leaves garbage for the collector, and a busy wave pays that at the worst moment. The pool pays once, up front with `Prewarm` or on first use, and later waves cost only a move and two flags. The price is that a woken beetle must be reset by hand: anything the last fight changed, such as health or a timer, has to be put back in `Wake`, or the old fight leaks into the new one. This is the Object Pool pattern from Pack 2's "Lend it out, take it back" world, and Unreal has no general actor pool built in, so games write one like this, often as a world subsystem shared by every spawner.
 
 # Parsons
 

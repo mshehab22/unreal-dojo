@@ -4,6 +4,9 @@ Newest first inside each section. A decision names the options considered, the c
 
 ## Awaiting Mohammad's review
 
+### A1527 2026-11-08 World 5 waits for Pack 2's Object Pool world (author-systems, M4.P4.5)
+Pack 2 World 16 (`object-pool`, "Lend it out, take it back") is on main now, so the step A1520 left open is done. Options: leave `s5-pool` free of it; require the world's last concept quest; require its boss. Chosen: `p16-object-pool-when-not`, the same kind of prerequisite World 5 already takes for State, Observer, and Type Object, so the learner meets the pattern's limits before reusing it here. `s5-pool` now lists the `object-pool` term (taught by `p16-object-pool-card`) instead of `isvalid`, which Pack 1 teaches, and the pool's alternative note and the boss name the world. Nothing in the reference solutions or tests changed.
+
 ### A1526 2026-11-03 No new glossary terms for World 5 (author-systems, M4.P4.5)
 Options: add entries for the dot product, `GetActorForwardVector`, and `SetActorHiddenInGame`; reuse what Packs 1 and 2 teach. Chosen: reuse. `fvector` already lists `GetSafeNormal` and `ForwardVector`, `spawnactor` lists `FActorSpawnParameters`, and `adddynamic` lists `AddUniqueDynamic`. A new term that no concept quest teaches adds an A72 warning to every quest that lists it, so `object-pool` is named in the quests' `patterns` but not in `terms` (no concept quest teaches it yet; see the plan's "Queued for content authors" line). The verifier stays at its 12 existing warnings. Reverse cost: none.
 
