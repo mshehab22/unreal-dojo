@@ -40,42 +40,40 @@ Mark the properties that are progress with the `SaveGame` specifier: `UPROPERTY(
 To write an actor's marked properties into bytes:
 
 - `FMemoryWriter Writer(Bytes, true);` (header `Serialization/MemoryWriter.h`) writes into a `TArray<uint8>` from its start. The `true` marks it as a persistent archive.
-- `FObjectAndNameAsStringProxyArchive Archive(Writer, true);` (header `Serialization/ObjectAndNameAsStringProxyArchive.h`) wraps it so object references are written as the object's path and found again by that path when read. A plain memory archive cannot write object references at all; it stops on an assertion.
+- `FObjectAndNameAsStringProxyArchive Archive(Writer, true);` (header `Serialization/ObjectAndNameAsStringProxyArchive.h`) wraps it so object references are written as the object's path and found again by that path when read. A plain memory archive cannot write object references at all; it stops the engine with a fatal error. That error says "Use FArchiveUObject instead", which points at the engine's object-aware archives, and the proxy archive is the ready-made one this quest uses. The second `true` tells it to try loading a referenced object from its asset when its path is not found among the loaded objects.
 - `Archive.ArIsSaveGame = true;` tells the property writer to skip every property that is not marked `SaveGame`.
 - `Archive.ArNoDelta = true;` makes it write every marked property. By default the writer skips a property whose value equals the class default, which keeps level files small; in a save that skip is a trap, because loading leaves a skipped property at whatever value the actor holds when it loads, not at the default.
 - `Actor->Serialize(Archive);` walks the actor's reflected properties and writes the marked ones.
 
 Reading back is the same lines with `FMemoryReader Reader(Bytes, true);` (header `Serialization/MemoryReader.h`) in place of the writer: `Serialize` sees a loading archive and fills the marked properties from the bytes, leaving every other property as it was.
 
-The properties are written with their names, so adding a new SaveGame property later does not break old bytes; it simply keeps its default when loading bytes that never held it. Renaming one does lose the old value.
+The properties are written with their names, so adding a new SaveGame property later does not break old bytes; it simply keeps whatever value the actor holds when loading bytes that never held it. Renaming one does lose the old value.
 
 The bytes do not move the actor: its transform lives in its components, not in its own marked properties, so an actor that must return to a saved place keeps that place in a marked property of its own.
 
-A `USaveGame` object itself is written by `SaveGameToSlot` without `ArIsSaveGame`, so every `UPROPERTY` on the save object is saved, marked or not. The flag is for actors and components, where most properties are not progress.
+A `USaveGame` object itself is written by `SaveGameToSlot` without `ArIsSaveGame`, so every `UPROPERTY` on the save object is saved, marked or not, except one marked `Transient`. The flag is for actors and components, where most properties are not progress.
 
 # Example
 
 ```cpp
-/** Writes an actor's SaveGame properties into bytes. */
-TArray<uint8> DojoExCapture(AActor* Actor)
+/** Copies one pot's SaveGame properties onto another by writing them to bytes and reading the bytes back. */
+void DojoExCopyProgress(AActor* FromPot, AActor* ToPot)
 {
 	TArray<uint8> Bytes;
-	FMemoryWriter Writer(Bytes, true);
-	FObjectAndNameAsStringProxyArchive Archive(Writer, true);
-	Archive.ArIsSaveGame = true;
-	Archive.ArNoDelta = true;
-	Actor->Serialize(Archive);
-	return Bytes;
-}
 
-/** Reads bytes from DojoExCapture back into the same kind of actor. */
-void DojoExRestore(AActor* Actor, const TArray<uint8>& Bytes)
-{
+	{
+		FMemoryWriter Writer(Bytes, true);
+		FObjectAndNameAsStringProxyArchive Out(Writer, true);
+		Out.ArIsSaveGame = true;
+		Out.ArNoDelta = true;
+		FromPot->Serialize(Out);
+	}
+
 	FMemoryReader Reader(Bytes, true);
-	FObjectAndNameAsStringProxyArchive Archive(Reader, true);
-	Archive.ArIsSaveGame = true;
-	Archive.ArNoDelta = true;
-	Actor->Serialize(Archive);
+	FObjectAndNameAsStringProxyArchive In(Reader, true);
+	In.ArIsSaveGame = true;
+	In.ArNoDelta = true;
+	ToPot->Serialize(In);
 }
 ```
 
@@ -115,12 +113,12 @@ void DojoExRestore(AActor* Actor, const TArray<uint8>& Bytes)
   type: multiple-choice
   prompt: Why wrap the memory writer in FObjectAndNameAsStringProxyArchive instead of serializing straight into it?
   choices:
-    - It compresses the bytes
-    - It writes object references as paths and finds them again when reading, which a plain memory archive cannot do at all
-    - It is the only archive that can set ArIsSaveGame
-    - It makes Serialize skip transient properties
-  answerIndex: 1
-  explanation: A plain memory archive asserts when it meets an object reference; the proxy writes the referenced object's path and looks it up again on load.
+    - It compresses the bytes before they reach the memory writer
+    - It is the only archive allowed to set the ArIsSaveGame flag
+    - It makes Serialize skip every property marked Transient
+    - It stores object references as paths, then finds them again
+  answerIndex: 3
+  explanation: A plain memory archive stops the engine with a fatal error when it meets an object reference; the proxy writes the referenced object's path and looks it up again on load.
 - id: explain-savegame-flag
   type: explain-in-one-sentence
   prompt: In one sentence, say how an actor's SaveGame properties end up in a save and come back.

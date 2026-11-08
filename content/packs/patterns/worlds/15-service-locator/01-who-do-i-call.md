@@ -7,7 +7,7 @@ difficulty: 2
 patterns: []
 skills: [architecture, subsystems]
 terms: [subsystem, world-subsystem, game-instance-subsystem, uinterface, null-object]
-prerequisites: [p13-bytecode-when-not]
+prerequisites: [p14-singleton-when-not]
 xp: 25
 estimatedMinutes: 8
 concepts:
@@ -25,10 +25,10 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: fifteen places in the dojo's code (the gong, the bout timer, the score screen, and twelve more) each create a loud speaker class and call its Shout function to announce a line. The testers want every automated test to run silently. How many places have to change?"
 choices:
-  - One, the speaker class itself
+  - One, inside the speaker class itself
   - None, because the engine can mute a class
-  - Every place that creates the speaker, all fifteen
-  - Only the tests
+  - All fifteen places that create it
+  - Only the test code, since the rest is untouched
 answerIndex: 2
 explanation: Each of the fifteen names the speaker class where it uses it, so each one has to change. Nothing else can reach inside them.
 ```
@@ -66,9 +66,9 @@ Desk->Get().Announce(TEXT("Fight!"));
   type: multiple-choice
   prompt: "Which of these is a caller naming what it needs, not what it has?"
   choices:
-    - It creates a UDojoLoudSpeaker and calls Shout
-    - It holds an announcer interface and calls Announce
-    - It includes the header of a speaker class
+    - It creates a UDojoLoudSpeaker and calls its Shout function
+    - It calls Announce on an announcer interface
+    - It includes the header of one particular speaker class
     - It copies the speaker's code into itself
   answerIndex: 1
   explanation: The interface names the one thing the caller wants done. The other three tie the caller to one particular class.
@@ -93,11 +93,11 @@ Desk->Get().Announce(TEXT("Fight!"));
   type: multiple-choice
   prompt: "Why does the place that holds the announcer start with a do-nothing announcer instead of an empty slot?"
   choices:
-    - So that callers can always call it, and a missing announcer cannot crash anything
     - So that the do-nothing announcer is the fastest one
     - Because the engine refuses to create an empty subsystem
     - So that every line is announced twice
-  answerIndex: 0
+    - So callers never need to check for nothing
+  answerIndex: 3
   explanation: With a stand-in in place, callers never have to check for nothing. It can count the lines it drops so that an accidental absence is still visible.
 - id: which-host
   type: multiple-choice

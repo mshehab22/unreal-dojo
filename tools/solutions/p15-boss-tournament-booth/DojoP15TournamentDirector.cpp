@@ -24,7 +24,7 @@ void ADojoP15TournamentDirector::BeginPlay()
 	Super::BeginPlay();
 
 	Crier = GetWorld()->SpawnActor<ADojoP15Crier>();
-	ProvideChosenServices();
+	InstallChosenServices();
 
 	if (APlayerController* Player = GetWorld()->GetFirstPlayerController())
 	{
@@ -64,11 +64,11 @@ void ADojoP15TournamentDirector::PressTrace()
 		Wrapped = Desk->GetProvider();
 		Tracer = NewObject<UDojoP15TracingAnnouncer>(this);
 		Tracer->Wrap(Wrapped);
-		Desk->Provide(Tracer);
+		Desk->Install(Tracer);
 	}
 	else
 	{
-		Desk->Provide(Wrapped);
+		Desk->Install(Wrapped);
 		Tracer = nullptr;
 		Wrapped = nullptr;
 	}
@@ -111,18 +111,18 @@ UDojoP15TracingAnnouncer* ADojoP15TournamentDirector::GetTracer() const
 	return Tracer.Get();
 }
 
-void ADojoP15TournamentDirector::ProvideChosenServices()
+void ADojoP15TournamentDirector::InstallChosenServices()
 {
 	if (AnnouncerClass.Get() != nullptr)
 	{
 		UDojoP15AnnouncerDesk* Desk = UDojoP15AnnouncerDesk::Locate(GetWorld());
-		if (Desk != nullptr) Desk->Provide(NewObject<UObject>(this, AnnouncerClass.Get()));
+		if (Desk != nullptr) Desk->Install(NewObject<UObject>(this, AnnouncerClass.Get()));
 	}
 
 	if (ScoreboardClass.Get() != nullptr)
 	{
 		UDojoP15ScoreboardDesk* Board = UDojoP15ScoreboardDesk::Locate(GetWorld());
-		if (Board != nullptr) Board->Provide(NewObject<UObject>(this, ScoreboardClass.Get()));
+		if (Board != nullptr) Board->Install(NewObject<UObject>(this, ScoreboardClass.Get()));
 	}
 }
 

@@ -7,7 +7,7 @@ difficulty: 4
 patterns: [observer, state]
 skills: [planning, input, collision, delegates, timers, tracing]
 terms: [pawn, overlap-event, dynamic-multicast-delegate, timer-manager]
-prerequisites: [m1-boss-drone-handoff, m2-boss-clockwork-hall, m3-boss-vault-room, m6-boss-quest-system]
+prerequisites: [m1-boss-drone-handoff, m2-boss-clockwork-hall, m3-boss-vault-room, m4-boss-fuse-yard, m5-boss-watchtower, m6-boss-quest-system]
 xp: 120
 estimatedMinutes: 25
 concepts:
@@ -28,7 +28,7 @@ A clip cannot be played in this app, so it is described here in writing, with ti
 
 Reference: the stealth sections of Metal Gear Solid and the generator rooms of Alien: Isolation. The player must feel hunted by a beam that is easy to see and easy to cross if they time it.
 
-You are planning, not coding. First write down everything the player does, everything that touches something, and everything that happens on its own, down to the smallest. Then map each to a skill you have already built (input, transforms, collision, timers, tracing, delegates) and mark the gaps, and for each gap say whether you would spike it, fake it, or cut it. Then name the classes, the data, and the events; for each pair, say which side points at the other, which side announces, and which side only listens.
+You are planning, not coding. First write down everything the player does, everything that touches something, and everything that happens on its own, down to the smallest. Then map each to a skill you have already built (input, transforms, collision, timers, tracing, delegates) and mark the gaps. A gap is anything the walkthrough needs that none of your built pieces covers. For each gap say whether you would spike it (build a quick throwaway to find out whether it works), fake it (build a cheaper stand-in that gives the same feel), or cut it (leave it out and say so). Then name the classes, the data, and the events; for each pair, say which side points at the other, which side announces, and which side only listens.
 
 Acceptance:
 
@@ -59,7 +59,7 @@ Acceptance:
 - id: clock
   kind: class
   label: A clock that owns the time and decides which ending the moment has
-  why: One place for the ending, so only one ending can happen.
+  why: One place for the ending.
 - id: director
   kind: class
   label: A director that spawns the round and connects the pieces and restarts it
@@ -105,7 +105,7 @@ Acceptance:
 
 - The plan lists the mechanics, interactions, and events of the walkthrough, including the small ones such as the counter and the restart.
 - Each piece has one job, and the plan says which side points at the other, which side announces, and which only listens.
-- The ending is decided in one place, and the plan says what happens if an escape and a catch come close together or the time runs out afterwards.
+- The ending is decided in one place, and the plan says where that decision lives.
 - Nothing is checked on every frame where an event or a timer would do, and the plan says what is on a timer.
 - The gap map names at least two things that are faked or cut and says why the moment still feels right without them.
 - Every tunable number from the walkthrough is a property, and a second round resets everything it should.

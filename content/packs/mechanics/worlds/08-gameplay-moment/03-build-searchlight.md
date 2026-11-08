@@ -7,7 +7,7 @@ scaffold: worked
 difficulty: 3
 patterns: [observer]
 skills: [tracing, transforms, delegates]
-terms: [line-trace, fvector, deltatime, tick, dynamic-multicast-delegate, tweakobjectptr]
+terms: [line-trace, dot-product, collision-query-params, fvector, deltatime, tick, dynamic-multicast-delegate, tweakobjectptr]
 prerequisites: [m8-inventory-and-gaps, m3-checkpoint]
 xp: 70
 estimatedMinutes: 20
@@ -33,7 +33,7 @@ This light is the first piece of the Blackout Escape boss. Tracing is taken as k
 
 ## See it in the editor
 
-Place a `DojoM8Searchlight` and a `DojoM8SightLog` in the sandbox map, and a runner you can move. In the level Blueprint, on BeginPlay call Watch on the light with the runner and Listen on the log with the light, then print the log's Get Seen Count and Get Lost Count on a one second timer. Press Play: the counts change when the beam sweeps across the runner and away again, not every frame. Put a cube set to block everything between the light and the runner and the counts stop changing while the wall stands.
+Place a `DojoM8Searchlight` at the origin, a `DojoM8SightLog`, and a `DojoM3Runner` (the ball from the checkpoint quest; it has no mesh, so switch on Show, then Collision in the viewport to see it) about 500 units from the light, and name it Hero in the Outliner. With the three selected, right-click the level Blueprint's graph to add a reference to each. On BeginPlay call Watch on the light with the runner and Listen on the log with the light, then print the log's Get Seen Count and Get Lost Count on a looping one second timer. Press Play: the counts change when the beam sweeps across the runner and away again, not every frame. To test the wall, place a cube with the BlockAll collision preset between the light and the runner before pressing Play; with the cube there the seen count never rises.
 
 # Files
 
@@ -483,9 +483,9 @@ bool FDojo_M8_Searchlight_DesignersCanTuneIt::RunTest(const FString& Parameters)
 
 # Hints
 
-- IsInsideCone has two checks: how far, then how far off the middle of the beam. Work on the floor plane so a runner standing a little higher or lower is not treated as off the beam.
-- The angle between two directions comes from their dot product: for unit vectors it is the cosine of the angle, and a smaller angle means a larger cosine. `GetSafeNormal2D` flattens and normalizes a vector. For the trace, `FCollisionQueryParams` can ignore actors, and `LineTraceSingleByChannel` returns true when it hits something solid.
-- Compare the dot product with the cosine of the half angle in radians, so no angle function is needed. In the trace, the query params take the light as the actor to ignore in their constructor and `AddIgnoredActor` for the candidate; the trace is on the `ECC_Visibility` channel, from the light's location to the candidate's. Both are covered in `Engine/World.h` and `CollisionQueryParams.h`.
+- Check how far the point is first, then how far off the middle of the beam it is, and flatten both directions onto the floor so height does not matter.
+- For unit directions the dot product is the cosine of the angle between them, and a smaller angle means a larger cosine, so compare it with the cosine of the half angle instead of computing an angle.
+- For the trace, the query parameters can list actors to skip, so skip both ends of the line, and the line is blocked if the trace reports any hit at all.
 
 # Rubric
 
@@ -511,8 +511,8 @@ The light could ask the hero directly for its position every frame and tell the 
     - "	bSeeing = bNowSeeing;"
     - "	OnSightChanged.Broadcast(this, bSeeing);"
   distractors:
-    - line: "	OnSightChanged.Broadcast(this, bNowSeeing);"
-      mistake: Broadcasting before the remembered state is updated, or on every frame, tells listeners again and again instead of once per change.
+    - line: "	OnSightChanged.Broadcast(bSeeing);"
+      mistake: The delegate was declared with the light and the new state, so Broadcast must pass both; this line does not match its signature.
 - id: searchlight-can-see
   prompt: Put CanSee in order.
   lines:

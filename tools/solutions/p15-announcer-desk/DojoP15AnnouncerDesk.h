@@ -13,7 +13,7 @@ class UDojoP15AnnouncerDesk : public UWorldSubsystem
 	GENERATED_BODY()
 
 public:
-	/** Makes the do-nothing announcer and provides it, so the desk is never empty. */
+	/** Makes the do-nothing announcer and installs it, so the desk is never empty. */
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 	/** The desk of LevelWorld, or nullptr when there is no world. */
@@ -21,7 +21,7 @@ public:
 
 	/** Makes Provider the announcer; nullptr puts the do-nothing announcer back. Returns false, changing nothing, when Provider does not implement the announcer interface. */
 	UFUNCTION(BlueprintCallable, Category = "Announcer")
-	bool Provide(UObject* Provider);
+	bool Install(UObject* Provider);
 
 	/** The announcer now in place, as the interface; never empty. */
 	IDojoP15Announcer& Get() const; // @explain: The desk gives out the interface, so a caller can speak a line without knowing which class stands behind it.

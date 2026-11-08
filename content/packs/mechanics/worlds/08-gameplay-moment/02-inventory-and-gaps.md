@@ -6,7 +6,7 @@ kind: concept
 difficulty: 2
 patterns: []
 skills: [planning]
-terms: [overlap-event, timer-manager, dynamic-multicast-delegate]
+terms: []
 prerequisites: [m8-moment-plan]
 xp: 30
 estimatedMinutes: 9
@@ -22,11 +22,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: you are handed a written walkthrough of a two-minute moment and told to build it. What is the best first move?"
 choices:
-  - "Start on the most exciting mechanic so there is something to show"
-  - "Write down what the player does, what touches what, and what happens, with the numbers the walkthrough gives"
-  - "Open the editor and block out the level"
-  - "Decide which parts are too hard and cut them"
-answerIndex: 1
+  - "Build the most exciting mechanic first, so there is something to show"
+  - "Open the editor and block out the whole level before reading further"
+  - "Decide up front which parts look too hard and cut those parts out"
+  - "List what the player does, what touches what, and the numbers"
+answerIndex: 3
 explanation: The list is what everything else is checked against. Without it you build what you notice and miss what you did not, and you cannot say what is cut.
 ```
 
@@ -66,19 +66,19 @@ Choose the cheapest answer that keeps what the player is meant to feel. Write th
   type: multiple-choice
   prompt: "A walkthrough says the player 'slips through a crowd of 30 dancing guests'. Your library has no crowds and no dancing. What is the best entry in your gap map?"
   choices:
-    - "Fake it: five slow-moving obstacles on a timer that the player must pass between, and cut the dancing"
-    - "Build a full crowd system before anything else"
-    - "Ignore it, since a crowd is only scenery"
-  answerIndex: 0
+    - "Build a full crowd system first, so the scene looks right from the start"
+    - "Fake it with five slow obstacles to pass between, and cut the dancing"
+    - "Ignore it, because a crowd is only scenery and the player never touches it"
+  answerIndex: 1
   explanation: A fake keeps the feeling that matters, passing close to moving people, at a fraction of the work, and writing the cut down keeps the gap visible.
 - id: not-too-small
   type: multiple-choice
   prompt: "The walkthrough says 'a green light comes on over the door when it has power'. Should it be in the inventory?"
   choices:
-    - "No, it is only decoration"
-    - "Yes: it is an event the exit must announce, even if you fake how it looks"
-    - "Only if there is time"
-  answerIndex: 1
+    - "No, because it is only decoration and nothing in the moment depends on it"
+    - "Only if there is spare time after the main mechanics are done"
+    - "Yes: the exit must announce it, even if the look of it is faked"
+  answerIndex: 2
   explanation: The light is the player's only sign that the exit works. The inventory lists what happens; how it looks is decided afterwards.
 - id: three-words
   type: fill-blank
@@ -89,10 +89,10 @@ Choose the cheapest answer that keeps what the player is meant to feel. Write th
   type: multiple-choice
   prompt: "Why write down a cut as well as leaving it out?"
   choices:
-    - "So nobody can ask for it later"
-    - "Cuts must be reported to the engine"
-    - "So the moment can be judged against what it was meant to be, with the missing part named"
-  answerIndex: 2
+    - "So the moment is judged against its plan, with the gap named"
+    - "So nobody can ask for the missing part to be added back later"
+    - "Because the engine expects every cut to be reported when it builds"
+  answerIndex: 0
   explanation: A named cut can be argued about and brought back. An unnamed one looks like a mistake.
 - id: explain-gap-map
   type: explain-in-one-sentence

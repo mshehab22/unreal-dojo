@@ -442,7 +442,7 @@
       "programming subsystems"
     ],
     "category": "framework",
-    "short": "An engine-managed singleton whose lifetime is tied to a host, such as the game instance or the world.",
+    "short": "An engine-managed object whose lifetime is tied to a host, such as the game instance or the world, found through that host.",
     "long": "Subsystems give you a clean place for a manager without writing singleton code. Derive from the right base, and the engine creates your object when the host starts and destroys it when the host ends, with Initialize and Deinitialize hooks. Need a quest log that survives level loads? Use a game instance subsystem. Need a per-level spawn director? Use a world subsystem. You fetch one with GetSubsystem on its host, and Blueprints can reach them too.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
     "related": [
@@ -480,8 +480,8 @@
       "UTickableWorldSubsystem"
     ],
     "category": "framework",
-    "short": "A subsystem created for each world, so it resets whenever a new level loads.",
-    "long": "A world subsystem is the right owner for things that belong to the current map: tracking every active enemy, a spawn director, or a registry of interactable objects. Because each world gets its own copy, data never leaks from one level into the next. Grab it with GetWorld()->GetSubsystem<T>(). There is also a tickable variant if the manager needs to update every frame without being an actor.",
+    "short": "A subsystem the engine creates with each game or editor world and destroys with it, so a new world starts clean.",
+    "long": "A world subsystem is the right owner for things that belong to the current map: tracking every active enemy, a spawn director, or a registry of interactable objects. Because each world gets its own copy, data never leaks from one world into the next. A subsystem may decline to be created, so check what GetWorld()->GetSubsystem<T>() returns for null. There is also a tickable variant if the manager needs to update every frame without being an actor.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
     "related": [
       "subsystem",
@@ -523,7 +523,8 @@
       "subsystem",
       "gengine",
       "editor-subsystem"
-    ]
+    ],
+    "firstQuestId": "p14-singleton-card"
   },
   {
     "id": "editor-subsystem",
@@ -550,7 +551,7 @@
     ],
     "category": "framework",
     "short": "The top-level object for everything currently in play: loaded levels, actors, physics, timers, and networking.",
-    "long": "When you press Play, the engine creates a world and loads levels into it. Nearly everything that touches the running game goes through the world: SpawnActor, line traces, the timer manager, and finding the game mode or game state. From any actor or component you can call GetWorld(). In the editor there may be several worlds at once, such as the editor world and one play-in-editor world per player, which is a reason never to cache a world pointer in static data.",
+    "long": "When you press Play, the engine creates a world and loads levels into it. Nearly everything that touches the running game goes through the world: SpawnActor, line traces, the timer manager, and finding the game mode or game state. From any actor or component you can call GetWorld().",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UWorld?application_version=5.8",
     "related": [
       "level",
@@ -1807,7 +1808,7 @@
     ],
     "category": "object model",
     "short": "The reflected half of an Unreal interface, which lets unrelated classes promise the same set of functions.",
-    "long": "A chest, a door, and an NPC have nothing in common in their class trees, yet all can be interacted with. An interface lets each promise an Interact function without sharing a parent. Unreal interfaces come in two parts: a UINTERFACE class prefixed with U that the reflection system sees, and a matching I class that holds the functions you implement. You test for support with Implements<UInteractable>() or by casting to the I type. This keeps the player's interaction code from knowing about every interactable class.",
+    "long": "A chest, a door, and an NPC have nothing in common in their class trees, yet all can be interacted with. An interface lets each promise an Interact function without sharing a parent. Unreal interfaces come in two parts: a UINTERFACE class prefixed with U that the reflection system sees, and a matching I class that holds the functions you implement. You ask an object whether it supports the interface with a test on its class, which also works for a Blueprint-only implementer where a cast to the I type does not. This keeps the player's interaction code from knowing about every interactable class.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/interfaces-in-unreal-engine?application_version=5.8",
     "related": [
       "iinterface",
@@ -1925,7 +1926,7 @@
     ],
     "category": "containers",
     "short": "Unreal's resizable list, the container you will use most for ordered collections.",
-    "long": "TArray<AActor*> Enemies; holds items in order and grows as needed. Add or Emplace puts items on the end, Remove and RemoveAt take them out, Num tells you how many there are, Contains and Find search, and a range-based for loop walks through them. Marked UPROPERTY, a TArray of UObject pointers keeps those objects alive and shows in the editor. Do not add or remove items while looping over the same array; collect changes and apply them after the loop.",
+    "long": "TArray<AActor*> Enemies; holds items in order and grows as needed. Add or Emplace puts items on the end, Remove and RemoveAt take them out, Num tells you how many there are, Contains and Find search, and a range-based for loop walks through them. Marked UPROPERTY, a TArray of UObject pointers keeps those objects alive and shows in the editor. Do not add or remove items inside a range-based for loop over the same array; collect changes and apply them after the loop, or loop by index.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/array-containers-in-unreal-engine?application_version=5.8",
     "related": [
       "tmap",
@@ -3065,7 +3066,8 @@
       "nav-mesh",
       "pawn-sensing",
       "possession"
-    ]
+    ],
+    "firstQuestId": "s6-senses-blackboard"
   },
   {
     "id": "behavior-tree",
@@ -3103,7 +3105,8 @@
       "behavior-tree",
       "ai-controller",
       "pawn-sensing"
-    ]
+    ],
+    "firstQuestId": "s6-senses-blackboard"
   },
   {
     "id": "nav-mesh",
@@ -3160,7 +3163,8 @@
       "ai-controller",
       "blackboard",
       "behavior-tree"
-    ]
+    ],
+    "firstQuestId": "s6-senses-blackboard"
   },
   {
     "id": "replication",
@@ -3687,7 +3691,8 @@
       "net-mode",
       "listen-server",
       "world"
-    ]
+    ],
+    "firstQuestId": "p14-reachable-from-anywhere"
   },
   {
     "id": "savegame",
@@ -3701,7 +3706,7 @@
     ],
     "category": "framework",
     "short": "A UObject subclass whose UPROPERTY fields get written to disk and read back to save player progress.",
-    "long": "Make UDojoSaveGame : public USaveGame with UPROPERTY fields such as unlocked levels and best times. To save, create one with UGameplayStatics::CreateSaveGameObject, fill it, and call SaveGameToSlot with a slot name and user index. To load, check DoesSaveGameExist and call LoadGameFromSlot, then cast. Async versions avoid hitches. Saving actor pointers does not work across sessions; save stable IDs, like an FName or a gameplay tag, and look things up again on load.",
+    "long": "Make UDojoSaveGame : public USaveGame with UPROPERTY fields such as unlocked levels and best times. To save, create one with UGameplayStatics::CreateSaveGameObject, fill it, and call SaveGameToSlot with a slot name and user index. To load, check DoesSaveGameExist and call LoadGameFromSlot, then cast. Async versions avoid hitches. A pointer to an actor spawned during play cannot be trusted to find the same actor in a later session; save stable IDs, like an FName or a gameplay tag, and look things up again on load.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/saving-and-loading-your-game-in-unreal-engine?application_version=5.8",
     "related": [
       "game-instance-subsystem",
@@ -3722,7 +3727,7 @@
     ],
     "category": "reflection",
     "short": "Properties marked with the SaveGame specifier, which an archive with ArIsSaveGame set writes into a save and reads back.",
-    "long": "Most of an actor's properties are settings or looks, not progress. Marking the progress ones UPROPERTY(SaveGame) lets one generic routine save any actor: wrap a memory writer in an FObjectAndNameAsStringProxyArchive, set ArIsSaveGame on it (and ArNoDelta, so values equal to the defaults are written too), and call the actor's Serialize, and only the marked properties are written, by name. Reading the bytes back with a memory reader and the same setup puts just those properties back and leaves the rest alone. A USaveGame object is written without the flag, so all of its properties are saved.",
+    "long": "Most of an actor's properties are settings or looks, not progress. Marking the progress ones UPROPERTY(SaveGame) lets one generic routine save any actor: an archive that has ArIsSaveGame set writes only the marked properties of the actor it serializes, by name, and an archive of the same kind reading those bytes puts just those properties back and leaves the rest alone. A USaveGame object is written without the flag, so all of its properties except Transient ones are saved.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-uproperties?application_version=5.8",
     "related": [
       "savegame",
@@ -4164,7 +4169,7 @@
       "bt-service",
       "blackboard"
     ],
-    "firstQuestId": "s6-walk-beat"
+    "firstQuestId": "s6-tree-nodes"
   },
   {
     "id": "node-memory",
@@ -4177,13 +4182,13 @@
     ],
     "category": "AI",
     "short": "A small block of bytes a behavior tree keeps for each node and each AI running it, where shared nodes store per-AI state.",
-    "long": "Behavior tree nodes are not copied per AI: ten guards running one tree share one task object. Anything a node must remember for one guard, such as where that guard is walking, lives in node memory instead. The node says how many bytes it needs with GetInstanceMemorySize, the tree hands each run a NodeMemory pointer to that guard's block, and CastInstanceNodeMemory turns the pointer into your struct. InitializeNodeMemory and CleanupNodeMemory build and tear the struct down properly. Setting bCreateNodeInstance makes a separate node object per AI instead, at a memory cost.",
+    "long": "Behavior tree nodes are not copied per AI: ten guards running one tree share one task object. Anything a node must remember for one guard, such as where that guard is walking, lives in node memory instead. The node says how many bytes it needs with GetInstanceMemorySize, and the tree hands each run a NodeMemory pointer to that guard's block, which your code reads as its own struct. Setting bCreateNodeInstance makes a separate node object per AI instead, at a memory cost.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTNode?application_version=5.8",
     "related": [
       "bt-task-node",
       "behavior-tree"
     ],
-    "firstQuestId": "s6-walk-beat"
+    "firstQuestId": "s6-tree-nodes"
   },
   {
     "id": "bt-service",
@@ -4203,7 +4208,7 @@
       "bt-decorator",
       "bt-task-node"
     ],
-    "firstQuestId": "s6-memory-service"
+    "firstQuestId": "s6-tree-nodes"
   },
   {
     "id": "bt-decorator",
@@ -4211,13 +4216,11 @@
     "aliases": [
       "UBTDecorator",
       "CalculateRawConditionValue",
-      "FlowAbortMode",
-      "observer aborts",
       "UBTDecorator_BlackboardBase"
     ],
     "category": "AI",
-    "short": "A condition attached to a behavior tree node that decides whether its branch may run and can interrupt running branches when its answer changes.",
-    "long": "A decorator gates the node under it: CalculateRawConditionValue returns true to let the branch run. On its own it is checked only when the tree reaches that node. Its FlowAbortMode adds observing: Self aborts its own branch when the condition turns false, LowerPriority aborts branches to its right when it turns true, and Both does both. UBTDecorator_BlackboardBase registers for changes to one blackboard key and, when an abort mode is set, asks the tree to check the condition again whenever that key changes.",
+    "short": "A condition attached to a behavior tree node that decides whether its branch may run.",
+    "long": "A decorator gates the node under it: its CalculateRawConditionValue returns true to let the branch run and false to keep it closed. It sits on a composite or a task. UBTDecorator_BlackboardBase is the ready-made base for a condition on one blackboard key. Several decorators on one node must all agree before the branch may run.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/AIModule/UBTDecorator?application_version=5.8",
     "related": [
       "behavior-tree",
@@ -4225,7 +4228,7 @@
       "bt-service",
       "bt-task-node"
     ],
-    "firstQuestId": "s6-clue-decorator"
+    "firstQuestId": "s6-tree-nodes"
   },
   {
     "id": "ai-stimulus",
@@ -4246,7 +4249,7 @@
       "ai-controller",
       "blackboard"
     ],
-    "firstQuestId": "s6-sense-memory"
+    "firstQuestId": "s6-senses-blackboard"
   },
   {
     "id": "abstract-specifier",
@@ -4769,6 +4772,298 @@
     "firstQuestId": "p13-behavior-as-data"
   },
   {
+    "id": "subsystem-dependency",
+    "term": "Subsystem dependency",
+    "aliases": [
+      "InitializeDependency",
+      "FSubsystemCollectionBase"
+    ],
+    "category": "framework",
+    "short": "A subsystem asking, in its Initialize, for another subsystem to be created first, so it can keep a pointer to it.",
+    "long": "Subsystems of one kind are created in no promised order. A subsystem that needs another calls Collection.InitializeDependency<UOtherSubsystem>() inside Initialize(FSubsystemCollectionBase& Collection); the collection creates and initializes that one first if it does not exist yet, and returns it. Keeping the returned pointer in a UPROPERTY lets a subsystem that fronts others hold the systems behind it without looking them up on every call.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/programming-subsystems-in-unreal-engine?application_version=5.8",
+    "related": [
+      "subsystem",
+      "world-subsystem",
+      "game-instance-subsystem"
+    ],
+    "firstQuestId": "p22-every-system-every-hit"
+  },
+  {
+    "id": "niagara-function-library",
+    "term": "UNiagaraFunctionLibrary",
+    "aliases": [
+      "SpawnSystemAtLocation",
+      "SpawnSystemAttached"
+    ],
+    "category": "framework",
+    "short": "The Niagara plugin's static functions for spawning particle systems from code or Blueprint, such as SpawnSystemAtLocation.",
+    "long": "UNiagaraFunctionLibrary::SpawnSystemAtLocation(WorldContextObject, SystemTemplate, Location, Rotation) spawns a UNiagaraSystem asset as a new component that destroys itself when the system finishes, since bAutoDestroy defaults to true; SpawnSystemAttached does the same on a component. A module that calls them lists Niagara in its Build.cs dependencies. Gameplay code that calls them in many places is a natural thing to hide behind one feedback function.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/Niagara/UNiagaraFunctionLibrary?application_version=5.8",
+    "related": [
+      "gameplay-statics",
+      "blueprint-function-library"
+    ],
+    "firstQuestId": "p22-every-system-every-hit"
+  },
+  {
+    "id": "save-game-to-memory",
+    "term": "SaveGameToMemory",
+    "aliases": [
+      "LoadGameFromMemory"
+    ],
+    "category": "framework",
+    "short": "UGameplayStatics functions that turn a USaveGame into an array of bytes and back, with no file or slot involved.",
+    "long": "UGameplayStatics::SaveGameToMemory(SaveObject, OutBytes) writes a small header naming the save's class and then every UPROPERTY of the object into a TArray<uint8>; LoadGameFromMemory(Bytes) reads the header, makes a new object of that class, and fills it, returning nullptr for an empty array or when the class named in the header cannot be found. SaveGameToSlot is built on the same bytes plus the platform's save system. The memory form suits checkpoints kept for a session, saves sent over the network, and tests.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/saving-and-loading-your-game-in-unreal-engine?application_version=5.8",
+    "related": [
+      "savegame",
+      "gameplay-statics"
+    ],
+    "firstQuestId": "p22-facade-card"
+  },
+  {
+    "id": "god-object",
+    "term": "God object",
+    "aliases": [
+      "god class",
+      "everything manager"
+    ],
+    "category": "cpp idiom",
+    "short": "One class that knows and does too much of the game, so almost every change touches it and almost everything depends on it.",
+    "long": "It usually starts as a helpful front: a GameServices class with a few calls. Then it gains pass-through functions for every call of the systems behind it, then state of its own (the score, the inventory, the current level), then rules. Every class includes it, every change risks breaking something unrelated, and it can no longer be tested alone. The cure is to keep each front small and about one job, let callers that need a system's full power use that system directly, and move state to the class that owns it.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/epic-cplusplus-coding-standard-for-unreal-engine?application_version=5.8",
+    "related": [
+      "subsystem",
+      "gameplay-statics"
+    ],
+    "firstQuestId": "p22-facade-card"
+  },
+  {
+    "id": "kismet-system-library",
+    "term": "UKismetSystemLibrary",
+    "aliases": [
+      "KismetSystemLibrary"
+    ],
+    "category": "framework",
+    "short": "An engine library of static functions behind many Blueprint nodes, such as PrintString, traces, and timers by function name.",
+    "long": "UKismetSystemLibrary is a UBlueprintFunctionLibrary: each static function is one simple node in front of a larger engine system, such as PrintString over on-screen and log output, LineTraceSingle over the physics scene, or K2_SetTimer over the timer manager. Like UGameplayStatics, it is a collection of small fronts rather than one facade, which keeps each call simple without becoming a class that owns the systems.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UKismetSystemLibrary?application_version=5.8",
+    "related": [
+      "gameplay-statics",
+      "blueprint-function-library"
+    ],
+    "firstQuestId": "p22-facade-card"
+  },
+  {
+    "id": "virtual-function",
+    "term": "Virtual function",
+    "aliases": [
+      "virtual functions",
+      "overriding a function",
+      "override a virtual function"
+    ],
+    "category": "cpp idiom",
+    "short": "A member function that is looked up on the real object when it is called, so a child class can replace what it does.",
+    "long": "Mark a function virtual in a base class and a child class can override it with its own version. When code calls the function through a pointer to the base class, the call runs the child's version if the object really is a child. This is what lets a launcher hold one pointer to a rule base class and ask it a question without knowing which rule it holds. In Unreal, write override after the child's declaration so the compiler checks that it matches, call Super to run the parent's version as well, and use a BlueprintNativeEvent when Blueprint children should be able to override the function too.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/epic-cplusplus-coding-standard-for-unreal-engine?application_version=5.8",
+    "related": [
+      "uclass",
+      "abstract-specifier",
+      "blueprintnativeevent"
+    ],
+    "firstQuestId": "p20-one-function-every-aim"
+  },
+  {
+    "id": "overlap-query",
+    "term": "Overlap query",
+    "aliases": [
+      "OverlapMultiByChannel",
+      "OverlapMultiByObjectType",
+      "OverlapAnyTestByChannel",
+      "FOverlapResult"
+    ],
+    "category": "collision",
+    "short": "A question to the physics scene: which collision shapes overlap this shape, placed here, right now.",
+    "long": "UWorld::OverlapMultiByChannel takes a position, a rotation, a channel, and an FCollisionShape such as FCollisionShape::MakeSphere(300.f), and fills an array of FOverlapResult, one per overlapping component; GetActor() on a result gives its owner. OverlapMultiByObjectType asks by object type instead of by channel, and OverlapAnyTestByChannel only answers whether anything overlaps. None of them loop over the level: they ask the physics scene's broadphase, so only shapes near the query are tested. They can only find collision shapes the physics scene knows about, so actors with no collision component and plain structs in an array are invisible to them.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/traces-in-unreal-engine---overview?application_version=5.8",
+    "related": [
+      "physics-broadphase",
+      "sweep",
+      "overlap-event",
+      "collision-channel"
+    ],
+    "firstQuestId": "p18-every-pair"
+  },
+  {
+    "id": "physics-broadphase",
+    "term": "Physics broadphase",
+    "aliases": [
+      "broadphase",
+      "broad phase",
+      "p.BroadphaseType",
+      "AABB tree"
+    ],
+    "category": "physics",
+    "short": "The physics scene's own spatial structure, which keeps every collision shape's bounding box so queries and collisions only test shapes that are near each other.",
+    "long": "Before the physics engine tests two shapes exactly, it needs to know which pairs could touch at all. The broadphase answers that from bounding boxes kept in a spatial structure; in UE 5.8 the Chaos physics scene uses a tree of bounding boxes by default, and the console variable p.BroadphaseType selects grid and tree variants. Overlap queries, sweeps, line traces, and overlap events all go through it, which is why they stay fast in a level full of shapes. It is a position index the engine keeps for you, but only for things with collision shapes.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/physics-in-unreal-engine?application_version=5.8",
+    "related": [
+      "overlap-query",
+      "uniform-grid",
+      "toctree2"
+    ],
+    "firstQuestId": "p18-every-pair"
+  },
+  {
+    "id": "navigation-octree",
+    "term": "Navigation octree",
+    "aliases": [
+      "FNavigationOctree",
+      "nav octree"
+    ],
+    "category": "AI",
+    "short": "The navigation system's own octree of the geometry and actors that shape the nav mesh.",
+    "long": "When the nav mesh is built or rebuilt around a change, the navigation system needs only the geometry inside the tiles it is rebuilding. It keeps every nav-relevant actor and component in FNavigationOctree, a TOctree2 of elements with their bounds, and gathers from the region it needs instead of the whole level. UNavigationSystemV1::GetNavOctree returns it. It is a good example of filing things by position inside the engine; it serves navigation, not gameplay questions, so gameplay data does not belong in it.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/navigation-system-in-unreal-engine?application_version=5.8",
+    "related": [
+      "nav-mesh",
+      "toctree2",
+      "physics-broadphase"
+    ],
+    "firstQuestId": "p18-every-pair"
+  },
+  {
+    "id": "uniform-grid",
+    "term": "Uniform grid",
+    "aliases": [
+      "spatial grid",
+      "grid cell",
+      "cell grid"
+    ],
+    "category": "containers",
+    "short": "Square cells of one fixed size laid over the world, each holding a list of the things inside it, so a question about a spot looks only in nearby cells.",
+    "long": "The simplest way to file things by where they are. A cell's coordinate is a position divided by the cell size and rounded down (FMath::FloorToInt32, so cells left of zero are as wide as the rest), and a TMap from FIntPoint to an array holds only the cells that contain something. Choose the cell size near the radius the questions usually ask about.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/map-containers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "fintpoint",
+      "tmap",
+      "toctree2",
+      "physics-broadphase"
+    ],
+    "firstQuestId": "p18-every-pair"
+  },
+  {
+    "id": "fintpoint",
+    "term": "FIntPoint",
+    "aliases": [
+      "TIntPoint",
+      "integer point"
+    ],
+    "category": "math",
+    "short": "A pair of int32 values, X and Y, used for things like grid cells and screen pixels.",
+    "long": "FIntPoint is TIntPoint<int32>: two integers with arithmetic, comparison, and a GetTypeHash, so it can be the key of a TMap or a TSet. That makes it the natural key for anything addressed by two whole numbers, such as the column and row of a tile in a board: TMap<FIntPoint, FTile>. FIntVector is the three-dimensional version.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TIntPoint?application_version=5.8",
+    "related": [
+      "uniform-grid",
+      "tmap",
+      "fvector"
+    ],
+    "firstQuestId": "p18-every-pair"
+  },
+  {
+    "id": "toctree2",
+    "term": "TOctree2",
+    "aliases": [
+      "octree",
+      "FOctreeElementId2"
+    ],
+    "category": "containers",
+    "short": "Unreal's reusable octree template, which splits space into eight smaller boxes only where many elements are crowded.",
+    "long": "TOctree2<ElementType, SemanticsType> stores elements with bounds in nested boxes that subdivide where they fill up, so clumps get small boxes and empty space stays one big box. The semantics type tells it each element's bounds and how many elements a node holds before it splits. AddElement and RemoveElement change it, and FindElementsWithBoundsTest calls a function for every element whose bounds touch a query box. The engine builds its navigation octree and the renderer's primitive octree on it. Prefer it to a uniform grid when things clump or most of the space is empty; it costs more code and more work per change.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TOctree2?application_version=5.8",
+    "related": [
+      "uniform-grid",
+      "navigation-octree",
+      "physics-broadphase"
+    ],
+    "firstQuestId": "p18-every-pair"
+  },
+  {
+    "id": "set-actor-hidden-in-game",
+    "term": "SetActorHiddenInGame",
+    "aliases": [
+      "SetActorHiddenInGame()",
+      "IsHidden()",
+      "bHidden"
+    ],
+    "category": "framework",
+    "short": "Stops or starts drawing an actor during play; on its own it changes nothing about collision or ticking.",
+    "long": "SetActorHiddenInGame(true) stops the actor's components from being drawn in the game, and false draws them again; IsHidden() says which it is now. It only affects drawing. A hidden actor still collides and still ticks, which is why taking an actor out of play without destroying it also needs SetActorEnableCollision(false) and SetActorTickEnabled(false). Hiding an actor in the editor, with the eye icon in the Outliner or the H key, is a separate thing and does not change what the game draws.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/AActor/SetActorHiddenInGame?application_version=5.8",
+    "related": [
+      "set-actor-enable-collision",
+      "primary-actor-tick",
+      "object-pool",
+      "actor"
+    ],
+    "firstQuestId": "p16-spawn-cost"
+  },
+  {
+    "id": "set-actor-enable-collision",
+    "term": "SetActorEnableCollision",
+    "aliases": [
+      "SetActorEnableCollision()",
+      "GetActorEnableCollision",
+      "bActorEnableCollision"
+    ],
+    "category": "collision",
+    "short": "Turns collision off or on for a whole actor at once, keeping each component's own collision settings for when it comes back on.",
+    "long": "SetActorEnableCollision(false) makes every component of the actor ignore collision without touching their own settings, and true restores them as they were; GetActorEnableCollision() reads the switch. It is the quick way to take an actor out of play: a hidden actor still blocks shots and overlaps triggers until this is off. To change how one shape collides while the actor stays in play, set that component's Collision Enabled or its responses instead.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/AActor/SetActorEnableCollision?application_version=5.8",
+    "related": [
+      "set-actor-hidden-in-game",
+      "collision-enabled",
+      "collision-response",
+      "object-pool"
+    ],
+    "firstQuestId": "p16-spawn-cost"
+  },
+  {
+    "id": "free-list",
+    "term": "Free list",
+    "aliases": [
+      "free-list"
+    ],
+    "category": "memory",
+    "short": "A chain through the unused slots of a fixed set, so finding a free one takes one step instead of a search.",
+    "long": "A set of reusable objects needs a fast answer to which one is free. A free list keeps that answer ready: each unused slot holds the index of the next unused slot, and the set remembers the first. Taking one means taking the first and moving the start to its next; giving one back means making it the new first. Both take the same time however large the set is. Unreal's TSparseArray keeps its empty slots on a free list in the same way, and for a handful of pooled actors a plain TArray of resting ones, used from its end with Pop and Add, does the same job.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TSparseArray?application_version=5.8",
+    "related": [
+      "object-pool",
+      "tarray"
+    ],
+    "firstQuestId": "p16-object-pool-card"
+  },
+  {
+    "id": "niagara-component-pool",
+    "term": "Niagara component pooling",
+    "aliases": [
+      "ENCPoolMethod",
+      "UNiagaraComponentPool",
+      "ReleaseToPool"
+    ],
+    "category": "framework",
+    "short": "Niagara's own reuse of effect components, chosen with the pooling method when an effect is spawned.",
+    "long": "UNiagaraFunctionLibrary::SpawnSystemAtLocation and SpawnSystemAttached take an ENCPoolMethod. None, the default, makes a fresh component each time. AutoRelease takes one from the world's Niagara pool and gives it back when the effect finishes, for fire and forget effects such as a hit spark; do not keep using the component after the frame it was spawned in. ManualRelease takes one from the pool and leaves it to you to call ReleaseToPool when you are done. Effects get reuse this way without a pool of your own.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/Niagara/ENCPoolMethod?application_version=5.8",
+    "related": [
+      "object-pool",
+      "spawnactor"
+    ],
+    "firstQuestId": "p16-object-pool-card"
+  },
+  {
     "id": "static-variable",
     "term": "Static variable",
     "aliases": [
@@ -4865,5 +5160,137 @@
       "cast"
     ],
     "firstQuestId": "p15-service-locator-card"
+  },
+  {
+    "id": "mutable-member",
+    "term": "Mutable member",
+    "aliases": [
+      "mutable specifier",
+      "mutable keyword"
+    ],
+    "category": "cpp idiom",
+    "short": "A class member marked mutable, which a const function is still allowed to change.",
+    "long": "A const function promises not to change the object a caller can see. A member marked mutable is outside that promise, so a const function may still write it. The usual use is a remembered answer: a const GetGuard function can store the sum it worked out, clear a flag, and count the work, while the fighter looks unchanged to anyone calling it. Use it only for caches and counters, never for data that is really part of the object's state, because it hides changes from every const reference.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/epic-cplusplus-coding-standard-for-unreal-engine?application_version=5.8",
+    "related": [
+      "coding-standard",
+      "forceinline",
+      "tobjectptr"
+    ],
+    "firstQuestId": "p17-recompute-every-frame"
+  },
+  {
+    "id": "render-state-dirty",
+    "term": "MarkRenderStateDirty",
+    "aliases": [
+      "MarkRenderTransformDirty",
+      "MarkRenderDynamicDataDirty",
+      "render state dirty"
+    ],
+    "category": "components",
+    "short": "The actor component calls that mark its render data stale, so the engine rebuilds or resends it later.",
+    "long": "A component does not rebuild its render data every time one of its settings changes. It calls MarkRenderStateDirty to say the whole render state must be recreated, MarkRenderTransformDirty when only its transform changed, or MarkRenderDynamicDataDirty when only per-frame data changed, and the engine does the work once at a safe point. It is the engine's own dirty flag. Calling it each frame on a component whose settings did not change throws the saving away.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UActorComponent?application_version=5.8",
+    "related": [
+      "actor-component",
+      "scene-component",
+      "tick"
+    ],
+    "firstQuestId": "p17-dirty-flag-card"
+  },
+  {
+    "id": "cache-line",
+    "term": "Cache line",
+    "aliases": [
+      "cache lines",
+      "PLATFORM_CACHE_LINE_SIZE",
+      "cache miss"
+    ],
+    "category": "memory",
+    "short": "The block of memory the processor fetches at once, 64 bytes on PC, so data stored next to what you read arrives with it.",
+    "long": "The processor keeps recently used memory in small, fast caches and fills them a whole line at a time; Unreal names the size PLATFORM_CACHE_LINE_SIZE, 64 bytes on Windows and 128 on a Mac with Apple silicon. Reading something already in a cache is quick, while a cache miss waits for main memory, often for hundreds of steps of work. That is why a loop over records packed side by side in a TArray can run much faster, once the data no longer fits in the caches, than a loop that follows a pointer to a separate object for each element: every fetched line holds the next records instead of unrelated fields.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/unreal-insights-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tarray",
+      "ustruct",
+      "hot-cold-split",
+      "profiling"
+    ],
+    "firstQuestId": "p19-scattered-memory"
+  },
+  {
+    "id": "fvector3f",
+    "term": "FVector3f",
+    "aliases": [
+      "TVector<float>"
+    ],
+    "category": "math",
+    "short": "A vector of three floats, 12 bytes, next to the UE 5 FVector of three doubles, 24 bytes.",
+    "long": "UE 5 switched FVector to doubles so that very large worlds keep their precision far from the origin. FVector3f, which is UE::Math::TVector<float>, keeps the old three floats and half the size, which suits large arrays of small records such as particles or crowd agents that stay near the origin. Converting between the two is explicit, with FVector3f(SomeVector) and FVector(SomeVector3f). Floats lose precision far from the origin, so positions in a world many kilometers across are better kept as FVector or relative to a nearby origin.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TVector?application_version=5.8",
+    "related": [
+      "fvector",
+      "ustruct",
+      "cache-line"
+    ],
+    "firstQuestId": "p19-scattered-memory"
+  },
+  {
+    "id": "hot-cold-split",
+    "term": "Hot and cold split",
+    "aliases": [
+      "hot/cold split",
+      "hot-cold split",
+      "hot and cold data"
+    ],
+    "category": "memory",
+    "short": "Keeping the fields a frequent loop reads in small records, and moving the rarely read fields to a second array at the same index.",
+    "long": "A record's size decides how many records each cache line brings, so fields the loop never reads still slow it down. A hot and cold split keeps the per-frame fields, such as position and velocity, in the records the loop walks, and puts the rest, such as a name or a description, in a second array kept in step with the first. Split by what the loop really reads, measured, not by guess, and keep both arrays changing together on every add and removal.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/array-containers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "cache-line",
+      "tarray",
+      "ustruct"
+    ],
+    "firstQuestId": "p19-data-locality-card"
+  },
+  {
+    "id": "remove-at-swap",
+    "term": "RemoveAtSwap",
+    "aliases": [
+      "RemoveAtSwap()",
+      "RemoveSwap",
+      "RemoveAllSwap"
+    ],
+    "category": "containers",
+    "short": "Removes an element from a TArray by moving the last element into its place, so nothing after it shifts; the order changes.",
+    "long": "RemoveAt keeps the order of a TArray by shifting every later element down one place, which costs more the longer the array is. RemoveAtSwap fills the gap with the last element instead, so only one element moves however long the array is, and the array stays packed. Use it when the order of the elements does not matter, as in a swarm of particles; use RemoveAt when it does. RemoveSwap does the same for an element found by value, and RemoveAllSwap for every element a predicate matches.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/array-containers-in-unreal-engine?application_version=5.8",
+    "related": [
+      "tarray",
+      "hot-cold-split"
+    ],
+    "firstQuestId": "p19-data-locality-card"
+  },
+  {
+    "id": "mass-entity",
+    "term": "Mass Entity",
+    "aliases": [
+      "MassEntity",
+      "FMassFragment",
+      "UMassProcessor",
+      "FMassEntityManager"
+    ],
+    "category": "framework",
+    "short": "Unreal's framework for simulating very many entities as plain data: fragments stored in chunks by archetype and processed in bulk.",
+    "long": "In Mass an entity is only an ID, and its data are fragments, plain structs deriving from FMassFragment. Entities with the same set of fragments share an archetype, whose fragments are stored together in chunks, and a UMassProcessor runs over those chunks in bulk, often across threads. It is built for tens of thousands of agents, such as large crowds and traffic. It brings its own concepts and setup, so a single swarm with one loop is usually simpler as a TArray of structs in one actor.",
+    "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/overview-of-mass-entity-in-unreal-engine?application_version=5.8",
+    "related": [
+      "ustruct",
+      "tarray",
+      "cache-line",
+      "subsystem"
+    ],
+    "firstQuestId": "p19-data-locality-card"
   }
 ]

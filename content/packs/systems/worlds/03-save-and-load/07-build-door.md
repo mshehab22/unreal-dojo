@@ -25,8 +25,9 @@ Write `ADojoS3Door` from nothing. The tests use this public interface, so keep t
 
 - `UPROPERTY(VisibleAnywhere) TObjectPtr<USceneComponent> Panel;`, the part that swings, attached to the door's root. Its relative yaw is 90 when the door is open and 0 when it is closed.
 - `UPROPERTY(VisibleAnywhere) TObjectPtr<UDojoS3SaveableComponent> Saveable;`, created in the constructor, so the door can be saved by its id.
-- `void Open()`, `void Close()`, and `void Toggle()`, each a `UFUNCTION(BlueprintCallable)`, change the state and swing the panel to match; `bool IsOpen() const` and `float GetPanelYaw() const` answer about the present, and the tests read the panel's own rotation too.
+- `void Open()`, `void Close()`, and `void Toggle()`, each a `UFUNCTION(BlueprintCallable)`, change the state and swing the panel to match; `bool IsOpen() const` and `float GetPanelYaw() const`, each a `UFUNCTION(BlueprintPure)`, answer about the present, and the tests read the panel's own rotation too.
 - The open state is a `bool bOpen` marked `UPROPERTY(SaveGame)`, so the saveable component saves it.
+- The door never ticks; it only reacts to calls.
 - When play begins, the panel matches the state the door was placed with.
 
 Compiles against earlier quests: s3-saveable (`Quests/s3-saveable/DojoS3SaveableComponent.h`), s3-save-system (`Quests/s3-save-system/DojoS3SaveSystem.h`), and s3-save-record (`Quests/s3-save-record/DojoS3SaveRecord.h`).
@@ -228,8 +229,8 @@ bool FDojo_S3_Door_Shape::RunTest(const FString& Parameters)
 
 # Hints
 
-- Read the failing assertion: the door says it is open, and something about it says otherwise. Ask what happened to the door when the state came back, and what did not happen.
-- Reading bytes into the door's SaveGame property sets the flag and calls none of the door's functions, so nothing swung the panel. The component already offers a way for an owner to hear that its state is back.
+- Read the failing assertion to see which of the door's two answers disagrees after its state comes back.
+- Reading bytes sets the flag and calls none of the door's functions, so nothing swung the panel, and the saveable component already has a way to tell an owner that its state is back.
 - Implement `IDojoS3Restorable` on the door (header `Quests/s3-saveable/DojoS3Restorable.h`) and override `OnRestoredFromSave_Implementation` to swing the panel from the restored flag, with the same function `Open` and `Close` use.
 
 # Rubric
@@ -247,17 +248,22 @@ The door could skip the flag and save the panel's rotation itself, as a `UPROPER
 # Parsons
 
 ```yaml
-- id: door-set-open
-  prompt: Put SetOpen in order, using the names from the reference.
+- id: door-constructor
+  prompt: "Put the constructor in order: ticking off first, then the frame, the panel and its attachment, and the saveable part last."
   lines:
-    - "void ADojoS3Door::SetOpen(bool bNewOpen)"
+    - "ADojoS3Door::ADojoS3Door()"
     - "{"
-    - "	bOpen = bNewOpen;"
-    - "	ApplyPanel();"
+    - "	PrimaryActorTick.bCanEverTick = false;"
+    - "	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT(\"Frame\"));"
+    - "	Panel = CreateDefaultSubobject<USceneComponent>(TEXT(\"Panel\"));"
+    - "	Panel->SetupAttachment(RootComponent);"
+    - "	Saveable = CreateDefaultSubobject<UDojoS3SaveableComponent>(TEXT(\"Saveable\"));"
     - "}"
   distractors:
-    - line: "	bOpen = !bOpen;"
-      mistake: That flips the state instead of setting it, so Open on an open door would close it.
-    - line: "	Panel->SetWorldRotation(FRotator(0.f, 90.f, 0.f));"
-      mistake: World rotation ignores how the door itself is turned, and the yaw must follow the state; the panel's relative rotation is set from bOpen in one place.
+    - line: "	PrimaryActorTick.bCanEverTick = true;"
+      mistake: The door only reacts to calls, so ticking stays off.
+    - line: "	RootComponent = Panel;"
+      mistake: The frame is the root and the panel hangs from it so the panel can turn on its own; with the panel as the root, the whole door would turn.
+    - line: "	Panel->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));"
+      mistake: A panel is created closed and takes its yaw from the open state, so setting it here would make every new door start open.
 ```

@@ -25,11 +25,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: the circuit's lap board is a UObject with a static Get function. The first call makes the board with NewObject, roots it with AddToRoot, and keeps it in a static pointer; every later call returns that pointer. You play in the editor, drive two laps, stop, and play again. What does the board show at the start of the second session?"
 choices:
-  - An empty board, because stopping play destroys everything the session made
-  - The two laps from the first session, because the board belongs to the program, not to the session
-  - Nothing at all; the static pointer is reset to nullptr when play stops
+  - An empty board, because stopping play destroys the session's objects
   - A crash, because AddToRoot is not allowed during play
-answerIndex: 1
+  - Nothing at all; the static pointer resets to nullptr when play stops
+  - The first session's two laps, because the board outlived it
+answerIndex: 3
 explanation: Static storage lasts as long as the program, and the editor is one program for every play session. A rooted object is never collected, so the second session reads the first session's laps.
 ```
 
@@ -69,11 +69,11 @@ void AFinishLine::UseBoard(ULapBoard* NewBoard)
   type: multiple-choice
   prompt: "How long does a static variable in your game module last?"
   choices:
-    - Until the level changes
-    - Until the Play In Editor session stops
-    - As long as the program, which in the editor spans every play session
-    - Until the next garbage collection
-  answerIndex: 2
+    - Until the editor or game program closes
+    - Until the level that made it is unloaded
+    - Until the play session that made it stops
+    - Until the next garbage collection pass
+  answerIndex: 0
   explanation: Static storage belongs to the program. In the editor, the program is the editor itself, so a static outlives every world and session it holds.
 - id: fill-root
   type: fill-blank
@@ -99,11 +99,11 @@ void AFinishLine::UseBoard(ULapBoard* NewBoard)
   type: multiple-choice
   prompt: "The designers want practice laps kept apart from the records. Why is that hard when every finish line calls ULapBoard::Get?"
   choices:
-    - Practice laps are slower to record
-    - Get always returns the one board, so every call site would have to change to reach a second one
-    - A UObject cannot hold more than one array
+    - Recording a practice lap costs more than a ranked one
     - Static functions cannot be called during play
-  answerIndex: 1
+    - Get has one answer, so every caller needs changing
+    - A UObject cannot hold more than one array
+  answerIndex: 2
   explanation: Making the board reachable from anywhere also made it the only board. Asking for a second one means rewriting every caller.
 - id: world-home
   type: multiple-choice
@@ -114,7 +114,7 @@ void AFinishLine::UseBoard(ULapBoard* NewBoard)
     - The class default object
     - A global variable in the game module
   answerIndex: 1
-  explanation: The engine makes one world subsystem for each world and destroys it with that world, so a new level starts clean.
+  explanation: The engine makes a world subsystem for each game world, unless that subsystem declines to be created, and destroys it with the world, so a new level starts clean.
 - id: explain-anywhere
   type: explain-in-one-sentence
   prompt: In one sentence, say why a static Get for the lap board causes trouble in the Unreal editor even if the game only ever needs one board.

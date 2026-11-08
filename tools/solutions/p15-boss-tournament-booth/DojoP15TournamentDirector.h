@@ -23,11 +23,11 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Tournament")
 	TObjectPtr<UTextRenderComponent> Label;
 
-	/** The announcer class to provide when play begins; empty provides nothing. */
+	/** The announcer class to install when play begins; empty installs nothing. */
 	UPROPERTY(EditAnywhere, Category = "Tournament")
 	TSubclassOf<UObject> AnnouncerClass;
 
-	/** The scoreboard class to provide when play begins; empty provides nothing. */
+	/** The scoreboard class to install when play begins; empty installs nothing. */
 	UPROPERTY(EditAnywhere, Category = "Tournament")
 	TSubclassOf<UObject> ScoreboardClass;
 
@@ -91,15 +91,15 @@ public:
 	UDojoP15TracingAnnouncer* GetTracer() const;
 
 protected:
-	/** Provides the chosen classes, makes the crier, binds the keys, and starts round 1. */
+	/** Installs the chosen classes, makes the crier, binds the keys, and starts round 1. */
 	virtual void BeginPlay() override;
 
 	/** Clears the round timers. */
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
-	/** Provides an announcer and a scoreboard made from the chosen classes, when there are any. */
-	void ProvideChosenServices();
+	/** Installs an announcer and a scoreboard made from the chosen classes, when there are any. */
+	void InstallChosenServices();
 
 	/** Resets the hits, starts both timers, and announces the round. */
 	void StartRound();

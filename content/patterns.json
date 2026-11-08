@@ -1881,7 +1881,7 @@
     "title": "Singleton",
     "intent": "Make a class guarantee there is only one of it and let any code reach that one through the class itself. In Unreal you learn it mostly to recognize it, and to give the one instance a real owner instead.",
     "problem": "A lap board, the standings, the start lights: some things feel naturally single, and a static Get saves passing them around. But the static belongs to the whole program, so in the editor it outlives every play session and is shared by worlds running together; its pointer is invisible to the garbage collector; every caller hides a dependency; and access from anywhere also rules out the second instance a practice mode or a test needs.",
-    "unrealForm": "Subsystems give single instances an owner and a lifetime the engine manages: UEngineSubsystem for the program, UGameInstanceSubsystem for the game session, UWorldSubsystem for each world, ULocalPlayerSubsystem for each local player, each found through its owner (GetSubsystem<T>() on the world, the game instance, or the local player, and GEngine->GetEngineSubsystem<T>() for the engine). The game instance, game mode, game state, and player controllers are owners that already exist. Code that only needs access is handed the object by whoever sets it up.",
+    "unrealForm": "Subsystems give single instances an owner and a lifetime the engine manages: UEngineSubsystem for the program, UGameInstanceSubsystem for the game session, UWorldSubsystem for each world, ULocalPlayerSubsystem for each local player, each found through its owner (GetSubsystem<T>() on the world, the game instance, or the local player, and GEngine->GetEngineSubsystem<T>() for the engine). The game instance, the game state, each player controller, and on the server the game mode are owners that already exist. A subsystem may decline to be created, so check what GetSubsystem returns. Code that only needs access is handed the object by whoever sets it up.",
     "whenNot": "Almost always skip the classic form. If the need is access, hand the object in or find it through its owner. If the need is one instance, enforce it where the instance comes into being, without global access. A manager that only does other objects' work should become behavior on those objects, a subsystem needs the owner whose lifetime matches its data, and stateless helpers belong in a function library.",
     "useCaseQuestIds": [
       "p14-lap-log",
@@ -1904,7 +1904,7 @@
       {
         "id": "singleton-recall-2",
         "type": "spot-the-bug",
-        "prompt": "This score manager is a hand-rolled singleton. Which line risks a crash after garbage collection or between play sessions?",
+        "prompt": "This score manager is a hand-rolled singleton. Which line declares the pointer that risks a crash after garbage collection or between play sessions?",
         "code": "UDojoScoreManager* UDojoScoreManager::Get()\n{\n    static UDojoScoreManager* Instance = nullptr;\n    if (!Instance) { Instance = NewObject<UDojoScoreManager>(); }\n    return Instance;\n}",
         "bugLine": 3,
         "fix": "Use a UGameInstanceSubsystem and GetSubsystem<UDojoScoreManager>() so the engine owns the lifetime.",
@@ -1926,12 +1926,12 @@
         "type": "multiple-choice",
         "prompt": "A finish line must write practice laps and ranked laps into different logs. What lets the same line class do both?",
         "choices": [
-          "A static Get on the log class",
-          "The line is handed the log it writes into by whoever sets up the race",
-          "A UEngineSubsystem that holds every log",
-          "A check that only one log exists"
+          "The line is handed its log by whoever sets up the race",
+          "A static Get on the log class, rooted so it stays alive",
+          "A UEngineSubsystem that holds every log for the program",
+          "A check at startup that only one log exists"
         ],
-        "answerIndex": 1,
+        "answerIndex": 0,
         "explanation": "A line that is handed its log can be handed either one; a log reached through the class can only ever be the one."
       },
       {
@@ -1939,12 +1939,12 @@
         "type": "multiple-choice",
         "prompt": "When does a UWorldSubsystem's Initialize run, compared with a classic Singleton made on first use?",
         "choices": [
-          "Whenever some code first calls GetSubsystem for it, like a Singleton",
-          "When its world is created, so its setup happens at a moment the game controls, such as a level load",
-          "Every frame, before Tick",
-          "Only when the game is packaged"
+          "When some code first calls GetSubsystem for it, like a Singleton",
+          "Every frame, just before Tick runs on the world",
+          "Only when the game is packaged for release",
+          "When its world is created, such as at a level load"
         ],
-        "answerIndex": 1,
+        "answerIndex": 3,
         "explanation": "The engine makes a world subsystem together with its world, so heavy setup runs at level load instead of in the middle of play when some code first asks."
       }
     ],
@@ -1952,7 +1952,7 @@
       {
         "id": "singleton-scenario-1",
         "type": "which-pattern",
-        "prompt": "Your quest tracker needs to live across level loads and be reachable from any widget or actor. A teammate writes a static GetInstance. Which Unreal form should replace it?",
+        "prompt": "Your quest tracker needs to live across level loads and be reachable from any widget or actor. A teammate writes a static GetInstance, and a game instance subsystem found by type with GetSubsystem replaces it. Which pattern is that replacement closest to?",
         "choices": [
           "facade",
           "observer",
@@ -1979,7 +1979,7 @@
       {
         "id": "singleton-scenario-2",
         "type": "which-pattern",
-        "prompt": "A class named UDojoEnemyManager has grown functions for moving, damaging, and animating every enemy, and every enemy calls it. Which pattern smell is this, and which pattern points to the fix?",
+        "prompt": "A class named UDojoEnemyManager has grown functions for moving, damaging, and animating every enemy, and every enemy calls it. Which pattern points to the fix?",
         "choices": [
           "component",
           "flyweight",
@@ -2036,11 +2036,11 @@
         "prompt": "A WeatherManager is a UGameInstanceSubsystem that holds the current level's rain and fog. After a level change the new level starts in the old level's storm. What is the fix?",
         "choices": [
           "Make it a static Get so it is easier to reset",
-          "Make it a UWorldSubsystem, so each level gets its own weather and it is destroyed with the level",
-          "Call AddToRoot on it",
-          "Make it a UEngineSubsystem"
+          "Call AddToRoot on it so the level cannot free it",
+          "Make it a UWorldSubsystem so each level gets its own",
+          "Make it a UEngineSubsystem that lives for the program"
         ],
-        "answerIndex": 1,
+        "answerIndex": 2,
         "explanation": "The owner decides the lifetime. Weather that belongs to a level needs the level's world as its owner."
       }
     ]
@@ -2050,11 +2050,11 @@
     "title": "Service Locator",
     "intent": "Let code ask one place for \"the announcer\" or \"the scoreboard\" by interface and get back whichever provider was set up (loud, recording, or silent), without knowing which class that is.",
     "problem": "The gong, the bout timer, and the score screen all need to announce lines. Passing an announcer through every function is tedious, and letting each create its own welds them to one concrete class, which blocks swapping in a silent or recording version for tests or a different build.",
-    "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem may keep its current provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's own registry for plugin features, and you ask whether a feature exists before asking for it. Provide a null provider so callers never check for nullptr.",
+    "unrealForm": "Subsystems found with GetSubsystem<T>() are the everyday form. A subsystem may keep its current provider behind a UINTERFACE (real, null, logging, mock) chosen at startup from project settings or a console variable. IModularFeatures is the engine's own registry for plugin features, and you ask whether a feature exists before asking for it. Use a null provider so callers never check for nullptr.",
     "whenNot": "If the dependency can be passed in through a constructor or function parameter, do that; it stays visible. A global lookup also cannot keep a facility to one context or phase, so do not use a locator for something that may only be reached there.",
     "useCaseQuestIds": [
       "p15-announcer-desk",
-      "p15-crier-trace"
+      "p15-gong-refactor"
     ],
     "recall": [
       {
@@ -2062,10 +2062,10 @@
         "type": "multiple-choice",
         "prompt": "What is the point of a null provider in a located service?",
         "choices": [
-          "A crash when used, to catch bugs",
-          "A cached copy of the last service",
-          "A network fallback",
-          "A do-nothing implementation so callers never have to check for a missing service"
+          "A crash when it is used, to catch bugs early",
+          "A cached copy of the last service that was used",
+          "A network fallback for when the service is offline",
+          "A do-nothing version, so callers need no checks"
         ],
         "answerIndex": 3,
         "explanation": "The null object keeps code working when no real provider is registered, such as in tests or a dedicated server."
@@ -2105,10 +2105,10 @@
         "type": "multiple-choice",
         "prompt": "Which of these is a service locator's three-part shape?",
         "choices": [
-          "A base class, a component, and a delegate",
-          "A service interface, providers behind it, and a place that hands out the provider in use",
-          "A factory, a prototype, and a pool",
-          "A header, a source file, and a build file"
+          "A base class, a component to attach it, and a delegate to call it",
+          "An interface, its providers, and a place that hands out the one in use",
+          "A factory that builds it, a prototype to copy it, and a pool to reuse it",
+          "A header that declares it, a source file, and a build file that compiles it"
         ],
         "answerIndex": 1,
         "explanation": "Callers use the interface, providers implement it, and the locator hands out whichever is in place."
@@ -2147,10 +2147,10 @@
         "type": "multiple-choice",
         "prompt": "A bell is spawned by a bout director that already holds a reference to the announcer desk. The bell needs to announce. What is the better choice than having the bell look the service up globally?",
         "choices": [
-          "Have the director pass the announcer interface to the bell when it spawns it",
-          "Make the announcer desk a static singleton",
-          "Broadcast a delegate asking someone to speak the line",
-          "Queue the line for the next frame"
+          "Have the director pass the announcer to the bell at spawn",
+          "Make the announcer desk a static singleton that the bell can call",
+          "Broadcast a delegate that asks someone else to speak the line",
+          "Queue the line and have the next frame find a speaker for it"
         ],
         "answerIndex": 0,
         "explanation": "When a caller already has the dependency, passing it in keeps it visible in the bell's interface. A locator is the fallback when passing in is impractical, not the default."
@@ -2177,7 +2177,7 @@
           },
           {
             "choice": "observer",
-            "why": "Subscribing the tests to every source works, but every source would have to be wired, where a located announcer needs one provide call."
+            "why": "Subscribing the tests to every source works, but every source would have to be wired, where a located announcer needs one Install call."
           }
         ],
         "explanation": "The callers use an announcer interface, and the test provides a recording announcer once."
@@ -2187,10 +2187,10 @@
         "type": "multiple-choice",
         "prompt": "A rival's strike needs the health of the one fighter it is hitting. Is a service locator the right way to reach it?",
         "choices": [
-          "Yes; anything many classes need belongs in a locator",
-          "No; the target is part of this one strike, so pass it in or reach its health through it",
-          "Yes, but only through a game instance subsystem",
-          "No; health should be a console variable"
+          "Yes; anything that many classes need belongs in a locator, so use one",
+          "No; the target belongs to this one strike, so pass it in",
+          "Yes, but only if it is registered through a game instance subsystem",
+          "No; a fighter's health should be a console variable instead"
         ],
         "answerIndex": 1,
         "explanation": "A locator is for a few cross-cutting services. A dependency that belongs to one relationship should stay visible in the code that uses it."
@@ -2200,23 +2200,26 @@
   {
     "id": "object-pool",
     "title": "Object Pool",
-    "intent": "Spawn a batch of projectiles, effects, or enemies up front, then lend them out and take them back as play needs them, so the busiest moments of a fight never pay the cost of spawning and destroying actors.",
-    "problem": "A minigun fires 20 bullets per second. Spawning an actor for each runs construction, component registration, and BeginPlay, then destroying it feeds the garbage collector. The hitches show up exactly when the action is most intense.",
-    "unrealForm": "Actor spawning is expensive, so pooling actors is a standard optimization. Niagara already pools its components. You write a pool as a UWorldSubsystem or a manager actor holding a TArray of inactive actors per class, with an explicit reset protocol: hide with SetActorHiddenInGame, disable collision and tick, clear timers and delegates, then fully reinitialize on acquire.",
-    "whenNot": "If objects are created rarely, or vary wildly in size and type, the pool wastes memory and adds a reset burden. Measure spawn cost before pooling. Forgetting to reset a field gives bugs that look almost right.",
-    "useCaseQuestIds": [],
+    "intent": "Make a fixed set of objects once and lend them out and take them back as play needs them, so the busiest moments of a game never pay for creating and destroying them.",
+    "problem": "A finale fires three hundred rockets in twenty seconds. Spawning each one builds an actor from its class, registers its components with rendering and physics, and runs BeginPlay; destroying it takes all that apart again and leaves the memory for a later garbage collection. The cost lands exactly when the screen is fullest.",
+    "unrealForm": "Actor spawning is the expensive part, so pools of actors are the common case: a manager actor or a UWorldSubsystem spawns the actors when play begins and keeps them in UPROPERTY arrays. Lending one resets it and turns drawing, collision, and ticking back on; taking it back turns all three off with SetActorHiddenInGame, SetActorEnableCollision, and SetActorTickEnabled. Niagara can pool its effects: spawn them with the AutoRelease pooling method, as the default of None makes a fresh component each time.",
+    "whenNot": "Skip it for things made a few times a level, for actors too complex to reset with certainty, and whenever stat game or Unreal Insights does not show spawning as the cost. A pool holds memory all the time and needs a reset that misses nothing; give it a size, a limit, and a deliberate choice for when it runs out.",
+    "useCaseQuestIds": [
+      "p16-rocket-rack",
+      "p16-shell-fuse"
+    ],
     "recall": [
       {
         "id": "object-pool-recall-1",
         "type": "multiple-choice",
         "prompt": "Why is pooling actors more valuable in Unreal than pooling small structs?",
         "choices": [
-          "Structs cannot be stored in arrays",
-          "Spawning an actor runs construction, registration, and BeginPlay, which is costly",
-          "Actors are never garbage collected",
-          "Pooled actors replicate for free"
+          "A spawn runs construction, registration, and BeginPlay, which is costly",
+          "Structs cannot be stored in arrays, so a pool of them could not reuse a slot",
+          "Actors are never garbage collected, so keeping them around costs nothing",
+          "Pooled actors replicate to every client for free, which structs cannot do"
         ],
-        "answerIndex": 1,
+        "answerIndex": 0,
         "explanation": "The cost being saved is the actor spawn and destroy pipeline, not raw memory allocation."
       },
       {
@@ -2238,6 +2241,32 @@
           "Says the policy is a deliberate design choice"
         ],
         "explanation": "There is no free answer; each policy has a visible gameplay cost."
+      },
+      {
+        "id": "object-pool-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A pool keeps its resting rockets in a TArray and lends from the end with Pop. Why from the end?",
+        "choices": [
+          "Pop is the only function in Unreal that can read an element back out of a TArray",
+          "The first element of a TArray is always invalid, so lending has to start at the end",
+          "Removing the last element moves nothing, so lending costs the same at any size",
+          "It makes the rockets spawn faster, because the array is filled from back to front"
+        ],
+        "answerIndex": 2,
+        "explanation": "Removing from the end of an array shifts no other element, which gives the same constant-time take and return that a free list gives."
+      },
+      {
+        "id": "object-pool-recall-5",
+        "type": "multiple-choice",
+        "prompt": "A rocket comes back to the rack twice without being lent in between, and the rack adds it to the resting list both times. What goes wrong?",
+        "choices": [
+          "Nothing, the second return is ignored by the engine",
+          "The rack later lends the same rocket to two users at once",
+          "The rocket is destroyed the next time it is lent out",
+          "The rack spawns a replacement for the missing rocket"
+        ],
+        "answerIndex": 1,
+        "explanation": "A rocket listed twice is handed out twice. A pool takes back only what it lent and has not yet taken back."
       }
     ],
     "scenarios": [
@@ -2271,26 +2300,69 @@
       {
         "id": "object-pool-scenario-2",
         "type": "multiple-choice",
-        "prompt": "A dungeon spawns its single boss once per level, and a teammate proposes pooling it. What is the best response?",
+        "prompt": "A harbor level places a dozen lanterns when it loads, and Unreal Insights shows the load spending almost nothing on spawning them. A teammate proposes pooling them. What is the best response?",
         "choices": [
-          "Pool it, since pooling is always faster",
-          "Pool it with a capacity of ten to be safe",
-          "Skip pooling; one spawn per level costs little and pooling adds a reset burden for no gain",
-          "Make the boss a singleton instead"
+          "Pool them anyway, because keeping actors around is always the safer habit to have",
+          "Skip pooling; a dozen spawns cost little, and a pool adds a reset to get right",
+          "Pool them with room for a hundred, so that the pool can never run out of lanterns",
+          "Merge the lanterns into one Singleton so that only a single lantern ever exists"
+        ],
+        "answerIndex": 1,
+        "explanation": "Pool things created and removed often. A dozen spawns at load do not justify a reset that must miss nothing and a pool's memory."
+      },
+      {
+        "id": "object-pool-scenario-3",
+        "type": "which-pattern",
+        "prompt": "Damage numbers float up from every hit in a brawler, thirty a second in a busy fight, each a small widget that lives for a second. Unreal Insights shows widget creation spiking during fights. Which pattern fits?",
+        "choices": [
+          "object-pool",
+          "flyweight",
+          "observer",
+          "dirty-flag"
+        ],
+        "answer": "object-pool",
+        "distractorNotes": [
+          {
+            "choice": "flyweight",
+            "why": "The numbers could share a font and style, but each widget is still created and removed thirty times a second."
+          },
+          {
+            "choice": "observer",
+            "why": "Hits could announce themselves as events, which says who hears about a hit, not where the widgets come from."
+          },
+          {
+            "choice": "dirty-flag",
+            "why": "Caching a derived value does not stop a widget from being created for every hit."
+          }
+        ],
+        "explanation": "Keep a fixed set of damage number widgets, lend one per hit, and take it back when it fades."
+      },
+      {
+        "id": "object-pool-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A grenade pool spawns one more grenade whenever it is empty and never removes any. After an hour-long match it holds 400 grenades, though at most 12 were ever in the air at once. What should change?",
+        "choices": [
+          "Nothing, since a bigger pool is always better and the memory is cheap anyway",
+          "Destroy the whole pool every minute, then let it grow back up from empty again",
+          "Give it a limit near the real peak, and refuse or recycle at the limit",
+          "Replace it with a static array of 1000 grenades, so that it can never run out"
         ],
         "answerIndex": 2,
-        "explanation": "Pool things created and destroyed often. A once-per-level spawn does not justify reset logic and a pool's memory."
+        "explanation": "Growing without a limit spawns during play and keeps every grenade forever. Size the pool for the real peak and decide what the limit means."
       }
     ]
   },
   {
     "id": "dirty-flag",
     "title": "Dirty Flag",
-    "intent": "When an expensive result (final stats, a total weight, a world transform) depends on inputs that change often, just raise a flag on each change and do the real recompute once, the next time someone asks for the result.",
-    "problem": "A character's final stats depend on base stats, ten equipment slots, and active buffs. Recomputing every time any input changes wastes work when several changes land in one frame, while recomputing every Tick wastes work when nothing changed.",
-    "unrealForm": "The engine uses dirty flags everywhere: scene components cache world transforms and mark them stale when local transforms change, MarkRenderStateDirty tells the render thread what to resend, packages track unsaved changes, and push-model replication marks properties dirty. In gameplay code you keep a bStatsDirty bool, set it in every setter, and recompute inside the getter when it is set.",
-    "whenNot": "When a running total is simpler (adding and subtracting one value), keep the total. When deferring could lose work or cause a hitch at a bad moment, compute eagerly. The risk is missing a mutation path, so route every change through a small set of functions.",
-    "useCaseQuestIds": [],
+    "intent": "When an expensive result (a guard rating, a ladder rating, a tower joint's position) depends on inputs that change now and then, raise a flag on each change and do the real recompute once, the next time someone asks for the result.",
+    "problem": "A fighter's guard rating depends on a base guard, the worn items, and the active buffs, and the screen, the damage code, and the enemy all read it every frame. Recomputing on every read repeats a sum whose answer cannot have changed, and recomputing on every change repeats it for answers nobody reads when several changes land together.",
+    "unrealForm": "Dirty flags run all through the engine: a scene component keeps its component-to-world transform ready and refreshes it after a change, MarkRenderStateDirty has the renderer pick up new data later, packages carry an unsaved bit, Slate widgets invalidate, and push-model replication marks properties. In gameplay code you keep a bStatsDirty bool, set it in every setter, and recompute inside the getter when it is set.",
+    "whenNot": "When adding or subtracting one value keeps a running total correct, keep the total. When the value is cheap to work out, or when deferring could lose work or cause a hitch at a bad moment, compute eagerly. The main risk is a mutation path that forgets the flag, so route every change through a small set of functions.",
+    "useCaseQuestIds": [
+      "p17-guard-rating",
+      "p17-tower-rig"
+    ],
     "recall": [
       {
         "id": "dirty-flag-recall-1",
@@ -2317,13 +2389,35 @@
         "type": "multiple-choice",
         "prompt": "When is a dirty flag the wrong tool?",
         "choices": [
-          "When derived data is expensive and read rarely",
-          "When several changes land in one frame",
-          "When derived data is cached",
-          "When a simple running total can be updated in constant time per change"
+          "When the derived data is expensive to work out and is read only rarely",
+          "When several changes land in the same frame before anything reads the value",
+          "When the derived value is cached next to the data it is worked out from",
+          "When a running total can be updated for free on each change"
         ],
         "answerIndex": 3,
         "explanation": "If you can update the result incrementally for free, a flag only adds a branch and a chance to forget."
+      },
+      {
+        "id": "dirty-flag-recall-4",
+        "type": "fill-blank",
+        "prompt": "A const function may refresh a remembered answer if the member that holds it is marked ___.",
+        "acceptedAnswers": [
+          "mutable"
+        ],
+        "explanation": "A mutable member can be written through a const function, which is how a read can store the answer it has just worked out."
+      },
+      {
+        "id": "dirty-flag-recall-5",
+        "type": "multiple-choice",
+        "prompt": "Which engine call tells the renderer that a component's data must be rebuilt later instead of right now?",
+        "choices": [
+          "MarkRenderStateDirty",
+          "DestroyComponent",
+          "SetTickEnabled",
+          "RegisterComponent"
+        ],
+        "answerIndex": 0,
+        "explanation": "MarkRenderStateDirty sets a flag on the component, and the engine rebuilds its render state once at a safe point."
       }
     ],
     "scenarios": [
@@ -2380,6 +2474,46 @@
           }
         ],
         "explanation": "Cache the result and invalidate it when a point is spent."
+      },
+      {
+        "id": "dirty-flag-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A tower's lantern position is read by a camera, a light, and a sound every frame, and the wind moves the tower's base only now and then. Which pattern?",
+        "choices": [
+          "update-method",
+          "dirty-flag",
+          "observer",
+          "double-buffer"
+        ],
+        "answer": "dirty-flag",
+        "distractorNotes": [
+          {
+            "choice": "update-method",
+            "why": "Working the position out in every tick is the repeated work you want to avoid."
+          },
+          {
+            "choice": "observer",
+            "why": "Telling the camera, the light, and the sound at every move would make each of them recompute separately."
+          },
+          {
+            "choice": "double-buffer",
+            "why": "There is no reader and writer racing over one value."
+          }
+        ],
+        "explanation": "Keep each joint's position and work it out when it is read, instead of on every frame for every follower."
+      },
+      {
+        "id": "dirty-flag-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A hit's damage is the fighter's strength times two, and it is read whenever a hit lands. Should the product be cached behind a dirty flag?",
+        "choices": [
+          "Yes; every number that is read often should be cached beside a flag",
+          "Yes, but only if a timer clears the flag every few seconds",
+          "No; the product costs less than keeping a flag right",
+          "No; the damage should be recomputed from scratch inside Tick"
+        ],
+        "answerIndex": 2,
+        "explanation": "A flag pays when the work is worth saving. For a single multiplication the flag costs more and adds a path that can be forgotten."
       }
     ]
   },
@@ -2388,22 +2522,25 @@
     "title": "Spatial Partition",
     "intent": "Bucket objects by where they are in the world, like cells on a grid, so a question such as \"which guards are within 15 meters\" only looks in the nearby buckets instead of at every guard in the level.",
     "problem": "Each of 2,000 boids needs its neighbors within 5 meters. Checking every pair is four million distance tests per frame, almost all between boids that are nowhere near each other.",
-    "unrealForm": "The engine partitions space for you in most places: the physics broadphase answers overlaps, sweeps, and traces (OverlapMultiByChannel, SweepSingleByChannel), World Partition streams by grid cell, the renderer culls through an octree, and TOctree2 is a reusable template. You write your own for gameplay data physics does not know about: a uniform grid keyed by FIntPoint in a TMap for flocking neighbors, influence maps, or tile logic, and you re-file objects when they move between cells.",
-    "whenNot": "With a few dozen objects, a plain loop is simpler and fast enough. If physics already tracks the objects, an overlap query is usually better than a second structure you must keep in sync.",
-    "useCaseQuestIds": [],
+    "unrealForm": "Wherever the engine tracks things itself, it already keeps them by place: the physics scene's broadphase keeps every collision shape in a bounding box tree, so overlap queries, sweeps, and traces (OverlapMultiByChannel, SweepSingleByChannel) look only near their shape; the navigation system files nav geometry in FNavigationOctree; the renderer keeps an octree of primitives to find what each light and shadow touches; World Partition streams by grid cell; and TOctree2 is a template you can use yourself. You write your own for data the engine does not track: a uniform grid, a TMap from FIntPoint cells to arrays, for thousands of agents kept as structs, actors with no collision shape, influence maps, or tiles, refiling each one when it crosses into another cell.",
+    "whenNot": "With a few dozen objects, a plain loop is simpler and fast enough. If the objects have collision shapes, the physics scene already files them, and an overlap query or an overlap event beats a second structure you must keep in step with every move and every destroy.",
+    "useCaseQuestIds": [
+      "p18-lantern-grid",
+      "p18-moth-swarm"
+    ],
     "recall": [
       {
         "id": "spatial-partition-recall-1",
         "type": "multiple-choice",
         "prompt": "What must happen when an object in a uniform grid moves across a cell boundary?",
         "choices": [
-          "It must be removed from its old cell and added to its new one",
-          "Nothing; the grid recalculates each query",
-          "The whole grid must be rebuilt",
-          "The cell size must change"
+          "Nothing, because the grid recalculates each query on its own",
+          "The whole grid must be rebuilt from every object's position",
+          "It must be moved from its old cell's list to its new one",
+          "The cell size must change to fit where the object went"
         ],
-        "answerIndex": 0,
-        "explanation": "A grid is like a hash table whose keys change as objects move, so moves must re-file entries."
+        "answerIndex": 2,
+        "explanation": "An object's cell is worked out from where it stands, so when it moves into another cell its entry has to move with it."
       },
       {
         "id": "spatial-partition-recall-2",
@@ -2428,6 +2565,30 @@
           "Mentions avoiding a check against every object"
         ],
         "explanation": "Memory and re-filing in exchange for fast queries."
+      },
+      {
+        "id": "spatial-partition-recall-4",
+        "type": "multiple-choice",
+        "prompt": "In a grid that measures every pair of nearby objects, why does each cell compare against only four of its eight neighbor cells?",
+        "choices": [
+          "Because four of the eight neighbors are always empty cells",
+          "To keep the grid's memory use smaller for a very large pond",
+          "Because diagonal cells can never hold a nearby object at all",
+          "So any two touching cells are compared from one side alone"
+        ],
+        "answerIndex": 3,
+        "explanation": "If each of two touching cells compared against the other, every pair across them would be measured twice. Four directions, one from each opposite pair, cover each touching pair once."
+      },
+      {
+        "id": "spatial-partition-recall-5",
+        "type": "fill-blank",
+        "prompt": "A grid of actors that files a ___ for each actor hands back nothing, instead of a dangling pointer, once that actor is destroyed.",
+        "acceptedAnswers": [
+          "TWeakObjectPtr",
+          "weak pointer",
+          "weak object pointer"
+        ],
+        "explanation": "A weak pointer reads as null once its actor is gone, so a stale entry is skipped instead of followed."
       }
     ],
     "scenarios": [
@@ -2449,7 +2610,7 @@
           },
           {
             "choice": "object-pool",
-            "why": "Pooling guards does not reduce the number of comparisons."
+            "why": "Pooling guards saves spawning them, yet every cover point would still be measured against every guard."
           },
           {
             "choice": "dirty-flag",
@@ -2463,34 +2624,77 @@
         "type": "multiple-choice",
         "prompt": "A puzzle room has 12 pressure plates and needs to know which plate the player stands on. A teammate proposes building an octree. What is the better approach?",
         "choices": [
-          "Build the octree; it scales better",
-          "Let each plate's box component report overlaps, since the physics broadphase already partitions space",
-          "Loop over all actors in the level each frame",
-          "Use a uniform grid with 1 centimeter cells"
+          "Build the octree, because it scales better as the room grows",
+          "Loop over all actors in the level each frame and measure",
+          "Use a uniform grid with 1 centimeter cells, refiled each frame",
+          "Let each plate's box report overlaps; physics tracks them"
         ],
-        "answerIndex": 1,
+        "answerIndex": 3,
         "explanation": "With a dozen objects the engine's own overlap events already do the spatial work. A custom partition pays off only for many objects physics does not track."
+      },
+      {
+        "id": "spatial-partition-scenario-3",
+        "type": "which-pattern",
+        "prompt": "An ant colony sim keeps 8,000 ants as structs in one array, and every ant needs the ants within 30 units of it each frame to avoid them. None of them are actors. Which pattern?",
+        "choices": [
+          "spatial-partition",
+          "object-pool",
+          "double-buffer",
+          "flyweight"
+        ],
+        "answer": "spatial-partition",
+        "distractorNotes": [
+          {
+            "choice": "object-pool",
+            "why": "Reusing ant storage avoids allocation, but each ant would still compare itself with all 8,000."
+          },
+          {
+            "choice": "double-buffer",
+            "why": "Reading last frame's positions makes the result independent of update order, yet every ant would still be measured against every other."
+          },
+          {
+            "choice": "flyweight",
+            "why": "Sharing the ants' common data saves memory, not neighbor checks."
+          }
+        ],
+        "explanation": "A uniform grid of ant indices, refiled as ants move, turns each neighbor question into a look at a few nearby cells."
+      },
+      {
+        "id": "spatial-partition-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A courtyard has 25 statues that are static meshes with collision, and a spell needs every statue within 600 units of where it lands. What fits best?",
+        "choices": [
+          "A uniform grid of the statues, refiled every single frame",
+          "An octree of the statues, rebuilt from scratch every frame",
+          "An overlap query with a 600 sphere where the spell lands",
+          "A loop over every actor in the level, measuring distance"
+        ],
+        "answerIndex": 2,
+        "explanation": "The statues already have collision shapes in the physics scene, so an overlap query finds them without a second structure. With 25 statues even a loop over just the statues would do; a structure of your own adds upkeep for nothing."
       }
     ]
   },
   {
     "id": "data-locality",
     "title": "Data Locality",
-    "intent": "Lay out the data a hot loop touches as tightly packed arrays it can walk front to back, so the CPU finds the next element already sitting in cache instead of stalling on pointer after pointer.",
-    "problem": "Updating 10,000 particles that each live in their own heap object means following 10,000 pointers to scattered memory. The CPU spends most of the frame waiting on cache misses, not doing math.",
-    "unrealForm": "Mass Entity is Unreal's data-oriented framework: fragments are plain structs stored in chunks per archetype, and processors iterate them in bulk. Niagara and instanced meshes keep packed buffers. In gameplay code you replace thousands of actors with one manager that holds a TArray of small structs, keeps active elements packed at the front, and splits rarely used fields into a separate array. Unreal Insights confirms whether it helped.",
-    "whenNot": "Code that runs rarely, or only for a handful of objects, gains nothing and loses readability, interfaces, and inheritance. Always profile first; this is an optimization with real design cost.",
-    "useCaseQuestIds": [],
+    "intent": "Lay out the data a frequently run loop reads side by side, in the order the loop reads it, so each fetch from memory brings the next records too.",
+    "problem": "Ten thousand fireflies as ten thousand actors are ten thousand ticks, ten thousand components, and ten thousand objects scattered across memory, each holding a few bytes the movement needs among many it never reads. The processor spends the frame fetching and dispatching instead of adding velocities.",
+    "unrealForm": "In gameplay code: one actor or subsystem holds a TArray of small USTRUCT records by value, walks it with one loop, keeps it packed, and moves rarely read fields to a second array. FVector3f keeps records small where doubles are not needed. At very large scale Mass Entity stores fragments in chunks by archetype and runs processors over them; Niagara and instanced static meshes keep their own packed buffers.",
+    "whenNot": "Skip it for a few dozen things, for anything that needs collision, physics, Blueprint behavior, or its own replication, and whenever a profiler does not show the loop's memory traffic as the cost. Records lose what made each thing an actor, so measure before and after.",
+    "useCaseQuestIds": [
+      "p19-firefly-swarm",
+      "p19-firefly-meadow"
+    ],
     "recall": [
       {
         "id": "data-locality-recall-1",
         "type": "multiple-choice",
         "prompt": "Why is iterating a TArray<FDojoParticle> usually faster than iterating a TArray<UDojoParticle*>?",
         "choices": [
-          "Structs are smaller than pointers",
-          "Pointers cannot be iterated in a range-based for",
-          "The struct array is contiguous, so the CPU reads neighbors from cache instead of chasing pointers",
-          "UObjects are always slower to read than structs"
+          "Structs are smaller than pointers, so the array is shorter",
+          "Pointers cannot be iterated in a range-based for loop at all",
+          "The struct array is contiguous, so neighbors share cache lines",
+          "UObjects are always slower to read than structs, whatever the layout"
         ],
         "answerIndex": 2,
         "explanation": "Contiguous memory lets cache lines and prefetching do their job."
@@ -2514,6 +2718,32 @@
           "Mentions confirming the bottleneck with measurement"
         ],
         "explanation": "Measure, then reorganize."
+      },
+      {
+        "id": "data-locality-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A record holds a position and a velocity as FVector. How large are those two fields together in UE 5, and how large as FVector3f?",
+        "choices": [
+          "24 bytes, and 12 bytes",
+          "12 bytes, and 6 bytes",
+          "48 bytes, and 24 bytes",
+          "The same either way"
+        ],
+        "answerIndex": 2,
+        "explanation": "UE 5's FVector holds three doubles, 24 bytes, and FVector3f three floats, 12 bytes; two of each are 48 and 24 bytes."
+      },
+      {
+        "id": "data-locality-recall-5",
+        "type": "multiple-choice",
+        "prompt": "A packed array of 20,000 records must lose the record at index 10. Which call keeps it packed while moving only one other record?",
+        "choices": [
+          "RemoveAtSwap(10)",
+          "RemoveAt(10)",
+          "Empty()",
+          "SetNum(10)"
+        ],
+        "answerIndex": 0,
+        "explanation": "RemoveAtSwap moves the last record into index 10; RemoveAt shifts all 19,989 records after it down by one."
       }
     ],
     "scenarios": [
@@ -2549,24 +2779,67 @@
         "type": "multiple-choice",
         "prompt": "A menu with 30 buttons feels sluggish, and a teammate proposes rewriting the buttons as packed struct arrays for cache efficiency. What should come first?",
         "choices": [
-          "Do the rewrite; cache misses are always the cause",
-          "Convert the buttons to Mass entities",
-          "Pool the buttons",
-          "Profile with Unreal Insights, because 30 buttons cannot plausibly cause a cache bottleneck"
+          "Do the rewrite now, because cache misses are always the cause",
+          "Profile first; 30 buttons are an unlikely cause",
+          "Convert all the buttons into Mass entities at once",
+          "Pool the buttons so they are not created again"
         ],
-        "answerIndex": 3,
+        "answerIndex": 1,
         "explanation": "Data Locality is for large, hot loops confirmed by a profiler. Thirty widgets are almost certainly slow for another reason."
+      },
+      {
+        "id": "data-locality-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A herding game has 50,000 sheep, each an actor whose Tick nudges it toward the flock. Unreal Insights shows the game thread spending most of its frame in those ticks, though each does very little math. Which pattern guides the rewrite?",
+        "choices": [
+          "data-locality",
+          "object-pool",
+          "flyweight",
+          "component"
+        ],
+        "answer": "data-locality",
+        "distractorNotes": [
+          {
+            "choice": "object-pool",
+            "why": "No sheep is spawned or destroyed during play; reusing actors would not shorten the per-frame walk over them."
+          },
+          {
+            "choice": "flyweight",
+            "why": "The sheep could share one mesh and one set of settings, but each still ticks as its own actor."
+          },
+          {
+            "choice": "component",
+            "why": "Splitting each sheep into components keeps one object per sheep, and adds more."
+          }
+        ],
+        "explanation": "Keep the sheep as small records in one array owned by one actor and update them in one loop; at this size Mass Entity is also worth a look."
+      },
+      {
+        "id": "data-locality-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A fire basket's embers are only seen: no gameplay code ever reads where they are. A teammate wants to write a hot and cold split for them. What is the better choice?",
+        "choices": [
+          "Write the split now, since embers suit it well",
+          "Make each ember an actor so that it can be seen",
+          "Use a Niagara system and write no ember code",
+          "Store them in a TMap keyed by an ember ID"
+        ],
+        "answerIndex": 2,
+        "explanation": "Effects that are only seen belong in Niagara. Records of your own pay off when gameplay has to read or change them."
       }
     ]
   },
   {
     "id": "strategy",
     "title": "Strategy",
-    "intent": "Hand an object a pluggable rule object, such as how a turret picks its target, so different actors run different rules (picked by a designer in the Details panel) while the class that uses the rule stays exactly the same.",
-    "problem": "An AI targeting component picks a target by nearest, lowest health, or highest threat depending on the enemy. A growing switch statement inside the component mixes every rule together, and adding a rule means editing a class many enemies depend on.",
-    "unrealForm": "Write an abstract UObject base marked UCLASS(Abstract, EditInlineNew), for example UDojoTargetingRule with a virtual ChooseTarget, and give the component a UPROPERTY(EditAnywhere, Instanced) TObjectPtr<UDojoTargetingRule>. Designers then pick and tune a rule per enemy in the Details panel. The Instanced property must point at that abstract UObject base, not at a UINTERFACE, because the editor can only create inline subobjects of a UObject class. Environment Query tests and Behavior Tree decorators are engine examples of pluggable rules. A TFunction member is the lightweight form for one-off cases.",
-    "whenNot": "If there are two fixed variants that never change, an if statement is clearer. If the object changes its own behavior based on its mode, that is State, not Strategy. Strategies that need lots of the owner's private data are a sign the split is wrong.",
-    "useCaseQuestIds": [],
+    "intent": "Give an object one pluggable rule, such as how a launcher picks its target or how a dummy moves, so different actors run different rules, chosen from outside in the Details panel or by code, while the class that uses the rule never changes.",
+    "problem": "A practice launcher picks its target by nearest, weakest, or farthest depending on the level. A switch on a number inside the launcher mixes every rule together, a designer cannot pick or tune one without a programmer, and each new rule means editing a class that every launcher shares.",
+    "unrealForm": "Write an abstract UObject base marked UCLASS(Abstract, Blueprintable, EditInlineNew), for example UDojoTargetRule with a virtual ChooseTarget(From, Candidates) that answers with an index, and give the host a UPROPERTY(EditAnywhere, Instanced) TObjectPtr<UDojoTargetRule>. Designers then pick and tune a rule on each host in the Details panel. The Instanced property must point at that UObject base, not at a UINTERFACE, because the editor can only create inline subobjects of a UObject class. To pick the rule from code instead, hold a TSubclassOf<UDojoMoveRule> and make the object with NewObject when it is needed; a rule that remembers things between calls, such as which way a patrol is heading, needs an object for each host. Environment Query tests and the navigation query filter class that a move request names are engine examples of pluggable rules. A TFunction member is the lightweight form for one-off cases.",
+    "whenNot": "If there are two fixed variants that never change, an if statement is clearer. If the object changes its own behavior as its mode changes in response to events, that is State, not Strategy. If the variation is fixed when the actor is made and needs many of the host's protected helpers, a Subclass Sandbox is plainer. Rules that need lots of the host's private data are a sign the split is wrong.",
+    "useCaseQuestIds": [
+      "p20-target-rules",
+      "p20-mover-rules"
+    ],
     "recall": [
       {
         "id": "strategy-recall-1",
@@ -2594,13 +2867,26 @@
         "id": "strategy-recall-3",
         "type": "explain-in-one-sentence",
         "prompt": "In one sentence, what does Strategy let you change without touching the class that uses it?",
-        "modelAnswer": "It lets you swap the algorithm, such as a targeting or scoring rule, by handing the user a different implementation of the same interface.",
+        "modelAnswer": "It lets you swap the algorithm, such as a targeting or scoring rule, by handing the user a different child of the same base class.",
         "rubric": [
           "Mentions swapping an algorithm or rule",
-          "Mentions an interface or common base",
+          "Mentions a shared base class",
           "Says the using class stays unchanged"
         ],
-        "explanation": "The host depends on the interface; new rules arrive as new classes."
+        "explanation": "The host depends on the shared base class; new rules arrive as new child classes."
+      },
+      {
+        "id": "strategy-recall-4",
+        "type": "multiple-choice",
+        "prompt": "A turret can aim three ways and move three ways, in any pairing. How many classes does that take as turret subclasses, and how many as rule classes held by one turret class?",
+        "choices": [
+          "Nine subclasses, or six rule classes",
+          "Six subclasses, or nine rule classes",
+          "Three in both cases",
+          "Nine in both cases"
+        ],
+        "answerIndex": 0,
+        "explanation": "Subclasses multiply, one for each pair. Rules add, one for each way, and any aim pairs with any movement."
       }
     ],
     "scenarios": [
@@ -2629,7 +2915,7 @@
             "why": "Data per kind tunes numbers; the rule itself is behavior."
           }
         ],
-        "explanation": "A targeting rule interface with three implementations, chosen per turret."
+        "explanation": "A targeting rule base class with three child classes, chosen per turret."
       },
       {
         "id": "strategy-scenario-2",
@@ -2657,6 +2943,33 @@
           }
         ],
         "explanation": "The game mode hands the generator a roll strategy."
+      },
+      {
+        "id": "strategy-scenario-3",
+        "type": "which-pattern",
+        "prompt": "A guard patrols until it sees the player, chases until it loses sight, and then searches the spot where it last saw them before it goes back to patrolling. Which pattern?",
+        "choices": [
+          "command",
+          "state",
+          "strategy",
+          "type-object"
+        ],
+        "answer": "state",
+        "distractorNotes": [
+          {
+            "choice": "strategy",
+            "why": "Nobody outside chooses the guard's behavior; the guard switches itself as events happen."
+          },
+          {
+            "choice": "command",
+            "why": "The guard is not being given actions to queue or undo."
+          },
+          {
+            "choice": "type-object",
+            "why": "A data row can set how fast the guard runs, but not when it changes what it is doing."
+          }
+        ],
+        "explanation": "The guard moves between modes on events, and each mode leads to the next, which is State."
       }
     ]
   },
@@ -2667,7 +2980,10 @@
     "problem": "Spawning code across the project names concrete classes directly, so changing which projectile a weapon fires, or routing creation through a pool, means editing every spawn site.",
     "unrealForm": "In Unreal the class choice is usually data: a TSubclassOf<ADojoProjectile> UPROPERTY that a designer sets, passed to SpawnActor. A factory function (UDojoWeaponKind::SpawnProjectile, or a static Create helper) centralizes deferred spawning with SpawnActorDeferred and FinishSpawning so initialization happens before BeginPlay, and is the natural place to add pooling later.",
     "whenNot": "If there is one class and one call site, a direct SpawnActor is clearer. Do not build abstract factory hierarchies when a TSubclassOf property already lets designers choose the class.",
-    "useCaseQuestIds": [],
+    "useCaseQuestIds": [
+      "p21-launchers",
+      "p21-wave-spawner"
+    ],
     "recall": [
       {
         "id": "factory-method-recall-1",
@@ -2764,9 +3080,12 @@
     "title": "Facade",
     "intent": "Put a short list of plain, task-named functions such as SaveCheckpoint and LoadLatest in front of a tangled system, so the rest of the game uses those few calls and never has to learn the system's internals.",
     "problem": "Saving the game touches USaveGame objects, slot names, user indices, async callbacks, and version migration. If every menu and checkpoint actor talks to all of that directly, the details leak everywhere and a change in the save format touches dozens of files.",
-    "unrealForm": "UGameplayStatics is a facade over many engine services (spawning, saving, sound, level loading). You build your own as a subsystem with a few intention-revealing functions, for example UDojoSaveSubsystem with SaveCheckpoint and LoadLatest that hides SaveGameToSlot, AsyncSaveGameToSlot, and slot naming. Blueprint function libraries are a lightweight facade for designers.",
-    "whenNot": "If callers truly need the subsystem's full power, a thin facade becomes a bottleneck that keeps growing pass-through functions. Do not wrap a simple API just to wrap it.",
-    "useCaseQuestIds": [],
+    "unrealForm": "UGameplayStatics and UKismetSystemLibrary are libraries of small fronts, each static function one call in front of an engine system (PlaySoundAtLocation, SaveGameToMemory, LineTraceSingle). You build your own as a world or game instance subsystem with a few calls named for the job, for example a hit feedback subsystem with PlayHitFeedback that drives the sound, effects, and HUD systems, asking for them with Collection.InitializeDependency in Initialize, or a checkpoint desk with SaveCheckpoint and LoadLatest that hides CreateSaveGameObject, the bytes, and the slots. A Blueprint function library is the lightest facade for designers.",
+    "whenNot": "Do not wrap a small API that has one caller just to wrap it, and do not add pass-through calls for callers who need a system's full power; let them use the system. A facade that collects the score, the inventory, and every team's special case becomes a god object everything depends on; split it by job.",
+    "useCaseQuestIds": [
+      "p22-hit-feedback",
+      "p22-checkpoint-desk"
+    ],
     "recall": [
       {
         "id": "facade-recall-1",
@@ -2800,6 +3119,28 @@
           "coupling"
         ],
         "explanation": "Callers couple to a few facade functions instead of the whole subsystem."
+      },
+      {
+        "id": "facade-recall-4",
+        "type": "multiple-choice",
+        "prompt": "In a facade subsystem's Initialize, why call Collection.InitializeDependency on the systems it drives?",
+        "choices": [
+          "To make a private copy of each system",
+          "Because subsystems start in no promised order, it makes sure each system exists and is initialized first, and hands it back to keep",
+          "To stop the systems from ticking",
+          "It is required for every UPROPERTY"
+        ],
+        "answerIndex": 1,
+        "explanation": "Asking for a dependency puts that subsystem first and returns it, so the facade can hold it from the start."
+      },
+      {
+        "id": "facade-recall-5",
+        "type": "fill-blank",
+        "prompt": "A facade that gathers other jobs' state and a pass-through for every call of the systems behind it turns into a ___ object.",
+        "acceptedAnswers": [
+          "god"
+        ],
+        "explanation": "Once everything depends on it for everything, no change to it is small."
       }
     ],
     "scenarios": [
@@ -2856,6 +3197,46 @@
           }
         ],
         "explanation": "One StartDialogue(ConversationId) function that performs the six steps in order."
+      },
+      {
+        "id": "facade-scenario-3",
+        "type": "which-pattern",
+        "prompt": "Every weapon, trap, and falling rock in a game plays its own sound, particles, and damage number on a hit, each with slightly different rules, and tuning what a heavy hit looks like means editing nine classes. Which pattern?",
+        "choices": [
+          "facade",
+          "observer",
+          "flyweight",
+          "prototype"
+        ],
+        "answer": "facade",
+        "distractorNotes": [
+          {
+            "choice": "observer",
+            "why": "Broadcasting a hit event lets listeners react, but each listener would still need to know how to drive the sound, effects, and HUD systems."
+          },
+          {
+            "choice": "flyweight",
+            "why": "Sharing the hit data saves memory; it does not put the rules in one place for every caller."
+          },
+          {
+            "choice": "prototype",
+            "why": "Copying a configured hit does not give callers one simple call or keep the systems' rules out of them."
+          }
+        ],
+        "explanation": "One feedback front with PlayHitFeedback, called by every weapon, trap, and rock."
+      },
+      {
+        "id": "facade-scenario-4",
+        "type": "multiple-choice",
+        "prompt": "A tool programmer wants to wrap UGameplayStatics::GetPlayerController in UMyHelpers::GetPlayerController with the same parameters, for one widget. What is the better choice?",
+        "choices": [
+          "Write the wrapper; every engine call deserves a facade",
+          "Call UGameplayStatics::GetPlayerController directly; the wrapper hides nothing and has one caller",
+          "Make the wrapper a game instance subsystem",
+          "Put the call in a god object with everything else"
+        ],
+        "answerIndex": 1,
+        "explanation": "A pass-through with one caller adds a class and a file and hides nothing. A facade earns its place by turning several steps into one call for many callers."
       }
     ]
   }
