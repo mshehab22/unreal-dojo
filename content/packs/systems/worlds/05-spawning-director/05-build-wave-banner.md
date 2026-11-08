@@ -41,7 +41,7 @@ This is the last piece of the Beetle Pit boss.
 
 ## See it in the editor
 
-Place a `DojoS5WaveBanner` above the pit beside the director from the last quest. In the level Blueprint, on BeginPlay call Watch on the banner with the director before Start Night. Press Play: the banner shows wave 1 with its count; swat the beetles with the 1 key and it shows the rest, then wave 2. On the 2 key call Destroy Actor on the banner, then keep swatting: the night goes on and nothing errors.
+Place a `DojoS5WaveBanner` above the pit beside the director from the last quest. In the level Blueprint, select the banner and the director in the level, right-click the graph and choose Create References to Selected Actors; on BeginPlay call Watch on the banner with the director before Start Night. Press Play: the banner shows wave 1 with its count; swat the beetles with the 1 key and it shows the rest, then wave 2. On the 2 key call Destroy Actor on the banner, then keep swatting: the night goes on and nothing errors.
 
 # Files
 
@@ -79,6 +79,7 @@ namespace DojoS5BannerTest
 	/** The banner's current line. */
 	FString LineOf(const ADojoS5WaveBanner* Banner)
 	{
+		if (Banner == nullptr || Banner->Display == nullptr) return FString(TEXT("(the banner has no display)"));
 		return Banner->Display->Text.ToString();
 	}
 
@@ -116,6 +117,9 @@ bool FDojo_S5_WaveBanner_Lines::RunTest(const FString& Parameters)
 
 	Director->OnRestStarted.Broadcast(5, 2.5f);
 	TestEqual(TEXT("A rest rounds its seconds up"), LineOf(Banner), FString(TEXT("Rest: wave 5 in 3 s")));
+
+	Director->OnRestStarted.Broadcast(2, 2.2f);
+	TestEqual(TEXT("A rest of 2.2 seconds rounds up too, not to the nearest"), LineOf(Banner), FString(TEXT("Rest: wave 2 in 3 s")));
 
 	Director->OnRestStarted.Broadcast(2, 3.f);
 	TestEqual(TEXT("Whole seconds stay as they are"), LineOf(Banner), FString(TEXT("Rest: wave 2 in 3 s")));
@@ -217,9 +221,9 @@ bool FDojo_S5_WaveBanner_RealNight::RunTest(const FString& Parameters)
 
 # Hints
 
-- The banner needs three handlers, one for each event, and each one replaces the whole line. Their parameter lists must match the delegates' declarations in the director's header exactly, or the binding will not compile.
-- `AddUniqueDynamic` ignores a second identical binding, and `RemoveDynamic` takes the same object and function. Remember which director you follow, in a member with another name than the parameter (such as `Watched`), so a later `Watch` and `EndPlay` can unbind from it.
-- `FString::Printf` builds each line, `FMath::CeilToInt` rounds the seconds up, and `UTextRenderComponent::SetText` takes an `FText`, which `FText::FromString` makes.
+- Each of the three handlers must match its delegate's parameter list in the director's header exactly, or the binding will not compile.
+- Remember which director you follow in a member, so that a later watch and the end of play can unbind from it, and make binding safe to repeat.
+- The line is a string you build for each event, with the seconds rounded up, and the text component takes it as text.
 
 # Rubric
 
@@ -237,7 +241,7 @@ The director could own a pointer to the banner and call `SetText` itself. That i
 
 ```yaml
 - id: banner-watch
-  prompt: Put Watch in order, using the names from the reference.
+  prompt: Put Watch in order, using the names from the reference; it stops following before it clears the line, and the other two events are bound the same way and left out here.
   lines:
     - "void ADojoS5WaveBanner::Watch(ADojoS5WaveDirector* Director)"
     - "{"

@@ -22,7 +22,7 @@ The temple keeper's second request is the old favorite of every dungeon: a key a
 The finished behavior, with its numbers fixed:
 
 - A key pickup is a small sphere 60 cm in radius with a key id, `ShrineKey` by default, floating above it as text.
-- A visitor that carries a key ring and touches the pickup adds the pickup's key id to its ring, and the pickup disappears: it is hidden and no longer touchable.
+- A visitor that carries a key ring (an actor component added to it) and touches the pickup adds the pickup's key id to its ring, and the pickup disappears: it is hidden and no longer touchable.
 - A visitor whose ring already holds that id leaves the pickup where it is for someone else. A visitor with no ring at all, such as a rolling crate, is ignored.
 - A door is a solid slab 40 cm thick, 300 cm wide, and 300 cm tall, with a required key id, `ShrineKey` by default, and a label.
 - A visitor tries the door. If its ring holds the required id, the door opens: the slab stops blocking, the label reads Open, and the door announces it was unlocked, naming itself and the visitor, exactly once. Trying an open door again succeeds and announces nothing.

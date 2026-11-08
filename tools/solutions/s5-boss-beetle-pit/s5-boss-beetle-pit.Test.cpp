@@ -59,16 +59,42 @@ namespace DojoS5BeetlePitTest
 		return Pit;
 	}
 
+	/** Reports, and returns false, unless the pit has a hero, a keeper with a pool, a board, a director, and a banner with a display, so the reads that follow cannot stop the engine. */
+	bool PitIsBuilt(FAutomationTestBase& Test, const FPit& Pit, const FString& When)
+	{
+		if (!Test.TestNotNull(*FString::Printf(TEXT("%s: the hero spawned"), *When), Pit.Hero)) return false;
+		if (!Test.TestNotNull(*FString::Printf(TEXT("%s: the keeper spawned"), *When), Pit.Keeper)) return false;
+
+		const UDojoS5PoolComponent* PoolComponent = Pit.Keeper->Pool;
+		const UTextRenderComponent* BoardComponent = Pit.Keeper->Board;
+		const ADojoS5WaveBanner* Banner = Pit.Keeper->GetBanner();
+		const UTextRenderComponent* BannerDisplay = nullptr;
+		if (Banner != nullptr)
+		{
+			BannerDisplay = Banner->Display;
+		}
+
+		const bool bHasPool = Test.TestNotNull(*FString::Printf(TEXT("%s: the keeper carries a pool"), *When), PoolComponent);
+		const bool bHasBoard = Test.TestNotNull(*FString::Printf(TEXT("%s: the keeper has a board"), *When), BoardComponent);
+		const bool bHasDirector = Test.TestNotNull(*FString::Printf(TEXT("%s: the keeper made a director"), *When), Pit.Keeper->GetDirector());
+		const bool bHasBanner = Test.TestNotNull(*FString::Printf(TEXT("%s: the keeper made a banner with a display"), *When), BannerDisplay);
+
+		return bHasPool && bHasBoard && bHasDirector && bHasBanner;
+	}
+
 	/** The board's text. */
 	FString BoardOf(const FPit& Pit)
 	{
+		if (Pit.Keeper == nullptr || Pit.Keeper->Board == nullptr) return FString(TEXT("(the keeper has no board)"));
 		return Pit.Keeper->Board->Text.ToString();
 	}
 
 	/** The banner's text. */
 	FString BannerOf(const FPit& Pit)
 	{
-		return Pit.Keeper->GetBanner()->Display->Text.ToString();
+		const ADojoS5WaveBanner* Banner = Pit.Keeper != nullptr ? Pit.Keeper->GetBanner() : nullptr;
+		if (Banner == nullptr || Banner->Display == nullptr) return FString(TEXT("(the keeper has no banner display)"));
+		return Banner->Display->Text.ToString();
 	}
 
 	/** True when the hero is looking straight at the beetle. */
@@ -78,7 +104,7 @@ namespace DojoS5BeetlePitTest
 		return FVector::DotProduct(Hero->GetActorForwardVector(), ToBeetle) > 0.9f;
 	}
 
-	/** Turns to each loose beetle with E and swats it with Space, until none is loose. */
+	/** Turns to each loose beetle with E and swats it with Space, until none is loose; call it only after PitIsBuilt has passed. */
 	void SwatEverythingLoose(const FPit& Pit)
 	{
 		for (int32 Guard = 0; Guard < 8; ++Guard)
@@ -118,7 +144,7 @@ bool FDojo_S5_BeetlePit_TwoNights::RunTest(const FString& Parameters)
 
 	FDojoTestWorld TestWorld;
 	FPit Pit = MakePit(TestWorld);
-	if (!TestNotNull(TEXT("Keeper spawned"), Pit.Keeper) || !TestNotNull(TEXT("Director spawned"), Pit.Keeper->GetDirector()) || !TestNotNull(TEXT("Banner spawned"), Pit.Keeper->GetBanner())) return false;
+	if (!PitIsBuilt(*this, Pit, TEXT("Two nights"))) return false;
 
 	for (int32 Night = 1; Night <= 2; ++Night)
 	{
@@ -141,11 +167,13 @@ bool FDojo_S5_BeetlePit_TwoNights::RunTest(const FString& Parameters)
 		TestTrue(Label + TEXT("the pit never held more beetles than could be loose at once"), Pit.Keeper->Pool->GetCreatedCount() <= 3);
 
 		const int32 CreatedAfterNight = Pit.Keeper->Pool->GetCreatedCount();
+		const FVector FacingAfterNight = Pit.Hero->GetActorForwardVector();
 
 		Pit.Keeper->PressSwat();
 		Pit.Keeper->PressTurn(true);
 		TestWorld.Tick(300);
 		TestEqual(Label + TEXT("keys do nothing after the finale"), Pit.Keeper->GetSwats(), 23);
+		TestTrue(Label + TEXT("Q and E turn nothing after the finale"), Pit.Hero->GetActorForwardVector().Equals(FacingAfterNight, 0.001f));
 		TestEqual(Label + TEXT("nothing comes out after the finale"), Pit.Keeper->Pool->GetAwakeCount(), 0);
 
 		Pit.Keeper->RestartNight();
@@ -164,7 +192,7 @@ bool FDojo_S5_BeetlePit_GateAndRest::RunTest(const FString& Parameters)
 
 	FDojoTestWorld TestWorld;
 	FPit Pit = MakePit(TestWorld);
-	if (!TestNotNull(TEXT("Keeper spawned"), Pit.Keeper) || !TestNotNull(TEXT("Director spawned"), Pit.Keeper->GetDirector())) return false;
+	if (!PitIsBuilt(*this, Pit, TEXT("The pit"))) return false;
 
 	TestFalse(TEXT("The gate is shut while wave 1 runs"), Pit.Keeper->IsGateOpen());
 
@@ -196,7 +224,7 @@ bool FDojo_S5_BeetlePit_SwatNeedsFacing::RunTest(const FString& Parameters)
 
 	FDojoTestWorld TestWorld;
 	FPit Pit = MakePit(TestWorld);
-	if (!TestNotNull(TEXT("Keeper spawned"), Pit.Keeper) || !TestNotNull(TEXT("Director spawned"), Pit.Keeper->GetDirector())) return false;
+	if (!PitIsBuilt(*this, Pit, TEXT("The pit"))) return false;
 
 	const TArray<ADojoS5Hatch*> Hatches = Pit.Keeper->GetHatches();
 	if (!TestEqual(TEXT("Four hatches"), Hatches.Num(), 4)) return false;
@@ -236,7 +264,7 @@ bool FDojo_S5_BeetlePit_UnbindsWhenItLeaves::RunTest(const FString& Parameters)
 
 	FDojoTestWorld TestWorld;
 	FPit Pit = MakePit(TestWorld);
-	if (!TestNotNull(TEXT("Keeper spawned"), Pit.Keeper)) return false;
+	if (!PitIsBuilt(*this, Pit, TEXT("The pit"))) return false;
 
 	ADojoS5WaveDirector* Director = Pit.Keeper->GetDirector();
 	ADojoS5WaveBanner* Banner = Pit.Keeper->GetBanner();

@@ -7,7 +7,7 @@ difficulty: 3
 patterns: [observer]
 skills: [planning, collision, delegates]
 terms: [overlap-event, get-overlapping-actors, dynamic-multicast-delegate, adddynamic, interpolation, tick]
-prerequisites: [m6-boss-quest-system]
+prerequisites: [m6-boss-quest-system, m3-scale-plate]
 xp: 100
 estimatedMinutes: 20
 concepts:
@@ -17,7 +17,7 @@ concepts:
 
 # Spec
 
-A temple keeper wants stone gates that open when visitors weigh down pressure plates. A plate is pressed while at least one runner or crate stands on it: the first arrival presses it, and it is released only when the last one leaves. A gate is given a list of plates in the editor. It rises 300 cm over 0.8 s while all of its plates are pressed, and sinks back the same way, at the same steady speed, when that stops being true. One plate can serve several gates, and one gate can need several plates. Each gate announces when it has fully opened and when it is fully closed again, so a sound, a lamp, or a puzzle director can react. Designers tune the height and the time on each gate without code.
+A temple keeper wants stone gates that open when visitors weigh down pressure plates. A plate is pressed while at least one runner or crate stands on it, which it learns from overlap events: the first arrival presses it, and it is released only when the last one leaves. A gate is given a list of plates in the editor. It rises 300 cm over 0.8 s while all of its plates are pressed, and sinks back the same way, at the same steady speed, when that stops being true. One plate can serve several gates, and one gate can need several plates. Each gate announces when it has fully opened and when it is fully closed again, so a sound, a lamp, or a puzzle director can react. Designers tune the height and the time on each gate without code.
 
 You are planning, not coding. Name the classes, the data, and the events; for each pair, say which side holds a pointer to the other, which side broadcasts, and which side only listens. World 3 already has a runner, a crate, and a plate that counts what stands on it: say for each whether you reuse it.
 
@@ -109,4 +109,4 @@ Acceptance:
 
 # Alternative Note
 
-Both plans pass. A gate class keeps the panel and its rule in one actor, which is simple to place and test; the cost is that every new kind of door is a new class. An opener component can turn a portcullis, a bridge, or a lift into something plates control, at the cost of telling the component which of its owner's parts to move. World 3's plate could be reused if the gate checked it every frame, but that breaks the first acceptance line, and changing World 3's file to add events means every World 3 quest changes too; building a new plate that announces itself, while reusing the runner and the crate as they are, keeps both worlds intact. A plan where the plate holds a pointer to its gate fails as soon as one plate must serve two gates.
+Both plans pass. A gate class keeps the panel and its rule in one actor, which is simple to place and test; the cost is that every new kind of door is a new class. An opener component can turn a portcullis, a bridge, or a lift into something plates control, at the cost of telling the component which of its owner's parts to move. World 3's plate could be reused if the gate checked it every frame, but that breaks the first acceptance line, and changing World 3's file to add events means every World 3 quest that compiles against that plate changes too; building a new plate that announces itself, while reusing the runner and the crate as they are, keeps both worlds intact. A plan where the plate holds a pointer to its gate fails as soon as one plate must serve two gates.

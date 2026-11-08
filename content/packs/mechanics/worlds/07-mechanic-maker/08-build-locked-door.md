@@ -37,6 +37,8 @@ The tests use this public interface, so keep these names:
 - `UFUNCTION(BlueprintPure) bool IsOpen() const;` and `UFUNCTION(BlueprintPure) int32 GetLockedTries() const;`
 - `UFUNCTION(BlueprintCallable) void Relock();`
 
+`UBoxComponent` is declared in `Components/BoxComponent.h` and `UTextRenderComponent` in `Components/TextRenderComponent.h`, and the delegate is declared above the class with a forward declaration of the door.
+
 The chime, `ADojoM7DoorChime`, is given in full: a listener that rings once for each unlock it hears and remembers the last door and visitor. The tests use it to hear your door.
 
 Dependency direction: the door holds no pointer to any visitor, ring, or chime; it asks the visitor in front of it for a ring, and it broadcasts. The chime subscribes to the door. The ring and the runner know nothing about doors.
@@ -47,7 +49,7 @@ Compiles against earlier quests: m7-key-ring (`Quests/m7-key-ring/DojoM7KeyRing.
 
 ## See it in the editor
 
-Place a `DojoM7LockedDoor` at X 500 facing the origin, a `DojoM7KeyPickup` at Y 500, and a `DojoM3Runner` at the origin with a Dojo M7 Key Ring added in Details. Type `show Collision` and press Play. In the level Blueprint, on the 1 key, call Try Open on the door with the runner and print the result: false, and the label reads Locked. On the 2 key, set the runner's location to Y 500 to take the key, and press 1 again: true, and the label reads Open. Bind On Unlocked to a Print String to watch the announcement arrive once. Then the A/B: set the door's Required Key to CellarKey and press Play again.
+Place a `DojoM7LockedDoor` at X 500 facing the origin, a `DojoM7KeyPickup` at Y 500, and a `DojoM3Runner` at the origin with a Dojo M7 Key Ring added in Details. Type `show Collision` and press Play. In the level Blueprint, create a reference to the door and the runner (select each in the level, right-click the graph, and choose Create a Reference to it). On the 1 key, call Try Open on the door with the runner and print the result: false, and the label reads Locked. On the 2 key, set the runner's location to Y 500 to take the key, and press 1 again: true, and the label reads Open. Bind On Unlocked to a Print String to watch the announcement arrive once. Then the A/B: set the door's Required Key to CellarKey and press Play again.
 
 # Files
 
@@ -191,16 +193,29 @@ namespace DojoM7LockedDoorTest
 		return Ring;
 	}
 
-	/** The door's label text. */
-	FString LabelOf(const ADojoM7LockedDoor* Door)
+	/** Reports, and returns false, unless the door has its panel and its label, so the reads that follow cannot stop the engine. */
+	bool HasParts(FAutomationTestBase& Test, const ADojoM7LockedDoor* Door)
 	{
-		return Door->Label->Text.ToString();
+		const UBoxComponent* PanelPart = Door->Panel;
+		const UTextRenderComponent* LabelPart = Door->Label;
+		const bool bHasPanel = Test.TestNotNull(TEXT("The door has a panel"), PanelPart);
+		const bool bHasLabel = Test.TestNotNull(TEXT("The door has a label"), LabelPart);
+
+		return bHasPanel && bHasLabel;
 	}
 
-	/** True while the door's panel stops pawns. */
+	/** The door's label text, or a note when the door has no label. */
+	FString LabelOf(const ADojoM7LockedDoor* Door)
+	{
+		const UTextRenderComponent* LabelPart = Door->Label;
+		return LabelPart ? LabelPart->Text.ToString() : FString(TEXT("(no label)"));
+	}
+
+	/** True while the door's panel stops pawns; a door with no panel stops nothing. */
 	bool BlocksPawns(const ADojoM7LockedDoor* Door)
 	{
-		return Door->Panel->GetCollisionEnabled() != ECollisionEnabled::NoCollision && Door->Panel->GetCollisionResponseToChannel(ECC_Pawn) == ECR_Block;
+		const UBoxComponent* PanelPart = Door->Panel;
+		return PanelPart != nullptr && PanelPart->GetCollisionEnabled() != ECollisionEnabled::NoCollision && PanelPart->GetCollisionResponseToChannel(ECC_Pawn) == ECR_Block;
 	}
 
 	/** Puts a runner at the origin, sweeps it 1000 along X toward the door, sends it back, and returns where it stopped. */
@@ -229,6 +244,7 @@ bool FDojo_M7_LockedDoor_StaysShutWithoutTheKey::RunTest(const FString& Paramete
 	ADojoM3Runner* Bare = SpawnAt<ADojoM3Runner>(TestWorld, FVector(0.0, -2000.0, 0.0));
 	ADojoM3Runner* Wrong = SpawnAt<ADojoM3Runner>(TestWorld, FVector(0.0, -2500.0, 0.0));
 	if (!TestNotNull(TEXT("Door, chime, and runners spawned"), Wrong) || !Bare || !Chime || !Door) return false;
+	if (!HasParts(*this, Door)) return false;
 	Chime->Listen(Door);
 	GiveRing(Wrong, TEXT("CellarKey"));
 
@@ -272,6 +288,7 @@ bool FDojo_M7_LockedDoor_OpensForTheKey::RunTest(const FString& Parameters)
 	ADojoM3Runner* Keeper = SpawnAt<ADojoM3Runner>(TestWorld, FVector(0.0, -2000.0, 0.0));
 	ADojoM3Runner* Stranger = SpawnAt<ADojoM3Runner>(TestWorld, FVector(0.0, -2500.0, 0.0));
 	if (!TestNotNull(TEXT("Doors, chime, and runners spawned"), Stranger) || !Keeper || !Chime || !Cellar || !Door) return false;
+	if (!HasParts(*this, Door) || !HasParts(*this, Cellar)) return false;
 	Chime->Listen(Door);
 	Chime->Listen(Door);
 	Chime->Listen(Cellar);
@@ -314,6 +331,7 @@ bool FDojo_M7_LockedDoor_RelockKeepsTheCount::RunTest(const FString& Parameters)
 	ADojoM7DoorChime* Chime = SpawnAt<ADojoM7DoorChime>(TestWorld, FVector(0.0, 2000.0, 0.0));
 	ADojoM3Runner* Runner = SpawnAt<ADojoM3Runner>(TestWorld, FVector(0.0, -2000.0, 0.0));
 	if (!TestNotNull(TEXT("Door, chime, and runner spawned"), Runner) || !Chime || !Door) return false;
+	if (!HasParts(*this, Door)) return false;
 	Chime->Listen(Door);
 
 	TestFalse(TEXT("Without a ring the door is locked"), Door->TryOpen(Runner));
@@ -344,9 +362,9 @@ bool FDojo_M7_LockedDoor_RelockKeepsTheCount::RunTest(const FString& Parameters)
 
 # Hints
 
-- The try has three outcomes in a fixed order: an open door answers at once, a visitor holding the key opens it, and everything else is a locked try. Write them as guard clauses from the top, and make the announcement the last thing the opening does.
-- The visitor carries its keys in a ring, so ask the visitor for its ring the same way the pickup did, and be ready for no visitor and for a visitor with no ring. Opening and relocking change the same two things in opposite directions: whether the panel collides, and what the label says.
-- `UBoxComponent` is in `Components/BoxComponent.h` and `UTextRenderComponent` in `Components/TextRenderComponent.h`; declare the delegate above the class with a forward declaration of the door; `SetCollisionEnabled` takes `ECollisionEnabled::NoCollision` to open and `ECollisionEnabled::QueryAndPhysics` to block again.
+- The try has three outcomes in a fixed order, so write them as guard clauses from the top and make the announcement the last thing the opening does.
+- The visitor carries its keys in a ring, so ask the visitor for it the way the pickup did, and be ready for no visitor and for no ring.
+- Opening and relocking change the same two things in opposite directions: whether the panel collides, and what the label says.
 
 # Rubric
 

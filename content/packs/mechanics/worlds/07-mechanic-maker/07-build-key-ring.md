@@ -24,10 +24,10 @@ Two classes are in this quest, and both headers are written for you. Write the f
 
 - The ring holds key ids, each at most once. `AddKey` refuses `None` and an id the ring already holds, returning false; otherwise it adds the id, announces it on `OnKeyAdded`, and returns true.
 - `HasKey`, `RemoveKey`, `ClearKeys`, and `GetKeyCount` do what their names say. `RemoveKey` returns false for an id the ring does not hold.
-- The pickup shows its `KeyId` on its label and listens for shapes arriving in its zone.
-- When an actor arrives, the pickup looks for a key ring on it. If there is a ring and it accepts the key, the pickup is taken: it hides itself and its zone stops touching anything.
+- The pickup shows its `KeyId` on its label and listens for overlap events from its zone, the shapes arriving in it.
+- When an actor arrives, the pickup looks for a key ring on it. If there is a ring and it accepts the key, the pickup is taken: it hides itself and turns its zone's collision off, so it touches nothing.
 - An actor with no ring is ignored. A ring that already holds the id refuses it, and then the pickup stays where it is for the next visitor.
-- `ResetPickup` shows the pickup again and turns its zone back on, so it can be taken again.
+- `ResetPickup` shows the pickup again and turns its zone's collision back on, so it can be taken again.
 
 The tally, `ADojoM7KeyTally`, is given in full: a listener that counts every key a ring announces and remembers the last one. The tests use it to hear your ring.
 
@@ -39,7 +39,7 @@ Compiles against earlier quests: m3-checkpoint (`Quests/m3-checkpoint/DojoM3Runn
 
 ## See it in the editor
 
-Place a `DojoM7KeyPickup` at the origin and two `DojoM3Runner` actors at X -500 and X -800. Select the first runner, click Add in Details, and add a Dojo M7 Key Ring to it. Type `show Collision` and press Play. In the level Blueprint, on the 1 key, set the location of the runner without a ring to the origin: the pickup stays and still reads ShrineKey. On the 2 key, set the location of the runner with the ring to the origin: the pickup vanishes. On the 3 key, print the ring's Get Key Count. Then the A/B: set the pickup's Key Id to None in Details and press Play again.
+Place a `DojoM7KeyPickup` at the origin and two `DojoM3Runner` actors at X -500 and X -800. Select the first runner, click Add in Details, and add a Dojo M7 Key Ring to it. Type `show Collision` and press Play. In the level Blueprint, create a reference to each runner (select it in the level, right-click the graph, and choose Create a Reference to it). On the 1 key, set the location of the runner without a ring to the origin: the pickup stays and still reads ShrineKey. On the 2 key, set the location of the runner with the ring to the origin: the pickup vanishes. On the 3 key, call Get Component by Class on the runner with the ring, choosing Dojo M7 Key Ring, and print its Get Key Count. Then the A/B: set the pickup's Key Id to None in Details and press Play again: the ring turns it away and the pickup stays.
 
 # Files
 
@@ -233,7 +233,7 @@ void ADojoM7KeyPickup::ResetPickup()
 
 void ADojoM7KeyPickup::HandleZoneBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	// Your code: find the visitor's ring; when it takes the key, mark the pickup taken, hide it, and stop its zone touching anything.
+	// Your code: find the visitor's ring; when it takes the key, mark the pickup taken, hide it, and turn its zone's collision off.
 }
 ```
 
@@ -512,9 +512,9 @@ bool FDojo_M7_KeyRing_DuplicatesStayAndResetReturns::RunTest(const FString& Para
 
 # Hints
 
-- Write the ring first, because the pickup only works through it. A set already keeps each value once, so `AddKey` mostly has to turn away the empty name and report whether the set changed; announce the key only when it did. The pickup's handler has three steps in a fixed order: find the ring, give it the key, and disappear only if the ring took it.
-- The arriving actor is the one to ask for its ring, with the same component lookup the patterns pack used. Hiding the actor and turning its zone's collision off are two separate calls, and `ResetPickup` undoes both, back to the query only setting the zone started with.
-- `TSet` has `Add`, `Contains`, `Remove` (which returns how many it removed), `Reset`, and `Num`; `FName` has `IsNone`; `FindComponentByClass` is on `AActor`; `SetActorHiddenInGame` is on `AActor`; `SetCollisionEnabled` is on `UPrimitiveComponent`; `FText::FromName` makes the label text.
+- Write the ring first, because the pickup only works through it.
+- The arriving actor is the one to ask for its ring, and the pickup disappears only if that ring took the key.
+- Hiding the pickup and turning its zone's collision off are two separate calls, and resetting undoes both.
 
 # Rubric
 

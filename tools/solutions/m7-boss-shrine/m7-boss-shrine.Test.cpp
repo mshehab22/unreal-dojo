@@ -84,10 +84,18 @@ namespace DojoM7ShrineTest
 		return Scene;
 	}
 
-	/** The board's text. */
+	/** Reports, and returns false, unless the director has a board, so the reads that follow cannot stop the engine. */
+	bool HasBoard(FAutomationTestBase& Test, const FShrineScene& Scene)
+	{
+		const UTextRenderComponent* BoardPart = Scene.Director->Board;
+		return Test.TestNotNull(TEXT("The director has a board"), BoardPart);
+	}
+
+	/** The board's text, or a note when the director has no board. */
 	FString BoardOf(const FShrineScene& Scene)
 	{
-		return Scene.Director->Board->Text.ToString();
+		const UTextRenderComponent* BoardPart = Scene.Director->Board;
+		return BoardPart ? BoardPart->Text.ToString() : FString(TEXT("(no board)"));
 	}
 
 	/** The board as it should read for a round count, the gate, and a coming reset. */
@@ -182,6 +190,7 @@ bool FDojo_M7_Shrine_TwoRoundsPlayAlike::RunTest(const FString& Parameters)
 	FDojoTestWorld TestWorld;
 	const FShrineScene Scene = MakeShrine(TestWorld, 2.f);
 	if (!TestNotNull(TEXT("The shrine was built"), Scene.Director) || !Scene.Gate || !Scene.Ring) return false;
+	if (!HasBoard(*this, Scene)) return false;
 
 	TestTrue(TEXT("The director listens to the door"), Scene.Door->OnUnlocked.Contains(Scene.Director, TEXT("HandleDoorUnlocked")));
 
@@ -209,6 +218,7 @@ bool FDojo_M7_Shrine_ResetFollowsTheKnob::RunTest(const FString& Parameters)
 	FDojoTestWorld TestWorld;
 	const FShrineScene Scene = MakeShrine(TestWorld, 0.5f);
 	if (!TestNotNull(TEXT("The shrine was built"), Scene.Director) || !Scene.Gate || !Scene.Ring) return false;
+	if (!HasBoard(*this, Scene)) return false;
 
 	Scene.Ring->AddKey(TEXT("ShrineKey"));
 	Scene.Runner->SetActorLocation(DoorstepSpot);
@@ -231,6 +241,47 @@ bool FDojo_M7_Shrine_ResetFollowsTheKnob::RunTest(const FString& Parameters)
 	TestWorld.Tick(60);
 	TestTrue(TEXT("and its pending reset never runs, so the door stays open"), Scene.Door->IsOpen());
 	TestTrue(TEXT("and the key stays on the ring"), Scene.Ring->HasKey(TEXT("ShrineKey")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M7_Shrine_ZeroPauseResetsAtOnce, "Dojo.M7.Shrine.ZeroPauseResetsAtOnce", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Sets the reset pause to zero and checks the unlock resets the shrine at once, with no timer left waiting. */
+bool FDojo_M7_Shrine_ZeroPauseResetsAtOnce::RunTest(const FString& Parameters)
+{
+	using namespace DojoM7ShrineTest;
+
+	FDojoTestWorld TestWorld;
+	const FShrineScene Scene = MakeShrine(TestWorld, 0.f);
+	if (!TestNotNull(TEXT("The shrine was built"), Scene.Director) || !Scene.Gate || !Scene.Ring) return false;
+	if (!HasBoard(*this, Scene)) return false;
+
+	Scene.Ring->AddKey(TEXT("ShrineKey"));
+	Scene.Runner->SetActorLocation(DoorstepSpot);
+	TestTrue(TEXT("A runner given the key opens the door"), Scene.Door->TryOpen(Scene.Runner));
+	TestEqual(TEXT("which clears a round"), Scene.Director->GetRoundsCleared(), 1);
+	TestFalse(TEXT("With a pause of zero no reset is left waiting"), Scene.Director->IsResetting());
+	TestFalse(TEXT("the door is locked again at once"), Scene.Door->IsOpen());
+	TestFalse(TEXT("and the key is already off the ring"), Scene.Ring->HasKey(TEXT("ShrineKey")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_M7_Shrine_ResetKnobKeepsItsRange, "Dojo.M7.Shrine.ResetKnobKeepsItsRange", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Checks the reset pause is an editable number whose range keeps a designer from typing below zero and which shows seconds. */
+bool FDojo_M7_Shrine_ResetKnobKeepsItsRange::RunTest(const FString& Parameters)
+{
+	const FProperty* Seconds = ADojoM7ShrineDirector::StaticClass()->FindPropertyByName(TEXT("ResetSeconds"));
+	if (!TestNotNull(TEXT("ResetSeconds is a UPROPERTY"), Seconds)) return false;
+
+	TestTrue(TEXT("ResetSeconds can be edited in Details"), Seconds->HasAnyPropertyFlags(CPF_Edit));
+
+#if WITH_METADATA
+	TestFalse(TEXT("ResetSeconds has a lower limit a designer cannot type past"), Seconds->GetMetaData(TEXT("ClampMin")).IsEmpty());
+	TestEqual(TEXT("ResetSeconds shows seconds"), Seconds->GetMetaData(TEXT("Units")), FString(TEXT("s")));
+#endif
 
 	return true;
 }

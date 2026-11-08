@@ -25,13 +25,13 @@ The beetle, the spawning helper, and the counting functions are written for you.
 1. `Acquire`: wake the first sleeping beetle, in the order the pool made them, at `Location`. Only when none is asleep, spawn a new one with `SpawnSleeping` (which returns null once the pool holds `MaxSize`) and wake that. Return the woken beetle, or null when every beetle is busy.
 2. `Release`: put a beetle back to sleep and return true, but only for a beetle this pool made that is awake right now. A null pointer, a beetle from somewhere else, and a beetle that is already asleep all give false and change nothing.
 
-Dependency direction: the pool points at its beetles; a beetle only broadcasts and knows nothing about the pool. A beetle never destroys itself. `Defeat` only announces the swat through `OnDefeated`, and whoever woke the beetle gives it back. The pool holds its beetles in a `UPROPERTY` array, so the garbage collector keeps them while they sleep.
+Dependency direction: the pool points at its beetles; a beetle only broadcasts and knows nothing about the pool. A beetle never destroys itself. `Defeat` only announces the swat through `OnDefeated`, and whoever woke the beetle gives it back. The pool holds its beetles in a `UPROPERTY` array, so the pointers stay valid and go null if something destroys a beetle.
 
 This is the second piece of the Beetle Pit boss.
 
 ## See it in the editor
 
-Make a Blueprint actor `BP_Burrow` with a `DojoS5PoolComponent`, set Max Size 3 in Details, and place one in the level. In the level Blueprint, get the pool with Get Component by Class. On the 1 key call Acquire at a random spot near the burrow and store the result in an array; on the 2 key call Release with the first entry of the array and remove it. Print Get Created Count and Get Awake Count after each key. Press 1 four times: three beetles appear, the fourth press gives nothing, and the created count stops at 3. Press 2 and then 1: a beetle vanishes and appears somewhere else, and the created count is still 3.
+Make a Blueprint actor `BP_Burrow` with a `DojoS5PoolComponent`, set Max Size 3 in Details, and place one in the level. In the level Blueprint, select the placed `BP_Burrow` in the level, right-click the graph and choose Create a Reference to it, then drag from it and get the pool with Get Component by Class using Dojo S5 Pool Component. On the 1 key call Acquire at a random spot near the burrow and store the result in an array; on the 2 key call Release with the first entry of the array and remove it. Print Get Created Count and Get Awake Count after each key. Press 1 four times: three beetles appear, the fourth press gives nothing, and the created count stops at 3. Press 2 and then 1: a beetle vanishes and appears somewhere else, and the created count is still 3.
 
 # Files
 
@@ -72,7 +72,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Beetle")
 	void Wake(const FVector& Location);
 
-	/** Hides the beetle and turns its collision off, so it costs nothing while it waits. */
+	/** Hides the beetle and turns its collision off, so it does no work while it waits. */
 	UFUNCTION(BlueprintCallable, Category = "Beetle")
 	void Sleep();
 
@@ -380,7 +380,8 @@ bool FDojo_S5_Pool_WakeBeforeSpawning::RunTest(const FString& Parameters)
 
 	ADojoS5Beetle* Bee = Pool->Acquire(First);
 	ADojoS5Beetle* Cricket = Pool->Acquire(First);
-	TestTrue(TEXT("Three different beetles"), Bee != nullptr && Cricket != nullptr && Bee != Ant && Cricket != Bee && Cricket != Ant);
+	if (!TestNotNull(TEXT("A second beetle is woken"), Bee) || !TestNotNull(TEXT("A third beetle is woken"), Cricket)) return false;
+	TestTrue(TEXT("Three different beetles"), Bee != Ant && Cricket != Bee && Cricket != Ant);
 	TestEqual(TEXT("Three beetles made"), Pool->GetCreatedCount(), 3);
 	TestEqual(TEXT("Three beetles awake"), Pool->GetAwakeCount(), 3);
 
@@ -427,7 +428,7 @@ bool FDojo_S5_Pool_FirstSleeperFirst::RunTest(const FString& Parameters)
 	ADojoS5Beetle* One = Pool->Acquire(FVector::ZeroVector);
 	ADojoS5Beetle* Two = Pool->Acquire(FVector::ZeroVector);
 	ADojoS5Beetle* Three = Pool->Acquire(FVector::ZeroVector);
-	if (!TestNotNull(TEXT("Three beetles"), Three)) return false;
+	if (!TestNotNull(TEXT("A first beetle"), One) || !TestNotNull(TEXT("A second beetle"), Two) || !TestNotNull(TEXT("A third beetle"), Three)) return false;
 
 	Pool->Release(Three);
 	Pool->Release(One);
@@ -479,9 +480,9 @@ bool FDojo_S5_Pool_PrewarmAndLeave::RunTest(const FString& Parameters)
 
 # Hints
 
-- Acquire has one decision and one action: decide which beetle (an old one if any sleeps, otherwise a new one if the pool is not full), then wake it. Keep the spawning inside the helper; the pool's size limit already lives there.
-- `IsAwake` tells a sleeping beetle from a busy one, and `IsValid` skips a beetle something else destroyed. `TArray::Contains` answers whether a beetle is one of the pool's own.
-- Release must leave the beetle in the pool's array. A beetle removed from it, or destroyed, is a beetle the pool will spawn again next time, which is the cost a pool exists to avoid.
+- Decide which beetle serves the request, an old sleeper first and a new one only if the pool has room, and then wake it.
+- Take back only a beetle the pool made itself that is still alive and awake, and refuse everything else.
+- Release must leave the beetle in the pool's array, because a beetle the pool forgets is spawned again and a destroyed one left there keeps its place until the pool runs dry.
 
 # Rubric
 
@@ -513,7 +514,7 @@ The plain way is `SpawnActor` for every beetle and `Destroy` when it is swatted.
     - "}"
   distractors:
     - line: "	Beetle->Destroy();"
-      mistake: Destroy removes the actor from the world, so the next Acquire has to spawn a new one; a pool puts the beetle to sleep instead.
+      mistake: Destroy removes the actor from the world but the pool keeps counting it toward its size, so the pool slowly runs dry; a pool puts the beetle to sleep instead.
     - line: "	Beetles.Remove(Beetle);"
       mistake: Removing the beetle from the array makes the pool forget it; it stays hidden in the level forever and the pool spawns a replacement.
 ```
