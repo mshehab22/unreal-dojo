@@ -25,11 +25,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: ten launchers stand in a level. A designer wants each one to aim differently, chosen in Details on that launcher, and wants to add an eleventh kind of aim next month without touching any launcher. What should a launcher hold?"
 choices:
-  - A number that says which aim to use
-  - One pointer to an aim object, and a call to a function every aim object shares
-  - A list of every aim class in the game
-  - A copy of the code of the aim it uses
-answerIndex: 1
+  - A number that says which aim this launcher should use
+  - A list of every aim class in the game, to pick from
+  - One pointer to an aim object and a shared call
+  - A copy of the code of whichever aim it uses
+answerIndex: 2
 explanation: A pointer to a shared kind of object lets each launcher hold a different aim, and a new aim is a new class that no launcher has to know about.
 ```
 
@@ -50,7 +50,7 @@ What you built for the launcher is the **Strategy** pattern. One job can be done
 
 A lighter form for a rule that is one line of code is a `TFunction` or a delegate on the host. It has no class to write, and also no Details picker, no settings, and no memory of its own.
 
-**Why a class and not an interface.** An `Instanced` property has to point at a `UObject` class, because Details can make only objects, not something that implements an interface. A rule shaped as a `UINTERFACE` can be called, but it cannot be created inline.
+**Why a class and not an interface.** An `Instanced` property has to point at a `UObject` class, because the header tool does not allow `Instanced` on an interface property, so Details has no inline object to create for one. A rule shaped as a `UINTERFACE` can still be called, but the rule you pick in Details is an abstract object class.
 
 **One rule object or one for each host.** A rule that keeps nothing between calls, such as nearest, could be shared by every host. A rule that remembers something, such as which way a patrol is heading, cannot: two hosts sharing it would tangle each other's memory. An instanced property gives each host its own object. With a class reference, each host makes its own.
 
@@ -97,11 +97,11 @@ TSubclassOf<UDojoMoveRule> RuleClass;
   type: multiple-choice
   prompt: "Which list names the parts of the pattern you built?"
   choices:
-    - A producer, a consumer, a queue, and a lock
-    - A host, a shared question on an abstract class, and a child class for each way of answering it
-    - A base class, a component, a delegate, and a timer
-    - A prototype, a copy, a registry, and a factory
-  answerIndex: 1
+    - A producer, a consumer, a queue between them, and a lock
+    - A base class, a component, a delegate, and a timer to drive it
+    - A prototype, a copy of it, a registry, and a factory
+    - A host, an abstract shared question, and one child per way
+  answerIndex: 3
   explanation: The host depends only on the shared question, and each rule is a child class that answers it its own way.
 - id: fill-instanced
   type: fill-blank
@@ -112,21 +112,21 @@ TSubclassOf<UDojoMoveRule> RuleClass;
   type: multiple-choice
   prompt: "A guard changes how it moves when it sees the player: it stops patrolling and starts chasing, and it switches back when it loses sight. Is that a rule chosen from outside?"
   choices:
-    - Yes, patrol and chase are two rules
-    - No, the guard changes its own behaviour in response to events, which is State
-    - Yes, but only if each uses a TSubclassOf
-    - No, because a guard has no host
-  answerIndex: 1
+    - No, it switches itself on events, which is State
+    - Yes, patrol and chase are two rules a designer can pick
+    - Yes, but only if each uses a TSubclassOf for its class
+    - No, because a guard has no host to hold a rule
+  answerIndex: 0
   explanation: The guard switches itself, on events, and each mode leads to the next. A strategy is picked by a designer or a game mode and stays until it is changed.
 - id: nine-or-six
   type: multiple-choice
   prompt: "A turret can aim three ways and move three ways. How many classes does it take to cover every pair as turret subclasses, and how many as rules held by one turret class?"
   choices:
-    - Nine subclasses, or six rule classes
-    - Six subclasses, or nine rule classes
-    - Three in both cases
-    - Nine in both cases
-  answerIndex: 0
+    - Six subclasses, or nine rule classes held by the turret
+    - Nine subclasses, or six rule classes held by the turret
+    - Three in both cases, one class for each way of aiming or moving
+    - Nine in both cases, since each pairing needs its own class
+  answerIndex: 1
   explanation: Subclasses multiply, one for each pair. Rules add, one for each way, and any aim can be paired with any movement.
 - id: spot-interface
   type: spot-the-bug
@@ -135,7 +135,7 @@ TSubclassOf<UDojoMoveRule> RuleClass;
     UPROPERTY(EditAnywhere, Instanced) TScriptInterface<IDojoTargetRule> Rule;
   bugLine: 1
   fix: Point the property at an abstract UObject class that is marked EditInlineNew, and put the shared function on that class.
-  explanation: Details can create objects of a class inline. It cannot create something that only implements an interface.
+  explanation: The header tool does not allow Instanced on an interface property, so Details has no inline object to create; an abstract object class marked EditInlineNew gives it one.
 - id: explain-strategy
   type: explain-in-one-sentence
   prompt: In one sentence, describe the Strategy pattern.

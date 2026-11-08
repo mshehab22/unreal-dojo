@@ -25,23 +25,25 @@ The range master runs the Ember Range. A round has two launchers and a row of cr
 
 The master's own spot is the origin of the range. The first launcher stands at the master's spot and the second 100 units along the Y axis from it, both facing along the positive X axis. A spawner stands 300 units along the X axis from the master and makes the wave, with 150 units between critters, so the standard critters stand at 450, 600, 750, and 900 units. Key 1 fires the first launcher and key 2 fires the second. Each launcher may fire 8 bolts a round, counted by the launcher itself.
 
-A bolt that is made hits the nearest living critter whose place is further along the X axis than the muzzle, takes that critter's health down by the bolt's damage, and is spent. A critter at 0 health or less is defeated and removed. A shot with nothing ahead of it is spent and hurts nobody. A launcher with no shots left, a number with no launcher, and a number key while no round runs do nothing. Defeating every critter wins the round: the label shows WIN, the time to one decimal, and the shots used. After 30 seconds without a win the label shows TIME UP. While a round runs, the label shows `Critters` still alive out of the wave, and the shots left of each launcher, such as `Critters 3/4  Shots left 7 6`.
+A bolt that is made hits the nearest living critter whose place is further along the X axis than the muzzle, takes that critter's health down by the bolt's damage, and is spent. A critter at 0 health or less is defeated and removed. A shot with nothing ahead of it is spent and hurts nobody. A launcher with no shots left, a number with no launcher, and a number key while no round runs do nothing. Defeating every critter wins the round: the label shows WIN, the time to one decimal, and the shots used, such as `WIN 1.0 s  Shots used 14`. After 30 seconds without a win the label shows `TIME UP`. While a round runs, the label shows `Critters` still alive out of the wave, and the shots left of each launcher, such as `Critters 3/4  Shots left 7 6`, with two spaces before `Shots`.
 
-How rounds start: round 1 starts when play begins, and R starts the next round, only after one has ended. Starting a round destroys the last round's launchers, critters, and spawner and builds fresh ones from the data, so every count starts again. A C++ master receives keys only after `EnableInput` with the player controller.
+How rounds start: round 1 starts when play begins, and R starts the next round, only after one has ended. Starting a round destroys the last round's launchers, critters, and spawner and builds fresh ones from the data, so every count starts again, and the 30 seconds of a round count from its own start, so the timer of an earlier round never ends a later one. A C++ master receives keys only after `EnableInput` with the player controller, and in the tests there may be no player controller, so check for one before binding.
 
 The launchers and the spawner are the pieces' own actors. The master asks a launcher to `Fire` and a spawner to `SpawnWave`; it never names a kind of launcher, bolt, or critter, so a new kind is a new entry in the master's lists, never a change to how the master treats a kind. The pieces need no changes.
 
+What the tests read and set is public on `ADojoP21RangeMaster`, declared in `Quests/p21-boss-ember-range/DojoP21RangeMaster.h`: the properties `LauncherClasses`, `Wave`, and `RoundSeconds` (a `float`), set before the master begins play, and `Label`, a text render component whose `Text` shows the label; and the functions `PressFire(int32 Number)`, counting from 1, `RestartRound()`, `IsRunning()`, `GetCritters()`, nearest first, `GetLaunchers()`, in order, `GetDefeatedCount()`, `GetShotsLeft(int32 LauncherIndex)`, counting from 0, and `GetWinSeconds()`.
+
 Compiles against earlier quests: p21-launchers (`Quests/p21-launchers/DojoP21Bolt.h`, `Quests/p21-launchers/DojoP21Launcher.h`, `Quests/p21-launchers/DojoP21EmberLauncher.h`, `Quests/p21-launchers/DojoP21FrostLauncher.h`) and p21-wave-spawner (`Quests/p21-wave-spawner/DojoP21Critter.h`, `Quests/p21-wave-spawner/DojoP21Slime.h`, `Quests/p21-wave-spawner/DojoP21Imp.h`, `Quests/p21-wave-spawner/DojoP21SpawnEntry.h`, `Quests/p21-wave-spawner/DojoP21Spawner.h`).
 
-Core numbers are fixed: 8 shots per launcher, a 30 second round, 100 units between launchers, a spawner 300 units out, and 150 between critters.
+Core numbers are fixed: 8 shots per launcher, a 30 second round by default, 100 units between launchers, a spawner 300 units out, and 150 between critters. The tests set `RoundSeconds` to shorter rounds, so it is a property whose default is 30.
 
 Extensions, in order of importance:
 
-1. A third kind of launcher added only through data: a C++ launcher subclass that overrides `CreateBolt` to make a fan of bolts, with key 3 added to the key bindings as the only change to the master.
+1. A third kind of launcher added only through data: a C++ launcher subclass that overrides `CreateBolt` to make a bolt of a new kind with its own damage, with key 3 added to the key bindings as the only change to the master.
 2. Critters that step 50 units toward the launchers every 3 seconds, and a round that is lost, with LOST on the label, when one reaches 200 units from the master.
 3. Bolts taken from a pool: a launcher subclass whose `CreateBolt` reuses a bolt the master has handed back after a hit.
 
-Feel: tune the shots and health so that neither launcher alone can win a round and a sensible mix wins with a few bolts to spare, so that a player feels both launchers matter and that wasting bolts on a critter that is nearly dead costs something.
+Feel: play the fixed numbers and check that neither launcher alone can win a round and a sensible mix wins with a few bolts to spare, so that a player feels both launchers matter and that wasting bolts on a critter that is nearly dead costs something.
 
 # Required Pieces
 
@@ -102,9 +104,9 @@ Feel: tune the shots and health so that neither launcher alone can win a round a
     - { id: master, kind: class, label: "BP_RangeMaster actor with a Text Render component and variables for the shots per launcher, the round length, and a Running flag", covers: [master] }
     - { id: classes, kind: data, label: "An array variable of Dojo P21 Launcher class references, filled in Details with the ember and frost launcher classes", covers: [launcher-data] }
     - { id: wave, kind: data, label: "An array variable of Dojo P21 Spawn Entry structs, each a Dojo P21 Critter class and a level", covers: [wave-data] }
-    - { id: build, kind: step, label: "A For Each over the class array uses Spawn Actor from Class 100 units apart, and a Dojo P21 Spawner gets the wave and Spawn Wave is called on it", covers: [launcher-data, wave-data] }
+    - { id: build, kind: step, label: "A For Each over the class array uses Spawn Actor from Class 100 units apart, and a Dojo P21 Spawner gets the wave and Spawn Wave is called on it, after which the master copies each critter's Health into a health array of its own", covers: [launcher-data, wave-data] }
     - { id: fire, kind: step, label: "The 1 and 2 key events call one Fire Launcher function with the number; it ignores a number outside the array and a launcher whose Shots Fired has reached the limit, and calls Fire on the rest", covers: [fire, ammo] }
-    - { id: hit, kind: step, label: "A loop over the living critters keeps the nearest one with a larger X than the bolt, subtracts the bolt's Damage from its Health, removes it from the array and destroys it at 0, and destroys the bolt", covers: [hit] }
+    - { id: hit, kind: step, label: "A loop over the living critters keeps the nearest one with a larger X than the bolt, subtracts the bolt's Damage from that critter's entry in the master's health array, because a critter's own Health can only be read, removes it from the array and destroys it at 0, and destroys the bolt", covers: [hit] }
     - { id: round, kind: step, label: "A 30 second Set Timer by Event shows TIME UP, the last critter falling shows WIN, and the R event behind a Branch on Running destroys the old range and rebuilds it", covers: [round] }
   edges:
     - { from: classes, to: build, label: "one launcher per class" }
@@ -117,11 +119,11 @@ Feel: tune the shots and health so that neither launcher alone can win a round a
 
 # Integration Rubric
 
-- The launcher and spawner pieces are reused unchanged, and the master only calls Fire and SpawnWave: it never names a kind of launcher, bolt, or critter.
+- The launcher and spawner pieces are reused unchanged, and the master only calls Fire and SpawnWave: it never names a kind of launcher, bolt, or critter, and no launcher, bolt, spawner, or critter knows the range or the master exists.
 - The launchers are built from the list of classes and the critters from the wave, in order, at the fixed places, so a new kind is a new entry in a list.
 - Key 1 and key 2 fire the first and second launcher; a number with no launcher, a launcher with no shots left, and a number key with no round running do nothing.
 - Each launcher stops at 8 shots a round, counted by the launcher, and neither launcher alone can win the round.
 - A bolt that was made hurts the nearest living critter ahead of the muzzle by its damage and is spent; a critter at 0 health is defeated, and a shot with nothing ahead hurts nobody.
 - Defeating every critter wins with the time and the shots used shown; 30 seconds without that shows TIME UP.
 - Round 1 starts with play, R starts later rounds only between rounds, and a round start destroys the old launchers, critters, and spawner, so round 2 plays like round 1 and the old timer cannot end it.
-- The submission says why the master owns no rule about which class a launcher or a critter is, and gives the tuned ammo with why a mix of both launchers was needed.
+- The submission says why the master owns no rule about which class a launcher or a critter is, and why a mix of both launchers is needed to win with the fixed ammo.

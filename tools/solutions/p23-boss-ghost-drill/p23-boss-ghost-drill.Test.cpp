@@ -17,6 +17,18 @@ namespace DojoP23DrillTest
 		while (TestWorld.GetWorld()->GetTimeSeconds() < Seconds) TestWorld.Tick(1, FrameSeconds);
 	}
 
+	/** The text on the drill's label, or a marker when the drill has no label, so a missing label fails the test that reads it instead of stopping the engine. */
+	FString LabelOf(const ADojoP23GhostDrill* Drill)
+	{
+		return Drill && Drill->Label ? Drill->Label->Text.ToString() : FString(TEXT("(the drill has no label)"));
+	}
+
+	/** True when the drill has both dummies and both pads, so the reads that follow cannot stop the engine. */
+	bool HasDummiesAndPads(const ADojoP23GhostDrill* Drill)
+	{
+		return Drill && Drill->GetLiveDummy() && Drill->GetGhostDummy() && Drill->GetLivePad() && Drill->GetGhostPad();
+	}
+
 	/** Ticks until Start plus At, then presses a move. */
 	void PressAt(FDojoTestWorld& TestWorld, ADojoP23GhostDrill* Drill, float Start, float At, EDojoP5DrillMove Move, float FrameSeconds)
 	{
@@ -58,6 +70,8 @@ namespace DojoP23DrillTest
 		PlayFirstScript(TestWorld, Drill, Start, FrameSeconds);
 		TickUntil(TestWorld, Start + 10.6f, FrameSeconds);
 
+		if (!HasDummiesAndPads(Drill)) return FString(TEXT("a dummy or a pad is missing"));
+
 		return FString::Printf(TEXT("%d,%d,%d,%d|%s|%s"), Drill->GetLiveDummy()->GetLane(), Drill->GetLiveDummy()->GetBlocks(), Drill->GetLivePad()->GetScore(), Drill->GetGhostPad()->GetScore(), *RecordingText(Drill), *Drill->GetResult());
 	}
 }
@@ -80,7 +94,7 @@ bool FDojo_P23_GhostDrill_TwoRoundsRecordThenReplay::RunTest(const FString& Para
 	TestTrue(TEXT("Round 1 is running"), Drill->IsRunning());
 	TestTrue(TEXT("In its live run"), Drill->IsLive());
 	TestEqual(TEXT("It is round 1"), Drill->GetRoundNumber(), 1);
-	TestEqual(TEXT("The label shows the round, the phase, and both scores"), Drill->Label->Text.ToString(), FString(TEXT("Round 1  LIVE  Live 0  Ghost 0")));
+	TestEqual(TEXT("The label shows the round, the phase, and both scores"), LabelOf(Drill), FString(TEXT("Round 1  LIVE  Live 0  Ghost 0")));
 
 	const float Start = TestWorld.GetWorld()->GetTimeSeconds();
 	PlayFirstScript(TestWorld, Drill, Start, Frame);
@@ -107,12 +121,13 @@ bool FDojo_P23_GhostDrill_TwoRoundsRecordThenReplay::RunTest(const FString& Para
 	TestEqual(TEXT("With two blocks"), Drill->GetGhostDummy()->GetBlocks(), 2);
 	TestEqual(TEXT("And the same 50 points"), Drill->GetGhostPad()->GetScore(), 50);
 	TestEqual(TEXT("So the ghost matches"), Drill->GetResult(), FString(TEXT("GHOST MATCHES")));
-	TestEqual(TEXT("The label shows the result"), Drill->Label->Text.ToString(), FString(TEXT("Round 1  DONE  Live 50  Ghost 50  GHOST MATCHES")));
+	TestEqual(TEXT("The label shows the result"), LabelOf(Drill), FString(TEXT("Round 1  DONE  Live 50  Ghost 50  GHOST MATCHES")));
 
 	Drill->PressNextRound();
 	TestTrue(TEXT("Round 2 is running"), Drill->IsRunning());
 	TestEqual(TEXT("It is round 2"), Drill->GetRoundNumber(), 2);
 	TestEqual(TEXT("The recording starts again"), Drill->GetRecording().Num(), 0);
+	if (!TestTrue(TEXT("Round 2 has both dummies and both pads"), HasDummiesAndPads(Drill))) return false;
 	TestEqual(TEXT("The dummies are fresh"), Drill->GetLiveDummy()->GetBlocks() + Drill->GetGhostDummy()->GetBlocks(), 0);
 	TestEqual(TEXT("And so are the pads"), Drill->GetLivePad()->GetScore() + Drill->GetGhostPad()->GetScore(), 0);
 	TestTrue(TEXT("And the result is empty"), Drill->GetResult().IsEmpty());
@@ -132,7 +147,7 @@ bool FDojo_P23_GhostDrill_TwoRoundsRecordThenReplay::RunTest(const FString& Para
 	TestEqual(TEXT("The live dummy is in lane 2 with one block"), Drill->GetLiveDummy()->GetLane() * 10 + Drill->GetLiveDummy()->GetBlocks(), 21);
 	TestEqual(TEXT("The ghost ended the same way"), Drill->GetGhostDummy()->GetLane() * 10 + Drill->GetGhostDummy()->GetBlocks(), 21);
 	TestEqual(TEXT("Three hits, 30 points on each pad"), Drill->GetLivePad()->GetScore() + Drill->GetGhostPad()->GetScore(), 60);
-	TestEqual(TEXT("The label shows round 2 and its result"), Drill->Label->Text.ToString(), FString(TEXT("Round 2  DONE  Live 30  Ghost 30  GHOST MATCHES")));
+	TestEqual(TEXT("The label shows round 2 and its result"), LabelOf(Drill), FString(TEXT("Round 2  DONE  Live 30  Ghost 30  GHOST MATCHES")));
 
 	return true;
 }

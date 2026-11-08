@@ -6,7 +6,7 @@ kind: boss
 difficulty: 4
 patterns: [component, observer, event-queue]
 skills: [planning, component, observer, event-queue]
-terms: [register-component, findcomponentbyclass, dynamic-multicast-delegate, multicast-delegate, spawnactor, timer-manager]
+terms: [register-component, dynamic-multicast-delegate, multicast-delegate, spawnactor, timer-manager]
 prerequisites: [p23-breakdown-fair-stalls, p9-arena-parts, p6-knockout-herald]
 xp: 340
 estimatedMinutes: 80
@@ -29,6 +29,8 @@ The designer sets the night up in Details. The roster lists each fighter's name,
 On its turn a blow does nothing if the striker or the target is already out of the arena. Otherwise it goes through the health part. When the health part says it has run out, the director sends the target out of the arena, naming the striker as the winner. The blows of one turn land in the order the script lists them.
 
 Knockouts are posted to the herald and are heard only when the herald announces them, at the end of the frame, so two fighters who go down in one turn are announced together, in the order they fell. The director credits a knockout to the winner's team when it hears the announcement, and adds a fighter's loot to the purse when the loot part reports the drop. The label reads `Night N  Team 1: A  Team 2: B  Standing S`, and when the night ends it adds two spaces and the result: `TEAM 1 WINS`, `TEAM 2 WINS`, or `DRAW` when the teams have the same number of knockouts. R starts the next night only after one has ended. A C++ director receives keys only after `EnableInput` with the player controller.
+
+The tests compile against `Quests/p23-boss-arena-night/DojoP23ArenaNight.h`, with the roster and script structs beside it, and read this surface of `ADojoP23ArenaNight`: a `Label` text render component; editable `Roster` and `Script` lists; `PressNextRound`; `IsRunning`; `GetRoundNumber`; `GetStandingCount`; `GetKnockoutsFor(Team)`; `GetPurse(Item)`; `GetResult` (a string, empty until the night ends); `GetHerald`; `GetFighter(Name)`, which is null once that fighter is out; and `GetAnnouncements`, a list of entries with a `Fallen` name, a `Winner` name and the world time in `Seconds`. A roster entry has `FighterName`, `Team`, `MaxHealth`, `LootItem`, `LootCount` and `StartLocation`. A script entry has `Turn`, `Attacker`, `Target` and `Damage`. The director makes its own herald when play begins, and the log stores the world time at which each announcement was heard.
 
 The fighters and the parts know nothing about the director. The director never works out damage, never decides whether loot drops, and never writes an announcement: it calls the parts, it listens, and it keeps the score. It never touches a part's stored values. Reference game: a platform brawler, where an announcer calls out each knockout once the scuffle in a moment has settled and the fallen leave a drop behind.
 

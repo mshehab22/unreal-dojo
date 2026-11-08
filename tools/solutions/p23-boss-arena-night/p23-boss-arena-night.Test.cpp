@@ -56,6 +56,12 @@ namespace DojoP23NightTest
 		return Night;
 	}
 
+	/** The text on the night's label, or a marker when the night has no label, so a missing label fails the test that reads it instead of stopping the engine. */
+	FString LabelOf(const ADojoP23ArenaNight* Night)
+	{
+		return Night && Night->Label ? Night->Label->Text.ToString() : FString(TEXT("(the night has no label)"));
+	}
+
 	/** The health a fighter has left, or -1 when it is out of the arena. */
 	float HealthOf(const ADojoP23ArenaNight* Night, const TCHAR* FighterName)
 	{
@@ -81,7 +87,7 @@ bool FDojo_P23_ArenaNight_TwoNightsOfBlowsAndKnockouts::RunTest(const FString& P
 	TestTrue(TEXT("Night 1 is running"), Night->IsRunning());
 	TestEqual(TEXT("It is night 1"), Night->GetRoundNumber(), 1);
 	TestEqual(TEXT("Four fighters stand"), Night->GetStandingCount(), 4);
-	TestEqual(TEXT("The label shows the night, the knockouts, and the fighters standing"), Night->Label->Text.ToString(), FString(TEXT("Night 1  Team 1: 0  Team 2: 0  Standing 4")));
+	TestEqual(TEXT("The label shows the night, the knockouts, and the fighters standing"), LabelOf(Night), FString(TEXT("Night 1  Team 1: 0  Team 2: 0  Standing 4")));
 
 	const float Start = TestWorld.GetWorld()->GetTimeSeconds();
 	TickUntil(TestWorld, Start + 1.5f);
@@ -123,7 +129,7 @@ bool FDojo_P23_ArenaNight_TwoNightsOfBlowsAndKnockouts::RunTest(const FString& P
 	TickUntil(TestWorld, Start + 7.f);
 	TestFalse(TEXT("The night is over half a second after the sixth turn"), Night->IsRunning());
 	TestEqual(TEXT("Team 2 has more knockouts"), Night->GetResult(), FString(TEXT("TEAM 2 WINS")));
-	TestEqual(TEXT("The label shows the result"), Night->Label->Text.ToString(), FString(TEXT("Night 1  Team 1: 1  Team 2: 2  Standing 1  TEAM 2 WINS")));
+	TestEqual(TEXT("The label shows the result"), LabelOf(Night), FString(TEXT("Night 1  Team 1: 1  Team 2: 2  Standing 1  TEAM 2 WINS")));
 
 	Night->Script = { MakeBlow(1, TEXT("Ash"), TEXT("Cedar"), 30.f), MakeBlow(2, TEXT("Birch"), TEXT("Dune"), 50.f) };
 	TickUntil(TestWorld, Start + 7.5f);
@@ -146,7 +152,7 @@ bool FDojo_P23_ArenaNight_TwoNightsOfBlowsAndKnockouts::RunTest(const FString& P
 	TickUntil(TestWorld, SecondStart + 7.f);
 	TestEqual(TEXT("Both knockouts went to team 1"), Night->GetKnockoutsFor(1), 2);
 	TestEqual(TEXT("So team 1 wins"), Night->GetResult(), FString(TEXT("TEAM 1 WINS")));
-	TestEqual(TEXT("The label shows night 2 and its result"), Night->Label->Text.ToString(), FString(TEXT("Night 2  Team 1: 2  Team 2: 0  Standing 2  TEAM 1 WINS")));
+	TestEqual(TEXT("The label shows night 2 and its result"), LabelOf(Night), FString(TEXT("Night 2  Team 1: 2  Team 2: 0  Standing 2  TEAM 1 WINS")));
 
 	return true;
 }
@@ -208,7 +214,7 @@ bool FDojo_P23_ArenaNight_BlowsThatCannotLandChangeNothing::RunTest(const FStrin
 	TickUntil(TestWorld, Start + 7.f);
 	TestEqual(TEXT("A night with no knockout is a draw"), Night->GetResult(), FString(TEXT("DRAW")));
 	TestEqual(TEXT("Everyone is still standing"), Night->GetStandingCount(), 4);
-	TestEqual(TEXT("The label shows the draw"), Night->Label->Text.ToString(), FString(TEXT("Night 1  Team 1: 0  Team 2: 0  Standing 4  DRAW")));
+	TestEqual(TEXT("The label shows the draw"), LabelOf(Night), FString(TEXT("Night 1  Team 1: 0  Team 2: 0  Standing 4  DRAW")));
 
 	return true;
 }
@@ -241,6 +247,45 @@ bool FDojo_P23_ArenaNight_FightersAreBuiltFromParts::RunTest(const FString& Para
 	TestEqual(TEXT("It drops the plan's item"), Loot->LootItem, FName(TEXT("Coin")));
 	TestEqual(TEXT("In the plan's number"), Loot->LootCount, 2);
 	TestFalse(TEXT("Nothing has dropped yet"), Loot->HasDropped());
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P23_ArenaNight_KnockoutsAreCreditedWhenHeard, "Dojo.P23.ArenaNight.KnockoutsAreCreditedWhenHeard", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** With the herald's tick off a knockout waits in its mailbox: the loot still drops with the loot part's own count, but the team is credited only when the herald announces it. */
+bool FDojo_P23_ArenaNight_KnockoutsAreCreditedWhenHeard::RunTest(const FString& Parameters)
+{
+	using namespace DojoP23NightTest;
+
+	FDojoTestWorld TestWorld;
+
+	ADojoP23ArenaNight* Night = SpawnNight(TestWorld, [](ADojoP23ArenaNight& Tuned)
+	{
+		Tuned.Script = { MakeBlow(1, TEXT("Ash"), TEXT("Cedar"), 30.f) };
+	});
+	if (!TestNotNull(TEXT("Night spawned"), Night)) return false;
+	if (!TestNotNull(TEXT("The night made its herald"), Night->GetHerald())) return false;
+
+	ADojoP6Fighter* Cedar = Night->GetFighter(TEXT("Cedar"));
+	UDojoP9LootComponent* CedarLoot = Cedar ? Cedar->FindComponentByClass<UDojoP9LootComponent>() : nullptr;
+	if (!TestNotNull(TEXT("Cedar has a loot part"), CedarLoot)) return false;
+	CedarLoot->LootCount = 7;
+
+	Night->GetHerald()->SetActorTickEnabled(false);
+
+	const float Start = TestWorld.GetWorld()->GetTimeSeconds();
+	TickUntil(TestWorld, Start + 1.5f);
+	TestEqual(TEXT("Cedar is out of the arena"), Night->GetStandingCount(), 3);
+	TestEqual(TEXT("Cedar's loot dropped with the count its loot part holds"), Night->GetPurse(TEXT("Coin")), 7);
+	TestEqual(TEXT("The knockout waits in the herald's mailbox"), Night->GetHerald()->GetWaitingCount(), 1);
+	TestEqual(TEXT("Nothing has been announced"), Night->GetAnnouncements().Num(), 0);
+	TestEqual(TEXT("So no team has been credited"), Night->GetKnockoutsFor(1), 0);
+
+	Night->GetHerald()->SetActorTickEnabled(true);
+	TestWorld.Tick(1);
+	TestEqual(TEXT("The herald announced the knockout"), Night->GetAnnouncements().Num(), 1);
+	TestEqual(TEXT("And the winner's team is credited when it is heard"), Night->GetKnockoutsFor(1), 1);
 
 	return true;
 }

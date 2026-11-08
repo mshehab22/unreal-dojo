@@ -26,9 +26,9 @@ type: multiple-choice
 prompt: "Guess, no penalty: a pickup in the yard is either a coin or a gem, and the design says it will never be anything else. A teammate wants a pickup rule base class, a coin rule, a gem rule, and a Details picker. Is that the right tool?"
 choices:
   - Yes, every choice between two behaviours should be a rule class
-  - Yes, but only if the rules are marked Instanced
-  - No; a bool and an if are clearer, and there is nothing to add later
-  - No; use a Blueprint instead
+  - Yes, as long as every rule is marked Instanced for Details
+  - No; a bool and an if are clearer for two fixed kinds
+  - No; a Blueprint would be the better choice for this
 answerIndex: 2
 explanation: A base class and two rules cost three files and a pointer to choose between two things that will never become three. An if says the same thing in one place.
 ```
@@ -73,22 +73,22 @@ void ADojoPickup::Collect(ADojoPlayer* Collector)
   type: multiple-choice
   prompt: "A door is closed, opening, open, or closing, and it moves from one to the next when the player acts and when its timer ends. Which pattern fits?"
   choices:
-    - Strategy, with a rule for each of the four
-    - State, because the door changes its own behaviour in response to events
-    - Subclass Sandbox, with a door class for each of the four
+    - Strategy, with one rule for each of the four modes
+    - Subclass Sandbox, with a class for each of the four
     - Type Object, with a data row for each of the four
-  answerIndex: 1
+    - State, because the door switches itself on events
+  answerIndex: 3
   explanation: The door switches itself, and each mode leads to the next. A strategy is chosen from outside and stays put.
 - id: when-not-private-data
   type: multiple-choice
   prompt: "A targeting rule needs seven of the turret's private fields to do its job. What does that suggest?"
   choices:
-    - The rule should be marked Instanced
-    - The line between the rule and the turret is in the wrong place, so pass only what the rule needs or keep the work in the turret
-    - The turret's fields should all become public
-    - The rule should be a Blueprint
-  answerIndex: 1
-  explanation: A rule is supposed to need little from its host. One that needs a lot is really part of the host.
+    - The line between rule and turret is in the wrong place
+    - The rule should be marked Instanced so Details creates it
+    - Every field of the turret should be made public
+    - The rule should be rebuilt as a Blueprint class
+  answerIndex: 0
+  explanation: A rule is supposed to need little from its host, so pass it only what it needs or keep the work in the turret. One that needs a lot is really part of the host.
 - id: spot-leftover-rule
   type: spot-the-bug
   prompt: A dummy makes its rule object from its class the first time it steps and keeps it, and its class can be changed at any time. Which line keeps the dummy moving by the old rule after the class is changed?
@@ -106,10 +106,10 @@ void ADojoPickup::Collect(ADojoPlayer* Collector)
   type: multiple-choice
   prompt: "A patrol rule remembers which way it is heading, and one patrol rule object is given to two dummies. What happens?"
   choices:
-    - Nothing, each dummy has its own heading inside the dummy
-    - Each dummy turns round when the other reaches an end, because they share the one heading
-    - The second dummy cannot be given a rule
-    - Both dummies stand still
+    - Nothing, because each dummy keeps its own heading inside itself
+    - Each turns round when the other does, sharing a heading
+    - Both dummies stand still until the object is released
+    - The second dummy cannot be given a rule at all
   answerIndex: 1
   explanation: The heading lives in the rule object, so two dummies that share the object share the heading.
 - id: explain-when-not

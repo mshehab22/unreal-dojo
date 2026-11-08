@@ -15,7 +15,7 @@ concepts:
   - A checkpoint desk is a facade over USaveGame objects, the bytes they become, and the slots that keep them
   - Callers save and load with a gate, a spot, and a health, and never see a save object or a byte
   - The desk keeps only the three newest checkpoints in memory, overwriting the oldest
-  - LoadLatest gives the newest checkpoint kept and LoadBack the ones before it, however many were ever saved
+  - LoadLatest gives the newest checkpoint kept and LoadBack the ones before it
   - Callers depend on the desk; the save object knows nothing about it
 ---
 
@@ -25,7 +25,7 @@ When you press Play, a gate that saves a checkpoint and a pit that loads one nev
 
 Saving in Unreal takes several steps. `UGameplayStatics::CreateSaveGameObject` makes a `USaveGame` of your class, you fill its UPROPERTY fields, and `UGameplayStatics::SaveGameToMemory` turns it into a `TArray<uint8>` (or `SaveGameToSlot` writes it to disk). Loading reverses it: `LoadGameFromMemory` makes a new object from the bytes, and you cast it to your class. `UDojoP22CheckpointDesk` is a facade over all of that: a world subsystem with five calls, and a `UDojoP22CheckpointSave` behind it that the callers never see.
 
-The desk keeps the three newest checkpoints as bytes, one per slot; a fourth save overwrites the oldest. Written for you: `SaveCheckpoint`, which makes, fills, and writes a save into the next slot, and `ClearCheckpoints`. Write the rest:
+The desk keeps the three newest checkpoints as bytes, one per slot; a fourth save overwrites the oldest. Written for you: `SaveCheckpoint`, which makes, fills, and writes a save into the next slot; `ClearCheckpoints`; the slots, sized when the world starts; and `BytesIn(Slot)`, which gives the bytes in a slot, or none for a slot that does not exist, so loading from a wrong slot fails instead of crashing. Write the rest:
 
 - `GetCheckpointCount`: how many checkpoints are kept now, never more than three.
 - `LoadBack(StepsBack, ...)`: the checkpoint `StepsBack` saves before the newest kept one, 0 being the newest. It reads the slot's bytes back into a save object and copies out its gate, spot, and health. When that checkpoint is not kept, or `StepsBack` is negative, it returns false and leaves the outputs as they were.
@@ -112,7 +112,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Checkpoints")
 	void ClearCheckpoints();
 
+	/** Sizes the slots when the world starts, so every slot exists from the first call. */
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+
 private:
+	/** The bytes kept in a slot; empty for a slot that holds nothing or does not exist. */
+	const TArray<uint8>& BytesIn(int32 Slot) const;
+
 	/** Each kept checkpoint as the bytes UGameplayStatics::SaveGameToMemory wrote, by slot. */
 	TArray<TArray<uint8>> Slots;
 
@@ -132,6 +138,19 @@ private:
 #include "DojoP22CheckpointSave.h"
 #include "Kismet/GameplayStatics.h"
 
+void UDojoP22CheckpointDesk::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+
+	Slots.SetNum(SlotCount);
+}
+
+const TArray<uint8>& UDojoP22CheckpointDesk::BytesIn(int32 Slot) const
+{
+	static const TArray<uint8> NoBytes;
+	return Slots.IsValidIndex(Slot) ? Slots[Slot] : NoBytes;
+}
+
 void UDojoP22CheckpointDesk::SaveCheckpoint(FName Gate, FVector Where, int32 Health)
 {
 	UDojoP22CheckpointSave* Save = Cast<UDojoP22CheckpointSave>(UGameplayStatics::CreateSaveGameObject(UDojoP22CheckpointSave::StaticClass()));
@@ -141,7 +160,6 @@ void UDojoP22CheckpointDesk::SaveCheckpoint(FName Gate, FVector Where, int32 Hea
 	Save->Where = Where;
 	Save->Health = Health;
 
-	Slots.SetNum(SlotCount);
 	Slots[NextSlot].Reset();
 	UGameplayStatics::SaveGameToMemory(Save, Slots[NextSlot]);
 	NextSlot = (NextSlot + 1) % SlotCount;
@@ -165,7 +183,11 @@ int32 UDojoP22CheckpointDesk::GetCheckpointCount() const
 
 void UDojoP22CheckpointDesk::ClearCheckpoints()
 {
-	Slots.Reset();
+	for (TArray<uint8>& Bytes : Slots)
+	{
+		Bytes.Reset();
+	}
+
 	NextSlot = 0;
 	SavedCount = 0;
 }
@@ -200,7 +222,7 @@ namespace DojoP22CheckpointDeskTest
 
 		if (Number == 0)
 		{
-			const bool bUntouched = Gate == FName(TEXT("Untouched")) && Health == -1;
+			const bool bUntouched = Gate == FName(TEXT("Untouched")) && Health == -1 && Where.Equals(FVector(-1.0, -1.0, -1.0), 0.01);
 			return Test.TestFalse(When + FString::Printf(TEXT(": nothing is kept %d back"), StepsBack), bFound) && Test.TestTrue(When + TEXT(": and the outputs are untouched"), bUntouched);
 		}
 
@@ -261,6 +283,7 @@ bool FDojo_P22_CheckpointDesk_NewestFirst::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Three saved, three kept"), Desk->GetCheckpointCount(), 3);
 	ExpectBack(*this, Desk, 0, 3, TEXT("After three saves"));
 	ExpectBack(*this, Desk, 2, 1, TEXT("After three saves"));
+	ExpectBack(*this, Desk, -1, 0, TEXT("Asking for -1 back after three saves"));
 
 	return true;
 }
@@ -321,14 +344,14 @@ bool FDojo_P22_CheckpointDesk_ClearForgetsAll::RunTest(const FString& Parameters
 
 # Hints
 
-- Three of the four tests pass with a simple answer and one fails. How many checkpoints had been saved in the test that fails, and what did the fourth save do to the slots?
-- After four saves, which slot holds the newest checkpoint, and which holds the oldest one still kept? Is the newest still in the last slot?
-- `SaveCheckpoint` already knows which slot it will write next. How many slots back from that one is the newest, and how do you step back past slot 0?
+- Three of the four tests pass with a simple answer, so ask how many checkpoints had been saved in the one that fails.
+- After four saves, which slot holds the newest checkpoint, and which holds the oldest one still kept?
+- `SaveCheckpoint` already knows which slot it will write next, so count back from that one.
 
 # Rubric
 
 - GetCheckpointCount is the number of checkpoints kept, at most three, and 0 after clearing.
-- LoadLatest hands back the newest checkpoint kept, however many were ever saved.
+- LoadLatest hands back the newest checkpoint kept.
 - LoadBack hands back the checkpoint StepsBack saves before the newest, and false for one that is not kept or a negative StepsBack, leaving the outputs untouched.
 - Every checkpoint comes back exactly: its gate, its spot, and its health, read back from the bytes the desk wrote.
 - Callers never see a save object, a slot, or a byte; they call the desk's five functions.
@@ -342,7 +365,7 @@ Keeping the save objects themselves in a UPROPERTY array would skip the bytes, b
 
 ```yaml
 - id: save-checkpoint
-  prompt: Put SaveCheckpoint in order. It makes the save object first, fills Gate, then Where, then Health, sizes the slots just before writing one, and moves to the next slot before counting the save.
+  prompt: Put SaveCheckpoint in order. It makes the save object first, fills Gate, then Where, then Health, clears the slot it will write, writes the save there, and moves to the next slot before counting the save.
   lines:
     - "void UDojoP22CheckpointDesk::SaveCheckpoint(FName Gate, FVector Where, int32 Health)"
     - "{"
@@ -351,7 +374,6 @@ Keeping the save objects themselves in a UPROPERTY array would skip the bytes, b
     - "	Save->Gate = Gate;"
     - "	Save->Where = Where;"
     - "	Save->Health = Health;"
-    - "	Slots.SetNum(SlotCount);"
     - "	Slots[NextSlot].Reset();"
     - "	UGameplayStatics::SaveGameToMemory(Save, Slots[NextSlot]);"
     - "	NextSlot = (NextSlot + 1) % SlotCount;"

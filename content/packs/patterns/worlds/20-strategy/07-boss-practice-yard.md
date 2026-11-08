@@ -28,7 +28,7 @@ The designer sets the yard up in Details. Each dummy has a name, a start place, 
 
 Every 0.5 seconds, the first at 0.25 seconds, every dummy that is still standing takes one step of 0.5 seconds through its own mover. Every 2 seconds, the first at 2 seconds, the launcher fires once. Before it fires, the director gives it the dummies as they are right now, with their names, their places, and their health. The launcher's rule picks, and a hit takes 10 health from the dummy the launcher names. A shot at nothing is a miss. Each shot is added to a log that keeps the name hit, or a dash for a miss. The round ends at 29 seconds, and the yard is `CLEARED` when no dummy is standing and `ESCAPED` otherwise.
 
-The first rule class in the list is the launcher's rule when play begins. Pressing T gives the launcher a new rule, made from the next class in the list, going round to the start after the last, and it works at any time, in a round or between rounds. With an empty list the launcher has no rule and every shot is a miss. Round 1 starts when play begins, and R starts the next round only after one has ended. Starting a round puts every dummy back at its start place with its full health, clears the hits, the log, and the result, and starts the timers again. The rule the launcher is using does not change when a round starts. A C++ director receives keys only after `EnableInput` with the player controller. The label reads `Round N  <rule class name>  Hits H  Standing S`, with `None` where the rule class name goes when the launcher has no rule, and when the round ends it adds two spaces and the result.
+The first rule class in the list is the launcher's rule when play begins. Pressing T gives the launcher a new rule, made from the next class in the list, going round to the start after the last, and it works at any time, in a round or between rounds. With an empty list the launcher has no rule and every shot is a miss. Round 1 starts when play begins, and R starts the next round only after one has ended. Starting a round puts every dummy back at its start place with its full health, clears the hits, the log, and the result, and starts the timers again. The rule the launcher is using does not change when a round starts. A C++ director receives keys only after `EnableInput` with the player controller. The label reads `Round N  <rule class name>  Hits H  Standing S`, where the rule class name is the class of the rule object now in the launcher as `GetClass()->GetName()` gives it, for example `DojoP20NearestRule`, with `None` there when the launcher has no rule, and when the round ends it adds two spaces and the result.
 
 The launcher and the dummies know nothing about the director. The director never names a targeting rule class or a movement rule class, never tests which kind of rule a piece holds, and never decides who is aimed at: it hands over the dummies and reads the name that comes back. Reference game: a tower defence game, where each tower has a target priority such as first, last, strongest, or closest that the player switches in the middle of a wave, and where the enemies on the path move by their own patterns.
 
@@ -36,13 +36,15 @@ Compiles against earlier quests: p20-target-rules (`Quests/p20-target-rules/Dojo
 
 Core numbers are fixed: a 29 second round, a step every 0.5 seconds from 0.25, a shot every 2 seconds from 2, a hit worth 10 health, and the dummies' starting health of 30, 50, and 40. They are the defaults of three public properties on the director, `RoundSeconds` and `FireInterval` (both `float`) and `HitDamage` (an `int32`), and the tests set those properties to other values: a round lasts `RoundSeconds`, a shot comes every `FireInterval` with the first after one interval, and a hit takes `HitDamage`.
 
+The director's public surface is what the tests read and set: the header `Quests/p20-boss-practice-yard/DojoP20PracticeYard.h`, a `Label` text render component, the lists `Dummies` (of `FDojoP20DummyPlan`, each with `DummyName`, `StartLocation`, `StartHealth` and `MoveRuleClass`) and `RuleClasses` (of `TSubclassOf<UDojoP20TargetRule>`), the key functions `PressCycleRule` and `PressNextRound`, and the readers `IsRunning`, `GetRoundNumber`, `GetHits`, `GetStandingCount`, `GetResult`, `GetShotLog`, `GetMover(Index)`, which gives the mover of dummy Index or nothing, and `GetLauncher`. The tests fill the lists before play begins. A test world has no player controller, so bind the keys only when there is one: without a controller `EnableInput` does nothing and the actor has no input component to bind to.
+
 Extensions, in order of importance:
 
 1. A second launcher with its own list of rule classes: the label shows both rules in use.
 2. A new targeting rule that aims at the standing dummy after the one it hit last. It remembers, so each launcher needs an object of its own, and adding it must change nothing in the director.
 3. A label line showing the shot log, so a swap can be seen in the order of the hits.
 
-Feel: judge the fixed numbers by whether a player who never touches T clears the yard with only a little time to spare, and a player who swaps to the right rule at the right moment clears it earlier. Make the moment the circling crate comes close the moment a swap feels worth having.
+Feel: judge the fixed numbers by whether any rule clears the yard with a little time to spare, and by whether a swap at the right moment changes which dummy falls first, so the order of the log is where a player feels their choice. Make the moment the circling crate comes close the moment a swap feels worth having.
 
 # Required Pieces
 
@@ -61,7 +63,7 @@ Feel: judge the fixed numbers by whether a player who never touches T clears the
   why: The dummies move by their own rules, and a dummy that is down stops.
 - id: fire
   kind: step
-  label: Every 2 seconds from 2 the launcher is given the dummies as they are now, fires, and the dummy it names loses 10 health
+  label: Every 2 seconds from 2 (by default) the launcher is given the dummies as they are now, fires, and the dummy it names loses health, 10 by default
   why: The rule can only choose well from fresh places and health, and the director only reads the answer.
 - id: swap
   kind: step
@@ -69,7 +71,7 @@ Feel: judge the fixed numbers by whether a player who never touches T clears the
   why: The player changes the rule from outside, and the next shot has to follow it.
 - id: round
   kind: step
-  label: A 29 second round, R only between rounds, and a reset that puts the dummies back and clears the log without changing the rule
+  label: A round of 29 seconds by default, R only between rounds, and a reset that puts the dummies back and clears the log without changing the rule
   why: A second round must play like the first, and the rule the player chose stays.
 - id: result
   kind: step
@@ -104,7 +106,7 @@ Feel: judge the fixed numbers by whether a player who never touches T clears the
     - { id: setup, kind: data, label: "A Blueprint struct for a dummy with a name, a start place, a starting health, and a class variable of the movement rule, in an array variable, plus an array of the targeting rule classes", covers: [setup] }
     - { id: step, kind: step, label: "A looping Set Timer by Event with a 0.25 second start delay and a 0.5 second time, a For Each over the movers that calls Step with 0.5 behind a Branch on that dummy's health", covers: [step] }
     - { id: fire, kind: step, label: "A looping Set Timer by Event with a 2 second start delay: a For Each building the launcher's Candidates from Get Actor Location and the health array, then Fire, an append to the log, and a subtract of 10 from the health of the named dummy", covers: [fire] }
-    - { id: swap, kind: step, label: "The T event adds one to a rule index with a modulo on the array length, then Construct Object from Class with the class at that index and the launcher as outer, into Set Rule on the launcher", covers: [swap] }
+    - { id: swap, kind: step, label: "The T event, which needs Enable Input called on the player controller in Begin Play, goes through a Branch on the array not being empty, adds one to a rule index with a modulo on the array length, then Construct Object from Class with the class at that index and the launcher as outer, into Set Rule on the launcher", covers: [swap] }
     - { id: round, kind: step, label: "A Start Round custom event resets the health array, calls Set Actor Location and Set Rule Class on each mover, clears the log and the hits, starts the three timers, and sets Running; the R event calls it behind a Branch on Running", covers: [round] }
     - { id: result, kind: step, label: "A 29 second Set Timer by Event stops the timers, sets Running false, and sets CLEARED or ESCAPED by counting the health values above 0", covers: [result] }
   edges:
@@ -118,11 +120,11 @@ Feel: judge the fixed numbers by whether a player who never touches T clears the
 
 # Integration Rubric
 
-- The launcher and the movers are reused unchanged, and the director never names a targeting or movement rule class, tests which kind of rule a piece holds, or decides who is aimed at: it hands the launcher the dummies and reads the name that comes back.
+- The launcher and the movers are reused unchanged and know nothing about the director, and the director never names a targeting or movement rule class, tests which kind of rule a piece holds, or decides who is aimed at: it hands the launcher the dummies and reads the name that comes back.
 - The targeting rule classes and each dummy's movement rule class come from Details, so a new rule class is chosen there with no change to the director; with an empty list the launcher has no rule and every shot is a miss.
 - T gives the launcher a new rule object made from the next class, so the next shot follows the new rule, in a round and between rounds, and the list goes round to its start.
 - Every standing dummy is stepped through its own mover every 0.5 seconds from 0.25, and a dummy that is down is neither stepped nor aimed at.
-- Before each shot the launcher is given the dummies' current names, places, and health, a hit takes 10 health from the named dummy, and a shot at nothing is a miss that is logged.
-- A round lasts 29 seconds, the result is CLEARED when no dummy is standing and ESCAPED otherwise, and the label shows the round, the rule class in use, the hits, the dummies standing, and the result as specified.
+- Before each shot the launcher is given the dummies' current names, places, and health, a hit takes its damage (10 by default) from the named dummy, and a shot at nothing is a miss that is logged.
+- A round lasts its length (29 seconds by default), the result is CLEARED when no dummy is standing and ESCAPED otherwise, and the label shows the round, the rule class in use, the hits, the dummies standing, and the result as specified.
 - R starts a round only between rounds, and a new round puts every dummy back at its start with full health, clears the hits, the log, and the result, restarts the timers, and keeps the rule the player chose.
 - The submission says which function decides each shot, why the director holds a list of classes instead of a switch, and says how the fixed damage and interval felt in play.

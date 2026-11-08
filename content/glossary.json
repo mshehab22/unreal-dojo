@@ -1317,7 +1317,7 @@
     ],
     "category": "framework",
     "short": "A spawn that hands you the new actor before its construction script and BeginPlay run, so you can set it up first.",
-    "long": "SpawnActor runs the whole start of an actor's life, construction script and BeginPlay included, before it returns, so anything BeginPlay reads must be set before that. GetWorld()->SpawnActorDeferred<T>(Class, Transform) stops just short: you get the actor, set its properties, and then call FinishSpawning(Transform) to run construction and BeginPlay with your values in place. A rack that loads bombs already burning, or a projectile told its speed before it starts moving, needs it. Every deferred spawn must be finished, or the actor never begins play.",
+    "long": "SpawnActor runs the whole start of an actor's life, construction script and BeginPlay included, before it returns. GetWorld()->SpawnActorDeferred<T>(Class, Transform) stops just short: you get the actor, set its properties, and then call FinishSpawning(Transform) to run construction and BeginPlay with your values in place. A rack that loads bombs already burning, or a projectile told its speed before it starts moving, needs it. Every deferred spawn must be finished, or the actor never begins play.",
     "unrealDocsUrl": "https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UWorld?application_version=5.8",
     "related": [
       "spawnactor",

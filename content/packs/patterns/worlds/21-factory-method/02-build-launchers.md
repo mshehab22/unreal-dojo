@@ -28,7 +28,7 @@ Most of the code is written. First read the marked lines and say in a sentence w
 
 ## See it in the editor
 
-Place a `DojoP21EmberLauncher`, a `DojoP21FrostLauncher`, and a `DojoP21DudLauncher` in the level, a few hundred units apart, all facing the same way. In the Level Blueprint, on Begin Play call Fire on each launcher and print the Damage of the bolt it returns: 12 and 7, and the dud returns nothing, so print Is Valid for it: false. Then print `Shots Fired` on each launcher: 1, 1, and 0. Also print each returned bolt's `Shooter`, which names the launcher that made it, and its `Shooter Known At Begin Play`, which is true. Add a fourth kind with a C++ subclass of `DojoP21Launcher` that overrides `CreateBolt`: nothing in the base class asks you to touch Fire. (A Blueprint child of the ember launcher only changes its defaults, such as Muzzle Distance, because `CreateBolt` is not exposed to Blueprint.)
+Place a `DojoP21EmberLauncher`, a `DojoP21FrostLauncher`, and a `DojoP21DudLauncher` in the level, a few hundred units apart, all facing the same way. Launchers and bolts have only an invisible root, so nothing shows in the viewport and the Output Log is where you read the result. Select each launcher in the level, right-click an empty spot in the Level Blueprint graph, and choose Create a Reference to it. In the Level Blueprint, on Begin Play call Fire on each launcher and print the Damage of the bolt it returns: 12 and 7, and the dud returns nothing, so print Is Valid for it: false. Print each returned bolt's `Get Actor Location` as well: it is 50 units in front of its launcher. Then print `Shots Fired` on each launcher: 1, 1, and 0. Also print each returned bolt's `Shooter`, which names the launcher that made it, and its `Shooter Known At Begin Play`, which is true. Add a fourth kind with a C++ subclass of `DojoP21Launcher` that overrides `CreateBolt`: nothing in the base class asks you to touch Fire. (A Blueprint child of the ember launcher only changes its defaults, such as Muzzle Distance, because `CreateBolt` is not exposed to Blueprint.)
 
 # Files
 
@@ -435,9 +435,9 @@ bool FDojo_P21_Launchers_SurvivesAFailedCreate::RunTest(const FString& Parameter
 
 # Hints
 
-- `CreateBolt` hands back a bolt that has not begun play. What has to happen to it before it can act in the world, and what would be different if the launcher did that step first and set the shooter afterwards?
-- The base launcher may call only what `ADojoP21Bolt` offers. Which line of `Fire` would stop compiling, or stop working for a new launcher, if it named one kind of bolt?
-- The dud launcher answers `CreateBolt` with nothing. Which two things must `Fire` skip in that case, so the dud's count stays at zero?
+- Look at what state the bolt from `CreateBolt` is in when `Fire` receives it, and what still has to be done to it.
+- The base launcher may call only what `ADojoP21Bolt` offers, so no line of `Fire` may name one kind of bolt.
+- The dud launcher answers `CreateBolt` with nothing, so decide which two things `Fire` must skip in that case.
 
 # Rubric
 
@@ -450,7 +450,7 @@ bool FDojo_P21_Launchers_SurvivesAFailedCreate::RunTest(const FString& Parameter
 
 # Alternative
 
-The base launcher could hold a bolt class as a property and spawn it directly, with no virtual function at all. That is shorter, and it is what a later quest in this world builds, because for a class that only differs by data it is the better tool. A subclass per kind earns its place when making the bolt takes more than choosing a class: a launcher that fires three bolts in a fan, one that takes bolts from a pool, or one whose bolts need a different setup. Another alternative is to spawn the bolt already finished and set the shooter afterwards. That works until a bolt reads its shooter in `BeginPlay`, as this one does; then it silently sees nothing.
+The base launcher could hold a bolt class as a property and spawn it directly, with no virtual function at all. That is shorter, and it is what a later quest in this world builds, because for a class that only differs by data it is the better tool. A subclass per kind earns its place when making the bolt takes more than choosing a class: a launcher whose bolts need extra setup, or one that takes bolts from a pool. Another alternative is to spawn the bolt already finished and set the shooter afterwards. That works until a bolt reads its shooter in `BeginPlay`, as this one does; then it silently sees nothing.
 
 # Parsons
 

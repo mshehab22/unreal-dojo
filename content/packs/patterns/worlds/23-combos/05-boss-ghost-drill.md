@@ -24,17 +24,19 @@ pieces:
 
 The director runs a ghost drill. A round has two halves of equal length. In the first, the player drills a live dummy by pressing moves, and every move is recorded. In the second, a ghost dummy runs the recording, and at the end the two dummies and their pads are compared. The earlier quests supply the rules: a drill dummy that steps between three lanes and blocks, an order that carries a move out on a dummy as a plain value, and a drum pad that counts hits from one finished snapshot for each frame.
 
-The director owns a clock. Real time collects frame by frame, and the clock runs whole fixed steps of 0.1 seconds from it, however long a frame was, at most 8 steps in one frame. A frame that owes more steps than are allowed runs the allowed ones and keeps at most one step of the rest, instead of catching up on all of it later. The engine itself caps a frame at 0.4 seconds, which is four steps, so the limit guards against a stall that other code hands straight to the clock. A round has 100 steps in all: steps 1 to 50 are the live run and steps 51 to 100 are the replay.
+The director owns a clock. Frame time collects frame by frame, and the clock runs whole fixed steps of 0.1 seconds from it, however long a frame was, at most 8 steps in one frame. A frame that owes more steps than are allowed runs the allowed ones, keeps exactly one step of the rest, and drops the others, instead of catching up on all of it later. The engine itself caps a frame at 0.4 seconds by default (a World Settings value), which is four steps, so the limit guards against a stall that other code hands straight to the clock. A round has 100 steps in all by default: steps 1 to 50 are the live run and steps 51 to 100 are the replay.
 
 During the live run, A is a step left, D a step right, and Space a block. A press does nothing at any other time. A pressed move waits until the next fixed step and then runs on the live dummy, in the order pressed, and is recorded with the number of that step. Each time a move runs, in either half, the director hits the pad lane that the dummy is in after the move. In the replay, the commands recorded on step N run on the ghost dummy on step 50 plus N, the same way, and hit the ghost's pad.
 
-The round is scored 10.5 seconds after it starts, after the last pad has counted its last hit. The result is `GHOST MATCHES` when the two dummies are in the same lane with the same number of blocks and the two pads have the same score, and `GHOST DRIFTED` otherwise. The label reads `Round N  PHASE  Live L  Ghost G`, with the phase `LIVE`, `REPLAY`, or `DONE`, and when the round is scored it adds two spaces and the result. R starts the next round only after one has been scored, and a new round makes fresh dummies and pads and forgets the recording. A C++ director receives keys only after `EnableInput` with the player controller.
+The round is scored 10.5 seconds after it starts, after the last pad has counted its last hit. The result is `GHOST MATCHES` when the two dummies are in the same lane with the same number of blocks and the two pads have the same score, and `GHOST DRIFTED` otherwise. The label reads `Round N  PHASE  Live L  Ghost G`, where L is the live pad's score and G is the ghost pad's, and the phase is `LIVE` until the last live step has run, `REPLAY` until the last replay step has run, and `DONE` after that; when the round is scored it adds two spaces and the result. R starts the next round only after one has been scored, and a new round makes fresh dummies and pads and forgets the recording. A C++ director receives keys only after `EnableInput` with the player controller.
 
 The dummies and the pads know nothing about the director. The director never works out a lane, a block, or a score, and never changes a pad's counts: it carries orders out on the dummies and hits the pads. Reference game: a racing game, where a ghost car drives your best lap again, exactly as you drove it, on any machine.
 
 Compiles against earlier quests: p5-drill-orders (`Quests/p5-drill-orders/DojoP5DrillDummy.h`, `Quests/p5-drill-orders/DojoP5DrillSergeant.h`) and p4-drum-pad (`Quests/p4-drum-pad/DojoP4DrumPad.h`).
 
-Core numbers are fixed: a step of 0.1 seconds, 50 live steps and 50 replay steps, at most 8 steps in a frame, a score 10.5 seconds after the round starts, and 10 points for a hit.
+Core numbers are the defaults of two editable properties on the director, `LiveSteps` (an `int32`, 50) and `FixedStepSeconds` (a `float`, 0.1): a round has twice `LiveSteps` steps, and it is scored `2 x LiveSteps x FixedStepSeconds + 0.5` seconds after it starts, which is 10.5 seconds by default. The tests change both properties before play begins. The other numbers are fixed: at most 8 steps in a frame and 10 points for a hit.
+
+The tests compile against `Quests/p23-boss-ghost-drill/DojoP23GhostDrill.h` and read this surface of `ADojoP23GhostDrill`: a `Label` text render component; a public `Tick(float)`, which they call directly to hand the clock a long frame; `PressMove` (taking the earlier quest's move enum) and `PressNextRound`; `IsRunning`; `IsLive`; `GetRoundNumber`; `GetResult` (a string, empty until the round is scored); `GetStepCount` (the fixed steps run so far this round); `GetRecording`, a list of entries with a `Step` and a `Move`; and `GetLiveDummy`, `GetGhostDummy`, `GetLivePad` and `GetGhostPad`. The dummies and pads are read with the earlier quests' `GetLane`, `GetBlocks` and `GetScore`.
 
 Extensions, in order of importance:
 
@@ -57,7 +59,7 @@ Feel: tune the step length so that a rapid pair of presses reads as two moves in
   why: A recording of small values replays on any dummy and costs almost nothing to keep.
 - id: clock
   kind: step
-  label: Real time collects each frame and whole fixed steps of 0.1 seconds run from it, up to 8 a frame, with at most one step of a long frame's debt kept
+  label: Frame time collects each frame and whole fixed steps of 0.1 seconds run from it, up to 8 a frame, with exactly one step of a long frame's debt kept
   why: The same whole steps run on every machine, and a long frame cannot start a spiral of catching up.
 - id: live-run
   kind: step
@@ -93,7 +95,7 @@ Feel: tune the step length so that a rapid pair of presses reads as two moves in
     - { id: live-run, kind: step, label: "PressMove adds to a pending TArray only while the live run is on, and RunStep, for steps up to 50, runs each pending move, records it, and clears the array", covers: [live-run] }
     - { id: replay-run, kind: step, label: "RunStep, for later steps, walks the recording for entries whose step equals the step minus 50 and runs them through the same Perform function that the live run used", covers: [replay-run] }
     - { id: pads, kind: data, label: "Perform builds a FDojoP5DrillOrder for the dummy and calls CarryOut, then calls Hit on that dummy's pad with the dummy's lane", covers: [pads] }
-    - { id: scoring, kind: step, label: "A non-looping timer of 10.5 seconds compares GetLane, GetBlocks, and GetScore on both sides and sets the result", covers: [scoring] }
+    - { id: scoring, kind: step, label: "A non-looping timer of 10.5 seconds (twice the live steps times the step, plus half a second) compares GetLane, GetBlocks, and GetScore on both sides and sets the result", covers: [scoring] }
     - { id: round, kind: step, label: "PressNextRound calls StartRound only while stopped; StartRound destroys the old dummies and pads, spawns new ones, and clears the pending moves, the recording, and the accumulator", covers: [round] }
   edges:
     - { from: clock, to: live-run, label: "runs the live steps" }
@@ -109,11 +111,11 @@ Feel: tune the step length so that a rapid pair of presses reads as two moves in
   pieces:
     - { id: director, kind: class, label: "ADojoP23GhostDrill with a text label as its root, tick enabled, TObjectPtr members for the two dummies and two pads, and a clock object and a recorder object made in its constructor", covers: [director] }
     - { id: moves, kind: data, label: "A plain struct of an int for the step and the earlier quest's EDojoP5DrillMove enum, kept in the recorder object's TArray", covers: [moves] }
-    - { id: clock, kind: step, label: "A clock object whose Advance takes DeltaSeconds, adds it to a double accumulator, and returns how many whole steps to run, at most the limit, keeping at most one step of the rest of a long frame", covers: [clock] }
+    - { id: clock, kind: step, label: "A clock object whose Advance takes DeltaSeconds, adds it to a double accumulator, and returns how many whole steps to run, at most the limit, keeping exactly one step of the rest of a long frame", covers: [clock] }
     - { id: live-run, kind: step, label: "PressMove adds to a pending TArray only while the live run is on, and the director's step function, for steps up to 50, runs each pending move, hands it to the recorder with the step, and clears the array", covers: [live-run] }
     - { id: replay-run, kind: step, label: "The step function, for later steps, asks the recorder for the commands of step minus 50 and runs them through the same Perform function that the live run used", covers: [replay-run] }
     - { id: pads, kind: data, label: "Perform builds a FDojoP5DrillOrder for the dummy and calls CarryOut, then calls Hit on that dummy's pad with the dummy's lane", covers: [pads] }
-    - { id: scoring, kind: step, label: "A non-looping timer of 10.5 seconds compares GetLane, GetBlocks, and GetScore on both sides and sets the result", covers: [scoring] }
+    - { id: scoring, kind: step, label: "A non-looping timer of 10.5 seconds (twice the live steps times the step, plus half a second) compares GetLane, GetBlocks, and GetScore on both sides and sets the result", covers: [scoring] }
     - { id: round, kind: step, label: "PressNextRound starts a round only while stopped; a new round destroys the old dummies and pads, spawns new ones, and resets the clock object and the recorder object", covers: [round] }
   edges:
     - { from: clock, to: live-run, label: "runs the live steps" }
@@ -129,7 +131,7 @@ Feel: tune the step length so that a rapid pair of presses reads as two moves in
 # Integration Rubric
 
 - The drill dummy, the order, and the drum pad are reused unchanged, and the director never works out a lane, a block, or a score, and never changes a pad's counts: it carries orders out and hits the pads.
-- Real time collects frame by frame and whole fixed steps of the same length run from it, so the live run, the recording, and the replay come out the same at 30, 60, and 144 frames a second, and a long frame runs at most the allowed steps and keeps at most one step of the rest.
+- Frame time collects frame by frame and whole fixed steps of the same length run from it, so the live run, the recording, and the replay come out the same at 30, 60, and 144 frames a second, and a long frame runs at most the allowed steps and keeps exactly one step of the rest.
 - A move pressed during the live run waits for the next fixed step and runs in the order pressed, several in one step if need be, and a move pressed at any other time does nothing.
 - Every command is recorded with the step it ran on and carries no pointer, so it still makes sense on a new dummy.
 - The replay runs the commands recorded on step N on step 50 plus N through the same function that ran them live, and hits the ghost's pad, so nothing the ghost does differs from the live run.
