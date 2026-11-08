@@ -28,7 +28,7 @@ Most of the code is written. First read the marked lines and say in a sentence w
 
 ## See it in the editor
 
-Place a Dojo P20 Launcher at the origin. In Details, under Launcher, add three Candidates: Anvil at 500, 0, 0 with Health 30; Barrel at 200, 0, 0 with Health 50; and Crate at 300, 0, 0 with Health 10. Open the Rule dropdown: it lists the three rule classes and not the base class. Choose Dojo P20 Nearest Rule. In the Level Blueprint, on Begin Play, get the launcher and print Pick Target: Barrel. Go back and choose the Weakest Rule instead: Crate. Choose the Farthest Rule: Anvil. The launcher is the same each time.
+Drag a Dojo P20 Launcher from the Place Actors panel into the level at the origin; it has no mesh, so find it in the Outliner. In Details, under Launcher, add three Candidates: Anvil at 500, 0, 0 with Health 30; Barrel at 200, 0, 0 with Health 50; and Crate at 300, 0, 0 with Health 10. Open the Rule dropdown: it lists the three rule classes and not the base class. Choose Dojo P20 Nearest Rule. In the Level Blueprint, select the launcher in the Outliner, right click the graph and choose Create a Reference to Dojo P20 Launcher, then on Begin Play call Pick Target on it and print the result: Barrel. Go back and choose the Weakest Rule instead: Crate. Choose the Farthest Rule: Anvil. The launcher is the same each time.
 
 # Files
 
@@ -557,9 +557,9 @@ bool FDojo_P20_TargetRules_DetailsCanMakeTheRule::RunTest(const FString& Paramet
 
 # Hints
 
-- Before `PickTarget` gives back a name it has three things to rule out: the launcher may hold no rule, the rule may answer that there is no dummy, and the rule may answer with a number that is not a place in the list. What does each give back?
-- The rule needs to be told where to aim from. Which function of an actor says where it is?
-- Check the rule pointer is usable, ask the rule, check the answer is a real place in the list, and only then read a name from it.
+- Start with the case that has nothing to ask: what should the launcher give back when it holds no rule?
+- The rule has to be told where to aim from, so ask which function of an actor says where it is.
+- Ask the rule, and read a name from the list only when its answer is a real place in it.
 
 # Rubric
 

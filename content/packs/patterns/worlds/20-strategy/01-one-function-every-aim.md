@@ -6,8 +6,8 @@ kind: concept
 difficulty: 2
 patterns: []
 skills: [architecture, refactoring]
-terms: [uobject, abstract-specifier, tobjectptr, virtual-function]
-prerequisites: [p13-bytecode-when-not]
+terms: [uobject, abstract-specifier, virtual-function]
+prerequisites: [p19-boss-dusk]
 xp: 25
 estimatedMinutes: 8
 concepts:
@@ -23,13 +23,13 @@ concepts:
 ```yaml
 id: predict
 type: multiple-choice
-prompt: "Guess, no penalty: a turret picks its target with a switch on a number. Number 0 aims at the nearest dummy, 1 at the weakest, 2 at the farthest. A designer asks for a fourth aim, the dummy that was shot last. Which files must a programmer change?"
+prompt: "Guess, no penalty: a turret picks its target with a switch on a number. Number 0 aims at the nearest dummy, 1 at the weakest, 2 at the farthest. A designer asks for a fourth aim, the dummy that was shot last. What must a programmer change?"
 choices:
   - None, the designer can type a new number into Details
   - Only the new aim, because the switch finds it by itself
-  - The turret's header and its picking function, which every turret in the game uses
-  - Only the tests
-answerIndex: 2
+  - Only the tests, because the aims are already written
+  - The picking function every turret in the game shares
+answerIndex: 3
 explanation: A new number means a new case in the one function that all turrets share, so every turret is rebuilt and has to be tested again, whichever aim it uses.
 ```
 
@@ -116,11 +116,11 @@ const int32 Index = Rule->ChooseTarget(GetActorLocation(), Dummies);
   type: multiple-choice
   prompt: "A turret picks its aim with a switch, and a designer asks for a fifth aim. What is the cost of the switch?"
   choices:
-    - Nothing, a switch is the fastest way to branch
-    - The one function every turret runs is edited, so every turret is at risk and is tested again
-    - The fifth case cannot be added to a switch
-    - The designer has to edit every level
-  answerIndex: 1
+    - Nothing, because a switch is the fastest way to branch
+    - The fifth case cannot be added to a switch once it is saved
+    - The shared function is edited, so every turret is retested
+    - The designer has to edit every level that uses a turret
+  answerIndex: 2
   explanation: A new case lives in the shared function. The cost is not speed, it is that a change meant for one aim can break the others.
 - id: fill-virtual
   type: fill-blank
@@ -132,19 +132,19 @@ const int32 Index = Rule->ChooseTarget(GetActorLocation(), Dummies);
   prompt: A designer wants another aim that targets the dummy with the most health, and the turret picks with a switch on AimStyle. What has to change?
   choices:
     - Nothing in the turret, the designer types a new number into Details
-    - A new case in the switch inside the turret, which every turret in the game runs
+    - A new case in the switch, which every turret in the game runs
     - Only a new file, because a switch finds new cases by itself
-    - Only the tests
+    - Only the tests, since the new aim is already written
   answerIndex: 1
   explanation: The switch has to learn every aim, so the shared function is edited for each new one.
 - id: what-turret-keeps
   type: multiple-choice
   prompt: "After the aims move into their own objects, what does the turret keep?"
   choices:
-    - One pointer to an aim object, and a call to its shared function
-    - A copy of every aim's code
-    - A list of every aim class that exists
-    - Nothing, the aim does its own shooting
+    - One pointer to an aim object, and a call to its function
+    - A copy of the code of every aim, kept inside the turret
+    - A list of every aim class that exists, checked one by one
+    - Nothing, because the aim object does its own shooting
   answerIndex: 0
   explanation: The turret asks one question of whatever object it holds. Which aim that is no longer matters to it.
 - id: explain-split

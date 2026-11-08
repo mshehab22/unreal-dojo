@@ -4,7 +4,7 @@
 #include "DojoP21Turret.h"
 #include "DojoP21CountingTurret.generated.h"
 
-/** A turret that notes every request for a bolt and can be told to refuse them, to show where its bolts come from. */
+/** A turret that notes every request for a bolt and can be told to refuse them, or to make bolts without counting them, to show where its bolts come from. */
 UCLASS()
 class ADojoP21CountingTurret : public ADojoP21Turret
 {
@@ -22,6 +22,10 @@ public:
 	/** When true, every request is answered with nothing. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Counting")
 	bool bRefuse = false;
+
+	/** When true, a bolt is made and handed back without being counted in ShotsFired. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Counting")
+	bool bSkipCounting = false;
 
 protected:
 	/** Notes the request, then refuses it or lets the turret's own way of making a bolt answer. */

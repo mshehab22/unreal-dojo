@@ -55,6 +55,19 @@ namespace DojoP23HallTest
 		return Hall;
 	}
 
+	/** The text on the hall's label, or a marker when the hall has no label, so a missing label fails the test that reads it instead of stopping the engine. */
+	FString LabelOf(const ADojoP23TrapHall* Hall)
+	{
+		return Hall && Hall->Label ? Hall->Label->Text.ToString() : FString(TEXT("(the hall has no label)"));
+	}
+
+	/** True when the hall has a ballista and it holds a target. */
+	bool HasTarget(const ADojoP23TrapHall* Hall)
+	{
+		const ADojoP7Ballista* Ballista = Hall ? Hall->GetBallista() : nullptr;
+		return Ballista && Ballista->HasTarget();
+	}
+
 	/** The health of the fighter built from plan Index, or -1 when there is none. */
 	float HealthOf(const ADojoP23TrapHall* Hall, int32 Index)
 	{
@@ -90,7 +103,7 @@ bool FDojo_P23_TrapHall_TwoRoundsOfTrapsAndBolts::RunTest(const FString& Paramet
 	TestTrue(TEXT("The second is the new frost vent"), Hall->GetTrap(1)->IsA<ADojoP23FrostVent>());
 	TestEqual(TEXT("Two fighters stand"), Hall->GetStandingCount(), 2);
 	TestTrue(TEXT("The ballista rests"), InMode(Hall, UDojoP7BallistaIdle::StaticClass()));
-	TestEqual(TEXT("The label shows the round, the bolts, and the fighters standing"), Hall->Label->Text.ToString(), FString(TEXT("Round 1  Bolts 0  Standing 2")));
+	TestEqual(TEXT("The label shows the round, the bolts, and the fighters standing"), LabelOf(Hall), FString(TEXT("Round 1  Bolts 0  Standing 2")));
 
 	const float Start = TestWorld.GetWorld()->GetTimeSeconds();
 	TickUntil(TestWorld, Start + 0.4f);
@@ -134,7 +147,7 @@ bool FDojo_P23_TrapHall_TwoRoundsOfTrapsAndBolts::RunTest(const FString& Paramet
 	TestEqual(TEXT("The frost vent at 8.5 put Bo down"), Hall->GetStandingCount(), 0);
 
 	TickUntil(TestWorld, Start + 9.f);
-	TestFalse(TEXT("With no fighter in reach the ballista has no target"), Hall->GetBallista()->HasTarget());
+	TestFalse(TEXT("With no fighter in reach the ballista has no target"), HasTarget(Hall));
 	TestTrue(TEXT("But it finishes its reload first"), InMode(Hall, UDojoP7BallistaReloading::StaticClass()));
 
 	TickUntil(TestWorld, Start + 10.f);
@@ -148,16 +161,17 @@ bool FDojo_P23_TrapHall_TwoRoundsOfTrapsAndBolts::RunTest(const FString& Paramet
 	TestFalse(TEXT("The round is over at 12 seconds"), Hall->IsRunning());
 	TestEqual(TEXT("Orders to fire at an idle ballista shot nothing"), Hall->GetBolts(), 3);
 	TestEqual(TEXT("Every fighter is down"), Hall->GetResult(), FString(TEXT("CLEARED")));
-	TestEqual(TEXT("The label shows the result"), Hall->Label->Text.ToString(), FString(TEXT("Round 1  Bolts 3  Standing 0  CLEARED")));
+	TestEqual(TEXT("The label shows the result"), LabelOf(Hall), FString(TEXT("Round 1  Bolts 3  Standing 0  CLEARED")));
 
-	Hall->Roster = { MakeFighter(100.f, 100.f), MakeFighter(400.f, 200.f) };
+	// Bo is listed first this round, so a hall that picks the first fighter in the roster and not the nearest one is caught.
+	Hall->Roster = { MakeFighter(400.f, 200.f), MakeFighter(100.f, 100.f) };
 	TickUntil(TestWorld, Start + 13.f);
 	Hall->PressNextRound();
 	TestTrue(TEXT("Round 2 is running"), Hall->IsRunning());
 	TestEqual(TEXT("It is round 2"), Hall->GetRoundNumber(), 2);
 	TestEqual(TEXT("A new ballista has shot nothing"), Hall->GetBolts(), 0);
 	TestEqual(TEXT("Both fighters are back"), Hall->GetStandingCount(), 2);
-	TestEqual(TEXT("Bo has the new 200"), HealthOf(Hall, 1), 200.f);
+	TestEqual(TEXT("Bo, listed first, has the new 200"), HealthOf(Hall, 0), 200.f);
 	TestTrue(TEXT("And the result is empty"), Hall->GetResult().IsEmpty());
 
 	const float SecondStart = TestWorld.GetWorld()->GetTimeSeconds();
@@ -172,10 +186,10 @@ bool FDojo_P23_TrapHall_TwoRoundsOfTrapsAndBolts::RunTest(const FString& Paramet
 	TickUntil(TestWorld, SecondStart + 12.5f);
 	TestFalse(TEXT("Round 2 is over at 12"), Hall->IsRunning());
 	TestEqual(TEXT("With a target in reach all round, the ballista shot four bolts"), Hall->GetBolts(), 4);
-	TestEqual(TEXT("Ava is down"), HealthOf(Hall, 0), 0.f);
-	TestEqual(TEXT("Six frost bursts and three bolts left Bo with 65"), HealthOf(Hall, 1), 65.f);
+	TestEqual(TEXT("Ava, listed second, is down"), HealthOf(Hall, 1), 0.f);
+	TestEqual(TEXT("Six frost bursts and three bolts left Bo with 65"), HealthOf(Hall, 0), 65.f);
 	TestEqual(TEXT("So the hall held"), Hall->GetResult(), FString(TEXT("HELD")));
-	TestEqual(TEXT("The label shows round 2 and its result"), Hall->Label->Text.ToString(), FString(TEXT("Round 2  Bolts 4  Standing 1  HELD")));
+	TestEqual(TEXT("The label shows round 2 and its result"), LabelOf(Hall), FString(TEXT("Round 2  Bolts 4  Standing 1  HELD")));
 
 	return true;
 }
@@ -197,28 +211,56 @@ bool FDojo_P23_TrapHall_OutOfReachNeverWakesTheBallista::RunTest(const FString& 
 	if (!TestNotNull(TEXT("Hall spawned"), Hall)) return false;
 
 	const float Start = TestWorld.GetWorld()->GetTimeSeconds();
-	TickUntil(TestWorld, Start + 5.f);
 
-	TestTrue(TEXT("The ballista is still idle"), InMode(Hall, UDojoP7BallistaIdle::StaticClass()));
-	TestFalse(TEXT("And has no target"), Hall->GetBallista()->HasTarget());
+	// The hall looks at 0.25, 0.75, 1.25 and so on, and a wrongly spotted target lasts until the next look, so check just after every look, at x.3 and x.8, to the end of the round.
+	for (int32 Look = 0; Look < 24; ++Look)
+	{
+		const float At = 0.3f + 0.5f * Look;
+
+		TickUntil(TestWorld, Start + At);
+		if (!TestFalse(*FString::Printf(TEXT("No target just after the look before %.1f seconds"), At), HasTarget(Hall))) return false;
+		if (!TestTrue(*FString::Printf(TEXT("The ballista is still idle just after the look before %.1f seconds"), At), InMode(Hall, UDojoP7BallistaIdle::StaticClass()))) return false;
+	}
+
 	TestEqual(TEXT("It shot nothing"), Hall->GetBolts(), 0);
 	TestEqual(TEXT("The fighter is untouched"), HealthOf(Hall, 0), 100.f);
 
-	// The hall looks every half second, so check again just after a look, when a wrongly spotted target would show.
-	TickUntil(TestWorld, Start + 5.3f);
-	TestFalse(TEXT("Still no target just after a look"), Hall->GetBallista()->HasTarget());
-	TestTrue(TEXT("Still idle just after a look"), InMode(Hall, UDojoP7BallistaIdle::StaticClass()));
-
 	TickUntil(TestWorld, Start + 12.5f);
 	TestEqual(TEXT("The fighter stands, so the hall held"), Hall->GetResult(), FString(TEXT("HELD")));
-	TestEqual(TEXT("The label shows it"), Hall->Label->Text.ToString(), FString(TEXT("Round 1  Bolts 0  Standing 1  HELD")));
+	TestEqual(TEXT("The label shows it"), LabelOf(Hall), FString(TEXT("Round 1  Bolts 0  Standing 1  HELD")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P23_TrapHall_OnATieTheEarlierFighterTakesTheBolt, "Dojo.P23.TrapHall.OnATieTheEarlierFighterTakesTheBolt", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Two fighters the same distance from the ballista: the first bolt hits the one listed first. */
+bool FDojo_P23_TrapHall_OnATieTheEarlierFighterTakesTheBolt::RunTest(const FString& Parameters)
+{
+	using namespace DojoP23HallTest;
+
+	FDojoTestWorld TestWorld;
+
+	ADojoP23TrapHall* Hall = SpawnHall(TestWorld, [](ADojoP23TrapHall& Tuned)
+	{
+		Tuned.Traps.Reset();
+		Tuned.Roster = { MakeFighter(300.f, 100.f), MakeFighter(-300.f, 100.f) };
+	});
+	if (!TestNotNull(TEXT("Hall spawned"), Hall)) return false;
+
+	const float Start = TestWorld.GetWorld()->GetTimeSeconds();
+	TickUntil(TestWorld, Start + 2.2f);
+
+	TestEqual(TEXT("The order at two seconds shot the first bolt"), Hall->GetBolts(), 1);
+	TestEqual(TEXT("It hit the fighter listed first"), HealthOf(Hall, 0), 75.f);
+	TestEqual(TEXT("And left the other, the same distance away, alone"), HealthOf(Hall, 1), 100.f);
 
 	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P23_TrapHall_AnyTrapClassWillDo, "Dojo.P23.TrapHall.AnyTrapClassWillDo", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** The traps come from classes in the plan, take the plan's rest, and an abstract class in the plan builds nothing and breaks nothing. */
+/** The traps come from classes in the plan, take the plan's rest, and an abstract or empty class in the plan builds nothing and breaks nothing. */
 bool FDojo_P23_TrapHall_AnyTrapClassWillDo::RunTest(const FString& Parameters)
 {
 	using namespace DojoP23HallTest;
@@ -229,22 +271,25 @@ bool FDojo_P23_TrapHall_AnyTrapClassWillDo::RunTest(const FString& Parameters)
 	{
 		FDojoP23TrapPlan SlowFrost = MakeTrap(ADojoP23FrostVent::StaticClass(), 400.f);
 		SlowFrost.RestSeconds = 2.5f;
-		Tuned.Traps = { MakeTrap(ADojoP8SpikeTrap::StaticClass(), 0.f), MakeTrap(ADojoP8TrapBase::StaticClass(), 0.f), SlowFrost };
+		FDojoP23TrapPlan EmptyPlan;
+		EmptyPlan.Location = FVector(200.f, 0.f, 0.f);
+		Tuned.Traps = { MakeTrap(ADojoP8SpikeTrap::StaticClass(), 0.f), MakeTrap(ADojoP8TrapBase::StaticClass(), 0.f), EmptyPlan, SlowFrost };
 	});
 	if (!TestNotNull(TEXT("Hall spawned"), Hall)) return false;
 
 	TestNotNull(TEXT("The spike trap was built"), Hall->GetTrap(0));
 	TestTrue(TEXT("The abstract class in the plan built nothing"), Hall->GetTrap(1) == nullptr);
-	if (!TestNotNull(TEXT("The frost vent was built"), Hall->GetTrap(2))) return false;
-	TestEqual(TEXT("The frost vent rests the plan's 2.5 seconds"), Hall->GetTrap(2)->CooldownSeconds, 2.5f);
+	TestTrue(TEXT("The empty class in the plan built nothing"), Hall->GetTrap(2) == nullptr);
+	if (!TestNotNull(TEXT("The frost vent was built"), Hall->GetTrap(3))) return false;
+	TestEqual(TEXT("The frost vent rests the plan's 2.5 seconds"), Hall->GetTrap(3)->CooldownSeconds, 2.5f);
 
 	const float Start = TestWorld.GetWorld()->GetTimeSeconds();
 	TickUntil(TestWorld, Start + 3.2f);
-	TestEqual(TEXT("A frost vent that rests 2.5 seconds sprang at 0.5 and not at 1.5 or 2.5"), Hall->GetTrap(2)->GetCueLog().Num(), 1);
+	TestEqual(TEXT("A frost vent that rests 2.5 seconds sprang at 0.5 and not at 1.5 or 2.5"), Hall->GetTrap(3)->GetCueLog().Num(), 1);
 	TestEqual(TEXT("It took 10 from Bo once"), HealthOf(Hall, 1), 90.f);
 
 	TickUntil(TestWorld, Start + 4.2f);
-	TestEqual(TEXT("And sprang again at 3.5"), Hall->GetTrap(2)->GetCueLog().Num(), 2);
+	TestEqual(TEXT("And sprang again at 3.5"), Hall->GetTrap(3)->GetCueLog().Num(), 2);
 
 	return true;
 }

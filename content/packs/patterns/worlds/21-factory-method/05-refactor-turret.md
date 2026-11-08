@@ -35,11 +35,11 @@ Refactor the turret:
 - `FireEmber`, `FireFrost`, and `FireSpread` get every bolt they fire by calling `MakeBolt` with the class they want and the muzzle they want, and do not spawn anything themselves.
 - The signatures of the three firing functions stay as they are, and so do the bolts they produce, where they appear, and how many are counted.
 
-`ADojoP21CountingTurret` is a turret that notes each request to `MakeBolt` and can be told to refuse them. Leave it as it is. Two of the four tests pass on the starter and must pass after; two do not. Read their messages.
+`ADojoP21CountingTurret` is a turret that notes each request to `MakeBolt` and can be told to refuse them or to make bolts without counting them. Leave it as it is. Two of the five tests pass on the starter and must pass after; three do not. Read their messages.
 
 ## See it in the editor
 
-Place a `DojoP21CountingTurret` in the level, facing the +X direction. In the Level Blueprint, on Begin Play call Fire Ember, Fire Frost, and Fire Spread on it, then print `Make Calls` and `Shots Fired`. Before the refactor the prints are 0 and 5: five bolts were fired and the turret's own maker was never asked. After it they are 5 and 5. Tick `Refuse` in the turret's Details and play again: after the refactor `Shots Fired` is 0 and no bolt appears at all; before it, the turret ignores the refusal and fires all five. The firing functions did not change what they fire, only where they get it.
+Place a `DojoP21CountingTurret` in the level, facing the +X direction. Turrets and bolts have no mesh, so nothing shows in the viewport and the Output Log is where you read the result. Select the turret, right-click an empty spot in the Level Blueprint graph, and choose Create a Reference to it. In the Level Blueprint, on Begin Play call Fire Ember, Fire Frost, and Fire Spread on it, then print `Make Calls` and `Shots Fired`. Before the refactor the prints are 0 and 5: five bolts were fired and the turret's own maker was never asked. After it they are 5 and 5. Tick `Refuse` in the turret's Details and play again: after the refactor `Shots Fired` is 0 and `Make Calls` is still 5; before it, the turret ignores the refusal and `Shots Fired` is 5. The firing functions did not change what they fire, only where they get it.
 
 # Files
 
@@ -174,7 +174,7 @@ ADojoP21Bolt* ADojoP21Turret::MakeBolt(TSubclassOf<ADojoP21Bolt> BoltClass, cons
 #include "DojoP21Turret.h"
 #include "DojoP21CountingTurret.generated.h"
 
-/** A turret that notes every request for a bolt and can be told to refuse them, to show where its bolts come from. */
+/** A turret that notes every request for a bolt and can be told to refuse them, or to make bolts without counting them, to show where its bolts come from. */
 UCLASS()
 class ADojoP21CountingTurret : public ADojoP21Turret
 {
@@ -193,6 +193,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Counting")
 	bool bRefuse = false;
 
+	/** When true, a bolt is made and handed back without being counted in ShotsFired. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Counting")
+	bool bSkipCounting = false;
+
 protected:
 	/** Notes the request, then refuses it or lets the turret's own way of making a bolt answer. */
 	virtual ADojoP21Bolt* MakeBolt(TSubclassOf<ADojoP21Bolt> BoltClass, const FTransform& Muzzle) override;
@@ -204,12 +208,24 @@ protected:
 ```cpp
 #include "DojoP21CountingTurret.h"
 
+#include "Engine/World.h"
+
 ADojoP21Bolt* ADojoP21CountingTurret::MakeBolt(TSubclassOf<ADojoP21Bolt> BoltClass, const FTransform& Muzzle)
 {
 	MakeCalls++;
 	AskedFor.Add(BoltClass);
 
 	if (bRefuse) return nullptr;
+
+	if (bSkipCounting)
+	{
+		ADojoP21Bolt* Bolt = GetWorld()->SpawnActorDeferred<ADojoP21Bolt>(BoltClass, Muzzle);
+		if (Bolt == nullptr) return nullptr;
+
+		Bolt->Shooter = this;
+		Bolt->FinishSpawning(Muzzle);
+		return Bolt;
+	}
 
 	return Super::MakeBolt(BoltClass, Muzzle);
 }
@@ -292,6 +308,7 @@ bool FDojo_P21_TurretRefactor_SpreadFansOut::RunTest(const FString& Parameters)
 	const double ExpectedYaw[3] = { 70.0, 90.0, 110.0 };
 	for (int32 Index = 0; Index < 3; Index++)
 	{
+		if (!TestNotNull(TEXT("Each fan bolt exists"), Fan[Index])) return false;
 		TestTrue(TEXT("Each is an ember bolt"), Cast<ADojoP21EmberBolt>(Fan[Index]) != nullptr);
 		TestTrue(TEXT("Each appears at the muzzle"), Fan[Index]->GetActorLocation().Equals(FVector(100.f, 50.f, 0.f), 0.1f));
 		TestTrue(TEXT("Each knew its shooter when it began play"), Fan[Index]->bShooterKnownAtBeginPlay);
@@ -358,14 +375,36 @@ bool FDojo_P21_TurretRefactor_ARefusalStopsEveryKindOfShot::RunTest(const FStrin
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P21_TurretRefactor_TheMakerDoesTheCounting, "Dojo.P21.TurretRefactor.TheMakerDoesTheCounting", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Shots are counted where a bolt is really made: when the maker hands back bolts without counting them, no kind of shot counts them either. */
+bool FDojo_P21_TurretRefactor_TheMakerDoesTheCounting::RunTest(const FString& Parameters)
+{
+	using namespace DojoP21TurretTest;
+
+	FDojoTestWorld TestWorld;
+
+	ADojoP21CountingTurret* Turret = TestWorld.SpawnActor<ADojoP21CountingTurret>();
+	if (!TestNotNull(TEXT("Counting turret spawned"), Turret)) return false;
+	PlaceTurret(Turret);
+	Turret->bSkipCounting = true;
+
+	TestTrue(TEXT("An ember shot returns the bolt the maker made"), Turret->FireEmber() != nullptr);
+	TestTrue(TEXT("A frost shot returns its bolt"), Turret->FireFrost() != nullptr);
+	TestEqual(TEXT("A spread returns its three bolts"), Turret->FireSpread().Num(), 3);
+	TestEqual(TEXT("The maker did not count them, so the firing functions must not count them either"), Turret->ShotsFired, 0);
+
+	return true;
+}
+
 #endif
 ```
 
 # Hints
 
-- Put the three firing functions side by side. Which lines are word for word the same in all of them, and what is the one thing that differs between an ember shot and a frost shot?
-- `MakeBolt` receives the class as a value, so the firing functions no longer need to name a bolt type in a spawn call. Where should the count of shots fired be kept, so that a bolt which was never made is never counted?
-- A turret that overrides `MakeBolt` only changes the shots that really ask it. If one firing function still builds its own bolt, which of the tests would notice, and what would it say?
+- Put the three firing functions side by side and find the lines that are the same in all of them.
+- Decide where the count of shots should live, so that a bolt which was never made is never counted.
+- If one firing function still builds its own bolt, think about which test would notice and what its message would say.
 
 # Rubric
 

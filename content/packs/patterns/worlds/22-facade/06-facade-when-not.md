@@ -25,11 +25,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: over a year, UGameServices grew from PlayHitFeedback and SaveCheckpoint to 60 functions, and it now keeps the score, the inventory, and the quest log. Every actor includes it. What is the most likely cost?"
 choices:
-  - None; one class is easier to find
-  - Every change risks breaking something unrelated, nothing can be tested without it, and the whole team edits one file
-  - The game runs slower because of the function count
-  - It cannot be a subsystem any more
-answerIndex: 1
+  - None at all, because finding one class is much easier than finding sixty of them
+  - The game runs slower, because a class with sixty functions costs more to call
+  - Every change risks something unrelated, and nothing can be tested without it
+  - It can no longer be made a subsystem, because it has grown too large for one
+answerIndex: 2
 explanation: A front that owns state and rules for everything has become a god object. Its size is the symptom; the cost is that every class depends on everything inside it.
 ```
 
@@ -66,29 +66,29 @@ void UMySounds::PlaySound(const UObject* WorldContext, USoundBase* Sound, FVecto
   choices:
     - One call that drives the sound desk, the spark pool, and the HUD for every hit in the game
     - SaveCheckpoint and LoadLatest over save objects, bytes, and slots, used by every gate and pit
-    - A wrapper around UGameplayStatics::PlaySoundAtLocation with exactly the same parameters, used by one actor
-    - One call that starts a dialogue by loading a row, building a widget, and pausing input, used by every speaker
+    - A wrapper around PlaySoundAtLocation with exactly the same parameters, used by one actor
+    - One call that starts a dialogue by loading a row, building a widget, and pausing input
   answerIndex: 2
   explanation: The wrapper hides nothing and has one caller; the others each turn several steps into one call for many callers.
 - id: when-not-god
   type: multiple-choice
   prompt: "A hit feedback facade gains AddScore, GetInventory, and SetCurrentLevel. What should happen to them?"
   choices:
-    - Nothing; one class for everything is simpler
-    - They move to the classes that own that state, such as a score subsystem, and the facade goes back to feedback
-    - They move into UGameplayStatics
-    - The facade becomes a global variable
-  answerIndex: 1
+    - Nothing happens to them, because one class that holds everything is simpler to find
+    - They move into UGameplayStatics, where every other game already keeps its state
+    - The facade turns into a global variable so that nothing needs to depend on it
+    - They move to the classes that own that state, and the facade goes back to feedback
+  answerIndex: 3
   explanation: State and rules for other jobs turn a front into a god object; each job's state belongs to its own class.
 - id: when-not-power
   type: multiple-choice
   prompt: "A cutscene needs to play a cue on a special bus at a chosen pitch, which the hit feedback facade does not offer. What is the better choice?"
   choices:
-    - Add PlayCueOnBusAtPitch to the facade for the cutscene
-    - Let the cutscene call the sound desk directly
-    - Copy the facade into the cutscene
-    - Remove the bus from the sound desk
-  answerIndex: 1
+    - Let the cutscene call the sound desk directly for this one need
+    - Add PlayCueOnBusAtPitch to the facade for the cutscene to use
+    - Copy the facade into the cutscene and change the copy as needed
+    - Remove the special bus from the sound desk so the problem goes away
+  answerIndex: 0
   explanation: The facade is a shortcut for the common job. A caller with an unusual need uses the system; the facade does not grow a call for each one.
 - id: spot-state
   type: spot-the-bug

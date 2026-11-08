@@ -36,7 +36,7 @@ Write the obvious version first and run the tests. One of them fails on purpose 
 
 ## See it in the editor
 
-Place a Dojo P20 Mover at the origin. In Details, under Mover, set Rule Class to Dojo P20 Patrol Rule. In the Level Blueprint, on Begin Play, call Set Timer by Event with Time 0.5 and Looping on, into a custom event that calls Step on the mover with Delta Seconds 0.5 and prints the mover's Get Actor Location. The X values go 50, 100, 150, 200, 150, 100, 50, 0, and turn again. Stop, set Rule Class to Dojo P20 Orbit Rule, and run again: the dummy circles a point 50 along X from the start. With Rule Class empty it never moves.
+Drag a Dojo P20 Mover from the Place Actors panel into the level at the origin; it has no mesh, so find it in the Outliner. In Details, under Mover, set Rule Class to Dojo P20 Patrol Rule. In the Level Blueprint, select the mover in the Outliner, right click the graph and choose Create a Reference to Dojo P20 Mover. Add a custom event named TakeStep that calls Step on that reference with Delta Seconds 0.5 and prints its Get Actor Location, and on Begin Play call Set Timer by Event with Time 0.5 and Looping on, pointing at TakeStep. The X values go 50, 100, 150, 200, 150, 100, 50, 0, and turn again. Stop, set Rule Class to Dojo P20 Orbit Rule, and run again: the dummy circles a point 50 along X from the start. With Rule Class empty it never moves.
 
 # Files
 
@@ -502,9 +502,9 @@ bool FDojo_P20_MoverRules_NewClassMovesTheNextStep::RunTest(const FString& Param
 
 # Hints
 
-- `Step` has three questions to settle in order: is there a usable class, is there a rule object to ask, and where does the dummy go. Which of them can `SetRuleClass` change the answer to?
+- `Step` has three questions to settle in order: is there a usable class, is there a rule object to ask, and where does the dummy go.
 - If `NewClassMovesTheNextStep` fails, read what the dummy did after the class changed, and ask what the mover is still holding when the next step runs.
-- An object made for one class must not be asked about the next. Either `SetRuleClass` lets go of the object it has, or `Step` checks the object against the class before it uses it.
+- An object made for the old class must not be asked about the new one, so one of the two functions has to see to it.
 
 # Rubric
 

@@ -6,6 +6,7 @@
 #include "Engine/World.h"
 #include "Quests/p22-boss-gauntlet/DojoP22Gauntlet.h"
 #include "Quests/p22-checkpoint-desk/DojoP22CheckpointDesk.h"
+#include "Quests/p22-hit-feedback/DojoP22HitFeedback.h"
 #include "Quests/p22-hit-feedback/DojoP22HudTicker.h"
 #include "Quests/p22-hit-feedback/DojoP22SoundDesk.h"
 #include "Quests/p22-hit-feedback/DojoP22SparkPool.h"
@@ -32,9 +33,11 @@ namespace DojoP22GauntletTest
 		return Scene;
 	}
 
-	/** The label's text. */
+	/** The label's text, or a message that says the gauntlet has no label. */
 	FString LabelOf(const FGauntletScene& Scene)
 	{
+		if (!Scene.Gauntlet->Label) return TEXT("(the gauntlet has no Label component)");
+
 		return Scene.Gauntlet->Label->Text.ToString();
 	}
 
@@ -237,12 +240,86 @@ bool FDojo_P22_Gauntlet_TimeRunsOut::RunTest(const FString& Parameters)
 	const FGauntletScene Scene = MakeGauntlet(TestWorld);
 	if (!TestNotNull(TEXT("The gauntlet spawned"), Scene.Gauntlet)) return false;
 
-	TestWorld.Tick(60 * 30 + 30);
-	TestEqual(TEXT("Thirty and a half seconds in, the label shows 30 seconds left"), LabelOf(Scene), FString(TEXT("GATE 1/3  HEALTH 100  30 s")));
+	TestWorld.Tick(60 * 30 + 42);
+	TestEqual(TEXT("Thirty and seven tenths seconds in, the label shows 30 seconds left, rounded up"), LabelOf(Scene), FString(TEXT("GATE 1/3  HEALTH 100  30 s")));
 
 	TestWorld.Tick(60 * 30);
 	TestFalse(TEXT("At 60 seconds the round is over"), Scene.Gauntlet->IsRunning());
 	TestEqual(TEXT("as TIME UP"), LabelOf(Scene), FString(TEXT("TIME UP")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P22_Gauntlet_TheEarlierDummyWinsATie, "Dojo.P22.Gauntlet.TheEarlierDummyWinsATie", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** A runner the same distance from two dummies strikes the earlier one. */
+bool FDojo_P22_Gauntlet_TheEarlierDummyWinsATie::RunTest(const FString& Parameters)
+{
+	using namespace DojoP22GauntletTest;
+
+	FDojoTestWorld TestWorld;
+	const FGauntletScene Scene = MakeGauntlet(TestWorld);
+	if (!TestNotNull(TEXT("The gauntlet spawned"), Scene.Gauntlet)) return false;
+
+	const FVector Earlier = Scene.Gauntlet->GetDummySpot(0);
+	const FVector Later = Scene.Gauntlet->GetDummySpot(1);
+	Scene.Runner->SetActorLocation((Earlier + Later) * 0.5);
+	Scene.Gauntlet->PressStrike();
+	TestWorld.Tick(6);
+
+	TestEqual(TEXT("With two dummies the same distance away, the earlier one is struck"), Scene.Gauntlet->GetDummyHealth(0), 35);
+	TestEqual(TEXT("and the later one is not"), Scene.Gauntlet->GetDummyHealth(1), 60);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P22_Gauntlet_LabelFollowsTheRun, "Dojo.P22.Gauntlet.LabelFollowsTheRun", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** The label shows the gate ahead after a gate opens, and the lower health after a fall. */
+bool FDojo_P22_Gauntlet_LabelFollowsTheRun::RunTest(const FString& Parameters)
+{
+	using namespace DojoP22GauntletTest;
+
+	FDojoTestWorld TestWorld;
+	const FGauntletScene Scene = MakeGauntlet(TestWorld);
+	if (!TestNotNull(TEXT("The gauntlet spawned"), Scene.Gauntlet)) return false;
+
+	for (int32 Dummy = 0; Dummy < 3; ++Dummy) StrikeDummy(TestWorld, Scene, Dummy, 3);
+	if (!TestEqual(TEXT("Breaking gate 1's three dummies opens it"), Scene.Gauntlet->GetGatesOpen(), 1)) return false;
+
+	TestWorld.Tick(2);
+	TestTrue(TEXT("Once gate 1 is open, the label shows GATE 2/3 with full health"), LabelOf(Scene).StartsWith(TEXT("GATE 2/3  HEALTH 100")));
+
+	Scene.Gauntlet->RunnerFell();
+	TestWorld.Tick(2);
+	TestTrue(TEXT("After a fall, the label shows the lower health"), LabelOf(Scene).StartsWith(TEXT("GATE 2/3  HEALTH 70")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P22_Gauntlet_FeelComesFromTheFacade, "Dojo.P22.Gauntlet.FeelComesFromTheFacade", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Moving the feedback facade's heavy threshold changes how the master's 25 damage strike feels, with no change to the master. */
+bool FDojo_P22_Gauntlet_FeelComesFromTheFacade::RunTest(const FString& Parameters)
+{
+	using namespace DojoP22GauntletTest;
+
+	FDojoTestWorld TestWorld;
+	const FGauntletScene Scene = MakeGauntlet(TestWorld);
+	if (!TestNotNull(TEXT("The gauntlet spawned"), Scene.Gauntlet)) return false;
+
+	UWorld* World = TestWorld.GetWorld();
+	UDojoP22HitFeedback* Feedback = World->GetSubsystem<UDojoP22HitFeedback>();
+	if (!TestNotNull(TEXT("The world has the hit feedback subsystem"), Feedback)) return false;
+
+	Feedback->SetHeavyDamage(20.f);
+	const FFeedbackCounts Before = ReadFeedback(World);
+	StrikeDummy(TestWorld, Scene, 0, 1);
+	const FFeedbackCounts After = ReadFeedback(World);
+
+	TestEqual(TEXT("With the facade's threshold at 20, a strike that does not break a dummy is a heavy hit"), After.HeavyHits - Before.HeavyHits, 1);
+	TestEqual(TEXT("and not a light one"), After.Hits - Before.Hits, 0);
+	TestEqual(TEXT("and it flashed the edge"), After.Flashes - Before.Flashes, 1);
 
 	return true;
 }

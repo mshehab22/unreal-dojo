@@ -34,7 +34,7 @@ The spawner depends on the critter base class and the entry; the critters know n
 
 ## See it in the editor
 
-Place a `DojoP21Spawner`. In Details, add three rows to Wave: Slime with Level 4, Imp with Level 2, and Slime with Level 2. In the Level Blueprint, on Begin Play call Spawn Wave on the spawner, run a For Each over the critters it returns, and print each one's Health: 40, 30, and 20, in a row along the X axis. Add a fourth row and leave its class empty: the print is the same three numbers, and the row of critters has no gap. Make a Blueprint child of `DojoP21Imp` named `BP_FireImp`, pick it in a new row, and play again: the spawner makes your new kind with no change to any C++.
+Place a `DojoP21Spawner` at the world origin. Critters have no mesh, so nothing shows in the viewport and the Output Log is where you read the result. In Details, add three rows to Wave: Slime with Level 4, Imp with Level 2, and Slime with Level 2. Select the spawner, right-click an empty spot in the Level Blueprint graph, and choose Create a Reference to it. On Begin Play call Spawn Wave on it, run a For Each over the critters it returns, and print each one's Health and its Get Actor Location X: health 40, 30, and 20 at X 150, 300, and 450. Add a fourth row and leave its class empty: the print is the same three lines, and the X values still step by 150 with no gap. Make a Blueprint child of `DojoP21Imp` named `BP_FireImp`, pick it in a new row, and play again: the spawner makes your new kind with no change to any C++.
 
 # Files
 
@@ -69,7 +69,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Critter")
 	int32 Health = 0;
 
-	/** The level this critter saw at the moment it began play; zero until then. */
+	/** The level recorded when this critter starts; zero until then. */
 	UPROPERTY(BlueprintReadOnly, Category = "Critter")
 	int32 LevelAtBeginPlay = 0;
 
@@ -404,9 +404,9 @@ bool FDojo_P21_WaveSpawner_WaveKeepsOrderAndSkipsBadEntries::RunTest(const FStri
 
 # Hints
 
-- A critter works out its health from its level at one particular moment of its life. Which moment is it, and what must already be true of the critter then?
-- Spawning with a class normally builds the actor and starts its life in a single call. The glossary has a spawn that splits those two steps and leaves a window between them; what can you do to the critter inside that window?
-- `SpawnWave` places each critter one spacing beyond the last critter it actually made. Which number gives the place of the next one: the count of entries it has looked at, or the count of critters it has made?
+- A critter works out its health at one particular moment of its life, so ask which moment it is and what must already be true then.
+- Look at which spawn function you call, because only one of the choices leaves a gap between building a critter and starting its life.
+- `SpawnWave` places each critter one spacing beyond the last one it actually made, so ask which count gives the next place.
 
 # Rubric
 
@@ -419,7 +419,7 @@ bool FDojo_P21_WaveSpawner_WaveKeepsOrderAndSkipsBadEntries::RunTest(const FStri
 
 # Alternative
 
-A virtual creator per kind, as in the last quest, would work here too: a slime spawner and an imp spawner, each overriding a `CreateCritter` function. That is the better choice when making a kind takes more than choosing its class. Here every kind is made the same way and differs only in which class it is, so the class is data: a `TSubclassOf` the designer picks, and one spawner for all of them, including kinds that exist only as Blueprints. Setting the level before the critter begins play matters because this critter reads its level in `BeginPlay`. A plain spawn builds the critter and runs `BeginPlay` in one step, so a level assigned on the line after it is too late, and the critter has already worked out its health from the default level. A deferred spawn splits the two steps: build, give the critter what it needs, then finish. Blueprint's Spawn Actor from Class node does the same for every pin marked `ExposeOnSpawn`.
+A virtual creator per kind, as in the launchers quest, would work here too: a slime spawner and an imp spawner, each overriding a `CreateCritter` function. That is the better choice when making a kind takes more than choosing its class. Here every kind is made the same way and differs only in which class it is, so the class is data: a `TSubclassOf` the designer picks, and one spawner for all of them, including kinds that exist only as Blueprints. Setting the level before the critter begins play matters because this critter reads its level in `BeginPlay`. A plain spawn builds the critter and runs `BeginPlay` in one step, so a level assigned on the line after it is too late, and the critter has already worked out its health from the default level. A deferred spawn splits the two steps: build, give the critter what it needs, then finish. Blueprint's Spawn Actor from Class node does the same for every pin marked `ExposeOnSpawn`.
 
 # Parsons
 

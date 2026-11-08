@@ -25,7 +25,7 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: the range's turrets all call one function, MakeBolt, to get a bolt. A teammate wants every bolt to come from a pool instead of a fresh spawn. Where does the change go?"
 choices:
-  - Into each of the turrets, one by one
+  - Into each of the turrets, one by one, wherever a bolt is made
   - Into MakeBolt, once, because every turret already asks it
   - Into the bolt class, which must now delete itself
   - Nowhere; pools and spawning cannot be combined
@@ -47,10 +47,10 @@ What you built for the launchers is the **Factory Method** pattern. Making a thi
 
 **Two ways to choose the class.**
 
-- **A virtual function in a subclass.** The base creator calls `CreateBolt`; the ember launcher overrides it and spawns an ember bolt. The choice is code, one subclass per product. It is the right shape when making the product takes more than naming a class, such as a spread of three bolts or a bolt taken from a pool. A base creator that only declares the function is marked `Abstract` so nobody can place one.
+- **A virtual function in a subclass.** The base creator calls `CreateBolt`; the ember launcher overrides it and spawns an ember bolt. The choice is code, one subclass per product. It is the right shape when making the product takes more than naming a class, such as a bolt that needs extra setup or a bolt taken from a pool. A base creator that only declares the function is marked `Abstract` so nobody can place one.
 - **A class in data.** A `TSubclassOf<ABase>` property, shown as a list of the base's children in the Details panel, passed to `SpawnActor`. One maker serves every product, including Blueprint classes created later. Reach for this first when only the class differs.
 
-**Prepare before it lives.** A maker that has something to give the new actor, such as a shooter or a level, spawns it deferred, sets what it needs, then calls `FinishSpawning`, so the actor's `BeginPlay` already sees its values. This is why a maker earns its keep even when it is three lines long: the order of those lines is written once.
+**Prepare before it lives.** A maker that has something to give the new actor, such as a shooter, spawns it deferred, sets what it needs, then calls `FinishSpawning`, so the actor's `BeginPlay` already sees its values. This is why a maker earns its keep even when it is three lines long: the order of those lines is written once.
 
 **A place to change how things are made.** Because every caller goes through the maker, a pool, a counter for the profiler, a limit on how many exist, or a different class for a game mode is a change to the one function. The turret refactor in this world does exactly that.
 
@@ -68,7 +68,7 @@ protected:
 
 // The same decision as data: a class a designer picks, handed to one maker.
 UPROPERTY(EditAnywhere, Category = "Spawn")
-TSubclassOf<ADojoP21Critter> CritterClass;
+TSubclassOf<ADojoP21Bolt> BoltClass;
 ```
 
 # Questions
@@ -78,8 +78,8 @@ TSubclassOf<ADojoP21Critter> CritterClass;
   type: multiple-choice
   prompt: "In the launchers, which part is the creator and which is the product?"
   choices:
-    - The launcher is the product and the bolt is the creator
-    - Both are creators
+    - The launcher is the product, and the bolt is the creator
+    - Both are creators, because both of them make something
     - The launcher is the creator and the bolt is the product
     - Neither; Factory Method has no creator
   answerIndex: 2
@@ -91,39 +91,39 @@ TSubclassOf<ADojoP21Critter> CritterClass;
     - Always; data is never enough
     - When designers must pick the class in the Details panel
     - Never; virtual functions cannot spawn actors
-    - When making the product takes more than choosing a class, such as firing three bolts or taking one from a pool
+    - When making it takes more than just choosing a class
   answerIndex: 3
   explanation: A class value can only say which class. When the making itself differs, the difference is code, and a virtual function holds it.
 - id: fill-subclass
   type: fill-blank
-  prompt: "A property of type TSubclassOf<ADojoP21Critter> shows a picker limited to the critter base and its ___."
+  prompt: "A property of type TSubclassOf<ADojoP21Bolt> shows a picker limited to the bolt base and its ___."
   acceptedAnswers: [children, subclasses, child classes, derived classes, descendants, child]
   explanation: TSubclassOf narrows a class reference to a family, so a designer cannot pick an unrelated class.
 - id: spot-hardcode
   type: spot-the-bug
-  prompt: This maker should spawn the class the entry names. Which line ignores the designer's choice?
+  prompt: This maker should spawn the bolt class a designer picked. Which line ignores the designer's choice?
   code: |
-    ADojoP21Critter* ADojoP21Spawner::Create(const FDojoP21SpawnEntry& Entry, const FTransform& Where)
+    ADojoP21Bolt* ADojoExRange::MakeBolt(const FTransform& Where)
     {
-    	if (Entry.CritterClass.Get() == nullptr) return nullptr;
-    	return GetWorld()->SpawnActor<ADojoP21Critter>(ADojoP21Critter::StaticClass(), Where);
+    	if (BoltClass.Get() == nullptr) return nullptr;
+    	return GetWorld()->SpawnActor<ADojoP21Bolt>(ADojoP21Bolt::StaticClass(), Where);
     }
   bugLine: 4
-  fix: Pass Entry.CritterClass to SpawnActor instead of the base class's StaticClass.
-  explanation: Passing the base class always makes the base critter, so every row the designer fills in produces the same thing.
+  fix: Pass BoltClass to SpawnActor instead of the base class's StaticClass.
+  explanation: Passing the base class always makes the base bolt, so every class the designer picks produces the same thing.
 - id: pool-swap
   type: multiple-choice
   prompt: "Every turret asks MakeBolt for its bolt. What does that make easy?"
   choices:
-    - Changing how bolts are made, for example taking them from a pool, in one place for every turret
-    - Giving every turret a different pool by editing each one
+    - Changing how bolts are made in one place, for every turret
+    - Giving every turret a different pool by editing each of them
     - Making bolts without any class
     - Removing the need for BeginPlay
   answerIndex: 0
   explanation: The turrets depend on the answer, not on how it is made, so the body of the one maker can change underneath them.
 - id: pick-neighbour
   type: which-pattern
-  prompt: "A spawner needs to choose between a slime class and an imp class and prepare the new critter before it begins play. Which pattern describes the function you write?"
+  prompt: "A turret function must choose between an ember bolt class and a frost bolt class and set the shooter before the bolt begins play. Which pattern describes the function you write?"
   choices: [factory-method, observer, state, prototype]
   answer: factory-method
   distractorNotes:

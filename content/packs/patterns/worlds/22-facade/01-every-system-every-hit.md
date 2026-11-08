@@ -7,7 +7,7 @@ difficulty: 3
 patterns: []
 skills: [facade, architecture]
 terms: [subsystem, world-subsystem, game-instance-subsystem, subsystem-dependency, gameplay-statics, niagara-function-library]
-prerequisites: [p13-bytecode-when-not]
+prerequisites: [p21-boss-ember-range]
 xp: 25
 estimatedMinutes: 10
 concepts:
@@ -25,11 +25,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: eight kinds of weapon and trap each play a hit by calling the sound system, the spark effects, and the HUD themselves, in their own code. A designer wants every heavy hit to flash the screen edge orange instead of red. How many places change?"
 choices:
-  - One, the HUD
-  - At least eight, one in every weapon and trap that flashes, and any that someone forgot will stay red
-  - None; colors are data
-  - Two, the HUD and the sound system
-answerIndex: 1
+  - One place, because the HUD system owns the flash color
+  - Two places, the HUD system and the sound system together
+  - None at all, because a color is only data and not code
+  - Eight, one in each caller, and a missed one stays red
+answerIndex: 3
 explanation: Each caller decided for itself when and how to flash. The rule lives in eight places, so it changes in eight places, and the one that is missed becomes a bug report.
 ```
 
@@ -66,45 +66,45 @@ GetWorld()->GetSubsystem<UDojoP22HitFeedback>()->PlayHitFeedback(Where, 50.f);
   type: multiple-choice
   prompt: "Four callers each play hit feedback by calling the sound, spark, and HUD systems directly. What goes wrong first as the game grows?"
   choices:
-    - The game runs out of memory
-    - The callers' copies of the rules drift apart, so the same hit feels different depending on who caused it
-    - The sound system stops working
-    - Nothing; four copies of a rule are as good as one
-  answerIndex: 1
+    - The game runs out of memory because each caller keeps its own copy of the systems
+    - The sound system stops working once more than three callers play cues at the same time
+    - The copies of the rules drift apart, so that one hit feels different from another
+    - Nothing goes wrong, because four copies of a rule are as safe as one copy of it
+  answerIndex: 2
   explanation: Each copy is changed or forgotten on its own schedule. One front keeps one copy.
 - id: fill-direction
   type: fill-blank
   prompt: "Callers depend on the front, and the front depends on the systems behind it; the systems ___ about the front."
-  acceptedAnswers: [know nothing, do not know, know nothing at all]
+  acceptedAnswers: [know nothing, do not know, know nothing at all, know nothing about it, know nothing about the front]
   explanation: The arrow points one way, so the systems can be reused or tested without the front.
 - id: home-subsystem
   type: multiple-choice
   prompt: "Which home suits a hit feedback front that every actor in a level should reach, and that can start over with each level?"
   choices:
-    - A UWorldSubsystem, created once per world and reached with GetWorld()->GetSubsystem
-    - A static global variable set from the first actor that hits something
-    - A component copied onto every weapon
-    - The level Blueprint
+    - A UWorldSubsystem, made once for each world and reached with GetSubsystem
+    - A static global variable that the first actor to hit something sets for the rest
+    - A component copied onto every weapon and trap in every level of the game
+    - The level Blueprint, which each level would have to copy from the one before
   answerIndex: 0
   explanation: A world subsystem is made for each world by the engine, one of it, with no actor to place and nothing global to clear.
 - id: dependency-call
   type: multiple-choice
   prompt: "In UDojoP22HitFeedback::Initialize, what does Collection.InitializeDependency<UDojoP22SoundDesk>() do?"
   choices:
-    - It creates a second sound desk only for the front
-    - It makes sure the world's sound desk exists and is initialized before the front goes on, and returns it
-    - It deletes the sound desk when the front is done
-    - It does nothing unless the sound desk ticks
-  answerIndex: 1
+    - It creates a second sound desk that only the front is allowed to use
+    - It deletes the sound desk again when the front has finished with it
+    - It does nothing at all unless the sound desk is set up to tick
+    - It makes sure the world's sound desk is ready first and returns it
+  answerIndex: 3
   explanation: Subsystems of one kind start in no promised order; asking for a dependency puts that one first and hands it back.
 - id: engine-front
   type: multiple-choice
   prompt: "Why can UGameplayStatics::PlaySoundAtLocation be called a front over a bigger system?"
   choices:
-    - It is the only way to play a sound
-    - One call stands for several steps inside the audio system that the caller never sees
-    - It runs on its own thread
-    - It saves the sound to disk
+    - It is the only function in the entire engine that is able to play a sound
+    - One call stands for several steps inside audio that the caller never sees
+    - It runs the sound on a thread of its own, away from the game's main thread
+    - It saves the sound to disk first so that later play sessions can start it
   answerIndex: 1
   explanation: The caller names what it wants; the function does the work of finding the device and starting a sound.
 - id: explain-front

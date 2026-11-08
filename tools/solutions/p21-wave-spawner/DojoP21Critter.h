@@ -26,7 +26,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Critter")
 	int32 Health = 0;
 
-	/** The level this critter saw at the moment it began play; zero until then. */
+	/** The level recorded when this critter starts; zero until then. */
 	UPROPERTY(BlueprintReadOnly, Category = "Critter")
 	int32 LevelAtBeginPlay = 0;
 

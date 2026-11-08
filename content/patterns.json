@@ -2846,12 +2846,12 @@
         "type": "multiple-choice",
         "prompt": "What separates Strategy from State?",
         "choices": [
-          "A strategy is usually chosen from outside and stays put, while states switch themselves in response to events",
-          "Strategy uses interfaces and State does not",
-          "State is only for AI",
-          "They are the same pattern"
+          "Strategy needs interfaces, while State never uses them at all",
+          "State is meant only for AI, while Strategy works for any actor",
+          "A strategy is picked from outside, a state switches itself",
+          "They are the same pattern with two different names"
         ],
-        "answerIndex": 0,
+        "answerIndex": 2,
         "explanation": "Same shape, different intent: who chooses the delegate and how often it changes."
       },
       {
@@ -2880,12 +2880,12 @@
         "type": "multiple-choice",
         "prompt": "A turret can aim three ways and move three ways, in any pairing. How many classes does that take as turret subclasses, and how many as rule classes held by one turret class?",
         "choices": [
-          "Nine subclasses, or six rule classes",
-          "Six subclasses, or nine rule classes",
-          "Three in both cases",
-          "Nine in both cases"
+          "Six subclasses, or nine rule classes held by the turret",
+          "Nine subclasses, or six rule classes held by the turret",
+          "Three in both cases, one class for each way of aiming or moving",
+          "Nine in both cases, since each pairing needs its own class"
         ],
-        "answerIndex": 0,
+        "answerIndex": 1,
         "explanation": "Subclasses multiply, one for each pair. Rules add, one for each way, and any aim pairs with any movement."
       }
     ],
@@ -2896,8 +2896,8 @@
         "prompt": "Turrets should choose targets differently: snipers pick the farthest, flamethrowers pick the closest, and support turrets pick the most wounded ally. Designers want to set this per turret Blueprint. Which pattern?",
         "choices": [
           "state",
-          "strategy",
           "subclass-sandbox",
+          "strategy",
           "type-object"
         ],
         "answer": "strategy",
@@ -2949,8 +2949,8 @@
         "type": "which-pattern",
         "prompt": "A guard patrols until it sees the player, chases until it loses sight, and then searches the spot where it last saw them before it goes back to patrolling. Which pattern?",
         "choices": [
-          "command",
           "state",
+          "command",
           "strategy",
           "type-object"
         ],
@@ -3001,12 +3001,12 @@
       {
         "id": "factory-method-recall-2",
         "type": "fill-blank",
-        "prompt": "To set properties on an actor before its BeginPlay runs, spawn it with SpawnActorDeferred and then call ___.",
+        "prompt": "To give a bolt its shooter before its BeginPlay runs, spawn it with SpawnActorDeferred and then call ___.",
         "acceptedAnswers": [
           "FinishSpawning",
           "FinishSpawning()"
         ],
-        "explanation": "Deferred spawning gives a window between construction and BeginPlay for initialization."
+        "explanation": "A deferred spawn leaves a window between building the bolt and its BeginPlay, in which the shooter can be set."
       },
       {
         "id": "factory-method-recall-3",
@@ -3049,7 +3049,7 @@
       {
         "id": "factory-method-scenario-2",
         "type": "which-pattern",
-        "prompt": "An enemy wave spawner needs to create the right enemy class and fully configure its kind data before BeginPlay runs. Which pattern describes the function you write?",
+        "prompt": "A turret needs one function that decides which bolt class to build, sets who shot it, and counts the shot, and every kind of shot should ask that same function. Which pattern describes it?",
         "choices": [
           "factory-method",
           "observer",
@@ -3060,18 +3060,18 @@
         "distractorNotes": [
           {
             "choice": "type-object",
-            "why": "The kind data is a type object, but the creating function is the factory."
+            "why": "A table of kinds says what a thing is by data, but the function that makes it is the factory."
           },
           {
             "choice": "observer",
-            "why": "Notifying listeners after spawn is too late for BeginPlay."
+            "why": "Telling listeners after the bolt exists does not decide how it is made."
           },
           {
             "choice": "state",
             "why": "States are unrelated to construction."
           }
         ],
-        "explanation": "A factory using SpawnActorDeferred, applying the kind, then FinishSpawning."
+        "explanation": "One function every shot asks decides the class and how the bolt starts, so a pool or a counter changes it in one place."
       }
     ]
   },
@@ -3090,7 +3090,7 @@
       {
         "id": "facade-recall-1",
         "type": "multiple-choice",
-        "prompt": "Which engine class is a broad facade over many engine services such as spawning, sound, and saving?",
+        "prompt": "Which engine class is a library of small fronts, each static function one call in front of an engine system such as sound or saving?",
         "choices": [
           "UCharacterMovementComponent",
           "FVector",
@@ -3125,12 +3125,12 @@
         "type": "multiple-choice",
         "prompt": "In a facade subsystem's Initialize, why call Collection.InitializeDependency on the systems it drives?",
         "choices": [
-          "To make a private copy of each system",
-          "Because subsystems start in no promised order, it makes sure each system exists and is initialized first, and hands it back to keep",
-          "To stop the systems from ticking",
-          "It is required for every UPROPERTY"
+          "To make a private copy of each system that only the front may use",
+          "To stop the systems from ticking until the front has finished starting",
+          "It readies each system before the front uses it, and returns it",
+          "It is required for every UPROPERTY the front happens to declare"
         ],
-        "answerIndex": 1,
+        "answerIndex": 2,
         "explanation": "Asking for a dependency puts that subsystem first and returns it, so the facade can hold it from the start."
       },
       {
@@ -3230,12 +3230,12 @@
         "type": "multiple-choice",
         "prompt": "A tool programmer wants to wrap UGameplayStatics::GetPlayerController in UMyHelpers::GetPlayerController with the same parameters, for one widget. What is the better choice?",
         "choices": [
-          "Write the wrapper; every engine call deserves a facade",
-          "Call UGameplayStatics::GetPlayerController directly; the wrapper hides nothing and has one caller",
-          "Make the wrapper a game instance subsystem",
-          "Put the call in a god object with everything else"
+          "Write the wrapper, because every engine call deserves a facade of its own to hide behind",
+          "Make the wrapper a game instance subsystem so that it lives across every level load",
+          "Call it directly, since a wrapper with the same parameters hides nothing here",
+          "Put the call in a god object with everything else, so there is only one place to look"
         ],
-        "answerIndex": 1,
+        "answerIndex": 2,
         "explanation": "A pass-through with one caller adds a class and a file and hides nothing. A facade earns its place by turning several steps into one call for many callers."
       }
     ]
