@@ -2620,6 +2620,14 @@ Sampled all 7: 01 breakdown quest system, 02 build quest item, 03 build checkpoi
   - A key ring and a pickup (stub): a runner with a ring takes the key and the pickup disappears; one without a ring leaves it.
   - A locked door (blank): Locked and a counted try without the key, Open and one unlock event with it.
   - Boss, the shrine gate: two full rounds with the reset in between.
-- Proof so far: two review rounds (fixes in A1546, A1547 and a parameter rename against MSVC shadowing); a fresh tester on 0b2bedb: typecheck passes; `npm test` 1290 passed, 32 skipped; verify-content 239 files, no problems; build passes; full e2e 50 passed, 1 skipped; starters match their solutions outside the gaps; LF line endings and no em dashes. The engine proof (`--pack mechanics --engine`) and 11 single-edit mutations are prepared and wait for an engine slot.
+- Proof so far: two review rounds (fixes in A1546, A1547 and a parameter rename against MSVC shadowing); a fresh tester on 0b2bedb: typecheck passes; `npm test` 1290 passed, 32 skipped; verify-content 239 files, no problems; build passes; full e2e 50 passed, 1 skipped; starters match their solutions outside the gaps; LF line endings and no em dashes.
+- Engine proof (UE 5.8.4, headless, the default verify workspace, one hold of the shared lock, at 6c2077e with main 5c79af4 merged; run approved by Mohammad in this session): each of the five build and boss quests run alone with `--quest <id> --engine`. All five references pass their tests, and each of the four starters fails as designed (the boss has no starter, A67). First builds took 92 to 163 s, solution tests about 16 s each.
+- Mutations (A67, each one edit, run alone against its quest): 11 planned, 11 caught by the intended test, none timed out.
+  - Plate: announcing every overlap instead of only the edges (`AnnouncesOnlyTheEdges`, "The lamp heard one press" was 2); announcing a null plate ("The press carried the plate itself").
+  - Gate: deciding from the plate that changed only, and the deliberate failure, opening for any plate (`WaitsForEveryPlate`, "only one pressed, the gate does not want to open"); easing instead of a constant speed ("Halfway through 0.8 s the panel is about halfway up").
+  - Key ring: a silent add (`HoldsEachKeyOnce`, "The new key is announced once" was 0); announcing a refused duplicate ("the refused key is not announced" was 2).
+  - Locked door: taking the key off the ring (`OpensForTheKey`, "The door leaves the key on the ring"); not counting a try with no visitor (`StaysShutWithoutTheKey`, 3 expected, 2 counted).
+  - Boss: the reset keeps the key (`TwoRoundsPlayAlike`, "Round 1: the key is gone from the runner's ring"); the reset leaves the door open ("Round 1: the door is locked again").
+- Glossary: `clamp-min-meta` takes ClampMin and ClampMax from `meta-specifier` on purpose (A1541); after the merge no term or alias is claimed by two entries (269 entries), and verify-content finds no problems.
 - Decisions made: A1540 to A1547.
-- Not done: the engine proof and the mutations; macOS.
+- Not done: unverified on macOS (no engine there, A75).
