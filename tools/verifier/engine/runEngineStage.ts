@@ -81,7 +81,7 @@ export async function runEngineStage(enginePath: string, options: VerifierOption
 		process.off("SIGTERM", stopOnSignal);
 	});
 
-	log(`engine: ${report.questsChecked} quests; first build ${report.timings.firstBuildSeconds} s, solution tests ${report.timings.solutionTestsSeconds} s, starter checks ${report.timings.starterChecksSeconds} s`);
+	log(`engine: ${report.questsChecked} quests; first build ${report.timings.firstBuildSeconds} s, solution tests ${report.timings.solutionTestsSeconds} s, own-solution checks ${report.timings.ownSolutionChecksSeconds} s, starter checks ${report.timings.starterChecksSeconds} s`);
 
 	if (report.logsFolder !== undefined) log(`engine: build and test logs of this run are in ${report.logsFolder} (the last few runs are kept)`);
 

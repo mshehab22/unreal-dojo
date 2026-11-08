@@ -12,7 +12,7 @@ import type { QuestRecord } from "../ContentCheck";
 import { EngineSandbox, type EngineTarget, type SandboxBuild, type SandboxFile, type SandboxTestRun } from "./EngineSandbox";
 
 /** A quest ready for the engine: what QuestFileWriter needs, the solution files, the starter (none for a boss), and declared test names. */
-interface EngineQuest
+export interface EngineQuest
 {
 	quest: { id: string; title: string; tests: string };
 	file: string;
@@ -27,14 +27,14 @@ interface EngineQuest
 }
 
 /** One quest's files as the sandbox should hold them for a step. */
-interface InstalledQuest
+export interface InstalledQuest
 {
 	quest: EngineQuest["quest"];
 	files: SandboxFile[];
 }
 
 /** Every quest a record needs before it: its prerequisites, the quests its "Compiles against earlier quests:" line names, and a boss's pieces. */
-function directRequirements(record: QuestRecord): string[]
+export function directRequirements(record: QuestRecord): string[]
 {
 	const quest = record.quest;
 	const prose = quest.kind === "build" || quest.kind === "refactor" ? quest.brief : quest.kind === "boss" ? quest.spec : "";
@@ -72,6 +72,9 @@ function fingerprint(files: readonly SandboxFile[]): string
 export interface EngineTimings
 {
 	firstBuildSeconds: number;
+
+	/** Building and testing the quests whose learner sandbox differs from the shared build's (A2040); zero when there are none. */
+	ownSolutionChecksSeconds: number;
 	solutionTestsSeconds: number;
 	starterChecksSeconds: number;
 }
@@ -190,7 +193,7 @@ async function bossEntry(quest: QuestRecord["quest"] & { kind: "boss" }, file: s
 }
 
 /** Turns quest records into engine quests, reading each reference solution; quests without one are skipped (the solution check reports them). */
-async function engineQuests(records: readonly QuestRecord[], solutionsFolder: string): Promise<{ quests: EngineQuest[]; problems: ContentProblem[] }>
+export async function engineQuests(records: readonly QuestRecord[], solutionsFolder: string): Promise<{ quests: EngineQuest[]; problems: ContentProblem[] }>
 {
 	const quests: EngineQuest[] = [];
 	const problems: ContentProblem[] = [];
@@ -273,6 +276,73 @@ async function install(sandbox: VerifierSandbox, desired: ReadonlyMap<string, In
 	}
 }
 
+/** Quests whose own tests can run together in one sandbox state, and that state. */
+export interface OwnStateGroup
+{
+	members: EngineQuest[];
+	desired: Map<string, InstalledQuest>;
+}
+
+/** Whether quest `questId` has exactly the same files in the `own` state as in the `shared` one. */
+function sameFilesInBoth(questId: string, own: ReadonlyMap<string, InstalledQuest>, shared: ReadonlyMap<string, InstalledQuest>): boolean
+{
+	const inOwn = own.get(questId);
+	const inShared = shared.get(questId);
+
+	return inOwn !== undefined && inShared !== undefined && fingerprint(inOwn.files) === fingerprint(inShared.files);
+}
+
+/** Whether two states never give one quest two different sets of files, so they can be one sandbox. */
+function compatible(first: ReadonlyMap<string, InstalledQuest>, second: ReadonlyMap<string, InstalledQuest>): boolean
+{
+	for (const [id, entry] of second)
+	{
+		const other = first.get(id);
+
+		if (other !== undefined && fingerprint(other.files) !== fingerprint(entry.files)) return false;
+	}
+
+	return true;
+}
+
+/**
+ * The extra sandbox states the judged quests' own tests need (A2040). The shared first build holds every solution with every
+ * boss's piece copies over the pieces, so a piece's tests there run against the boss's copy and a mistake in the piece's own
+ * solution goes unseen. A quest's tests must also run against what its learner has: its own solution, the solutions of what it
+ * needs, and the piece copies of only the bosses it needs. Only a quest whose own files differ between that state and the shared one
+ * (a piece a later boss carries its own copy of) is tested again; a quest that merely uses such a piece keeps its shared-build
+ * verdict, because the boss copies only extend what dependents call (A2040). Quests whose states never give one quest two
+ * different file sets share a group, so the extra builds are a handful, not one per piece.
+ */
+export function ownStateGroups(quests: readonly EngineQuest[], judged: readonly EngineQuest[], requirementsOf: ReadonlyMap<string, readonly string[]>): OwnStateGroup[]
+{
+	const shared = desiredState(quests, new Set(quests.map((entry) => entry.quest.id)));
+	const groups: OwnStateGroup[] = [];
+
+	for (const entry of judged)
+	{
+		const needed = requirementClosure(entry.quest.id, requirementsOf);
+		const own = desiredState(quests, new Set([...needed, entry.quest.id]));
+
+		if (sameFilesInBoth(entry.quest.id, own, shared)) continue;
+
+		const group = groups.find((candidate) => compatible(candidate.desired, own));
+
+		if (group === undefined)
+		{
+			groups.push({ members: [entry], desired: new Map(own) });
+		}
+		else
+		{
+			group.members.push(entry);
+
+			for (const [id, state] of own) group.desired.set(id, state);
+		}
+	}
+
+	return groups;
+}
+
 /** The error for an engine run that built and tested no quest, so a mistyped path or id never looks like a pass. */
 function nothingJudgedMessage(scope: ReadonlySet<string> | undefined, solutionsFolder: string): string
 {
@@ -305,7 +375,7 @@ export class EngineVerifier
 	async verify(records: readonly QuestRecord[], scope?: ReadonlySet<string>): Promise<EngineReport>
 	{
 		const { log } = this.options;
-		const timings: EngineTimings = { firstBuildSeconds: 0, solutionTestsSeconds: 0, starterChecksSeconds: 0 };
+		const timings: EngineTimings = { firstBuildSeconds: 0, ownSolutionChecksSeconds: 0, solutionTestsSeconds: 0, starterChecksSeconds: 0 };
 		const { quests, problems } = await engineQuests(records, this.options.solutionsFolder);
 
 		const judged = quests.filter((entry) => scope === undefined || scope.has(entry.quest.id));
@@ -405,8 +475,51 @@ export class EngineVerifier
 			problems.push(...found);
 		}
 
-		const startersStarted = performance.now();
+		// A quest whose learner would have a different version of a piece than the shared build holds is tested again in its own sandbox (A2040).
+		const ownStartedAt = performance.now();
 
+		for (const group of ownStateGroups(quests, judged, requirementsOf))
+		{
+			if (signal.aborted) return stopped("the own-solution checks");
+
+			log(`engine: own-solution check of ${group.members.map((member) => member.quest.id).join(", ")}`);
+
+			await install(sandbox, group.desired, installed);
+
+			const groupBuild = await sandbox.build();
+
+			if (signal.aborted) return stopped("the own-solution checks");
+
+			if (!groupBuild.succeeded)
+			{
+				for (const member of group.members)
+				{
+					const quoted = buildErrors(groupBuild, member.quest.id);
+
+					solutionFailed.add(member.quest.id);
+					problems.push(errorAt(member.file, `the reference solution did not build in the sandbox a learner has at this quest (the solutions of what it needs, without the boss copies of pieces that come after it)${quoted.length > 0 ? `:\n${quoted.join("\n")}` : ""}`, "engine"));
+				}
+
+				continue;
+			}
+
+			const groupRun = await sandbox.runTests(group.members.flatMap((member) => member.testNames));
+
+			if (signal.aborted) return stopped("the own-solution checks");
+
+			for (const member of group.members)
+			{
+				const found = this.judgeSolution(member, groupRun, " in the sandbox a learner has at this quest");
+
+				if (found.length > 0) solutionFailed.add(member.quest.id);
+
+				problems.push(...found);
+			}
+		}
+
+		timings.ownSolutionChecksSeconds = secondsSince(ownStartedAt);
+
+		const startersStarted = performance.now();
 
 		for (const entry of judged)
 		{
@@ -433,8 +546,8 @@ export class EngineVerifier
 		return { problems, questsChecked: judged.length, timings, logsFolder: sandbox.logsFolder };
 	}
 
-	/** Every declared test of a quest must appear in the report and pass. */
-	private judgeSolution(entry: EngineQuest, run: SandboxTestRun): ContentProblem[]
+	/** Every declared test of a quest must appear in the report and pass; `where` says which sandbox the run used, when it is not the shared one. */
+	private judgeSolution(entry: EngineQuest, run: SandboxTestRun, where = ""): ContentProblem[]
 	{
 		const outcomes = run.outcomes;
 
@@ -446,8 +559,8 @@ export class EngineVerifier
 		{
 			const outcome = outcomes.get(name);
 
-			if (outcome === undefined) problems.push(errorAt(entry.file, `test ${name} did not run with the reference solution`, "engine"));
-			else if (!outcome.passed) problems.push(errorAt(entry.file, `test ${name} fails with the reference solution (${outcome.state})${outcome.messages.length > 0 ? `:\n${outcome.messages.join("\n")}` : ""}`, "engine"));
+			if (outcome === undefined) problems.push(errorAt(entry.file, `test ${name} did not run with the reference solution${where}`, "engine"));
+			else if (!outcome.passed) problems.push(errorAt(entry.file, `test ${name} fails with the reference solution${where} (${outcome.state})${outcome.messages.length > 0 ? `:\n${outcome.messages.join("\n")}` : ""}`, "engine"));
 		}
 
 		return problems;

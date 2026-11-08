@@ -125,7 +125,9 @@ class FakeSandbox implements VerifierSandbox
 
 			if (isStarter && this.starterTestsMissing.has(questId)) continue;
 
-			const passed = !isStarter || this.starterPasses.has(questId);
+			// A quest whose files say DEFECT has a bug its tests catch, whichever version of the quest it is.
+			const defective = this.written.get(questId)?.some((file) => file.text.includes("DEFECT")) ?? false;
+			const passed = (!isStarter || this.starterPasses.has(questId)) && !defective;
 
 			outcomes.set(name, { passed, state: passed ? "Success" : "Fail", messages: passed ? [] : ["Error: Expected true"] });
 		}
@@ -361,10 +363,70 @@ describe("EngineVerifier", () =>
 			"write a: a.cpp=EXTENDED",
 			"write yard: DojoBoss.cpp=SOLUTION",
 			"build",
+			// a's tests ran against the boss's copy above; they run again against a's own solution, as its learner has it (A2040).
 			"remove yard",
+			"write a: a.cpp=SOLUTION",
+			"build",
 			"write a: a.cpp=STARTER",
 			"build",
 		]);
+	});
+
+	it("tests a piece's own solution even when the boss's copy of the piece would pass (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "SOLUTION DEFECT" });
+
+		await writeBossSolution("yard", true);
+		await mkdir(join(solutions, "yard", "a"), { recursive: true });
+		await writeFile(join(solutions, "yard", "a", "a.cpp"), "EXTENDED");
+
+		const report = await verifyWith(sandbox, [quest("a"), { ...boss("yard"), pieces: ["a"] }], solutions);
+
+		expect(report.problems.map((problem) => `${problem.file}: ${problem.message}`)).toEqual([
+			"examples/a.md: test Dojo.Test.a fails with the reference solution in the sandbox a learner has at this quest (Fail):\nError: Expected true",
+			"examples/a.md: starter check inconclusive: the reference solution fails, so the starter was not checked",
+		]);
+	});
+
+	it("reports a piece's own solution that does not build without the boss's copy (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "BROKEN" });
+
+		await writeBossSolution("yard", true);
+		await mkdir(join(solutions, "yard", "a"), { recursive: true });
+		await writeFile(join(solutions, "yard", "a", "a.cpp"), "EXTENDED");
+
+		const report = await verifyWith(sandbox, [quest("a"), { ...boss("yard"), pieces: ["a"] }], solutions);
+
+		expect(report.problems.map((problem) => problem.message)).toEqual([
+			"the reference solution did not build in the sandbox a learner has at this quest (the solutions of what it needs, without the boss copies of pieces that come after it):\n/x/Source/Dojo/Quests/a/a.cpp:3:1: error: expected ';'",
+			"starter check inconclusive: the reference solution fails, so the starter was not checked",
+		]);
+	});
+
+	it("checks two pieces of one boss in a single extra build, and adds none for a quest the boss does not touch (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "SOLUTION", b: "SOLUTION", c: "SOLUTION" });
+
+		await writeBossSolution("yard", true);
+
+		for (const piece of ["a", "b"])
+		{
+			await mkdir(join(solutions, "yard", piece), { recursive: true });
+			await writeFile(join(solutions, "yard", piece, `${piece}.cpp`), "EXTENDED");
+		}
+
+		const report = await verifyWith(sandbox, [quest("a"), quest("b"), quest("c"), { ...boss("yard"), pieces: ["a", "b"] }], solutions, new Set(["a", "b", "c"]));
+		const firstBuild = sandbox.operations.indexOf("build");
+		const secondBuild = sandbox.operations.indexOf("build", firstBuild + 1);
+
+		expect(report.problems).toEqual([]);
+
+		// One extra build between the shared build and the first starter check, holding both pieces on their own solutions.
+		expect(sandbox.operations.slice(firstBuild + 1, secondBuild + 1)).toEqual(["remove c", "remove yard", "write a: a.cpp=SOLUTION", "write b: b.cpp=SOLUTION", "build"]);
 	});
 
 	it("stops after the step a Ctrl+C interrupts, keeps the sandbox, and reports the cancel", async () =>
@@ -403,9 +465,12 @@ describe("EngineVerifier with quests after a boss (A443)", () =>
 			"write yard: DojoBoss.cpp=SOLUTION",
 			"write c: c.cpp=SOLUTION",
 			"build",
-			// a's starter: nothing after a is in the sandbox, so the boss and c go and a is checked on its own.
+			// a's own tests (A2040): a's learner has a's solution alone, without the boss's copy of a, so a is checked on its own first.
 			"remove yard",
 			"remove c",
+			"write a: a.cpp=SOLUTION",
+			"build",
+			// a's starter: the same state, with a's starter in place of its solution.
 			"write a: a.cpp=STARTER",
 			"build",
 			// c's starter: c needs the boss, so the boss and the extended a come back.
