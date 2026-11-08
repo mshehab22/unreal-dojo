@@ -1,9 +1,8 @@
-// Brings a persistent workspace to the sandbox template's state without touching build outputs or files that already match (W14, A1281).
+// Brings a persistent workspace to the sandbox template's state without touching build outputs or files that already match (W14, A1281, A1321).
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-/** Removal settings that ride out an editor or scanner still holding a file on Windows. */
-const REMOVE_OPTIONS = { recursive: true, force: true, maxRetries: 5, retryDelay: 200 } as const;
+import { REMOVE_OPTIONS } from "./removeOptions";
 
 /** What a sync changed. */
 export interface SyncSummary
@@ -47,10 +46,12 @@ async function listTree(root: string, skipped: ReadonlySet<string>): Promise<{ f
 /**
  * Makes `workspaceFolder` match `templateFolder`: files that differ or are missing are written (a file that already matches is
  * left alone, so its timestamp does not make UBT rebuild it), and files and folders the template does not have are removed, which
- * takes out every quest and test of the last run. `skipped` top-level names (the build outputs) are never read, written or
- * removed. `textOverrides` gives the wanted text of files that are not copied as they are (the `.uproject`).
+ * takes out stray files. `skipped` top-level names (the build outputs) are never read, written or removed. `textOverrides`
+ * gives the wanted text of files that are not copied as they are (the `.uproject`). A path for which `kept` returns true is not
+ * removed even though the template lacks it (the last run's quests, which the verifier reuses or removes itself); a folder
+ * that is kept can still lose entries inside it that are not.
  */
-export async function syncWorkspace(templateFolder: string, workspaceFolder: string, textOverrides: ReadonlyMap<string, string>, skipped: ReadonlySet<string>): Promise<SyncSummary>
+export async function syncWorkspace(templateFolder: string, workspaceFolder: string, textOverrides: ReadonlyMap<string, string>, skipped: ReadonlySet<string>, kept: (path: string) => boolean = () => false): Promise<SyncSummary>
 {
 	const summary: SyncSummary = { written: [], removed: [] };
 	const template = await listTree(templateFolder, skipped);
@@ -78,7 +79,7 @@ export async function syncWorkspace(templateFolder: string, workspaceFolder: str
 	// Folders first: a folder the template lacks goes with everything in it.
 	for (const path of present.folders)
 	{
-		if (wantedFolders.has(fold(path)) || summary.removed.some((removed) => path.startsWith(`${removed}/`))) continue;
+		if (wantedFolders.has(fold(path)) || kept(path) || summary.removed.some((removed) => path.startsWith(`${removed}/`))) continue;
 
 		await rm(join(workspaceFolder, path), REMOVE_OPTIONS);
 		summary.removed.push(path);
@@ -86,7 +87,7 @@ export async function syncWorkspace(templateFolder: string, workspaceFolder: str
 
 	for (const path of present.files)
 	{
-		if (wantedFiles.has(fold(path)) || summary.removed.some((removed) => path.startsWith(`${removed}/`))) continue;
+		if (wantedFiles.has(fold(path)) || kept(path) || summary.removed.some((removed) => path.startsWith(`${removed}/`))) continue;
 
 		await rm(join(workspaceFolder, path), REMOVE_OPTIONS);
 		summary.removed.push(path);

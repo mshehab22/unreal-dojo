@@ -1,4 +1,4 @@
-// The persistent sandbox project the verifier writes quest code into, then builds and tests through M1.3's runners (A211, A1280).
+// The persistent sandbox project the verifier writes quest code into, then builds and tests through M1.3's runners (A211, A1280, A1321).
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
@@ -9,7 +9,9 @@ import type { QuestFileWriter, QuestForWriting } from "../../../src/main/service
 import type { UnrealBuilder } from "../../../src/main/services/unreal/UnrealBuilder";
 
 import { pruneRunLogs } from "./pruneRunLogs";
+import { QuestParking, type QuestLocation } from "./QuestParking";
 import { syncWorkspace } from "./syncWorkspace";
+import { entryNames, QUEST_ID } from "./workspaceEntries";
 import { WorkspaceLock, type HeldWorkspaceLock, type WorkspaceLockTuning } from "./WorkspaceLock";
 import { resolveWorkspaceRoot, WORKSPACE_ENVIRONMENT_VARIABLE } from "./workspaceLocation";
 
@@ -34,12 +36,37 @@ const LONG_WORKSPACE_PATH = 100;
 /** Where a build's end time is kept in the workspace, so the gap above also holds between two runs (the next run may start within a second). */
 const LAST_BUILD_ENDED_FILE = join("Saved", "LastBuildEnded.txt");
 
+/** Where parked quests wait, outside `Source` so UBT does not see them (A1322). */
+const PARKED_FOLDER = join("Saved", "VerifierParked");
+
 /** Waits until the clock is more than the timestamp gap past `moment` (milliseconds since the epoch); never longer than the gap, whatever `moment` says. */
 async function waitPast(moment: number): Promise<void>
 {
 	const remaining = Math.min(TIMESTAMP_GAP_MILLISECONDS, moment + TIMESTAMP_GAP_MILLISECONDS - Date.now());
 
 	if (remaining > 0) await new Promise((done) => setTimeout(done, remaining));
+}
+
+/** The quest ids a project folder holds: a folder under `Source/Dojo/Quests` or a `Source/Dojo/Tests/<id>.Test.cpp`. */
+async function questIdsIn(projectFolder: string): Promise<Set<string>>
+{
+	const folders = await entryNames(join(projectFolder, "Source", "Dojo", "Quests"), (entry) => entry.isDirectory());
+	const tests = (await entryNames(join(projectFolder, "Source", "Dojo", "Tests"), (entry) => entry.isFile() && entry.name.endsWith(".Test.cpp"))).map((name) => name.slice(0, -".Test.cpp".length));
+
+	return new Set([...folders, ...tests].filter((id) => QUEST_ID.test(id)));
+}
+
+/**
+ * Whether a workspace path (relative, `/`-separated) belongs to a quest the verifier manages, so the template sync leaves it for
+ * the verifier to reuse or remove (A1321): a quest folder, a file directly in it, or a quest's test file. The template's own
+ * quests are not included; the sync mirrors them like any template file.
+ */
+function isQuestPath(path: string, templateQuestIds: ReadonlySet<string>): boolean
+{
+	const quest = /^Source\/Dojo\/Quests\/([^/]+)(?:\/[^/]+)?$/.exec(path) ?? /^Source\/Dojo\/Tests\/([^/]+)\.Test\.cpp$/.exec(path);
+	const id = quest?.[1];
+
+	return id !== undefined && QUEST_ID.test(id) && !templateQuestIds.has(id);
 }
 
 /** A sortable, file-name-safe stamp for the run's log folder. */
@@ -132,23 +159,31 @@ export class EngineSandbox
 	private readonly target: EngineTarget;
 	private readonly signal: AbortSignal;
 	private readonly lock: HeldWorkspaceLock;
+
+	/** Quests the template itself ships (the sample); never reported as the verifier's and never parked or removed by it. */
+	private readonly templateQuestIds: ReadonlySet<string>;
+	private readonly parking: QuestParking;
 	private runNumber = 0;
 	private lastBuildEnded = 0;
 
 	/** Use `EngineSandbox.create`. */
-	private constructor(folder: string, logsFolder: string, target: EngineTarget, signal: AbortSignal, lock: HeldWorkspaceLock)
+	private constructor(folder: string, logsFolder: string, target: EngineTarget, signal: AbortSignal, lock: HeldWorkspaceLock, templateQuestIds: ReadonlySet<string>, parking: QuestParking)
 	{
 		this.folder = folder;
 		this.logsFolder = logsFolder;
 		this.target = target;
 		this.signal = signal;
 		this.lock = lock;
+		this.templateQuestIds = templateQuestIds;
+		this.parking = parking;
 	}
 
 	/**
 	 * Takes the workspace lock for `target.version` (major.minor), then brings the workspace to the template's state: changed
-	 * template files are written, files the template lacks (last run's quests and tests) are removed, `EngineAssociation` is set
-	 * and the 5.8 plugins dropped for older engines as SandboxProjectService does (A41). Build outputs are kept, so builds are incremental.
+	 * template files are written, files the template lacks are removed, `EngineAssociation` is set and the 5.8 plugins dropped
+	 * for older engines as SandboxProjectService does (A41). Build outputs are kept, so builds are incremental. The last run's
+	 * quests are left in place (`questsInPlace` lists them) for the verifier to reuse, park or remove, so an unchanged quest is not
+	 * rewritten and recompiled (A1321).
 	 */
 	static async create(templateFolder: string, target: EngineTarget, options: SandboxCreateOptions = {}): Promise<EngineSandbox>
 	{
@@ -188,8 +223,13 @@ export class EngineSandbox
 
 			if (major === 5 && minor < 8) project.Plugins = (project.Plugins ?? []).filter((plugin) => !PLUGINS_FROM_5_8.has(plugin.Name));
 
-			const summary = await syncWorkspace(templateFolder, folder, new Map([["Dojo.uproject", `${JSON.stringify(project, null, "\t")}\n`]]), BUILD_OUTPUT_FOLDERS);
+			const templateQuestIds = await questIdsIn(templateFolder);
+			const summary = await syncWorkspace(templateFolder, folder, new Map([["Dojo.uproject", `${JSON.stringify(project, null, "\t")}\n`]]), BUILD_OUTPUT_FOLDERS, (path) => isQuestPath(path, templateQuestIds));
 			const logsRoot = join(folder, "Saved", "VerifierLogs");
+
+			const parking = new QuestParking(join(folder, PARKED_FOLDER));
+
+			await parking.removeUnfinished();
 
 			await mkdir(logsRoot, { recursive: true });
 			await pruneRunLogs(logsRoot, KEPT_RUN_LOGS - 1);
@@ -199,7 +239,7 @@ export class EngineSandbox
 			await mkdir(logsFolder, { recursive: true });
 			log(`engine: verify workspace at ${folder} (${summary.written.length} template files written, ${summary.removed.length} stale entries removed)`);
 
-			return new EngineSandbox(folder, logsFolder, target, signal, lock);
+			return new EngineSandbox(folder, logsFolder, target, signal, lock, templateQuestIds, parking);
 		}
 		catch (error)
 		{
@@ -210,18 +250,45 @@ export class EngineSandbox
 		}
 	}
 
-	/** Writes a quest's files to `Source/Dojo/Quests/<quest-id>/` and its tests to `Source/Dojo/Tests/<quest-id>.Test.cpp` with QuestFileWriter. */
+	/**
+	 * Writes a quest's files to `Source/Dojo/Quests/<quest-id>/` and its tests to `Source/Dojo/Tests/<quest-id>.Test.cpp` with
+	 * QuestFileWriter. A parked quest's files are moved back first, keeping their old times, so a file whose bytes still match is
+	 * not recompiled (with KeepUnchangedFileSystem under the writer, A1320); a file that differs is written fresh and rebuilt.
+	 */
 	async writeQuest(quest: QuestForWriting, files: readonly SandboxFile[]): Promise<void>
 	{
+		this.assertManagedQuest(quest.id);
 		await this.waitPastLastBuild();
+		await this.parking.restore(quest.id, this.locationOf(quest.id));
 		await this.target.tools.writer.write(this.folder, quest, Object.fromEntries(files.map((file) => [file.name, file.text])));
 	}
 
-	/** Removes a quest's folder and test file with QuestFileWriter. */
+	/**
+	 * Takes a quest out of the build without deleting its files (A1322): its learner files and test file move to the parked folder
+	 * under `Saved`, and its now empty quest folder stays, so the module's include paths (one per quest folder, in Dojo.Build.cs)
+	 * do not change and the rest of the module is not recompiled. `writeQuest` brings the files back.
+	 */
+	async parkQuest(questId: string): Promise<void>
+	{
+		this.assertManagedQuest(questId);
+		await this.parking.park(questId, this.locationOf(questId));
+	}
+
+	/** Removes a quest's folder and test file with QuestFileWriter, and any parked copy of it. */
 	async removeQuest(questId: string): Promise<void>
 	{
+		this.assertManagedQuest(questId);
 		await this.waitPastLastBuild();
 		await this.target.tools.writer.remove(this.folder, questId);
+		await this.parking.discard(questId);
+	}
+
+	/** The quests an earlier run left in the workspace, in place or parked; the template's own quests are not listed. */
+	async questsInPlace(): Promise<string[]>
+	{
+		const ids = new Set([...(await questIdsIn(this.folder)), ...(await this.parking.parkedIds())]);
+
+		return [...ids].filter((id) => !this.templateQuestIds.has(id)).sort();
 	}
 
 	/** Builds the editor target with UnrealBuilder. The full output is saved in this run's `logsFolder`. */
@@ -285,6 +352,21 @@ export class EngineSandbox
 	async release(): Promise<void>
 	{
 		await this.lock.release();
+	}
+
+	/** Where a quest's learner files and test file live in the workspace. */
+	private locationOf(questId: string): QuestLocation
+	{
+		const writer = this.target.tools.writer;
+
+		return { questFolder: writer.questFolder(this.folder, questId), testFile: writer.testFile(this.folder, questId) };
+	}
+
+	/** Throws for an id that could leave the parked or quest folders, or that names one of the template's own quests. */
+	private assertManagedQuest(questId: string): void
+	{
+		if (!QUEST_ID.test(questId)) throw new Error(`Unsafe quest id for the verify workspace: ${questId}`);
+		if (this.templateQuestIds.has(questId)) throw new Error(`${questId} is the sandbox template's own quest; the verifier does not manage it`);
 	}
 
 	/** Waits until the clock is past the last build by more than a second, so files written now are newer than every output. */
