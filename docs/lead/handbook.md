@@ -28,7 +28,7 @@ Every commit message ends with `Co-Authored-By: Claude Opus 5.5 <noreply@anthrop
 - **A67:** every boss ships a compiled reference integration with a test that plays two rounds, proven by mutations the tests catch.
 - **A72:** a term gates a quest only when an earlier concept quest teaches it; every glossary term's `firstQuestId` points at the first concept quest that teaches it.
 - **A73:** world ids are unique across packs.
-- **D13:** originality. Compare at 6 and 5 words against Nystrom's book and the GameDev.tv research. The book PDF is no longer on the Mac (problems.md), so recent worlds were checked by a manual read and owe an n-gram check.
+- **D13:** originality. Compare at 6 and 5 words against Nystrom's book and the GameDev.tv research. The book PDF is no longer on the Mac, so check against the book's free web edition (gameprogrammingpatterns.com), kept in the scratchpad and never in the repo; drop phrases the other packs also use (A2090).
 - **Deliberate failures** must not be given away anywhere the learner sees before failing: brief, card, questions, glossary hover cards, rubric, front matter, breakdown text.
 
 ## Engine runs

@@ -59,4 +59,4 @@ Then follow "The first world on the real engine, start to finish" under "Ready t
 ## 5. Not needed now
 
 - The macOS items in `docs/problems.md` (Metal toolchain download, `gh auth login`, the Cmd+Q check) wait until the Mac matters again.
-- The originality check of Patterns Worlds 10 and later against Nystrom's book (D13) is owed because the PDF is no longer on the Mac. The Lead can run it against the book's free web edition; nothing needs you for that.
+- The owed originality check against Nystrom's book (D13) is done: it ran against the book's free web edition on 2026-11-08 and found no reproduced text or examples (A2090).
