@@ -154,7 +154,14 @@ Windows desktop, 2026-11-03 (W16, A1323), UE 5.8.4, code before W16, `--pack fou
 | Cold (workspace created) | about 2541 s | first build 534 s, solution tests 236.5 s, starter checks 1769.1 s; no problems |
 | Warm 1 | about 5194 s | first build 390.2 s, solution tests 260.6 s, starter checks 4540.8 s; no problems, three "inconclusive" starter warnings in World 6 from the load |
 
-The same runs with W16, and the mutation series that measures A1325 (World 1 scratch folders, two mutants of `f1-score-keeper`, before and after), have not run yet: see A1323.
+The same pack runs with W16 have not run. Windows desktop, 2026-11-08 (A1323), UE 5.8.4, default workspace, `--quest f1-score-keeper` on a World 1 scratch folder, four runs per version in a row, no Unreal processes from others at the start of any run:
+
+| Code | Wall time per run | First build | Files compiled by the first build |
+| --- | --- | --- | --- |
+| Before W16 | 48, 49, 49, 49 s | 7.9 to 8.5 s | 17 every run |
+| W16 at e965dae | 49, 45, 44, 47 s | 9 s, then 6.3 to 7.7 s | 17 on the first run (taking over the old code's workspace), then 11 |
+
+The 11 are World 1's quest files: its boss's copies of three pieces differ from the pieces' solutions, and the starter check swaps them every run (A1323). The batch's mutants changed only the piece, so the boss's copy masked them; the mutation cost of A1325 is still unmeasured.
 
 Starter checks dominate. For a full pack, M2 or later can cut this with one batched starter build, falling back to one quest at a time only when that build fails (see A208).
 
