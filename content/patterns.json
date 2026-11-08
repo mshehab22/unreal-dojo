@@ -3127,7 +3127,7 @@
         "choices": [
           "To make a private copy of each system that only the front may use",
           "To stop the systems from ticking until the front has finished starting",
-          "It readies each system first, in no promised order, and returns it",
+          "It readies each system before the front uses it, and returns it",
           "It is required for every UPROPERTY the front happens to declare"
         ],
         "answerIndex": 2,

@@ -87,7 +87,8 @@ namespace DojoP21RangeTest
 	/** Reports, and returns false, unless the master has a label and both launchers, so the reads that follow cannot stop the engine. */
 	bool RangeIsBuilt(FAutomationTestBase& Test, ADojoP21RangeMaster* Master, const FString& When)
 	{
-		const bool bHasLabel = Test.TestNotNull(*FString::Printf(TEXT("%s: the master has a label"), *When), Master->Label.Get());
+		const UTextRenderComponent* LabelComponent = Master->Label;
+		const bool bHasLabel = Test.TestNotNull(*FString::Printf(TEXT("%s: the master has a label"), *When), LabelComponent);
 		const bool bHasLaunchers = Test.TestEqual(*FString::Printf(TEXT("%s: two launchers were built"), *When), Master->GetLaunchers().Num(), 2);
 
 		return bHasLabel && bHasLaunchers;

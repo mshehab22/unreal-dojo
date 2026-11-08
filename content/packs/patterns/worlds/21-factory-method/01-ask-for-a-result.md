@@ -66,7 +66,7 @@ ABolt* Bolt = MakeBolt(Where);
   prompt: "Which of these is already a function that makes things for you, taking a class and returning a finished object?"
   choices:
     - UPROPERTY
-    - GetOwner
+    - GetActorLocation
     - BeginPlay
     - SpawnActor
   answerIndex: 3

@@ -35,7 +35,7 @@ Refactor the turret:
 - `FireEmber`, `FireFrost`, and `FireSpread` get every bolt they fire by calling `MakeBolt` with the class they want and the muzzle they want, and do not spawn anything themselves.
 - The signatures of the three firing functions stay as they are, and so do the bolts they produce, where they appear, and how many are counted.
 
-`ADojoP21CountingTurret` is a turret that notes each request to `MakeBolt` and can be told to refuse them. Leave it as it is. Two of the five tests pass on the starter and must pass after; three do not. Read their messages.
+`ADojoP21CountingTurret` is a turret that notes each request to `MakeBolt` and can be told to refuse them or to make bolts without counting them. Leave it as it is. Two of the five tests pass on the starter and must pass after; three do not. Read their messages.
 
 ## See it in the editor
 
