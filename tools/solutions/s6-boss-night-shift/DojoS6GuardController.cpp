@@ -23,7 +23,7 @@ ADojoS6GuardController::ADojoS6GuardController()
 	UAISenseConfig_Sight* Sight = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("Sight"));
 	Sight->SightRadius = 1200.f;
 	Sight->LoseSightRadius = 1400.f;
-	Sight->PeripheralVisionAngleDegrees = 60.f;
+	Sight->PeripheralVisionAngleDegrees = 70.f;
 	Sight->DetectionByAffiliation = FAISenseAffiliationFilter(true, true, true);
 	Senses->ConfigureSense(*Sight);
 

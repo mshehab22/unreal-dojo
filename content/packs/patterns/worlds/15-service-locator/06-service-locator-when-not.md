@@ -1,6 +1,6 @@
 ---
 id: p15-service-locator-when-not
-title: When asking a phone book hides too much
+title: When asking the desk hides too much
 order: 6
 kind: concept
 difficulty: 2
@@ -25,10 +25,10 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: a bell's chime should be as loud as the gong that set it ringing. A teammate proposes registering every gong's volume with a locator so the bell can look it up. Right call?"
 choices:
-  - Yes, a locator is the right place for anything many classes need
-  - No; the bell already knows which gong rang it, so pass that gong in or read the volume through it
-  - Yes, but only with a game instance subsystem
-  - No; health should be a console variable
+  - Yes, since the bell and the gong both need the number
+  - No; the bell knows its gong, so pass the gong in
+  - Yes, but register it from the gong's constructor
+  - No; the volume should be a console variable
 answerIndex: 1
 explanation: The gong is part of this one chime, not a service for the whole game. Passing it in, or reaching its volume through it, keeps the relationship visible.
 ```
@@ -45,7 +45,7 @@ A locator is useful for a few things and harmful when it becomes the default way
 
 **A subsystem as a bag of shared state.** It is easy to hang "the current target", "the selected weapon", and "the last score" on a world subsystem because everyone can reach it. That is a global variable with a nicer name. State that belongs to a bout belongs to the bout. A subsystem should hold a service, not the facts one part of the game is passing to another.
 
-**Before setup has run.** A located service only exists in the form you want after setup code has provided it. A constructor, which also runs for the class default object, has no world to ask. Code that runs very early may find only the null object. The null object keeps it from crashing, but also hides the mistake, so make it count or log what it drops.
+**Before setup has run.** A located service only exists in the form you want after setup code has provided it. A constructor also runs for the class default object, which belongs to no world, so a lookup there can find nothing. Code that runs very early may find only the null object. The null object keeps it from crashing, but also hides the mistake, so make it count or log what it drops.
 
 **A place that is only valid sometimes.** If a facility must only be used during one phase, or by one family of classes, a global lookup cannot make sure of that. Put it behind the objects that own the phase, or make the getter reachable only by those classes.
 
@@ -68,7 +68,7 @@ void ADojoRival::Strike(ADojoFighter* Target)
   choices:
     - The announcer every system speaks through
     - The analytics sink every system reports to
-    - The particular crate a player is opening right now
+    - The crate a player is opening right now
     - The saving of the player's profile
   answerIndex: 2
   explanation: The crate belongs to one interaction. It is not a service for the whole game, so it should be passed in or reached through the actor that owns it.
@@ -76,10 +76,10 @@ void ADojoRival::Strike(ADojoFighter* Target)
   type: multiple-choice
   prompt: "A bell fetches the announcer in BeginPlay and keeps the pointer. Later a test provides a different announcer. Whom does the bell announce to?"
   choices:
-    - The new announcer, because the desk tells it
-    - Both announcers
-    - Nobody; the engine stops the bell
-    - The one it fetched at BeginPlay, which is no longer the one in place
+    - The new announcer, because the desk pushes the change to the bell
+    - Both the old and the new announcer, one after the other
+    - Nobody, because the engine stops a bell with a stale pointer
+    - The one it fetched at BeginPlay, which is not the one in place
   answerIndex: 3
   explanation: A pointer kept from BeginPlay keeps pointing at the old announcer. The desk can only answer when it is asked again.
 - id: spot-kept-provider
@@ -99,9 +99,9 @@ void ADojoRival::Strike(ADojoFighter* Target)
   prompt: "A teammate adds fields for the current target, the selected weapon, and the last score to a world subsystem so that any class can read them. What is this?"
   choices:
     - A global variable in disguise
-    - A good use of a locator
-    - A null object
-    - A decorator
+    - A good, ordinary use of a locator
+    - A null object for the shared facts
+    - A decorator around the desk
   answerIndex: 0
   explanation: The values are facts passed between parts of the game, not a service. Everyone can reach and change them, which is what a global is.
 - id: explain-when-not

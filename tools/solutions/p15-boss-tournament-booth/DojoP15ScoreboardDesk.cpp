@@ -15,7 +15,7 @@ UDojoP15ScoreboardDesk* UDojoP15ScoreboardDesk::Locate(const UWorld* LevelWorld)
 	return LevelWorld ? LevelWorld->GetSubsystem<UDojoP15ScoreboardDesk>() : nullptr;
 }
 
-bool UDojoP15ScoreboardDesk::Provide(UObject* Provider)
+bool UDojoP15ScoreboardDesk::Install(UObject* Provider)
 {
 	if (!IsValid(Provider))
 	{

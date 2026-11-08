@@ -1,0 +1,5 @@
+{
+	"id": "object-pool",
+	"title": "Lend it out, take it back",
+	"summary": "The harbor festival fires hundreds of rockets and shells into the night, and every one of them is an actor. Learn what spawning and destroying an actor really costs, keep a fixed set ready instead, and send each one back out of play so cleanly that its next flight never sees anything its last flight left behind. Then learn when keeping actors around costs more than it saves."
+}

@@ -1,0 +1,31 @@
+[2026.11.03-22.30.08:520][594]AutomationTestingLog: -----Test Run 3----
+[2026.11.03-22.30.08:523][595]LogAutomationWorker: Received RunTests DesignersSetIds from 4BC8286248C33421D60462B9AC39A6F7
+[2026.11.03-22.30.08:541][597]LogAutomationController: Display: Test Completed. Result={Success} Name={DesignersSetIds} Path={Dojo.S3.Saveable.DesignersSetIds}
+[2026.11.03-22.30.08:541][597]LogAutomationController: BeginEvents: Dojo.S3.Saveable.DesignersSetIds
+[2026.11.03-22.30.08:541][597]LogAutomationController: EndEvents: Dojo.S3.Saveable.DesignersSetIds
+[2026.11.03-22.30.08:541][597]LogAutomationController: Sending RunTest OnlySaveGameTravels to 68602B7B4E2947B7021E24A8552029E7
+[2026.11.03-22.30.08:541][597]LogAutomationController: Display: Test Started. Name={OnlySaveGameTravels} Path={Dojo.S3.Saveable.OnlySaveGameTravels}
+[2026.11.03-22.30.08:549][598]LogAutomationWorker: Received RunTests OnlySaveGameTravels from 4BC8286248C33421D60462B9AC39A6F7
+[2026.11.03-22.30.08:549][598]LogChaosDD: Creating Chaos Debug Draw Scene for world DojoTestWorld_0
+[2026.11.03-22.30.08:552][598]LogWorld: Bringing World /Engine/Transient.DojoTestWorld_0 up for play (max tick rate 120) at 2026.11.03-17.30.08
+[2026.11.03-22.30.08:553][598]LogWorld: Bringing up level for play took: 0.000104
+[2026.11.03-22.30.08:553][598]LogOutputDevice: Warning:
+
+Script Stack (0 frames) :
+
+[2026.11.03-22.30.08:553][598]LogWindows: Error: appError called: Fatal error: [File:D:\build\++UE5\Sync\Engine\Source\Runtime\Core\Private\Serialization\Archive.cpp] [Line: 523]
+FArchive does not support FObjectPtr serialization. Use FArchiveUObject instead.
+
+
+
+[2026.11.03-22.30.08:553][598]LogWindows: Windows GetLastError: The operation completed successfully. (0)
+[2026.11.03-22.30.11:492][598]LogWindows: Error: === Critical error: ===
+[2026.11.03-22.30.11:492][598]LogWindows: Error:
+[2026.11.03-22.30.11:493][598]LogWindows: Error: Fatal error: [File:D:\build\++UE5\Sync\Engine\Source\Runtime\Core\Private\Serialization\Archive.cpp] [Line: 523]
+[2026.11.03-22.30.11:493][598]LogWindows: Error: FArchive does not support FObjectPtr serialization. Use FArchiveUObject instead.
+[2026.11.03-22.30.11:493][598]LogWindows: Error:
+[2026.11.03-22.30.11:493][598]LogWindows: Error:
+[2026.11.03-22.30.11:496][598]LogExit: Executing StaticShutdownAfterError
+[2026.11.03-22.30.11:525][598]LogWindows: FPlatformMisc::RequestExit(1, LaunchWindowsStartup.ExceptionHandler)
+[2026.11.03-22.30.11:525][598]LogWindows: FPlatformMisc::RequestExitWithStatus(1, 3, LaunchWindowsStartup.ExceptionHandler)
+[2026.11.03-22.30.11:525][598]LogCore: Engine exit requested (reason: Win RequestExit)

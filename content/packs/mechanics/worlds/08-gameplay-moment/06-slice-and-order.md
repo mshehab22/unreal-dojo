@@ -23,11 +23,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: you have a light, a counter, and an exit, each tested alone. What is the safest way to join them into one moment?"
 choices:
-  - "Join all three at once and test the whole moment"
-  - "Add one connection at a time and play the moment after each, starting with the first minute of it"
-  - "Rewrite them as one big class"
-  - "Wait until the art is done"
-answerIndex: 1
+  - "Join all three at once, then test the whole moment together"
+  - "Rewrite the three of them as one big class with one tick"
+  - "Add one connection at a time and play the moment after each"
+  - "Wait until the art is done so the joined moment looks right"
+answerIndex: 2
 explanation: When a joined moment fails, one new connection is the only suspect. Joining everything at once leaves every connection under suspicion.
 ```
 
@@ -65,20 +65,20 @@ void ADojoMoment::StartRound()
   type: multiple-choice
   prompt: "The director checks every frame whether the meter is full and, if so, ends the moment. What should change?"
   choices:
-    - "Nothing, a director may decide things"
-    - "Move the rule into the meter or a clock that listens to it, and let the director only connect them"
-    - "Make the director a subsystem"
-  answerIndex: 1
+    - "Move the rule into the piece that owns it; the director only connects"
+    - "Nothing changes, because a director is allowed to decide things itself"
+    - "Make the director a subsystem so it lives for the whole game session"
+  answerIndex: 0
   explanation: A director that decides things becomes the one class everything depends on. Rules belong in the pieces that own the data, and an announcement replaces the per-frame check.
 - id: cut-order
   type: multiple-choice
   prompt: "A moment is two days behind. It has a siren sound nobody will miss, a glow on the pickup that is seen for a second, and the core chase. What goes first?"
   choices:
-    - "The chase, since it is the hardest"
-    - "The glow, since it is only seen for a second"
+    - "The chase, since it is the hardest part to get right"
+    - "The glow on the pickup, since the player sees it for a second"
+    - "Nothing yet; work longer until all of it can be kept in"
     - "The siren sound, which the player will not notice is missing"
-    - "Nothing; work longer"
-  answerIndex: 2
+  answerIndex: 3
   explanation: Cut what the player will not notice first, fake what they see briefly next, and leave the core for last.
 - id: stale-bind
   type: spot-the-bug
@@ -86,11 +86,13 @@ void ADojoMoment::StartRound()
   code: |
     void ADojoMoment::StartRound()
     {
+    	Light->Destroy();
+    	Light = World->SpawnActor<ADojoLight>(LightSpot, FRotator::ZeroRotator);
     	Box = World->SpawnActor<ADojoBox>(BoxSpot, FRotator::ZeroRotator);
     	Box->OnPowered.AddUniqueDynamic(this, &ADojoMoment::HandlePowered);
     	Exit->StartOver();
     }
-  bugLine: 3
+  bugLine: 5
   fix: Destroy the old box before spawning the new one, so its announcement and its binding go with it.
   explanation: The old box still exists and still announces to the director, so one round's pieces leak into the next. Destroying the old pieces first leaves nothing to listen to.
 - id: slice-first

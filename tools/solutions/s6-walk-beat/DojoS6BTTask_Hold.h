@@ -4,7 +4,7 @@
 #include "BehaviorTree/BTTaskNode.h"
 #include "DojoS6BTTask_Hold.generated.h"
 
-/** A task that stands still and never finishes on its own; the branch above it ends only when a decorator aborts it. */
+/** A task that stands still and never finishes on its own. */
 UCLASS()
 class UDojoS6BTTask_Hold : public UBTTaskNode
 {

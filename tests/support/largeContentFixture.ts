@@ -115,8 +115,8 @@ function retagRealQuest(quest: RealQuestFile, idPrefix: string, order: number): 
 	return retaggedFrontMatter + quest.text.slice(frontMatter.length);
 }
 
-/** Copies the real glossary with each `firstQuestId` pointing at the first clone of that quest, and records each pointer so the dangling check covers it. */
-function retagGlossary(text: string, idPrefix: string, pointers: { from: string; to: string }[]): string
+/** Copies the real glossary with each `firstQuestId` pointing at the first clone of that quest. A term whose quest was not cloned loses its optional pointer, because the real course is larger than the fixture. */
+function retagGlossary(text: string, idPrefix: string, writtenIds: Set<string>): string
 {
 	const entries = JSON.parse(text) as { id?: string; firstQuestId?: string }[];
 
@@ -124,8 +124,10 @@ function retagGlossary(text: string, idPrefix: string, pointers: { from: string;
 	{
 		if (entry.firstQuestId === undefined) continue;
 
-		entry.firstQuestId = `${idPrefix}${entry.firstQuestId}`;
-		pointers.push({ from: `glossary ${entry.id ?? "entry"}`, to: entry.firstQuestId });
+		const cloneId = `${idPrefix}${entry.firstQuestId}`;
+
+		if (writtenIds.has(cloneId)) entry.firstQuestId = cloneId;
+		else delete entry.firstQuestId;
 	}
 
 	return JSON.stringify(entries);
@@ -176,7 +178,6 @@ async function writeLargeContent(root: string, questCount: number, questsPerWorl
 	const worldFolders = new Set<string>();
 	const packNumbers = new Set<number>();
 
-	writes.push(writeFileUnder(root, "glossary.json", retagGlossary(await readFile(resolve("content", "glossary.json"), "utf8"), "load1-", pointers)));
 	writes.push(writeFileUnder(root, "patterns.json", await readFile(resolve("content", "patterns.json"), "utf8")));
 
 	for (let position = 0; position < questCount; position++)
@@ -210,6 +211,8 @@ async function writeLargeContent(root: string, questCount: number, questsPerWorl
 
 		writes.push(writeFileUnder(root, `${worldFolder}/${String(order).padStart(2, "0")}-${quest.slug}.md`, retagRealQuest(quest, idPrefix, order)));
 	}
+
+	writes.push(writeFileUnder(root, "glossary.json", retagGlossary(await readFile(resolve("content", "glossary.json"), "utf8"), "load1-", writtenIds)));
 
 	const dangling = pointers.filter((pointer) => !writtenIds.has(pointer.to));
 
