@@ -161,7 +161,16 @@ The same pack runs with W16 have not run. Windows desktop, 2026-11-08 (A1323), U
 | Before W16 | 48, 49, 49, 49 s | 7.9 to 8.5 s | 17 every run |
 | W16 at e965dae | 49, 45, 44, 47 s | 9 s, then 6.3 to 7.7 s | 17 on the first run (taking over the old code's workspace), then 11 |
 
-The 11 are World 1's quest files: its boss's copies of three pieces differ from the pieces' solutions, and the starter check swaps them every run (A1323). The batch's mutants changed only the piece, so the boss's copy masked them; the mutation cost of A1325 is still unmeasured.
+The 11 are World 1's quest files: its boss's copies of three pieces differ from the pieces' solutions, and the starter check swaps them every run (A1323). The batch's mutants changed only the piece, so the boss's copy masked them.
+
+Corrected batch, 2026-11-08 (A1323): both the piece and the boss's copy changed; order real, comment-only edit, real, mutant 1, mutant 2, real:
+
+| Code | Wall time per run | Files compiled by the first build | Verdicts |
+| --- | --- | --- | --- |
+| Before W16 | 45, 45, 46, 24, 22, 44 s | 17, 17, 17, 17, 11, 11 | pass, pass, pass, both mutants caught, pass |
+| W16 at 2aa2b2a | 45, 44, 43, 23, 21, 41 s | 17, 11, 11, 11, 1, 1 | the same |
+
+The 1-file runs follow a failed run, which skips the starter check, so nothing else changed: only `DojoF1ScoreKeeper.cpp` recompiled (first build 4.7 s). About 35 s of each passing run is solution tests and starter checks in the editor, which W16 does not touch. A whole `--pack` warm run with W16 has not been measured.
 
 Starter checks dominate. For a full pack, M2 or later can cut this with one batched starter build, falling back to one quest at a time only when that build fails (see A208).
 
