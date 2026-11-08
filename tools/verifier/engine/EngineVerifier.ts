@@ -101,7 +101,15 @@ export interface VerifierSandbox
 	/** Where this run's logs are written. */
 	readonly logsFolder: string;
 	writeQuest(quest: { id: string; title: string; tests: string }, files: readonly SandboxFile[]): Promise<void>;
+
+	/** Takes a quest out of the build, keeping its files aside so `writeQuest` can bring them back unchanged (A1322); an already parked quest stays as it is. */
+	parkQuest(questId: string): Promise<void>;
+
+	/** Takes a quest out of the workspace for good. */
 	removeQuest(questId: string): Promise<void>;
+
+	/** The quests an earlier run left in the workspace, in place or parked (A1321). */
+	questsInPlace(): Promise<string[]>;
 	build(): Promise<SandboxBuild>;
 	runTests(testNames: readonly string[]): Promise<SandboxTestRun>;
 
@@ -254,14 +262,18 @@ function desiredState(quests: readonly EngineQuest[], included: ReadonlySet<stri
 	return desired;
 }
 
-/** Brings the sandbox to `desired`: removes quests not in it and writes only quests whose files changed, tracking what is in place in `installed`. */
-async function install(sandbox: VerifierSandbox, desired: ReadonlyMap<string, InstalledQuest>, installed: Map<string, string>): Promise<void>
+/**
+ * Brings the sandbox to `desired`: parks quests not in it and writes only quests whose files changed, tracking what is in place
+ * in `installed` (null for a quest an earlier run left, whose files are not known, so it is always written; the sandbox then
+ * leaves every file whose bytes already match).
+ */
+async function install(sandbox: VerifierSandbox, desired: ReadonlyMap<string, InstalledQuest>, installed: Map<string, string | null>): Promise<void>
 {
 	for (const id of [...installed.keys()])
 	{
 		if (desired.has(id)) continue;
 
-		await sandbox.removeQuest(id);
+		await sandbox.parkQuest(id);
 		installed.delete(id);
 	}
 
@@ -360,6 +372,46 @@ export function ownStateGroups(quests: readonly EngineQuest[], judged: readonly 
 	return groups;
 }
 
+/**
+ * One error per header name that more than one quest folder would hold. Headers are included by bare name through one include
+ * path per quest folder, so a shared name is ambiguous for learners, and with parked quests coming back at their old times
+ * (A1322) an object could stay built against the other quest's header (A1324). A boss's piece overrides count for the piece.
+ */
+function sharedHeaderProblems(quests: readonly EngineQuest[]): ContentProblem[]
+{
+	// Keyed by the lower-case name, since Windows and macOS file systems ignore case.
+	const owners = new Map<string, { name: string; holders: Set<EngineQuest> }>();
+	const byId = new Map(quests.map((entry) => [entry.quest.id, entry]));
+
+	/** Notes that `entry`'s folder holds `name`. */
+	const note = (name: string, entry: EngineQuest | undefined): void =>
+	{
+		if (entry === undefined || !name.toLowerCase().endsWith(".h")) return;
+
+		const owner = owners.get(name.toLowerCase()) ?? { name, holders: new Set<EngineQuest>() };
+
+		owner.holders.add(entry);
+		owners.set(name.toLowerCase(), owner);
+	};
+
+	for (const entry of quests)
+	{
+		for (const file of [...entry.solution, ...(entry.starter ?? [])]) note(file.name, entry);
+
+		for (const [pieceId, files] of entry.overrides ?? [])
+		{
+			for (const file of files) note(file.name, byId.get(pieceId));
+		}
+	}
+
+	return [...owners.values()].filter((owner) => owner.holders.size > 1).map((owner) =>
+	{
+		const [first, ...others] = [...owner.holders];
+
+		return errorAt(first?.file ?? "(engine)", `header ${owner.name} is also in ${others.map((other) => other.quest.id).join(", ")}; quest headers are included by bare name, so each header name must belong to one quest`, "engine");
+	});
+}
+
 /** The error for an engine run that built and tested no quest, so a mistyped path or id never looks like a pass. */
 function nothingJudgedMessage(scope: ReadonlySet<string> | undefined, solutionsFolder: string): string
 {
@@ -383,7 +435,7 @@ export class EngineVerifier
 	/**
 	 * 0. Take the persistent workspace for the engine version (waiting if another run holds it) and bring it to the template's state.
 	 *    Whatever way the run ends, the lock is released and nothing is left in the temp folder.
-	 * 1. Write every reference solution and its tests.
+	 * 1. Write every reference solution and its tests, reusing what the last run left where the bytes match (A1320, A1321).
 	 * 2. Build once and run every quest's tests headless; each declared test must run and pass.
 	 * 3. For each quest in turn, swap in its starter files, build, and run its tests: they must not all pass
 	 *    (a starter that does not compile is fine). Then put the solution back.
@@ -394,6 +446,8 @@ export class EngineVerifier
 		const { log } = this.options;
 		const timings: EngineTimings = { firstBuildSeconds: 0, ownSolutionChecksSeconds: 0, solutionTestsSeconds: 0, starterChecksSeconds: 0 };
 		const { quests, problems } = await engineQuests(records, this.options.solutionsFolder);
+
+		problems.push(...sharedHeaderProblems(quests));
 
 		const judged = quests.filter((entry) => scope === undefined || scope.has(entry.quest.id));
 
@@ -442,8 +496,36 @@ export class EngineVerifier
 
 		log(`engine: verify workspace at ${sandbox.folder}`);
 
+		// The last run's quests stay for reuse when this run has them too, so unchanged files keep their times and are not
+		// recompiled. Every other quest is out of the build before the first build, since one stale quest breaks the whole
+		// module (A1321): parked when the content still has it, so a run on another solutions folder keeps the module's quest
+		// folders and its include paths, and does not recompile every file (A1325); removed when the content no longer has it.
+		const installed = new Map<string, string | null>();
+		const runQuestIds = new Set(quests.map((entry) => entry.quest.id));
+		const contentQuestIds = new Set(records.map((record) => record.quest.id));
+		const leftByLastRun = await sandbox.questsInPlace();
+		let parked = 0;
+
+		for (const id of leftByLastRun)
+		{
+			if (runQuestIds.has(id))
+			{
+				installed.set(id, null);
+			}
+			else if (contentQuestIds.has(id))
+			{
+				await sandbox.parkQuest(id);
+				parked++;
+			}
+			else
+			{
+				await sandbox.removeQuest(id);
+			}
+		}
+
+		log(`engine: ${installed.size} quests from the last run kept for reuse, ${parked} parked (no solution in this run), ${leftByLastRun.length - installed.size - parked} removed`);
+
 		// Every solution goes in, with every boss's piece overrides over its pieces' solutions (A215).
-		const installed = new Map<string, string>();
 		const requirementsOf = new Map(records.map((record) => [record.quest.id, directRequirements(record)]));
 
 		await install(sandbox, desiredState(quests, new Set(quests.map((entry) => entry.quest.id))), installed);
@@ -535,7 +617,7 @@ export class EngineVerifier
 	 * in something they need, or in the build tool) each member is built alone, so every verdict is its own. Returns false when the run
 	 * was cancelled.
 	 */
-	private async checkOwnStates(sandbox: VerifierSandbox, members: readonly EngineQuest[], memberStates: ReadonlyMap<string, ReadonlyMap<string, InstalledQuest>>, installed: Map<string, string>, problems: ContentProblem[], solutionFailed: Set<string>, signal: AbortSignal): Promise<boolean>
+	private async checkOwnStates(sandbox: VerifierSandbox, members: readonly EngineQuest[], memberStates: ReadonlyMap<string, ReadonlyMap<string, InstalledQuest>>, installed: Map<string, string | null>, problems: ContentProblem[], solutionFailed: Set<string>, signal: AbortSignal): Promise<boolean>
 	{
 		if (members.length === 0) return true;
 

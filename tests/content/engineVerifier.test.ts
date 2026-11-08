@@ -83,6 +83,9 @@ class FakeSandbox implements VerifierSandbox
 	/** When set, the first build aborts this controller, as Ctrl+C would mid-build. */
 	abortOnBuild: AbortController | undefined;
 
+	/** What `questsInPlace` reports, as if a last run had left these quests. */
+	leftByLastRun: string[] = [];
+
 	/** Every write, removal, and build in order, for checking the sequence. */
 	readonly operations: string[] = [];
 
@@ -93,11 +96,24 @@ class FakeSandbox implements VerifierSandbox
 		this.operations.push(`write ${quest.id}: ${files.map((file) => `${file.name}=${file.text}`).join(", ")}`);
 	}
 
+	/** Takes a quest's files out of the build for a step. */
+	async parkQuest(questId: string): Promise<void>
+	{
+		this.written.delete(questId);
+		this.operations.push(`park ${questId}`);
+	}
+
 	/** Forgets a quest's files. */
 	async removeQuest(questId: string): Promise<void>
 	{
 		this.written.delete(questId);
 		this.operations.push(`remove ${questId}`);
+	}
+
+	/** The quests a last run left; empty by default, as in a cold workspace. */
+	async questsInPlace(): Promise<string[]>
+	{
+		return [...this.leftByLastRun];
 	}
 
 	/** Fails when a written file says BROKEN, quoting a compiler-style line for that quest. */
@@ -246,13 +262,56 @@ describe("EngineVerifier", () =>
 			"write a: a.cpp=SOLUTION",
 			"write b: b.cpp=SOLUTION",
 			"build",
-			"remove b",
+			"park b",
 			"write a: a.cpp=STARTER",
 			"build",
-			"remove a",
+			"park a",
 			"write b: b.cpp=STARTER",
 			"build",
 		]);
+	});
+
+	it("removes a quest the last run left that this run lacks before anything is written, and rewrites one it has (W16)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+
+		sandbox.leftByLastRun = ["a", "gone"];
+
+		const report = await verifyWith(sandbox, [quest("a")], await writeSolutions({ a: "SOLUTION" }));
+
+		expect(report.problems).toEqual([]);
+		expect(sandbox.operations.slice(0, 3)).toEqual(["remove gone", "write a: a.cpp=SOLUTION", "build"]);
+	});
+
+	it("parks a quest the last run left that the content still has but this run has no solution for (A1325)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+
+		sandbox.leftByLastRun = ["a", "elsewhere", "gone"];
+
+		const report = await verifyWith(sandbox, [quest("a"), quest("elsewhere")], await writeSolutions({ a: "SOLUTION" }));
+
+		expect(report.problems).toEqual([]);
+		expect(sandbox.operations.slice(0, 4)).toEqual(["park elsewhere", "remove gone", "write a: a.cpp=SOLUTION", "build"]);
+	});
+
+	it("reports a header name two quest folders would hold, ignoring case (W16)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = join(scratch, "solutions");
+		const first = { ...quest("a"), files: [{ name: "Shared.h", starter: "STARTER" }, { name: "a.cpp", starter: "STARTER" }] };
+		const second = { ...quest("b"), files: [{ name: "shared.h", starter: "STARTER" }, { name: "b.cpp", starter: "STARTER" }] };
+
+		for (const id of ["a", "b"])
+		{
+			await mkdir(join(solutions, id), { recursive: true });
+			await writeFile(join(solutions, id, id === "a" ? "Shared.h" : "shared.h"), "SOLUTION");
+			await writeFile(join(solutions, id, `${id}.cpp`), "SOLUTION");
+		}
+
+		const report = await verifyWith(sandbox, [first, second], solutions);
+
+		expect(report.problems.map((problem) => `${problem.file}: ${problem.message}`)).toContain("examples/a.md: header Shared.h is also in b; quest headers are included by bare name, so each header name must belong to one quest");
 	});
 
 	it("reports a starter that already passes, and keeps the sandbox", async () =>
@@ -367,7 +426,7 @@ describe("EngineVerifier", () =>
 			"write yard: DojoBoss.cpp=SOLUTION",
 			"build",
 			// a's tests ran against the boss's copy above; they run again against a's own solution, as its learner has it (A2040).
-			"remove yard",
+			"park yard",
 			"write a: a.cpp=SOLUTION",
 			"build",
 			"write a: a.cpp=STARTER",
@@ -468,7 +527,7 @@ describe("EngineVerifier", () =>
 		const secondBuild = sandbox.operations.indexOf("build", firstBuild + 1);
 
 		expect(report.problems).toEqual([]);
-		expect(sandbox.operations.slice(firstBuild + 1, secondBuild + 1)).toEqual(["remove yard", "write a: a.cpp=SOLUTION", "build"]);
+		expect(sandbox.operations.slice(firstBuild + 1, secondBuild + 1)).toEqual(["park yard", "write a: a.cpp=SOLUTION", "build"]);
 	});
 
 	it("checks two pieces of one boss in a single extra build, and adds none for a quest the boss does not touch (A2040)", async () =>
@@ -491,7 +550,7 @@ describe("EngineVerifier", () =>
 		expect(report.problems).toEqual([]);
 
 		// One extra build between the shared build and the first starter check, holding both pieces on their own solutions.
-		expect(sandbox.operations.slice(firstBuild + 1, secondBuild + 1)).toEqual(["remove c", "remove yard", "write a: a.cpp=SOLUTION", "write b: b.cpp=SOLUTION", "build"]);
+		expect(sandbox.operations.slice(firstBuild + 1, secondBuild + 1)).toEqual(["park c", "park yard", "write a: a.cpp=SOLUTION", "write b: b.cpp=SOLUTION", "build"]);
 	});
 
 	it("stops after the step a Ctrl+C interrupts, keeps the sandbox, and reports the cancel", async () =>
@@ -531,8 +590,8 @@ describe("EngineVerifier with quests after a boss (A443)", () =>
 			"write c: c.cpp=SOLUTION",
 			"build",
 			// a's own tests (A2040): a's learner has a's solution alone, without the boss's copy of a, so a is checked on its own first.
-			"remove yard",
-			"remove c",
+			"park yard",
+			"park c",
 			"write a: a.cpp=SOLUTION",
 			"build",
 			// a's starter: the same state, with a's starter in place of its solution.
