@@ -271,6 +271,10 @@ Mohammad asked to pause all work. Every builder was told to stop at a safe point
 - Building: Pack 2 World 10 at WIP 03a40f8 (content and C++ written, verifier passes; no engine run yet), Pack 3 World 6 at WIP 79c9373 (pack `mechanics`, world `delegates`, 7 quests, all references and the boss director and tests written, decisions A870 to A873, originality checked; left: first engine build, mutations, starters, --engine, iterations, typecheck and test, rebase).
 - Waiting on others: M2.2c drill copy (after M1.6g), M3.4b screens (after M3.4), the full real-engine learner-flow rerun (after M1.6g, M2.1e, M1.3c).
 
+## Needs Mohammad
+
+Everything that waits for Mohammad, as one decision per item, is in [for-mohammad.md](for-mohammad.md) (2026-11-08). Keep it current: remove an item when he answers it.
+
 ## Ready to playtest
 
 Note: earlier dev runs saved `dojo.dataSource = fake:returning` in the app's real data folder on this Mac, and a stored choice wins over the build flag, so a plain `npm run dev` opens the sample learner with a "Fake data" badge. To try the real app from a fresh start, use a throwaway data folder: `npm run build`, then `npx electron . --user-data-dir=$HOME/DojoPlaytestData`.
