@@ -546,9 +546,11 @@ export class EngineVerifier
 			for (const entry of judged)
 			{
 				const own = buildErrors(build, entry.quest.id);
-				const quoted = own.length > 0 ? own : general;
+				const neededId = own.length > 0 ? undefined : [...requirementClosure(entry.quest.id, requirementsOf)].find((id) => buildErrors(build, id).length > 0);
+				const quoted = own.length > 0 ? own : neededId === undefined ? general : buildErrors(build, neededId);
+				const where = neededId === undefined ? "" : `, in a quest it needs: ${neededId}`;
 
-				problems.push(errorAt(entry.file, `the reference solution did not build${quoted.length > 0 ? `:\n${quoted.join("\n")}` : ""}`, "engine"));
+				problems.push(errorAt(entry.file, `the reference solution did not build${where}${quoted.length > 0 ? `:\n${quoted.join("\n")}` : ""}`, "engine"));
 			}
 
 			return { problems, questsChecked: judged.length, timings, logsFolder: sandbox.logsFolder };
@@ -577,7 +579,10 @@ export class EngineVerifier
 		// A quest whose learner would have a different version of a piece than the shared build holds is tested again in its own sandbox (A2040).
 		const ownStartedAt = performance.now();
 
-		for (const group of ownStateGroups(quests, judged, requirementsOf))
+		// A quest whose shared run already failed has its verdict; testing it again in its own state would only repeat the report.
+		const stillToCheck = judged.filter((entry) => !solutionFailed.has(entry.quest.id));
+
+		for (const group of ownStateGroups(quests, stillToCheck, requirementsOf))
 		{
 			if (!(await this.checkOwnStates(sandbox, group.members, group.memberStates, installed, problems, solutionFailed, signal))) return stopped("the own-solution checks");
 		}
@@ -631,13 +636,36 @@ export class EngineVerifier
 
 		if (!build.succeeded)
 		{
-			const atFault = members.filter((member) => buildErrors(build, member.quest.id).length > 0);
+			// The quests the compiler errors point into, among every quest any member's sandbox holds.
+			const blamed = new Map<string, string[]>();
 
-			for (const member of atFault) this.reportOwnStateBuildFailure(member, buildErrors(build, member.quest.id), problems, solutionFailed);
+			for (const member of members)
+			{
+				for (const id of memberStates.get(member.quest.id)?.keys() ?? [])
+				{
+					const lines = buildErrors(build, id);
 
-			if (atFault.length > 0) return this.checkOwnStates(sandbox, members.filter((member) => !atFault.includes(member)), memberStates, installed, problems, solutionFailed, signal);
+					if (lines.length > 0) blamed.set(id, lines);
+				}
+			}
 
-			if (members.length > 1)
+			// A member that is itself at fault, or whose sandbox holds a quest that is, fails without another build; the rest are built again.
+			const remaining: EngineQuest[] = [];
+
+			for (const member of members)
+			{
+				const ownLines = blamed.get(member.quest.id);
+				const neededId = [...(memberStates.get(member.quest.id)?.keys() ?? [])].find((id) => blamed.has(id));
+
+				if (ownLines !== undefined) this.reportOwnStateBuildFailure(member, ownLines, problems, solutionFailed);
+				else if (neededId !== undefined) this.reportOwnStateBuildFailure(member, blamed.get(neededId) ?? [], problems, solutionFailed, neededId);
+				else remaining.push(member);
+			}
+
+			if (remaining.length < members.length) return this.checkOwnStates(sandbox, remaining, memberStates, installed, problems, solutionFailed, signal);
+
+			// Nothing is named. A build tool failure (a timeout, say) will not change by building each member alone, so every member is told once.
+			if (members.length > 1 && build.pipelineError === undefined)
 			{
 				for (const member of members)
 				{
@@ -649,9 +677,7 @@ export class EngineVerifier
 
 			const general = build.pipelineError === undefined ? buildErrors(build) : [build.pipelineError];
 
-			const only = members[0];
-
-			if (only !== undefined) this.reportOwnStateBuildFailure(only, general, problems, solutionFailed);
+			for (const member of members) this.reportOwnStateBuildFailure(member, general, problems, solutionFailed);
 
 			return true;
 		}
@@ -672,11 +698,16 @@ export class EngineVerifier
 		return true;
 	}
 
-	/** Records that a quest's reference solution did not build in its learner's sandbox, quoting the compiler lines. */
-	private reportOwnStateBuildFailure(member: EngineQuest, quoted: readonly string[], problems: ContentProblem[], solutionFailed: Set<string>): void
+	/** Records that a quest's reference solution did not build in its learner's sandbox, quoting the compiler lines; `neededId` names the quest it needs that holds the errors. */
+	private reportOwnStateBuildFailure(member: EngineQuest, quoted: readonly string[], problems: ContentProblem[], solutionFailed: Set<string>, neededId?: string): void
 	{
 		solutionFailed.add(member.quest.id);
-		problems.push(errorAt(member.file, `the reference solution did not build in the sandbox a learner has at this quest (the solutions of what it needs, without the boss copies of pieces that come after it)${quoted.length > 0 ? `:\n${quoted.join("\n")}` : ""}`, "engine"));
+
+		const where = neededId === undefined
+			? "in the sandbox a learner has at this quest (the solutions of what it needs, without the boss copies of pieces that come after it)"
+			: `in the sandbox a learner has at this quest, in a quest it needs: ${neededId}`;
+
+		problems.push(errorAt(member.file, `the reference solution did not build ${where}${quoted.length > 0 ? `:\n${quoted.join("\n")}` : ""}`, "engine"));
 	}
 
 	/** Every declared test of a quest must appear in the report and pass; `where` says which sandbox the run used, when it is not the shared one. */
