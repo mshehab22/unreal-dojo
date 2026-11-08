@@ -122,6 +122,12 @@ class FakeSandbox implements VerifierSandbox
 		this.operations.push("build");
 		this.abortOnBuild?.abort();
 
+		// A file saying ELSEWHERE breaks the build somewhere that is no quest's own files (a header, a build tool problem).
+		if ([...this.written].some(([, files]) => files.some((file) => file.text.includes("ELSEWHERE")))) return buildResult(["/x/Source/Dojo/Support/Odd.cpp:1:1: error: something else", "Result: Failed (OtherCompilationError)"]);
+
+		// A file saying TIMEOUT makes the build program itself fail, with no compiler line at all.
+		if ([...this.written].some(([, files]) => files.some((file) => file.text.includes("TIMEOUT")))) return { succeeded: false, lines: [], pipelineError: "the build took longer than 15 minutes" };
+
 		const broken = [...this.written].find(([, files]) => files.some((file) => file.text.includes("BROKEN")));
 		const breaker = [...this.starterBreaks.keys()].find((id) => this.holdsStarter(id));
 		const blamed = broken?.[0] ?? (breaker === undefined ? undefined : this.starterBreaks.get(breaker));
@@ -141,7 +147,9 @@ class FakeSandbox implements VerifierSandbox
 
 			if (isStarter && this.starterTestsMissing.has(questId)) continue;
 
-			const passed = !isStarter || this.starterPasses.has(questId);
+			// A quest whose files say DEFECT has a bug its tests catch, whichever version of the quest it is.
+			const defective = this.written.get(questId)?.some((file) => file.text.includes("DEFECT")) ?? false;
+			const passed = (!isStarter || this.starterPasses.has(questId)) && !defective;
 
 			outcomes.set(name, { passed, state: passed ? "Success" : "Fail", messages: passed ? [] : ["Error: Expected true"] });
 		}
@@ -420,10 +428,228 @@ describe("EngineVerifier", () =>
 			"write a: a.cpp=EXTENDED",
 			"write yard: DojoBoss.cpp=SOLUTION",
 			"build",
+			// a's tests ran against the boss's copy above; they run again against a's own solution, as its learner has it (A2040).
 			"park yard",
+			"write a: a.cpp=SOLUTION",
+			"build",
 			"write a: a.cpp=STARTER",
 			"build",
 		]);
+	});
+
+	it("tests a piece's own solution even when the boss's copy of the piece would pass (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "SOLUTION DEFECT" });
+
+		await writeBossSolution("yard", true);
+		await mkdir(join(solutions, "yard", "a"), { recursive: true });
+		await writeFile(join(solutions, "yard", "a", "a.cpp"), "EXTENDED");
+
+		const report = await verifyWith(sandbox, [quest("a"), { ...boss("yard"), pieces: ["a"] }], solutions);
+
+		expect(report.problems.map((problem) => `${problem.file}: ${problem.message}`)).toEqual([
+			"examples/a.md: test Dojo.Test.a fails with the reference solution in the sandbox a learner has at this quest (Fail):\nError: Expected true",
+			"examples/a.md: starter check inconclusive: the reference solution fails, so the starter was not checked",
+		]);
+	});
+
+	it("reports a piece's own solution that does not build without the boss's copy (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "BROKEN" });
+
+		await writeBossSolution("yard", true);
+		await mkdir(join(solutions, "yard", "a"), { recursive: true });
+		await writeFile(join(solutions, "yard", "a", "a.cpp"), "EXTENDED");
+
+		const report = await verifyWith(sandbox, [quest("a"), { ...boss("yard"), pieces: ["a"] }], solutions);
+
+		expect(report.problems.map((problem) => problem.message)).toEqual([
+			"the reference solution did not build in the sandbox a learner has at this quest (the solutions of what it needs, without the boss copies of pieces that come after it):\n/x/Source/Dojo/Quests/a/a.cpp:3:1: error: expected ';'",
+			"starter check inconclusive: the reference solution fails, so the starter was not checked",
+		]);
+	});
+
+	it("blames only the piece whose own files the compiler names when a group build fails, and builds the others again (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "BROKEN", b: "SOLUTION" });
+
+		await writeBossSolution("yard", true);
+
+		for (const [piece, text] of [["a", "EXTENDED"], ["b", "EXTENDED"]] as const)
+		{
+			await mkdir(join(solutions, "yard", piece), { recursive: true });
+			await writeFile(join(solutions, "yard", piece, `${piece}.cpp`), text);
+		}
+
+		const report = await verifyWith(sandbox, [quest("a"), quest("b"), { ...boss("yard"), pieces: ["a", "b"] }], solutions);
+
+		expect(report.problems.map((problem) => `${problem.severity ?? "error"} ${problem.file}: ${problem.message}`)).toEqual([
+			"error examples/a.md: the reference solution did not build in the sandbox a learner has at this quest (the solutions of what it needs, without the boss copies of pieces that come after it):\n/x/Source/Dojo/Quests/a/a.cpp:3:1: error: expected ';'",
+			"warning examples/a.md: starter check inconclusive: the reference solution fails, so the starter was not checked",
+		]);
+		// b kept a real verdict: it was built again without a, and its starter was checked.
+		expect(sandbox.operations).toContain("write b: b.cpp=STARTER");
+	});
+
+	it("builds each piece alone when a group build fails somewhere no piece's files are named, and quotes the compiler lines (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "ELSEWHERE", b: "SOLUTION" });
+
+		await writeBossSolution("yard", true);
+
+		for (const piece of ["a", "b"])
+		{
+			await mkdir(join(solutions, "yard", piece), { recursive: true });
+			await writeFile(join(solutions, "yard", piece, `${piece}.cpp`), "EXTENDED");
+		}
+
+		const report = await verifyWith(sandbox, [quest("a"), quest("b"), { ...boss("yard"), pieces: ["a", "b"] }], solutions);
+
+		expect(report.problems.map((problem) => `${problem.severity ?? "error"} ${problem.file}: ${problem.message}`)).toEqual([
+			"error examples/a.md: the reference solution did not build in the sandbox a learner has at this quest (the solutions of what it needs, without the boss copies of pieces that come after it):\n/x/Source/Dojo/Support/Odd.cpp:1:1: error: something else\nResult: Failed (OtherCompilationError)",
+			"warning examples/a.md: starter check inconclusive: the reference solution fails, so the starter was not checked",
+		]);
+	});
+
+	it("fails a quest that needs the piece at fault without building it, naming that piece (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "BROKEN", d: "SOLUTION" });
+
+		await writeBossSolution("yard", true);
+		await mkdir(join(solutions, "yard", "a"), { recursive: true });
+		await writeFile(join(solutions, "yard", "a", "a.cpp"), "EXTENDED");
+
+		const report = await verifyWith(sandbox, [quest("a"), { ...quest("d"), prerequisites: ["a"] }, { ...boss("yard"), pieces: ["a"] }], solutions);
+		const line = "/x/Source/Dojo/Quests/a/a.cpp:3:1: error: expected ';'";
+
+		expect(report.problems.map((problem) => `${problem.severity ?? "error"} ${problem.file}: ${problem.message}`)).toEqual([
+			`error examples/a.md: the reference solution did not build in the sandbox a learner has at this quest (the solutions of what it needs, without the boss copies of pieces that come after it):\n${line}`,
+			`error examples/d.md: the reference solution did not build in the sandbox a learner has at this quest, in a quest it needs: a:\n${line}`,
+			"warning examples/a.md: starter check inconclusive: the reference solution fails, so the starter was not checked",
+			"warning examples/d.md: starter check inconclusive: the reference solution fails, so the starter was not checked",
+		]);
+
+		// The shared build and the one group build only: nothing was built again, alone or without a.
+		expect(sandbox.operations.filter((operation) => operation === "build")).toHaveLength(2);
+	});
+
+	it("reports every piece once when the build program itself fails and no files are named (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "TIMEOUT", b: "SOLUTION" });
+
+		await writeBossSolution("yard", true);
+
+		for (const piece of ["a", "b"])
+		{
+			await mkdir(join(solutions, "yard", piece), { recursive: true });
+			await writeFile(join(solutions, "yard", piece, `${piece}.cpp`), "EXTENDED");
+		}
+
+		const report = await verifyWith(sandbox, [quest("a"), quest("b"), { ...boss("yard"), pieces: ["a", "b"] }], solutions);
+		const message = "the reference solution did not build in the sandbox a learner has at this quest (the solutions of what it needs, without the boss copies of pieces that come after it):\nthe build took longer than 15 minutes";
+
+		expect(report.problems.map((problem) => `${problem.severity ?? "error"} ${problem.file}: ${problem.message}`)).toEqual([
+			`error examples/a.md: ${message}`,
+			`error examples/b.md: ${message}`,
+			"warning examples/a.md: starter check inconclusive: the reference solution fails, so the starter was not checked",
+			"warning examples/b.md: starter check inconclusive: the reference solution fails, so the starter was not checked",
+		]);
+
+		// The shared build and the one group build; the members were not built alone to find the same timeout again.
+		expect(sandbox.operations.filter((operation) => operation === "build")).toHaveLength(2);
+	});
+
+	it("does not test again in its own state a quest whose shared run already failed (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "SOLUTION" });
+
+		await writeBossSolution("yard", true);
+		await mkdir(join(solutions, "yard", "a"), { recursive: true });
+		await writeFile(join(solutions, "yard", "a", "a.cpp"), "EXTENDED DEFECT");
+
+		const report = await verifyWith(sandbox, [quest("a"), { ...boss("yard"), pieces: ["a"] }], solutions);
+
+		expect(report.problems.map((problem) => problem.message)).toEqual([
+			"test Dojo.Test.a fails with the reference solution (Fail):\nError: Expected true",
+			"starter check inconclusive: the reference solution fails, so the starter was not checked",
+		]);
+
+		// Only the shared build: the piece already has its verdict, so no extra build for it.
+		expect(sandbox.operations.filter((operation) => operation === "build")).toHaveLength(1);
+	});
+
+	it("names a piece outside the scope that breaks the in-scope quest's sandbox (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "BROKEN", d: "SOLUTION" });
+
+		await writeBossSolution("yard", true);
+		await mkdir(join(solutions, "yard", "a"), { recursive: true });
+		await writeFile(join(solutions, "yard", "a", "a.cpp"), "EXTENDED");
+
+		// Only d is in the scope; a, which d needs, is not, and its own solution does not build.
+		const report = await verifyWith(sandbox, [quest("a"), { ...quest("d"), prerequisites: ["a"] }, { ...boss("yard"), pieces: ["a"] }], solutions, new Set(["d"]));
+
+		expect(report.problems.map((problem) => `${problem.severity ?? "error"} ${problem.file}: ${problem.message}`)).toEqual([
+			"error examples/d.md: the reference solution did not build in the sandbox a learner has at this quest, in a quest it needs: a:\n/x/Source/Dojo/Quests/a/a.cpp:3:1: error: expected ';'",
+			"warning examples/d.md: starter check inconclusive: the reference solution fails, so the starter was not checked",
+		]);
+	});
+
+	it("names the quest it needs when the shared first build fails in that quest and not in the judged one (A2040)", async () =>
+	{
+		const solutions = await writeSolutions({ a: "BROKEN", d: "SOLUTION" });
+		const report = await verifyWith(new FakeSandbox(), [quest("a"), { ...quest("d"), prerequisites: ["a"] }], solutions, new Set(["d"]));
+
+		expect(report.problems.map((problem) => problem.message)).toEqual(["the reference solution did not build, in a quest it needs: a:\n/x/Source/Dojo/Quests/a/a.cpp:3:1: error: expected ';'"]);
+	});
+
+	it("also tests a quest that only needs a piece the boss has its own copy of, in the state its learner has (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "SOLUTION", d: "SOLUTION" });
+
+		await writeBossSolution("yard", true);
+		await mkdir(join(solutions, "yard", "a"), { recursive: true });
+		await writeFile(join(solutions, "yard", "a", "a.cpp"), "EXTENDED");
+
+		// d needs a but not the boss, which comes after d: d's learner has a's own solution, so d is built again with it.
+		const report = await verifyWith(sandbox, [quest("a"), { ...quest("d"), prerequisites: ["a"] }, { ...boss("yard"), pieces: ["a"] }], solutions, new Set(["d"]));
+		const firstBuild = sandbox.operations.indexOf("build");
+		const secondBuild = sandbox.operations.indexOf("build", firstBuild + 1);
+
+		expect(report.problems).toEqual([]);
+		expect(sandbox.operations.slice(firstBuild + 1, secondBuild + 1)).toEqual(["park yard", "write a: a.cpp=SOLUTION", "build"]);
+	});
+
+	it("checks two pieces of one boss in a single extra build, and adds none for a quest the boss does not touch (A2040)", async () =>
+	{
+		const sandbox = new FakeSandbox();
+		const solutions = await writeSolutions({ a: "SOLUTION", b: "SOLUTION", c: "SOLUTION" });
+
+		await writeBossSolution("yard", true);
+
+		for (const piece of ["a", "b"])
+		{
+			await mkdir(join(solutions, "yard", piece), { recursive: true });
+			await writeFile(join(solutions, "yard", piece, `${piece}.cpp`), "EXTENDED");
+		}
+
+		const report = await verifyWith(sandbox, [quest("a"), quest("b"), quest("c"), { ...boss("yard"), pieces: ["a", "b"] }], solutions, new Set(["a", "b", "c"]));
+		const firstBuild = sandbox.operations.indexOf("build");
+		const secondBuild = sandbox.operations.indexOf("build", firstBuild + 1);
+
+		expect(report.problems).toEqual([]);
+
+		// One extra build between the shared build and the first starter check, holding both pieces on their own solutions.
+		expect(sandbox.operations.slice(firstBuild + 1, secondBuild + 1)).toEqual(["park c", "park yard", "write a: a.cpp=SOLUTION", "write b: b.cpp=SOLUTION", "build"]);
 	});
 
 	it("stops after the step a Ctrl+C interrupts, keeps the sandbox, and reports the cancel", async () =>
@@ -462,9 +688,12 @@ describe("EngineVerifier with quests after a boss (A443)", () =>
 			"write yard: DojoBoss.cpp=SOLUTION",
 			"write c: c.cpp=SOLUTION",
 			"build",
-			// a's starter: nothing after a is in the sandbox, so the boss and c go and a is checked on its own.
+			// a's own tests (A2040): a's learner has a's solution alone, without the boss's copy of a, so a is checked on its own first.
 			"park yard",
 			"park c",
+			"write a: a.cpp=SOLUTION",
+			"build",
+			// a's starter: the same state, with a's starter in place of its solution.
 			"write a: a.cpp=STARTER",
 			"build",
 			// c's starter: c needs the boss, so the boss and the extended a come back.
