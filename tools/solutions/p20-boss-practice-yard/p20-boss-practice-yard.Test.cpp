@@ -37,6 +37,13 @@ namespace DojoP20YardTest
 		return Launcher && IsValid(Launcher->Rule) ? Launcher->Rule->GetClass()->GetName() : FString(TEXT("None"));
 	}
 
+	/** The text on the yard's label, or a note that the yard has no label, so a missing label fails a check and does not stop the engine. */
+	FString LabelText(const ADojoP20PracticeYard* Yard)
+	{
+		const UTextRenderComponent* LabelComponent = Yard->Label;
+		return LabelComponent ? LabelComponent->Text.ToString() : FString(TEXT("(the yard has no label)"));
+	}
+
 	/** Anvil stands 100 out with 30 health, Barrel stands 480 out with 50, and Crate circles a point 500 out from 450 with 40. */
 	void SetUpDummies(ADojoP20PracticeYard& Yard)
 	{
@@ -106,14 +113,16 @@ bool FDojo_P20_PracticeYard_TwoRoundsSwapRulesLive::RunTest(const FString& Param
 	TestEqual(TEXT("It is round 1"), Yard->GetRoundNumber(), 1);
 	TestEqual(TEXT("The first rule class is in the launcher"), RuleName(Yard), FString(TEXT("DojoP20NearestRule")));
 	TestEqual(TEXT("Three dummies are standing"), Yard->GetStandingCount(), 3);
-	TestEqual(TEXT("The label shows the round, the rule, the hits and the dummies standing"), Yard->Label->Text.ToString(), FString(TEXT("Round 1  DojoP20NearestRule  Hits 0  Standing 3")));
+	TestEqual(TEXT("The label shows the round, the rule, the hits and the dummies standing"), LabelText(Yard), FString(TEXT("Round 1  DojoP20NearestRule  Hits 0  Standing 3")));
 
 	const float Start = TestWorld.GetWorld()->GetTimeSeconds();
 	TickUntil(TestWorld, Start + 1.f);
 	ADojoP20Mover* Crate = Yard->GetMover(2);
 	if (!TestNotNull(TEXT("The crate has a mover"), Crate)) return false;
 	TestTrue(TEXT("Two steps of the orbit have turned the crate a quarter of the way round its centre"), FMath::IsNearlyEqual(Crate->GetActorLocation().X, 500.f, 0.5f) && FMath::IsNearlyEqual(FMath::Abs(Crate->GetActorLocation().Y), 50.f, 0.5f));
-	TestTrue(TEXT("The anvil has not moved"), Yard->GetMover(0)->GetActorLocation().Equals(FVector(100.f, 0.f, 0.f), 0.01f));
+	ADojoP20Mover* Anvil = Yard->GetMover(0);
+	if (!TestNotNull(TEXT("The anvil has a mover"), Anvil)) return false;
+	TestTrue(TEXT("The anvil has not moved"), Anvil->GetActorLocation().Equals(FVector(100.f, 0.f, 0.f), 0.01f));
 
 	TickUntil(TestWorld, Start + 6.5f);
 	TestEqual(TEXT("The nearest rule shot the anvil three times"), LogText(Yard->GetShotLog()), FString(TEXT("AAA")));
@@ -124,13 +133,18 @@ bool FDojo_P20_PracticeYard_TwoRoundsSwapRulesLive::RunTest(const FString& Param
 	Yard->PressCycleRule();
 	TestEqual(TEXT("T put the weakest rule in the launcher"), RuleName(Yard), FString(TEXT("DojoP20WeakestRule")));
 
+	TickUntil(TestWorld, Start + 14.1f);
+	const FVector CrateWhenDown = Crate->GetActorLocation();
+	TickUntil(TestWorld, Start + 15.1f);
+	TestTrue(TEXT("The crate went down at 14 seconds, and a dummy that is down is not stepped, so it has not moved since"), Crate->GetActorLocation().Equals(CrateWhenDown, 0.01f));
+
 	TickUntil(TestWorld, Start + 29.5f);
 	TestFalse(TEXT("The round is over at 29 seconds"), Yard->IsRunning());
 	TestEqual(TEXT("After the swap the weakest crate and then the barrel took the shots"), LogText(Yard->GetShotLog()), FString(TEXT("AAACCCCBBBBB--")));
 	TestEqual(TEXT("Twelve shots hit"), Yard->GetHits(), 12);
 	TestEqual(TEXT("No dummy is standing"), Yard->GetStandingCount(), 0);
 	TestEqual(TEXT("So the yard is cleared"), Yard->GetResult(), FString(TEXT("CLEARED")));
-	TestEqual(TEXT("The label shows the rule in use and the result"), Yard->Label->Text.ToString(), FString(TEXT("Round 1  DojoP20WeakestRule  Hits 12  Standing 0  CLEARED")));
+	TestEqual(TEXT("The label shows the rule in use and the result"), LabelText(Yard), FString(TEXT("Round 1  DojoP20WeakestRule  Hits 12  Standing 0  CLEARED")));
 
 	Yard->PressCycleRule();
 	TestEqual(TEXT("T works between rounds too and picks the farthest rule"), RuleName(Yard), FString(TEXT("DojoP20FarthestRule")));
@@ -143,7 +157,9 @@ bool FDojo_P20_PracticeYard_TwoRoundsSwapRulesLive::RunTest(const FString& Param
 	TestEqual(TEXT("The log starts again"), Yard->GetShotLog().Num(), 0);
 	TestTrue(TEXT("And the result is empty"), Yard->GetResult().IsEmpty());
 	TestEqual(TEXT("Every dummy is back on its feet"), Yard->GetStandingCount(), 3);
-	TestTrue(TEXT("The crate is back at its start"), Yard->GetMover(2)->GetActorLocation().Equals(FVector(450.f, 0.f, 0.f), 0.01f));
+	ADojoP20Mover* RestartedCrate = Yard->GetMover(2);
+	if (!TestNotNull(TEXT("The crate still has a mover in round 2"), RestartedCrate)) return false;
+	TestTrue(TEXT("The crate is back at its start"), RestartedCrate->GetActorLocation().Equals(FVector(450.f, 0.f, 0.f), 0.01f));
 
 	const float SecondStart = TestWorld.GetWorld()->GetTimeSeconds();
 	TickUntil(TestWorld, SecondStart + 3.f);
@@ -159,7 +175,7 @@ bool FDojo_P20_PracticeYard_TwoRoundsSwapRulesLive::RunTest(const FString& Param
 	TestEqual(TEXT("The farthest rule took the first two shots and the nearest rule the rest"), LogText(Yard->GetShotLog()), FString(TEXT("CBAAACBCBCBB--")));
 	TestEqual(TEXT("Twelve shots hit again"), Yard->GetHits(), 12);
 	TestEqual(TEXT("The yard is cleared again"), Yard->GetResult(), FString(TEXT("CLEARED")));
-	TestEqual(TEXT("The label shows round 2 and its result"), Yard->Label->Text.ToString(), FString(TEXT("Round 2  DojoP20NearestRule  Hits 12  Standing 0  CLEARED")));
+	TestEqual(TEXT("The label shows round 2 and its result"), LabelText(Yard), FString(TEXT("Round 2  DojoP20NearestRule  Hits 12  Standing 0  CLEARED")));
 
 	return true;
 }
@@ -211,7 +227,7 @@ bool FDojo_P20_PracticeYard_ShortRoundEscapes::RunTest(const FString& Parameters
 	TestEqual(TEXT("All seven hit"), Yard->GetHits(), 7);
 	TestEqual(TEXT("The barrel and the crate are still standing"), Yard->GetStandingCount(), 2);
 	TestEqual(TEXT("So the dummies escaped"), Yard->GetResult(), FString(TEXT("ESCAPED")));
-	TestEqual(TEXT("The label shows the result"), Yard->Label->Text.ToString(), FString(TEXT("Round 1  DojoP20NearestRule  Hits 7  Standing 2  ESCAPED")));
+	TestEqual(TEXT("The label shows the result"), LabelText(Yard), FString(TEXT("Round 1  DojoP20NearestRule  Hits 7  Standing 2  ESCAPED")));
 
 	return true;
 }
@@ -239,7 +255,7 @@ bool FDojo_P20_PracticeYard_NoRuleClassesShootsNothing::RunTest(const FString& P
 	TestEqual(TEXT("No hits"), Yard->GetHits(), 0);
 	TestEqual(TEXT("All three dummies are still standing"), Yard->GetStandingCount(), 3);
 	TestEqual(TEXT("So the dummies escaped"), Yard->GetResult(), FString(TEXT("ESCAPED")));
-	TestEqual(TEXT("The label names no rule"), Yard->Label->Text.ToString(), FString(TEXT("Round 1  None  Hits 0  Standing 3  ESCAPED")));
+	TestEqual(TEXT("The label names no rule"), LabelText(Yard), FString(TEXT("Round 1  None  Hits 0  Standing 3  ESCAPED")));
 
 	return true;
 }
@@ -304,7 +320,7 @@ bool FDojo_P20_PracticeYard_ShotIntervalIsTunable::RunTest(const FString& Parame
 	TestEqual(TEXT("All four hit"), Yard->GetHits(), 4);
 	TestEqual(TEXT("The anvil is down and the barrel and the crate are standing"), Yard->GetStandingCount(), 2);
 	TestEqual(TEXT("So the dummies escaped"), Yard->GetResult(), FString(TEXT("ESCAPED")));
-	TestEqual(TEXT("The label shows the hits and the result"), Yard->Label->Text.ToString(), FString(TEXT("Round 1  DojoP20WeakestRule  Hits 4  Standing 2  ESCAPED")));
+	TestEqual(TEXT("The label shows the hits and the result"), LabelText(Yard), FString(TEXT("Round 1  DojoP20WeakestRule  Hits 4  Standing 2  ESCAPED")));
 
 	return true;
 }
@@ -334,7 +350,7 @@ bool FDojo_P20_PracticeYard_HitDamageIsTunable::RunTest(const FString& Parameter
 	TestEqual(TEXT("All four hit"), Yard->GetHits(), 4);
 	TestEqual(TEXT("Only the barrel is standing"), Yard->GetStandingCount(), 1);
 	TestEqual(TEXT("So the dummies escaped"), Yard->GetResult(), FString(TEXT("ESCAPED")));
-	TestEqual(TEXT("The label shows the hits and the result"), Yard->Label->Text.ToString(), FString(TEXT("Round 1  DojoP20WeakestRule  Hits 4  Standing 1  ESCAPED")));
+	TestEqual(TEXT("The label shows the hits and the result"), LabelText(Yard), FString(TEXT("Round 1  DojoP20WeakestRule  Hits 4  Standing 1  ESCAPED")));
 
 	return true;
 }

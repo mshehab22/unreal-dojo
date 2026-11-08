@@ -37,7 +37,7 @@ Two of the three tests pass on the starter and must pass after; one does not. Re
 
 ## See it in the editor
 
-Place a Dojo P20 Turret at the origin with three Candidates: Anvil at 500, 0, 0 with Health 30; Barrel at 200, 0, 0 with Health 50; and Crate at 300, 0, 0 with Health 10. In the Level Blueprint, on Begin Play, print Pick Target. Before the refactor, Aim Style 0 prints Barrel, 1 prints Crate, and 2 prints Anvil, and the Rule dropdown changes nothing. After the refactor there is no Aim Style: choose the Nearest Rule and it prints Barrel, the Weakest Rule and it prints Crate, the Farthest Rule and it prints Anvil, and with the Rule empty it prints None.
+Drag a Dojo P20 Turret from the Place Actors panel into the level at the origin; it has no mesh, so find it in the Outliner. Give it three Candidates: Anvil at 500, 0, 0 with Health 30; Barrel at 200, 0, 0 with Health 50; and Crate at 300, 0, 0 with Health 10. In the Level Blueprint, select the turret in the Outliner, right click the graph and choose Create a Reference to Dojo P20 Turret, then on Begin Play call Pick Target on it and print the result. Before the refactor, Aim Style 0 prints Barrel, 1 prints Crate, and 2 prints Anvil, and the Rule dropdown changes nothing. After the refactor there is no Aim Style: choose the Nearest Rule and it prints Barrel, the Weakest Rule and it prints Crate, the Farthest Rule and it prints Anvil, and with the Rule empty it prints None.
 
 # Files
 
@@ -252,7 +252,7 @@ bool FDojo_P20_TurretRefactor_FireRemembersTheShot::RunTest(const FString& Param
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P20_TurretRefactor_TheRuleDecidesTheAim, "Dojo.P20.TurretRefactor.TheRuleDecidesTheAim", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-/** The rule the turret holds decides who it aims at, a changed rule changes the aim, and with no rule it aims at nothing. */
+/** The rule the turret holds decides who it aims at, a changed rule changes the aim, with no rule it aims at nothing, and the old aim number is gone. */
 bool FDojo_P20_TurretRefactor_TheRuleDecidesTheAim::RunTest(const FString& Parameters)
 {
 	using namespace DojoP20TurretTest;
@@ -261,6 +261,8 @@ bool FDojo_P20_TurretRefactor_TheRuleDecidesTheAim::RunTest(const FString& Param
 
 	ADojoP20Turret* Turret = MakeTurret(TestWorld);
 	if (!TestNotNull(TEXT("Turret made"), Turret)) return false;
+
+	TestNull(TEXT("The AimStyle property is gone from the turret"), FindFProperty<FProperty>(ADojoP20Turret::StaticClass(), TEXT("AimStyle")));
 
 	TestEqual(TEXT("With no rule the turret aims at nothing"), Turret->PickTarget(), FName(NAME_None));
 
@@ -281,9 +283,9 @@ bool FDojo_P20_TurretRefactor_TheRuleDecidesTheAim::RunTest(const FString& Param
 
 # Hints
 
-- `TheRuleDecidesTheAim` is the one that says the refactor is done. Read its message: who did the turret aim at, and who should it have?
-- The turret already holds the rule it needs. What reads it?
-- Ask the rule from the turret's own place, check the answer is a real place in the list, and read the name. Once nothing reads the number, the number goes, and so does the loop that compared dummies, since each rule skips the dummies that are down itself.
+- Read the message of `TheRuleDecidesTheAim`: it names who the turret aimed at and who it should have.
+- The turret already holds the rule it needs, so ask what in `PickTarget` reads it.
+- Once the rule's answer is the only thing `PickTarget` uses, ask which members and loops are left with no reader.
 
 # Rubric
 
@@ -295,4 +297,4 @@ bool FDojo_P20_TurretRefactor_TheRuleDecidesTheAim::RunTest(const FString& Param
 
 # Alternative
 
-If a project has only ever had these three aims, and no designer chooses one, the switch is the plainer code and would be fine to leave. The rule objects pay for themselves the day a fourth aim is wanted, or a designer wants to tune one aim for one turret, or the same aims are wanted by a second kind of actor. Notice also what the refactor leaves behind: a level that saved an `AimStyle` number on its turrets loses it, because the number no longer exists, and every turret now starts with the rule that was chosen, or with none. In a real project that needs a one-off fix-up that reads the old number and sets the matching rule, or a redirect of the old property.
+If a project has only ever had these three aims, and no designer chooses one, the switch is the plainer code and would be fine to leave. The rule objects pay for themselves the day a fourth aim is wanted, or a designer wants to tune one aim for one turret, or the same aims are wanted by a second kind of actor. Notice also what the refactor leaves behind: a level that saved an `AimStyle` number on its turrets loses it, because the number no longer exists, and every turret now starts with the rule that was chosen, or with none. In a real project that needs a one-off fix-up that reads the old number and sets the matching rule, for example from a deprecated copy of the property converted in `PostLoad`.

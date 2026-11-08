@@ -25,11 +25,11 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: after the hit feedback facade lands, a programmer writing a slow-motion replay needs to play a cue at half volume on a different bus. The facade has no call for that. What should the replay do?"
 choices:
-  - Add PlayHitFeedbackAtHalfVolumeOnTheReplayBus to the facade
-  - Call the sound desk directly; the facade hides the desk from callers that only want a hit, it does not forbid using the desk
-  - Copy the facade into the replay
-  - Give up on the replay
-answerIndex: 1
+  - Add a call for half volume on the replay bus to the facade, named for the replay
+  - Copy the whole facade into the replay and change the volume in the copy
+  - Call the sound desk directly, since the facade does not forbid using the desk
+  - Give up on the replay, because the facade has no call that can do it
+answerIndex: 2
 explanation: A facade is a shortcut for the common job, not a wall. Callers with an unusual need talk to the system behind it, and the facade stays small.
 ```
 
@@ -70,11 +70,11 @@ public:
   type: multiple-choice
   prompt: "What does a facade hide from its callers?"
   choices:
-    - That the systems behind it exist at all
-    - How the systems must be used for the common job, such as the order of calls and the ids passed between them
-    - Every bug in the systems
-    - The game's memory use
-  answerIndex: 1
+    - How the systems are used for the common job, such as the order of calls and ids
+    - That the systems behind it exist at all, so no caller can ever reach them directly
+    - Every bug in the systems, so that a caller never has to see one of them fail
+    - The game's memory use, so that the callers can never run short of it at all
+  answerIndex: 0
   explanation: The systems stay public; the facade hides the steps of the common job.
 - id: fill-direction
   type: fill-blank
@@ -85,20 +85,20 @@ public:
   type: multiple-choice
   prompt: "Which change is the clearest sign a facade is turning into a god object?"
   choices:
-    - It gains a second call for misses
-    - It starts keeping the player's score and inventory, and adds a pass-through for every function of the systems behind it
-    - It asks for its systems as dependencies in Initialize
-    - It is a world subsystem
-  answerIndex: 1
+    - It gains a second call that handles misses next to the call that handles hits
+    - It asks for the systems it drives as dependencies in its Initialize function
+    - It is made a world subsystem so that every actor in the level can reach it
+    - It keeps the player's score and forwards every call of the systems behind it
+  answerIndex: 3
   explanation: State of the game and a mirror of every system's interface make every class depend on it for everything.
 - id: engine-model
   type: multiple-choice
   prompt: "Why are UGameplayStatics and UKismetSystemLibrary good models for keeping a front small?"
   choices:
-    - They have no functions
-    - Each static function is a separate, short front over one engine system, with no shared state
-    - They can only be called from Blueprint
-    - They replace every engine system
+    - They have no functions of their own, only a large set of data that other classes read
+    - Each function is a short front over one engine system and keeps no state of the game
+    - They can only be called from Blueprint graphs and never from any C++ code at all
+    - They replace every engine system so that no other class is needed in the game
   answerIndex: 1
   explanation: Many small fronts, each about one job, never become one class that owns everything.
 - id: spot-pass-through

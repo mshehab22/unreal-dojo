@@ -571,7 +571,40 @@ bool FDojo_P22_HitFeedback_HeavyAndLightHits::RunTest(const FString& Parameters)
 
 	Feedback->SetHeavyDamage(20.f);
 	Feedback->PlayHitFeedback(FVector::ZeroVector, 25.f);
-	TestTrue(TEXT("With the threshold at 20, 25 damage is heavy"), World->GetSubsystem<UDojoP22SoundDesk>()->GetPlayed().Last().Cue == FName(TEXT("HeavyHit")));
+	const TArray<FDojoP22PlayedCue> PlayedAfter = World->GetSubsystem<UDojoP22SoundDesk>()->GetPlayed();
+	if (TestEqual(TEXT("A fourth cue played"), PlayedAfter.Num(), 4))
+	{
+		TestTrue(TEXT("With the threshold at 20, 25 damage is heavy"), PlayedAfter[3].Cue == FName(TEXT("HeavyHit")));
+	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDojo_P22_HitFeedback_SparksAndLinesRound, "Dojo.P22.HitFeedback.SparksAndLinesRound", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+/** Sparks and the line round to the nearest whole number, and every burst points up. */
+bool FDojo_P22_HitFeedback_SparksAndLinesRound::RunTest(const FString& Parameters)
+{
+	FDojoTestWorld TestWorld;
+	UWorld* World = TestWorld.GetWorld();
+	UDojoP22HitFeedback* Feedback = World->GetSubsystem<UDojoP22HitFeedback>();
+	if (!TestNotNull(TEXT("The world has the hit feedback subsystem"), Feedback)) return false;
+
+	Feedback->PlayHitFeedback(FVector::ZeroVector, 22.f);
+	Feedback->PlayHitFeedback(FVector::ZeroVector, 23.f);
+	Feedback->PlayHitFeedback(FVector::ZeroVector, 24.6f);
+
+	const TArray<FDojoP22SparkBurst> Bursts = World->GetSubsystem<UDojoP22SparkPool>()->GetBursts();
+	if (!TestEqual(TEXT("Three bursts"), Bursts.Num(), 3)) return false;
+	TestEqual(TEXT("22 damage rounds down to 4 sparks"), Bursts[0].Count, 4);
+	TestEqual(TEXT("23 damage rounds up to 5 sparks"), Bursts[1].Count, 5);
+	TestEqual(TEXT("24.6 damage rounds up to 5 sparks"), Bursts[2].Count, 5);
+	for (const FDojoP22SparkBurst& Burst : Bursts)
+	{
+		TestTrue(TEXT("Every burst points up"), Burst.Normal.Equals(FVector::UpVector, 0.01));
+	}
+
+	TestTrue(TEXT("The ticker rounds each line: -22, -23, and -25"), World->GetSubsystem<UDojoP22HudTicker>()->GetLines() == TArray<FString>({ TEXT("-22"), TEXT("-23"), TEXT("-25") }));
 
 	return true;
 }
@@ -623,9 +656,9 @@ bool FDojo_P22_HitFeedback_MissIsOnlyACue::RunTest(const FString& Parameters)
 
 # Hints
 
-- Every number in the hit depends on whether it is heavy. What do you decide first, before you touch any of the three systems?
-- The sound desk wants an id, not a name, and the spark pool wants a ticket before it will fire. Which call gives each of those, and what should happen when the pool says no?
-- A line on the ticker is text. How does a damage of 24.6 become the text `-25`?
+- Decide first which of the cue and the flash depend on the hit being heavy, before you touch any of the three systems.
+- The sound desk wants an id and the spark pool wants a ticket, so ask each for one before you use it, and handle the pool saying no.
+- A line on the ticker is text, so how does a damage of 24.6 become the text `-25`?
 
 # Rubric
 
@@ -638,7 +671,7 @@ bool FDojo_P22_HitFeedback_MissIsOnlyACue::RunTest(const FString& Parameters)
 
 # Alternative
 
-A `UGameInstanceSubsystem` would keep the facade, and anything it remembers, alive across level loads; that suits a front over the session's own systems, such as saving or the music mixer. Feedback belongs to the level being played, and the stand-in systems are world subsystems, so the facade is one too. A lighter alternative is a `UBlueprintFunctionLibrary` with a static `PlayHitFeedback(WorldContextObject, Where, Damage)`: no object to create, but nowhere to keep the three systems or a threshold a designer can change, so every call looks them all up again. A component on every weapon would put the rules back into every actor that has one.
+A `UGameInstanceSubsystem` would keep the facade, and anything it remembers, alive across level loads; that suits a front over the session's own systems, such as saving or the music mixer. Feedback belongs to the level being played, and the stand-in systems are world subsystems, so the facade is one too. A lighter alternative is a `UBlueprintFunctionLibrary` with a static `PlayHitFeedback(WorldContextObject, Where, Damage)`: no object to create, but no natural place to keep the three systems or a threshold that can change while the game runs, so every call looks them all up again. A component on every weapon would put the rules back into every actor that has one.
 
 # Parsons
 

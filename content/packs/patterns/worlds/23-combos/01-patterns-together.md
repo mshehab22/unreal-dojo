@@ -6,8 +6,8 @@ kind: concept
 difficulty: 2
 patterns: []
 skills: [architecture, planning]
-terms: [delegate, actor-component, timer-manager]
-prerequisites: [p13-boss-modded-vault]
+terms: [actor-component, timer-manager]
+prerequisites: [p19-boss-dusk, p20-boss-practice-yard, p21-boss-ember-range, p22-boss-gauntlet]
 xp: 25
 estimatedMinutes: 10
 concepts:
@@ -26,10 +26,10 @@ type: multiple-choice
 prompt: "Guess, no penalty: a team builds an arena night from three parts that each pass all of their own tests. In the first playtest the scoreboard counts a knockout one frame before the loot it dropped appears. Where should the team look first?"
 choices:
   - Inside each of the three parts, because one of them must have a hidden bug
-  - At the places where the parts hand values and calls to each other, and at what order and what moment each hand-over happens
-  - In the engine, because three correct parts cannot disagree
-  - At the compiler settings
-answerIndex: 1
+  - In the engine itself, because three correct parts cannot disagree
+  - At the compiler settings and the build flags the team chose
+  - At the hand-overs between the parts, and the order and moment of each
+answerIndex: 3
 explanation: Each part is right on its own, so the fault is in the order and timing of the hand-overs between them. That is where combinations go wrong.
 ```
 
@@ -96,11 +96,11 @@ if (Health->IsDepleted()) Fighter->KnockOut(Striker);
   type: multiple-choice
   prompt: "A knockout waits in a mailbox until the end of the frame. The fighter it names is destroyed in the meantime. What should the waiting message carry?"
   choices:
-    - A pointer to the fighter
+    - A pointer to the fighter, so the listener sees its live state
+    - Nothing at all, and the listener looks the fighter up later
     - A copy of the fighter's name, team, and the winner's name
-    - Nothing, and the listener should look the fighter up later
-    - A timer handle
-  answerIndex: 1
+    - A handle to the timer that will deliver the message
+  answerIndex: 2
   explanation: A copy still makes sense after the fighter is gone. A pointer would be dangling by the time the message is read.
 - id: explain-director
   type: explain-in-one-sentence

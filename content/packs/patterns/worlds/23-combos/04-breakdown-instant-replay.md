@@ -66,6 +66,10 @@ Acceptance:
   kind: step
   label: At the start of each frame the finished copy becomes the one shown and the other starts being written
   why: The moment of the swap is the only moment the two copies change roles.
+- id: keyframe
+  kind: data
+  label: A keyframe of every duelist's place and state, kept up to date as the window slides forward
+  why: The moves from before the window are gone, so a replay can only start from a stored state of the duel at the window's start.
 ```
 
 # Reference Plans
@@ -81,8 +85,11 @@ Acceptance:
     - { id: controls, kind: step, label: "A speed multiplier of 1, 0.5, or 0 added into the accumulator, and a single-step flag that runs exactly one tick", covers: [controls] }
     - { id: snapshot, kind: data, label: "Two TArrays of places; the simulation writes the back one and the screen reads the front one", covers: [snapshot] }
     - { id: swap, kind: step, label: "The first thing in each frame's Tick swaps the two arrays with Swap and clears the new back one", covers: [swap] }
+    - { id: keyframe, kind: data, label: "A stored copy of every duelist's place and state; each time the ring buffer overwrites its oldest tick, that tick's moves are applied to the copy first", covers: [keyframe] }
   edges:
     - { from: moves, to: recorder, label: "what is kept" }
+    - { from: recorder, to: keyframe, label: "what slides out of the window is applied to it" }
+    - { from: keyframe, to: replay-run, label: "where the replay starts" }
     - { from: clock, to: replay-run, label: "drives the replay in the same ticks" }
     - { from: controls, to: clock, label: "changes how many ticks are asked for" }
     - { from: replay-run, to: snapshot, label: "writes the back copy" }
@@ -97,8 +104,11 @@ Acceptance:
     - { id: controls, kind: step, label: "Pause skips the replay's part of each tick, half speed runs it on every second tick, and a step runs it once by hand", covers: [controls] }
     - { id: snapshot, kind: data, label: "Two struct arrays of places and a sequence number written last in each; the screen shows the array whose number is the larger and finished", covers: [snapshot] }
     - { id: swap, kind: step, label: "The simulation finishes writing one array, sets its sequence number, and writes the other one next", covers: [swap] }
+    - { id: keyframe, kind: data, label: "A struct array copy of every duelist's place and state; each time a move older than 200 ticks is removed, it is applied to the copy first", covers: [keyframe] }
   edges:
     - { from: moves, to: recorder, label: "what is kept" }
+    - { from: recorder, to: keyframe, label: "what slides out of the window is applied to it" }
+    - { from: keyframe, to: replay-run, label: "where the replay starts" }
     - { from: clock, to: replay-run, label: "the replay advances on the same tick" }
     - { from: controls, to: replay-run, label: "changes how many ticks it gets" }
     - { from: replay-run, to: snapshot, label: "writes the other array" }
@@ -112,8 +122,8 @@ Acceptance:
 - The replay applies the recorded moves through the same clock as the live duel, so it comes out the same on every machine.
 - Speed, pause, and step change how many ticks the replay is asked for and never change the recorded ticks.
 - The screen reads one finished copy of the places while the simulation writes the other, and the roles change at one known moment.
-- The recorder keeps only the last 10 seconds and its memory stops growing once the window is full.
+- The recorder keeps only the last 10 seconds and its memory stops growing once the window is full, and the replay starts from a stored state of the duelists at the start of the window, because the moves before it are gone.
 
 # Alternative Note
 
-Both plans pass. A clock in a Tick with an accumulator gives full control of the limit and the order of work in a frame, and is the plainer thing to test. A looping timer needs less code and the timer manager already catches up missed ticks, but the order of a timer against other work in a frame is only as predictable as the timer manager's order, so the sequence number is needed to be sure which copy is finished. Swapping two arrays costs nothing; tagging by sequence number suits a screen that reads from another thread.
+Both plans pass. A clock in a Tick with an accumulator gives full control of the limit and the order of work in a frame, and is the plainer thing to test. A looping timer needs less code and the timer manager already catches up missed ticks, but the order of a timer against other work in a frame is only as predictable as the timer manager's order, so the sequence number is needed to be sure which copy is finished. Swapping two arrays costs nothing; tagging by sequence number lets a reader tell which copy is finished without waiting for a swap.

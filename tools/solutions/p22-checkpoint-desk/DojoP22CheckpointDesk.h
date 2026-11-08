@@ -38,7 +38,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Checkpoints")
 	void ClearCheckpoints();
 
+	/** Sizes the slots when the world starts, so every slot exists from the first call. */
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+
 private:
+	/** The bytes kept in a slot; empty for a slot that holds nothing or does not exist. */
+	const TArray<uint8>& BytesIn(int32 Slot) const;
+
 	/** Each kept checkpoint as the bytes UGameplayStatics::SaveGameToMemory wrote, by slot. */
 	TArray<TArray<uint8>> Slots;
 

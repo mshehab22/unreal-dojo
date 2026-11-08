@@ -7,7 +7,7 @@ scaffold: stub
 difficulty: 4
 patterns: [facade]
 skills: [facade, refactoring]
-terms: [world-subsystem, gameplay-statics, subsystem-dependency]
+terms: [world-subsystem, subsystem-dependency]
 prerequisites: [p22-checkpoint-desk, p22-hit-feedback]
 xp: 110
 estimatedMinutes: 25
@@ -37,7 +37,7 @@ Two of the four tests pass on the starter and must pass after; two do not. Read 
 
 ## See it in the editor
 
-Place a `DojoP22Turret`, a `DojoP22SpikeTrap`, and a cube as the target. In the Level Blueprint, on Begin Play, call Fire At on the turret with the cube and a damage of 50, then Spring on the trap with the cube and 50. Get the Dojo P22 Hud Ticker subsystem and print Get Flash Count: 1 before the refactor, because the trap never flashes, and 2 after. Then, before the two calls, get the Dojo P22 Hit Feedback subsystem and Set Heavy Damage to 60: after the refactor neither hit flashes, and the count is 0.
+Place a `DojoP22Turret`, a `DojoP22SpikeTrap`, and a Cube from the Basic shapes as the target; the turret and the trap have no mesh, so find them in the Outliner. With all three selected, right-click in the Level Blueprint graph and choose Create a Reference to Selected Actors. On Begin Play, call Fire At on the turret with the cube and a damage of 50, then Spring on the trap with the cube and 50. Get the Dojo P22 Hud Ticker subsystem and print Get Flash Count: 1 before the refactor, because the trap never flashes, and 2 after. Then, before the two calls, get the Dojo P22 Hit Feedback subsystem and Set Heavy Damage to 60: after the refactor neither hit flashes, and the count is 0.
 
 # Files
 
@@ -271,7 +271,11 @@ bool FDojo_P22_FeedbackRefactor_TurretFeelsAsBefore::RunTest(const FString& Para
 	TestTrue(TEXT("5 sparks, then 10"), SparksOf(World) == TArray<int32>({ 5, 10 }));
 	TestTrue(TEXT("The ticker shows both"), World->GetSubsystem<UDojoP22HudTicker>()->GetLines() == TArray<FString>({ TEXT("-25"), TEXT("-50") }));
 	TestEqual(TEXT("Only the heavy hit flashed"), World->GetSubsystem<UDojoP22HudTicker>()->GetFlashCount(), 1);
-	TestTrue(TEXT("The sparks flew at the target"), World->GetSubsystem<UDojoP22SparkPool>()->GetBursts()[0].Where.Equals(FVector(300.0, 0.0, 0.0), 0.01));
+	const TArray<FDojoP22SparkBurst> Bursts = World->GetSubsystem<UDojoP22SparkPool>()->GetBursts();
+	if (TestTrue(TEXT("The first shot threw a burst"), Bursts.Num() >= 1))
+	{
+		TestTrue(TEXT("The sparks flew at the target"), Bursts[0].Where.Equals(FVector(300.0, 0.0, 0.0), 0.01));
+	}
 
 	return true;
 }
@@ -352,8 +356,8 @@ bool FDojo_P22_FeedbackRefactor_OneSettingChangesBoth::RunTest(const FString& Pa
 
 # Hints
 
-- The two failing tests compare the trap with the turret, and both with the facade's threshold. Where do the turret and the trap each get their numbers from today?
-- The facade already knows every rule the turret copies. What is left in `FireAt` once the facade does the feedback?
+- The two failing tests compare the trap with the turret, so look at where each of them gets its numbers today.
+- Once the facade does the feedback, what is left in `FireAt` besides counting the shot?
 - When the refactor is done, which `#include` lines should be gone from both .cpp files?
 
 # Rubric
@@ -367,7 +371,7 @@ bool FDojo_P22_FeedbackRefactor_OneSettingChangesBoth::RunTest(const FString& Pa
 
 # Alternative
 
-Leaving the turret alone and fixing only the trap's numbers would pass the tests today, and drift again the next time anyone tunes a hit. A shared base class for everything that deals damage, with the feedback in a protected helper, would also keep one copy of the rules, but it ties feedback to an inheritance tree that turrets, traps, swords, and falling rocks do not share; the facade works for any caller with a world. A `UBlueprintFunctionLibrary` with a static `PlayHitFeedback(WorldContextObject, ...)` would keep the call this short too, but it would have to find the three systems again on every hit and would have nowhere to keep the heavy threshold.
+Leaving the turret alone and fixing only the trap's numbers would pass the tests today, and drift again the next time anyone tunes a hit. A shared base class for everything that deals damage, with the feedback in a protected helper, would also keep one copy of the rules, but it ties feedback to an inheritance tree that turrets, traps, swords, and falling rocks do not share; the facade works for any caller with a world. A `UBlueprintFunctionLibrary` with a static `PlayHitFeedback(WorldContextObject, ...)` would keep the call this short too, but it would have to find the three systems again on every hit and would have no natural place to keep a heavy threshold that can change while the game runs.
 
 # Parsons
 

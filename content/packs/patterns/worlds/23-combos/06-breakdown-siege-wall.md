@@ -74,7 +74,7 @@ Acceptance:
 - id: mode-objects
   title: A base class with a mode object for each mode
   pieces:
-    - { id: engine-base, kind: class, label: "An abstract AEngine with UCLASS(Abstract), a timer, and a pointer to the current mode object, with Fire, Repair, Break, and a Tick that feeds time to the mode", covers: [engine-base] }
+    - { id: engine-base, kind: class, label: "An abstract AEngine with UCLASS(Abstract) and a pointer to the current mode object, with Fire, Repair, Break, and a Tick that feeds time to the mode", covers: [engine-base] }
     - { id: engine-kinds, kind: class, label: "ABallista, ACatapult, and ACauldron override a protected OnFire and set load and rest seconds in their constructors", covers: [engine-kinds] }
     - { id: tools, kind: step, label: "Protected HurtNear, HurtOne, PlaySound, and CountEnemiesNear on the base, which children call and nothing else reaches", covers: [tools] }
     - { id: modes, kind: data, label: "A UObject class for each mode with its own seconds left, made once on the engine and reused", covers: [modes] }

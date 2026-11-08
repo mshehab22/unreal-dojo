@@ -6,7 +6,7 @@ kind: breakdown
 difficulty: 4
 patterns: [component, observer, event-queue]
 skills: [planning, component, observer, event-queue]
-terms: [actor-component, dynamic-multicast-delegate, multicast-delegate, tarray, timer-manager]
+terms: [actor-component, dynamic-multicast-delegate, multicast-delegate, tarray]
 prerequisites: [p23-patterns-together, p1-observer-when-not, p6-event-queue-when-not, p9-component-when-not]
 xp: 100
 estimatedMinutes: 25
@@ -103,9 +103,9 @@ Acceptance:
     - { id: parts, kind: component, label: "Three UActorComponent subclasses marked BlueprintSpawnableComponent so designers add them in a Blueprint", covers: [parts] }
     - { id: assembly, kind: step, label: "Each stall kind is a data table row listing part classes; the fair spawns one plain stall Blueprint and adds a component of each listed class with Add Component by Class", covers: [assembly] }
     - { id: part-events, kind: event, label: "The shelf owns a dynamic multicast delegate with BlueprintAssignable, and the board binds with Bind Event to On Emptied", covers: [part-events] }
-    - { id: request, kind: data, label: "A Blueprint struct with a request type enum, the visitor name, and the time it was posted", covers: [request] }
+    - { id: request, kind: data, label: "A Blueprint struct with a request type enum, the visitor name, and a posting counter that the fair raises by one on every post", covers: [request] }
     - { id: mailbox, kind: data, label: "An array variable on each stall, so a stall that is removed takes its own waiting requests with it", covers: [mailbox] }
-    - { id: settle, kind: step, label: "The till's Event Tick, in a late tick group, asks each stall in turn to settle the requests that were in its mailbox when the till started", covers: [settle] }
+    - { id: settle, kind: step, label: "The till's Event Tick, with its tick group set to a late one in Class Defaults, collects the requests that were in every stall's mailbox when the till started, sorts them by their posting counter, and settles them in that order", covers: [settle] }
     - { id: closing, kind: step, label: "A stall that closes empties its own mailbox and answers every waiting request with closed", covers: [closing] }
     - { id: board, kind: class, label: "A Blueprint actor that binds to each shelf in its Begin Play and sets a Text variable when it fires", covers: [board] }
   edges:
@@ -128,4 +128,4 @@ Acceptance:
 
 # Alternative Note
 
-Both plans pass. One mailbox for the whole fair makes the arrival order across stalls exact and puts the settling in one place, but a request names its stall, and the name must be looked up. A mailbox for each stall removes the lookup and lets a removed stall take its requests with it, but the order across stalls is only as good as the till's visit order. Native delegates are cheaper and keep listeners in C++; dynamic delegates let a designer bind in a Blueprint, at some cost per broadcast.
+Both plans pass. One mailbox for the whole fair makes the arrival order across stalls exact and puts the settling in one place, but a request names its stall, and the name must be looked up. A mailbox for each stall removes the lookup and lets a removed stall take its requests with it, and the posting counter, not the time, is what restores the arrival order across stalls when the till collects the mailboxes. Native delegates are cheaper and keep listeners in C++; dynamic delegates let a designer bind in a Blueprint, at some cost per broadcast.

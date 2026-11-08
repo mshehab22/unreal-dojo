@@ -25,10 +25,10 @@ id: predict
 type: multiple-choice
 prompt: "Guess, no penalty: one door class is spawned from exactly one place, the level start code, and nobody has asked for a second kind of door. A teammate proposes a DoorFactory base class with a virtual CreateDoor, a WoodenDoorFactory, and a manager to hold the factory. Is that the right tool?"
 choices:
-  - Yes; every spawn should go through a factory
-  - No; with one class and one call site, a direct SpawnActor is clearer and costs nothing to change later
-  - Yes, as long as the factory is a singleton
-  - No; doors can never be spawned from code
+  - Yes, since every spawn in a project ought to go through a factory class
+  - No; with one class and one call site, a direct SpawnActor is clearer
+  - Yes, as long as the factory class is made a singleton first
+  - No; doors can never be spawned from code at all, only placed
 answerIndex: 1
 explanation: A maker earns its cost when the class, the setup, or how things are made can change, or when many places make them. One class from one place has none of those, and the factory is three classes of reading for no gain.
 ```
@@ -84,11 +84,11 @@ virtual ADojoP21Bolt* MakeBolt(TSubclassOf<ADojoP21Bolt> BoltClass, const FTrans
   type: multiple-choice
   prompt: "A function MakeDoor does nothing except return SpawnActor<ADoor>(Where). What should happen to it?"
   choices:
-    - Keep it; wrappers are always good
-    - Make it virtual so it looks like the pattern
-    - Delete it unless it will choose a class, prepare the door, count, limit, or pool, because as it stands it only adds a name to read
-    - Move it to a subsystem
-  answerIndex: 2
+    - Delete it unless it will choose, prepare, count, limit or pool
+    - Keep it, because a thin wrapper is always good for readability
+    - Make it virtual so that it looks like the pattern in a book
+    - Move it into a subsystem and call it from there instead of here
+  answerIndex: 0
   explanation: A maker has to do something a bare spawn does not, or it is a layer without a purpose.
 - id: spot-parallel
   type: spot-the-bug
