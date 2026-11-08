@@ -49,7 +49,7 @@ void ADojoM3CrackingWall::HandleBoxHit(UPrimitiveComponent* HitComponent, AActor
 	if (Cracks >= HitsToBreak)
 	{
 		bBroken = true;
-		Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Box->SetCollisionResponseToAllChannels(ECR_Overlap);
 	}
 
 	RefreshLabel();
