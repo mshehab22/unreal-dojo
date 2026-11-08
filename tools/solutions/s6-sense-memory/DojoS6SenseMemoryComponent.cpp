@@ -73,7 +73,7 @@ void UDojoS6SenseMemoryComponent::NoteSight(AActor* SeenActor, bool bSeen, FVect
 /** Records a noise as the newest clue, unless the followed actor is in sight. */
 void UDojoS6SenseMemoryComponent::NoteNoise(FVector NoiseLocation)
 {
-	if (bTargetVisible)
+	if (IsTargetVisible())
 	{
 		return;
 	}

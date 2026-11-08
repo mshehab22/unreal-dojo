@@ -15,7 +15,7 @@ concepts:
   - The dojo's code speaks through a small interface, and any class that implements it can stand behind it
   - A world subsystem is the one place that holds the announcer in use and hands it out
   - A do-nothing announcer is in place from the start, so asking for an announcer never fails
-  - Providing something that is not an announcer is refused and changes nothing
+  - Installing something that is not an announcer is refused and changes nothing
 ---
 
 # Brief
@@ -24,13 +24,13 @@ When you press Play with the setup below, the desk holds the do-nothing announce
 
 `IDojoP15Announcer` is the interface: one function, `Announce(Line)`. Three classes can stand behind it: `UDojoP15NullAnnouncer`, which drops every line and counts it, `UDojoP15RecordingAnnouncer`, which writes every line down, and whatever you provide later. `UDojoP15AnnouncerDesk` is a world subsystem: one exists in every game world, made by the engine, and it holds the announcer in use. `Locate` finds the desk of a world, `Get` hands out the announcer in place as the interface, and `GetProvider` names the object behind it.
 
-Most of the code is written. First read the marked lines and say in a sentence why each one is there. Then fill the one gap: `Provide`. Given a provider, it puts that object in place and returns true; given nullptr it puts the do-nothing announcer back and returns true; given an object that does not implement `IDojoP15Announcer` it returns false and leaves the desk as it was.
+Most of the code is written. First read the marked lines and say in a sentence why each one is there. Then fill the one gap: `Install`. Given a provider, it puts that object in place and returns true; given nullptr it puts the do-nothing announcer back and returns true; given an object that does not implement `IDojoP15Announcer` it returns false and leaves the desk as it was.
 
 The desk depends on the interface only. The announcers know nothing about the desk, and the desk knows nothing about who will call it.
 
 ## See it in the editor
 
-Open the Level Blueprint. On Begin Play, use Get World Subsystem with the class Dojo P15 Announcer Desk, call Get Provider on it, and print the result's name with Get Object Name: it starts with DojoP15NullAnnouncer. Then call Provide with the result of Construct Object from Class (class Dojo P15 Recording Announcer, outer: the desk) and print the returned boolean: true. Call Get Provider again and print its name: it starts with DojoP15RecordingAnnouncer. Finally call Provide with Get Player Controller (index 0), which is not an announcer, and print the boolean: false, and Get Provider still gives the recording announcer.
+Open the Level Blueprint. On Begin Play, use Get World Subsystem with the class Dojo P15 Announcer Desk, call Get Provider on it, and print the result's name with Get Object Name: it starts with DojoP15NullAnnouncer. Then call Install with the result of Construct Object from Class (class Dojo P15 Recording Announcer, outer: the desk) and print the returned boolean: true. Call Get Provider again and print its name: it starts with DojoP15RecordingAnnouncer. Finally call Install with Get Player Controller (index 0), which is not an announcer, and print the boolean: false, and Get Provider still gives the recording announcer.
 
 # Files
 
@@ -172,7 +172,7 @@ class UDojoP15AnnouncerDesk : public UWorldSubsystem
 	GENERATED_BODY()
 
 public:
-	/** Makes the do-nothing announcer and provides it, so the desk is never empty. */
+	/** Makes the do-nothing announcer and installs it, so the desk is never empty. */
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 	/** The desk of LevelWorld, or nullptr when there is no world. */
@@ -180,7 +180,7 @@ public:
 
 	/** Makes Provider the announcer; nullptr puts the do-nothing announcer back. Returns false, changing nothing, when Provider does not implement the announcer interface. */
 	UFUNCTION(BlueprintCallable, Category = "Announcer")
-	bool Provide(UObject* Provider);
+	bool Install(UObject* Provider);
 
 	/** The announcer now in place, as the interface; never empty. */
 	IDojoP15Announcer& Get() const; // @explain: The desk gives out the interface, so a caller can speak a line without knowing which class stands behind it.
@@ -223,7 +223,7 @@ UDojoP15AnnouncerDesk* UDojoP15AnnouncerDesk::Locate(const UWorld* LevelWorld)
 	return LevelWorld ? LevelWorld->GetSubsystem<UDojoP15AnnouncerDesk>() : nullptr;
 }
 
-bool UDojoP15AnnouncerDesk::Provide(UObject* Provider)
+bool UDojoP15AnnouncerDesk::Install(UObject* Provider)
 {
 	return false;
 }
@@ -295,7 +295,7 @@ bool FDojo_P15_AnnouncerDesk_ProvidedAnnouncerHearsEverything::RunTest(const FSt
 	if (!TestNotNull(TEXT("The world has a desk"), Desk)) return false;
 
 	UDojoP15RecordingAnnouncer* Record = NewObject<UDojoP15RecordingAnnouncer>(GetTransientPackage());
-	TestTrue(TEXT("Providing an announcer succeeds"), Desk->Provide(Record));
+	TestTrue(TEXT("Installing an announcer succeeds"), Desk->Install(Record));
 	TestTrue(TEXT("The desk now holds it"), Desk->GetProvider() == Record);
 
 	Desk->Get().Announce(TEXT("Begin"));
@@ -324,21 +324,21 @@ bool FDojo_P15_AnnouncerDesk_ReplacingAndResetting::RunTest(const FString& Param
 	const TStrongObjectPtr<UObject> KeepFirst(First);
 	const TStrongObjectPtr<UObject> KeepSecond(Second);
 
-	Desk->Provide(First);
+	Desk->Install(First);
 	Desk->Get().Announce(TEXT("One"));
-	Desk->Provide(Second);
+	Desk->Install(Second);
 	Desk->Get().Announce(TEXT("Two"));
 	TestEqual(TEXT("The first heard only the first line"), First->GetLines().Num(), 1);
 	TestEqual(TEXT("The second heard only the second"), Second->GetLines().Num(), 1);
 
-	TestTrue(TEXT("Providing nullptr succeeds"), Desk->Provide(nullptr));
+	TestTrue(TEXT("Installing nullptr succeeds"), Desk->Install(nullptr));
 	TestTrue(TEXT("It puts the do-nothing announcer back"), Desk->GetProvider() == Desk->GetNullAnnouncer());
 	Desk->Get().Announce(TEXT("Three"));
 	TestEqual(TEXT("And that announcer counts the line"), Desk->GetNullAnnouncer()->GetAbsorbedCount(), 1);
 
-	Desk->Provide(First);
+	Desk->Install(First);
 	UObject* NotAnAnnouncer = NewObject<USceneComponent>(GetTransientPackage());
-	TestFalse(TEXT("An object that is not an announcer is refused"), Desk->Provide(NotAnAnnouncer));
+	TestFalse(TEXT("An object that is not an announcer is refused"), Desk->Install(NotAnAnnouncer));
 	TestTrue(TEXT("And the desk is unchanged"), Desk->GetProvider() == First);
 
 	return true;
@@ -349,16 +349,16 @@ bool FDojo_P15_AnnouncerDesk_ReplacingAndResetting::RunTest(const FString& Param
 
 # Hints
 
-- Three cases: no provider at all, an object that carries the announcer interface, and an object that does not. Which of them should change `Current`?
-- `UObject::Implements<UDojoP15Announcer>()` asks whether an object implements the interface. The `U` class is the reflected half, not the `I` class.
-- The do-nothing announcer is already made and stored in `Silent`; putting it back is one assignment.
+- Sort the argument into three cases before writing a line, and decide which of them may change `Current` and what each one returns.
+- Every object can be asked whether it implements an interface, and the question takes the reflected `U` class, not the `I` class.
+- The do-nothing announcer is already made and stored in `Silent`, so putting it back takes one assignment.
 
 # Rubric
 
-- Provide with nullptr or a pointer that is no longer valid puts the do-nothing announcer back and returns true.
-- Provide checks the object against the announcer interface before accepting it, and one that fails the check is refused with false and no change.
+- Install with nullptr or a pointer that is no longer valid puts the do-nothing announcer back and returns true.
+- Install checks the object against the announcer interface before accepting it, and one that fails the check is refused with false and no change.
 - A valid announcer becomes the one Get hands out, replacing the one before it, and the do-nothing announcer is left alone.
-- Provide makes no announcer of its own, so the desk never depends on a concrete announcer class.
+- Install makes no announcer of its own, so the desk never depends on a concrete announcer class.
 - The desk depends on the interface only, and an announcer knows nothing about the desk.
 
 # Alternative
@@ -368,10 +368,10 @@ The desk could keep a `TScriptInterface<IDojoP15Announcer>` instead of a plain o
 # Parsons
 
 ```yaml
-- id: provide
-  prompt: Put Provide in order.
+- id: install
+  prompt: Put Install in order.
   lines:
-    - "bool UDojoP15AnnouncerDesk::Provide(UObject* Provider)"
+    - "bool UDojoP15AnnouncerDesk::Install(UObject* Provider)"
     - "{"
     - "	if (!IsValid(Provider))"
     - "	{"

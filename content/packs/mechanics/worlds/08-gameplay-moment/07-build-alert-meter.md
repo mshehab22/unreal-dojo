@@ -35,7 +35,7 @@ This meter is the fourth piece of the Blackout Escape boss.
 
 ## See it in the editor
 
-Place a `DojoM8Searchlight` with Sweep Degrees Per Second set to 0, a `DojoM8AlertMeter`, a `DojoM8AlertLog`, and a runner in front of the light. In the level Blueprint, on BeginPlay call Watch on the light with the runner, Watch on the meter with the light, and Listen on the log with the meter, and print the meter's Get Alert Level on a one second timer. Press Play: the level climbs by about 1 each second, and the log's Get Caught Count becomes 1 after two seconds and stays there. Drag the runner out of the beam and the level falls.
+Place a `DojoM8Searchlight` with Sweep Degrees Per Second set to 0, a `DojoM8AlertMeter`, a `DojoM8AlertLog`, and a `DojoM3Runner` about 500 units in front of the light; the runner has no mesh, so switch on Show, then Collision in the viewport to see it. Add references to all four in the level Blueprint. On BeginPlay call Watch on the light with the runner, Watch on the meter with the light, and Listen on the log with the meter, and print the meter's Get Alert Level and the log's Get Caught Count on a looping one second timer. On the 1 key call Set Actor Location on the runner to move it 600 units to the side, out of the beam. Press Play: the level climbs by about 1 each second, and the log's Get Caught Count becomes 1 after two seconds and stays there. Press 1 and the level falls.
 
 # Files
 
@@ -400,14 +400,14 @@ bool FDojo_M8_AlertMeter_NothingPollsEveryFrame::RunTest(const FString& Paramete
 
 # Hints
 
-- The meter has three moving parts: the timer started in BeginPlay, the remembered sight state, and the pulse that reads both. Write them in that order.
-- `GetWorldTimerManager().SetTimer` takes a handle, an object, a member function, a time, and whether to loop. The pulse needs two branches and a guard: seen adds, not seen subtracts but never below zero, and a catch announces once.
-- Keep a bool for "seen right now" that only `HandleSightChanged` writes and only `Pulse` reads. For the catch, set the caught flag in the same place you broadcast, and return at the top of `Pulse` when it is already set.
+- Write the meter's three parts in order: the repeating timer, the remembered sight state, and the pulse that reads both.
+- Each pulse adds while the target is seen and takes away while it is not, and the level must never drop below zero.
+- Only the sight handler writes the seen flag and only the pulse reads it, and the caught flag is set where the catch is broadcast and checked at the top of the pulse.
 
 # Rubric
 
 - A repeating timer started in BeginPlay drives the meter; the meter never ticks.
-- The meter listens to the light with AddUniqueDynamic and stores only whether the target is seen.
+- The meter listens to the light with AddUniqueDynamic and stores only whether the target is seen, and the light knows nothing of the meter.
 - Each pulse adds `PulseSeconds` while seen, or takes away `CalmDownPerSecond` times `PulseSeconds` while not, and the level never goes below zero.
 - The first time the level reaches `CaughtAfterSeconds` the catch is announced exactly once.
 - StartOver empties the meter and clears the caught state so a new round can be caught again.

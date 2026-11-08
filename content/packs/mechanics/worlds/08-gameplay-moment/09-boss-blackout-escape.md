@@ -39,11 +39,11 @@ Core numbers are fixed: 3 fuses, the positions above, 800 range, 20 degree half 
 
 Extensions, in order of importance:
 
-1. A second searchlight that turns the other way, with both lights feeding the one meter.
+1. A second searchlight that turns the other way, with both lights feeding the one meter, which then has to count how many lights see the hero instead of keeping one yes or no.
 2. A guard that is spawned when the alert passes 1.0 and walks toward the hero, using a spawn and a timer.
 3. A best escape time kept across rounds and shown on the status line.
 
-Feel: tune the beam's speed and width until crossing it feels like a decision, not a coin toss.
+Feel: judge whether the fixed beam speed and width make crossing it feel like a decision, not a coin toss, and say why in one sentence.
 
 # Required Pieces
 
@@ -117,4 +117,4 @@ Feel: tune the beam's speed and width until crossing it feels like a decision, n
 - The moment ends once, with the first of an escape, a catch, or the time limit, and no later event changes the label or the time.
 - R does nothing before an ending; after one it starts a clean round, and a second round plays exactly like the first.
 - Starting a round releases the player's pawn before destroying it, destroys every piece of the round before, and leaves no binding or timer behind; the director's context and input are removed in EndPlay.
-- The tower's speed, range, and width, the pulse, and the time limit are properties a designer can change; the submission gives the tuned beam speed and width with one sentence on why.
+- The tower's speed, range, and width, the pulse, and the time limit are properties a designer can change; the submission says in one sentence why the fixed beam speed and width make crossing it a decision.

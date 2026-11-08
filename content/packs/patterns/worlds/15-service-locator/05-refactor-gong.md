@@ -7,7 +7,7 @@ scaffold: stub
 difficulty: 3
 patterns: [service-locator]
 skills: [service-locator, refactoring]
-terms: [world-subsystem, uinterface, createdefaultsubobject, null-object, beginplay]
+terms: [world-subsystem, uinterface, createdefaultsubobject, null-object]
 prerequisites: [p15-crier-trace, p15-announcer-desk]
 xp: 100
 estimatedMinutes: 20
@@ -36,7 +36,7 @@ One of the three tests passes on the starter and must pass after; the other two 
 
 ## See it in the editor
 
-Place a `DojoP15Gong`. In the Level Blueprint, on Begin Play, get the world subsystem Dojo P15 Announcer Desk and call Provide with a Construct Object from Class of Dojo P15 Recording Announcer (outer: the desk), and keep it in a variable. On the G key, call Strike on the gong and print the gong's Strike Count and the recording announcer's Lines joined with Join String Array. Before the refactor the Lines stay empty while the Output Log fills with LOUD: GONG! lines. After it the Lines gain a "Gong!" for each strike and the Output Log stays quiet.
+Place a `DojoP15Gong`, select it in the level, then right-click in the Level Blueprint graph and choose Create a Reference to it. On Begin Play, get the world subsystem Dojo P15 Announcer Desk and call Install with a Construct Object from Class of Dojo P15 Recording Announcer (outer: the desk), and keep it in a variable. On the G key, call Strike on the gong, print the gong's Strike Count, and print the recording announcer's Lines joined with Join String Array. Before the refactor the joined Lines print as an empty line while the Output Log fills with LOUD: GONG! lines. After it they read "Gong!" once for each strike, such as Gong!, Gong! after two strikes, and the Output Log stays quiet.
 
 # Files
 
@@ -198,7 +198,7 @@ bool FDojo_P15_GongRefactor_StrikesAreAnnouncedThroughTheDesk::RunTest(const FSt
 	if (!TestNotNull(TEXT("The world has a desk"), Desk) || !TestNotNull(TEXT("Gong spawned"), Gong)) return false;
 
 	UDojoP15RecordingAnnouncer* First = NewObject<UDojoP15RecordingAnnouncer>(GetTransientPackage());
-	Desk->Provide(First);
+	Desk->Install(First);
 	Gong->Strike();
 	Gong->Strike();
 
@@ -206,7 +206,7 @@ bool FDojo_P15_GongRefactor_StrikesAreAnnouncedThroughTheDesk::RunTest(const FSt
 	TestTrue(TEXT("The recording announcer heard two gongs"), First->GetLines() == Expected);
 
 	UDojoP15RecordingAnnouncer* Second = NewObject<UDojoP15RecordingAnnouncer>(GetTransientPackage());
-	Desk->Provide(Second);
+	Desk->Install(Second);
 	Gong->Strike();
 	TestEqual(TEXT("A newly provided announcer hears the next strike"), Second->GetLines().Num(), 1);
 	TestEqual(TEXT("And the first hears nothing more"), First->GetLines().Num(), 2);
@@ -237,14 +237,14 @@ bool FDojo_P15_GongRefactor_NothingProvidedIsAbsorbed::RunTest(const FString& Pa
 
 # Hints
 
-- `StrikesAreCounted` passes before and after; keep it passing. The other two tests say the refactor is done.
-- The desk of a world is found with `UDojoP15AnnouncerDesk::Locate(GetWorld())`; the announcer in place comes from `Get()`.
-- Delete the constructor line that creates the speaker, the member, and the include of the speaker's header. The gong then has nothing left that names a speaker class.
+- Read the messages of the two failing tests first: they say who should have heard the line.
+- The desk class offers a static way to find the desk of a world, and the desk hands out the announcer in place.
+- Once `Strike` goes through the desk, nothing should still need the speaker, so remove what is left and let the compiler show you anything you missed.
 
 # Rubric
 
 - Strike counts the strike and announces "Gong!" through the announcer the world's desk holds.
-- The gong no longer creates, owns, or names a concrete speaker class, and its header no longer includes the speaker's.
+- The gong no longer creates, owns, names, or includes a concrete speaker class.
 - With nothing provided the do-nothing announcer takes the line, and with no desk the gong carries on.
 - Strike, GetStrikeCount, and the strike count keep their names and results.
 - The gong depends on the desk and the interface; the announcers know nothing about the gong.
