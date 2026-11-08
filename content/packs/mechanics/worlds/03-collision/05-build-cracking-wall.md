@@ -324,7 +324,7 @@ bool FDojo_M3_CrackingWall_BrokenWallLetsEverythingPass::RunTest(const FString& 
 - The handler is bound to the box's `OnComponentHit` in `BeginPlay`, and it is the `UFUNCTION` with the hit delegate's parameters.
 - Each blocking hit adds one crack, and an overlapping shape never cracks the wall.
 - At `HitsToBreak` cracks the box overlaps every channel instead of blocking it, so the ball and every other swept shape pass through and the box can still tell what is inside it.
-- A broken wall ignores further hits, and the label always matches the state.
+- The count stops at `HitsToBreak` once the wall is broken, and the label always matches the state.
 - The wall holds no pointer to the ball; it reacts only to its own box's hits, and the ball is reused from World 2 unchanged.
 
 # Alternative
